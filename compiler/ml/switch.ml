@@ -188,25 +188,6 @@ let cut = ref 8
 
 and more_cut = ref 16
 
-(*
-let pint chan i =
-  if i = min_int then Printf.fprintf chan "-oo"
-  else if i=max_int then Printf.fprintf chan "oo"
-  else Printf.fprintf chan "%d" i
-
-let pcases chan cases =
-  for i =0 to Array.length cases-1 do
-    let l,h,act = cases.(i) in
-    if l=h then
-      Printf.fprintf chan "%d:%d " l act
-    else
-      Printf.fprintf chan "%a..%a:%d " pint l pint h act
-  done
-
-let prerr_inter i = Printf.fprintf stderr
-        "cases=%a" pcases i.cases
-*)
-
 let get_act cases i =
   let _, _, r = cases.(i) in
   r
@@ -218,16 +199,6 @@ and get_low cases i =
 type ctests = {mutable n: int; mutable ni: int}
 
 let too_much = {n = max_int; ni = max_int}
-
-(*
-let ptests chan {n=n ; ni=ni} =
-  Printf.fprintf chan "{n=%d ; ni=%d}" n ni
-
-let pta chan t =
-  for i =0 to Array.length t-1 do
-    Printf.fprintf chan "%d: %a\n" i ptests t.(i)
-  done
-*)
 
 let less_tests c1 c2 =
   if c1.n < c2.n then true
@@ -317,19 +288,6 @@ let coupe_inter i j cases =
       (Array.sub cases (j + 1) (lcases - (j + 1))) )
 
 type kind = Kvalue of int | Kinter of int | Kempty
-
-(*
-let pkind chan = function
-  | Kvalue i ->Printf.fprintf chan "V%d" i
-  | Kinter i -> Printf.fprintf chan "I%d" i
-  | Kempty -> Printf.fprintf chan "E"
-
-let rec pkey chan  = function
-  | [] -> ()
-  | [k] -> pkind chan k
-  | k::rem ->
-      Printf.fprintf chan "%a %a" pkey rem pkind k
-*)
 
 let cache_key = Request_local.new_key (fun () -> Hashtbl.create 17)
 let cache () = Domain.DLS.get cache_key

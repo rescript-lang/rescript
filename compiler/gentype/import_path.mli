@@ -2,7 +2,6 @@ open Gentype_common
 
 type t
 
-val bs_curry_path : config:Config.t -> t
 val dump : t -> string
 
 (* Escape a semantic import path for a single-quoted JavaScript/TypeScript

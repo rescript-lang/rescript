@@ -560,7 +560,7 @@ module Outcome_printer_tests = struct
     let env = Res_compmisc.initial_env () in
     try
       let _typedStructure, signature, _newenv =
-        Typemod.type_toplevel_phrase env structure
+        Typemod.type_structure env structure
       in
       signature |> Printtyp.tree_of_signature
       |> !Oprint.out_signature Format.str_formatter;

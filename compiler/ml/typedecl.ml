@@ -950,10 +950,8 @@ let check_well_founded env loc path to_check ty =
     else
       let rec_ok =
         match ty.desc with
-        | Tconstr (_p, _, _) ->
-          false (*!Clflags.recursive_types && Ctype.is_contractive env p*)
         | Tobject _ | Tvariant _ -> true
-        | _ -> false (* !Clflags.recursive_types*)
+        | _ -> false
       in
       let visited' = Type_map.add ty parents !visited in
       let arg_exn =

@@ -86,19 +86,19 @@ let extract_sig_open env loc mty =
 
 (* Compute the environment after opening a module *)
 
-let type_open_ ?used_slot ?toplevel ovf env loc lid =
+let type_open_ ?used_slot ovf env loc lid =
   let path = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
-  match Env.open_signature ~loc ?used_slot ?toplevel ovf path env with
+  match Env.open_signature ~loc ?used_slot ovf path env with
   | Some env -> (path, env)
   | None ->
     let md = Env.find_module path env in
     ignore (extract_sig_open env lid.loc md.md_type);
     assert false
 
-let type_open ?toplevel env sod =
+let type_open env sod =
   let path, newenv =
     Builtin_attributes.warning_scope sod.popen_attributes (fun () ->
-        type_open_ ?toplevel sod.popen_override env sod.popen_loc sod.popen_lid)
+        type_open_ sod.popen_override env sod.popen_loc sod.popen_lid)
   in
   let od =
     {
@@ -1420,7 +1420,7 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
       mod_attributes = arg.mod_attributes @ smod.pmod_attributes;
     }
 
-and type_structure ?(toplevel = false) funct_body anchor env sstr =
+and type_structure funct_body anchor env sstr =
   let names = new_names () in
 
   let type_str_item env {pstr_loc = loc; pstr_desc = desc} =
@@ -1610,7 +1610,7 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr =
       let newenv, mtd, sg = transl_modtype_decl names env pmtd in
       (Tstr_modtype mtd, [sg], newenv)
     | Pstr_open sod ->
-      let _path, newenv, od = type_open ~toplevel env sod in
+      let _path, newenv, od = type_open env sod in
       (Tstr_open od, [], newenv)
     | Pstr_include sincl ->
       let smodl = sincl.pincl_mod in
@@ -1665,9 +1665,7 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr =
       (Cmt_format.Partial_structure str :: previous_saved_types);
     (str, sg, final_env)
   in
-  if toplevel then run () else Builtin_attributes.warning_scope [] run
-
-let type_toplevel_phrase env s = type_structure ~toplevel:true false None env s
+  Builtin_attributes.warning_scope [] run
 
 let type_module_alias = type_module ~alias:true true false None
 let type_module = type_module true false None
@@ -1767,7 +1765,7 @@ let () =
   Typecore.type_module := type_module_alias;
   Typetexp.transl_modtype_longident := transl_modtype_longident;
   Typetexp.transl_modtype := transl_modtype;
-  Typecore.type_open := type_open_ ?toplevel:None;
+  Typecore.type_open := type_open_;
   Typecore.type_package := type_package;
   type_module_type_of_fwd := type_module_type_of
 

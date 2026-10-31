@@ -16,7 +16,6 @@ type t = {
   dep_paths: (string, string) Hashtbl.t;
       (** Map from package name to its install path, used to locate
           [.cmt]/[.cmti] files of cross-package references. *)
-  mutable emit_import_curry: bool;
   mutable emit_import_react: bool;
   mutable emit_type_prop_done: bool;
   mutable everything: bool;
@@ -25,7 +24,6 @@ type t = {
   module_: module_;
   module_resolution: module_resolution;
   namespace: string option;
-  platform_lib: string;
   project_root: string;
   shims_map: Module_name.t Module_name_map.t;
   sources: string list;
@@ -37,7 +35,6 @@ let default =
     bsb_project_root = "";
     bs_dependencies = [];
     dep_paths = Hashtbl.create 0;
-    emit_import_curry = false;
     emit_import_react = false;
     emit_type_prop_done = false;
     everything = false;
@@ -46,20 +43,11 @@ let default =
     module_ = ESModule;
     module_resolution = Node;
     namespace = None;
-    platform_lib = "";
     project_root = "";
     shims_map = Module_name_map.empty;
     sources = [];
     suffix = ".bs.js";
   }
-
-let bs_platform_lib ~config =
-  match config.module_ with
-  | ESModule -> config.platform_lib ^ "/lib/es6"
-  | CommonJS -> config.platform_lib ^ "/lib/js"
-
-let get_bs_curry_path ~config =
-  Filename.concat (bs_platform_lib ~config) "curry.js"
 
 (* ----- CLI-flag backing state ----------------------------------------- *)
 
@@ -195,7 +183,6 @@ let build_config ~namespace =
     bsb_project_root;
     bs_dependencies = !(bs_dependencies_flag ());
     dep_paths;
-    emit_import_curry = false;
     emit_import_react = false;
     emit_type_prop_done = false;
     everything = false;
@@ -204,7 +191,6 @@ let build_config ~namespace =
     module_;
     module_resolution;
     namespace;
-    platform_lib = "rescript";
     project_root;
     shims_map;
     sources = !(source_dirs_flag ());

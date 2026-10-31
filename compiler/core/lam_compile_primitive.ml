@@ -39,10 +39,7 @@ let ensure_value_unit (st : Lam_compile_context.continuation) e : E.t =
 let get_module_system () =
   let package_info = Js_packages_state.get_packages_info () in
   let module_system =
-    if
-      Js_packages_info.is_empty package_info
-      && !((Js_config.current ()).js_stdout)
-    then [Ext_module_system.Commonjs]
+    if Js_packages_info.is_empty package_info then [Ext_module_system.Commonjs]
     else
       Js_packages_info.map package_info (fun {module_system} -> module_system)
   in

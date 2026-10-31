@@ -1800,10 +1800,10 @@ let open_signature slot root env0 =
 
 (* Open a signature from a file *)
 
-let open_signature ?(used_slot = ref false) ?(loc = Location.none)
-    ?(toplevel = false) ovf root env =
+let open_signature ?(used_slot = ref false) ?(loc = Location.none) ovf root env
+    =
   if
-    (not toplevel) && ovf = Asttypes.Fresh
+    ovf = Asttypes.Fresh
     && (not loc.Location.loc_ghost)
     && (Warnings.is_active (Warnings.Unused_open "")
        || Warnings.is_active (Warnings.Open_shadow_identifier ("", ""))

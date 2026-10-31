@@ -104,8 +104,7 @@ let find_relevant_types_from_type ~state ~file ~package typ =
     match References.dig_constructor ~state ~env ~package path with
     | None -> None
     | Some (env, {name = {txt}; extent_loc; item = {decl}}) ->
-      if Utils.is_uncurried_internal path then None
-      else Some {name = txt; env; loc = extent_loc; decl; path}
+      Some {name = txt; env; loc = extent_loc; decl; path}
   in
   let constructors = Shared.find_type_constructors types_to_search in
   constructors |> List.filter_map (from_constructor_path ~env:env_to_search)
