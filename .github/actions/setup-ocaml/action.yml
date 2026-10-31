@@ -100,7 +100,7 @@ runs:
 
     - name: Use OCaml ${{ inputs.compiler }}
       if: steps.cache.outputs.cache-hit != 'true'
-      uses: ocaml/setup-ocaml@v3.9.0
+      uses: ocaml/setup-ocaml@v3.9.1
       with:
         ocaml-compiler: ${{ inputs.compiler }}
         # Use the HTTP repository to prevent intermittent CI setup failures:
