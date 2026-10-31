@@ -1,1 +1,0 @@
-- Update ppx_expect to v0.17.3 to resolve test dependencies with ppxlib 0.38 and OCaml 5.5.
