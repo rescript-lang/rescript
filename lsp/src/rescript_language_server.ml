@@ -25,11 +25,11 @@ let initialization () =
   let renameProvider =
     `RenameOptions (RenameOptions.create ~prepareProvider:true ())
   in
-  (* TODO: We support this? *)
+  (* NOTE: For now, we do not support this. *)
   let workspace =
     let workspaceFolders =
-      WorkspaceFoldersServerCapabilities.create ~supported:true
-        ~changeNotifications:(`Bool true) ()
+      WorkspaceFoldersServerCapabilities.create ~supported:false
+        ~changeNotifications:(`Bool false) ()
     in
     ServerCapabilities.create_workspace ~workspaceFolders ()
   in
