@@ -129,8 +129,8 @@ let get_cmi_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
           let relative_path = relative_to ~root:package_root_path path in
           let sources_dir = dirname relative_path in
           let cmi =
-            let res_file = basename relative_path ^ suffix_to_append in
-            remove_extension res_file ^ ".cmi"
+            let stem = basename relative_path |> remove_extension in
+            stem ^ suffix_to_append ^ ".cmi"
           in
           package_root_path /+ "lib" /+ "bs" /+ sources_dir /+ cmi
         in
