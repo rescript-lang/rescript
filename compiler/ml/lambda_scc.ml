@@ -73,27 +73,29 @@ let preprocess_deps (groups : bindings) :
   let len = Array.length ids in
   let index = Hash_ident.create len in
   Array.iteri (fun i id -> Hash_ident.replace index id i) ids;
-  let edges lam =
-    let hit = Array.make len false in
-    let remaining = ref len in
+  (* [seen.(j) = i] once body [i] has referred to binding [j]: one array
+     for all bodies, so finding the edges costs the size of the bodies,
+     not [len] per body *)
+  let seen = Array.make len (-1) in
+  let edges i lam =
+    let found = ref [] and count = ref 0 in
     (* stop walking [lam] once it has referred to every binding *)
     ignore
       (exists_var
          (fun id ->
            match Hash_ident.find_opt index id with
-           | Some i when not hit.(i) ->
-             hit.(i) <- true;
-             decr remaining;
-             !remaining = 0
+           | Some j when seen.(j) <> i ->
+             seen.(j) <- i;
+             found := j :: !found;
+             incr count;
+             !count = len
            | Some _ | None -> false)
          lam);
-    let edges = ref [] in
-    for i = len - 1 downto 0 do
-      if hit.(i) then edges := i :: !edges
-    done;
-    Array.of_list !edges
+    let edges = Array.of_list !found in
+    Array.sort Int.compare edges;
+    edges
   in
-  (ids, lams, Array.map edges lams)
+  (ids, lams, Array.mapi edges lams)
 
 let bind_rec (groups : bindings) (body : Lambda.t) : Lambda.t =
   match groups with

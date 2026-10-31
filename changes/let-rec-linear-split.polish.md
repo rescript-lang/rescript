@@ -1,0 +1,1 @@
+- Split large `let rec` groups into their recursive components in time linear in their size; a group of 16,000 bindings compiles about twice as fast.
