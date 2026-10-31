@@ -1,8 +1,8 @@
 // @ts-check
 
 /* Commit records, parsed from a commit message and drawn as HTML. The
- * caller (commitRecords.js) reads each commit's identity and message from
- * git. The
+ * caller reads each commit's identity and message: commitRecords.js from
+ * git, recordViewer.js in the browser from GitHub's API. The
  * format is the `records` skill's (.agents/skills/records/SKILL.md): a
  * subject, a `Why:` section, object blocks such as
  * `AST modified (raw extensions):`, each followed by an optional `Example:`
