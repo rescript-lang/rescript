@@ -3,19 +3,10 @@ open Lsp.Types
 
 let workspace_root_uri_of_initialize_params (params : InitializeParams.t) =
   match (params.workspaceFolders, params.rootUri, params.rootPath) with
-  | Some (Some workspace_folders), Some root_uri, None ->
-    let root =
-      match workspace_folders with
-      | [] -> root_uri
-      | ws :: _ -> ws.uri
-    in
-    root
+  | Some (Some (workspace_folder :: _)), _, _ -> workspace_folder.uri
   | _, Some root_uri, _ -> root_uri
   | _, _, Some (Some root_path) -> root_path |> Uri.of_path
-  | _ ->
-    failwith
-      ("Failed to find workspace root uri of initialize params. Received: "
-      ^ Yojson.Safe.pretty_to_string (InitializeParams.yojson_of_t params))
+  | _ -> Sys.getcwd () |> Uri.of_path
 
 (* Return the most specific root from [entries] that contains [path].
 
