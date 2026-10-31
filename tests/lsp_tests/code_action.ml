@@ -74,7 +74,7 @@ let%expect_test "extracts a local module into its own file" =
             {
               "edits": [
                 {
-                  "newText": "/** Doc comment. */\ntype t = int\nlet doStuff = a => a + 1\n",
+                  "newText": "/** Doc comment. */\ntype t = int\n\nlet doStuff = a => a + 1\n",
                   "range": {
                     "end": { "character": 1, "line": 4 },
                     "start": { "character": 0, "line": 0 }
@@ -127,7 +127,7 @@ let value = if kind == First {
             {
               "edits": [
                 {
-                  "newText": "switch kind {\n               | First => failwith(\"TODO\")\n               | Second => failwith(\"TODO\")\n               }",
+                  "newText": "switch kind {\n               | First => %todo\n               | Second => %todo\n               }",
                   "range": {
                     "end": { "character": 19, "line": 2 },
                     "start": { "character": 15, "line": 2 }
