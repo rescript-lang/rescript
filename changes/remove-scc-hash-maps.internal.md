@@ -1,0 +1,1 @@
+- Remove the ordered hash map and identifier mask modules, used only to split `let rec` groups, and the `@deriving` registry, which had a single deriver.

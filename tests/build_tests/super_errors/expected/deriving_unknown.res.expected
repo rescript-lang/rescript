@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/deriving_unknown.res[0m:[2m1:11-16[0m
+
+  [1;31m1[0m [2m│[0m @deriving([1;31mlenses[0m)
+  2 [2m│[0m type t = {name: string}
+  3 [2m│[0m 
+
+  lenses is not supported

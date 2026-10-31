@@ -64,26 +64,38 @@ let exists_var (p : Ident.t -> bool) (l : Lambda.t) : bool =
   in
   hit l
 
-let preprocess_deps (groups : bindings) : _ * Ident.t array * int array array =
-  let len = List.length groups in
-  let domain : _ Ordered_hash_map_local_ident.t =
-    Ordered_hash_map_local_ident.create len
+(* The bindings of a group as arrays, and for each binding the indices of
+   the bindings its body refers to, in binding order. *)
+let preprocess_deps (groups : bindings) :
+    Ident.t array * Lambda.t array * int array array =
+  let ids = Array.of_list (List.map fst groups) in
+  let lams = Array.of_list (List.map snd groups) in
+  let len = Array.length ids in
+  let index = Hash_ident.create len in
+  Array.iteri (fun i id -> Hash_ident.replace index id i) ids;
+  (* [seen.(j) = i] once body [i] has referred to binding [j]: one array
+     for all bodies, so finding the edges costs the size of the bodies,
+     not [len] per body *)
+  let seen = Array.make len (-1) in
+  let edges i lam =
+    let found = ref [] and count = ref 0 in
+    (* stop walking [lam] once it has referred to every binding *)
+    ignore
+      (exists_var
+         (fun id ->
+           match Hash_ident.find_opt index id with
+           | Some j when seen.(j) <> i ->
+             seen.(j) <- i;
+             found := j :: !found;
+             incr count;
+             !count = len
+           | Some _ | None -> false)
+         lam);
+    let edges = Array.of_list !found in
+    Array.sort Int.compare edges;
+    edges
   in
-  let mask = Hash_set_ident_mask.create len in
-  Ext_list.iter groups (fun (x, lam) ->
-      Ordered_hash_map_local_ident.add domain x lam;
-      Hash_set_ident_mask.add_unmask mask x);
-  let int_mapping = Ordered_hash_map_local_ident.to_sorted_array domain in
-  (* the edges of each node, most recent first *)
-  let rev_edges = Array.make (Array.length int_mapping) [] in
-  Ordered_hash_map_local_ident.iter domain (fun _id lam key_index ->
-      ignore (exists_var (Hash_set_ident_mask.mask_and_check_all_hit mask) lam);
-      Hash_set_ident_mask.iter_and_unmask mask (fun ident hit ->
-          if hit then
-            let key = Ordered_hash_map_local_ident.rank domain ident in
-            rev_edges.(key_index) <- key :: rev_edges.(key_index)));
-  let node_edges = Array.map (fun l -> Array.of_list (List.rev l)) rev_edges in
-  (domain, int_mapping, node_edges)
+  (ids, lams, Array.mapi edges lams)
 
 let bind_rec (groups : bindings) (body : Lambda.t) : Lambda.t =
   match groups with
@@ -91,24 +103,18 @@ let bind_rec (groups : bindings) (body : Lambda.t) : Lambda.t =
     if exists_var (Ident.same id) bind then letrec groups body
     else let_ Strict id bind body
   | _ ->
-    let domain, int_mapping, node_edges = preprocess_deps groups in
+    let ids, lams, node_edges = preprocess_deps groups in
     let clusters = Ext_scc.graph node_edges in
     if List.compare_length_with clusters 1 <= 0 then letrec groups body
     else
       List.fold_right
         (fun (cluster : int array) acc ->
           let bindings =
-            List.map
-              (fun i ->
-                let id = int_mapping.(i) in
-                let lam = Ordered_hash_map_local_ident.find_value domain id in
-                (id, lam))
-              (Array.to_list cluster)
+            List.map (fun i -> (ids.(i), lams.(i))) (Array.to_list cluster)
           in
-          match bindings with
-          | [(id, lam)] ->
-            let base_key = Ordered_hash_map_local_ident.rank domain id in
-            if Array.mem base_key node_edges.(base_key) then letrec bindings acc
-            else let_ Strict id lam acc
+          match cluster with
+          | [|i|] ->
+            if Array.mem i node_edges.(i) then letrec bindings acc
+            else let_ Strict ids.(i) lams.(i) acc
           | _ -> letrec bindings acc)
         clusters body
