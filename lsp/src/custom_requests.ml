@@ -51,7 +51,7 @@ module Create_interface_file = struct
     match Document.kind_of_uri uri with
     | Res -> (
       match
-        Analysis.Create_interface.command
+        Analysis.Create_interface.command ~path:(Uri.to_path uri)
           ~source:(Document_store.get ~uri state.store |> Document.text)
           ~cmi_file:(cmi_uri |> Uri.to_path)
       with
