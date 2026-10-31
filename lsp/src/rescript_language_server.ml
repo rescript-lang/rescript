@@ -128,30 +128,22 @@ let publish_diagnostics ?(force_publish_uris = []) (state : State.t) diagnostics
    function unsafe in the usual functional sense: callers must provide a fresh
    per-server analysis state or accept that repeated calls append/overwrite
    package roots as a side effect. *)
-let discover_subpackages_and_populate ~workspace_root
+let discover_subpackages_and_populate ~notify_errors ~workspace_root
     ~(analysis_state : Analysis.Shared_types.state) ~server =
   let root_package =
     let root_path = workspace_root |> Uri.to_path in
     match Analysis.Packages.new_bs_package ~root_path with
     | Some p -> Some p
     | None ->
-      (* TODO: Decide how the server should recover when the workspace has not
-         been built yet, for example right after cloning a repository. Package
-         discovery depends on generated build metadata, so most analysis
-         features cannot work until that metadata exists.
-         Options to evaluate:
-         - Keep the server running and show a window message. In this case user should restart the server after build.
-         - Stop the server after explaining that a build is required.
-         - Re-initialize `analysis_state` after DidChangeWatchedFiles reports a
-           new `.compiler.log` change.
-         *)
       let message =
         Printf.sprintf
           "Failed to initialize the context for the project at %s. Try \
-           building the project then restart the server"
+           building the project. The server will retry when a compiler log \
+           changes."
           root_path
       in
-      Server.show_message_notification ~kind:MessageType.Error message server;
+      if notify_errors then
+        Server.show_message_notification ~kind:MessageType.Error message server;
       None
   in
 
@@ -171,7 +163,7 @@ let discover_subpackages_and_populate ~workspace_root
             | exception Failure err -> Either.Right err)
           dependencies
       in
-      if List.length deps_errors > 0 then
+      if notify_errors && List.length deps_errors > 0 then
         Server.show_message_notification ~kind:MessageType.Error
           (Printf.sprintf "Failed to resolve dependencies. %s"
              (String.concat ", " deps_errors))
@@ -205,27 +197,18 @@ let discover_subpackages_and_populate ~workspace_root
     | None -> ())
   |> ignore
 
-let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
-  let state = Server.state server in
-
-  let diagnostics =
-    Diagnostics.make ~diagnostics:(Diagnostics.empty ())
-      ~send:(fun publish_diagnostics_params ->
-        Server.notification
-          (Server_notification.PublishDiagnostics publish_diagnostics_params)
-          server)
-  in
-
+let discover_project_context ~notify_errors ~workspace_root
+    (server : State.t Server.t) =
   let analysis_state = Analysis.Shared_types.create_state () in
-
-  let workspace_root = Helpers.workspace_root_uri_of_initialize_params params in
-
-  discover_subpackages_and_populate ~workspace_root ~analysis_state ~server;
+  discover_subpackages_and_populate ~notify_errors ~workspace_root
+    ~analysis_state ~server;
 
   let compiler_config =
     analysis_state.packages_by_root |> Hashtbl.to_seq
     |> Seq.filter_map (fun (root_path, _) ->
-        match Compiler_config.parse ~root:root_path ~fs:state.fs with
+        match
+          Compiler_config.parse ~root:root_path ~fs:(Server.state server).fs
+        with
         | Ok config -> Some (Uri.of_path root_path, config)
         | Error _ ->
           (* NOTE: Surface malformed package configs to the client. We ignore
@@ -233,6 +216,21 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
                 valid packages. *)
           None)
     |> Compiler_config.Uri_map.of_seq
+  in
+  (analysis_state, compiler_config)
+
+let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
+  let state = Server.state server in
+  let diagnostics =
+    Diagnostics.make ~diagnostics:(Diagnostics.empty ())
+      ~send:(fun publish_diagnostics_params ->
+        Server.notification
+          (Server_notification.PublishDiagnostics publish_diagnostics_params)
+          server)
+  in
+  let workspace_root = Helpers.workspace_root_uri_of_initialize_params params in
+  let analysis_state, compiler_config =
+    discover_project_context ~notify_errors:true ~workspace_root server
   in
 
   let state =
@@ -626,7 +624,34 @@ let on_notification notification (server : State.t Server.t) =
     Server.request (Server_request.ClientRegisterCapability params) server;
 
     state
-  | DidChangeWatchedFiles _ -> (
+  | DidChangeWatchedFiles {changes} -> (
+    let state =
+      if
+        List.exists
+          (fun (event : FileEvent.t) ->
+            Filename.basename (Uri.to_path event.uri) = Constants.compiler_log
+            && (event.type_ = FileChangeType.Created
+               || event.type_ = FileChangeType.Changed))
+          changes
+      then
+        let workspace_root = State.workspace_root state in
+        let analysis_state, compiler_config =
+          discover_project_context ~notify_errors:false ~workspace_root server
+        in
+        (* A workspace opened before its first build has no package metadata.
+           Rediscover into fresh tables so failed lookups and old CMT caches
+           cannot survive the build. Keep the previous context if metadata is
+           still unavailable, and preserve buffers, settings and diagnostics. *)
+        if
+          Hashtbl.mem analysis_state.packages_by_root
+            (Uri.to_path workspace_root)
+        then
+          State.initialize state ~params:(State.params state)
+            ~diagnostics:(State.diagnostics state) ~analysis_state
+            ~compiler_config
+        else state
+      else state
+    in
     (* Do not limit diagnostics to the path reported by
        DidChangeWatchedFilesParams. In monorepos, a build in one subpackage
        can change diagnostics that should be shown for files in another

@@ -114,6 +114,11 @@ notifications. Some are out of scope because they don't make sense.
       generated with `build_root` field for each subpackage.
   - [x] Add the warning number to the diagnostic message.
 - [x] `workspace/didChangeWatchedFiles` - client notification
+  - When a `.compiler.log` is created or changed, the server rediscovers packages
+    and refreshes its analysis context and compiler configuration. A workspace
+    opened before its first build can recover without restarting the server.
+    Failed discovery leaves the previous context intact; open buffers, settings
+    and diagnostic ownership are preserved.
   - The server uses this notification to detect changes to generated
     `.compiler.log` files, which usually means a ReScript build has finished.
     When a watched log changes, the server re-reads every known compiler log and
