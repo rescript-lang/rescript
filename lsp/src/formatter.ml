@@ -38,32 +38,17 @@ let run ~uri ~(state : State.t) =
   let close_process_noerr () =
     try ignore (Unix.close_process (stdin, stdout)) with _ -> ()
   in
-
-  let document_has_syntax_error =
-    let engine = Res_driver.parsing_engine in
-    match kind_file with
-    | Res -> (engine.parse_implementation_from_source ~source).invalid
-    | Resi -> (engine.parse_interface_from_source ~source).invalid
-    | _ -> assert false
-  in
-
-  match document_has_syntax_error with
-  | false -> (
-    try
-      output_string stdout source;
-      close_out stdout;
-      let formatted = read_all_from_channel stdin in
-      match Unix.close_process (stdin, stdout) with
-      | Unix.WEXITED 0 -> Ok (Diff.edit ~from:source ~to_:formatted)
-      | status ->
-        Error
-          (Printf.sprintf "%s %s" executable (process_status_to_string status))
-    with exn ->
-      close_out_noerr stdout;
-      close_in_noerr stdin;
-      close_process_noerr ();
-      Error (Printexc.to_string exn))
-  | true ->
-    Error
-      (Printf.sprintf "Failed to format %s, document has syntax error"
-         (Uri.to_path uri))
+  try
+    output_string stdout source;
+    close_out stdout;
+    let formatted = read_all_from_channel stdin in
+    match Unix.close_process (stdin, stdout) with
+    | Unix.WEXITED 0 -> Ok (Diff.edit ~from:source ~to_:formatted)
+    | status ->
+      Error
+        (Printf.sprintf "%s %s" executable (process_status_to_string status))
+  with exn ->
+    close_out_noerr stdout;
+    close_in_noerr stdin;
+    close_process_noerr ();
+    Error (Printexc.to_string exn)
