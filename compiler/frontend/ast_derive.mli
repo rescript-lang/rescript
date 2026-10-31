@@ -24,18 +24,6 @@
 
 type tdcls = Parsetree.type_declaration list
 
-type gen = {
-  structure_gen: tdcls -> Asttypes.rec_flag -> Ast_structure.t;
-  signature_gen: tdcls -> Asttypes.rec_flag -> Ast_signature.t;
-  expression_gen: (Parsetree.core_type -> Parsetree.expression) option;
-}
-
-val register : string -> (Parsetree.expression option -> gen) -> unit
-(**
-   [register name cb]
-   example: [register "accessors" cb]
-*)
-
 val gen_signature :
   tdcls -> Ast_payload.action list -> Asttypes.rec_flag -> Ast_signature.t
 

@@ -27,19 +27,7 @@ type tdcls = Parsetree.type_declaration list
 type gen = {
   structure_gen: tdcls -> Asttypes.rec_flag -> Ast_structure.t;
   signature_gen: tdcls -> Asttypes.rec_flag -> Ast_signature.t;
-  expression_gen: (Parsetree.core_type -> Parsetree.expression) option;
 }
-
-(* the first argument is [config] payload
-   {[
-     { x = {uu} }
-   ]}
-*)
-type derive_table = (Parsetree.expression option -> gen) Map_string.t
-
-let derive_table : derive_table ref = ref Map_string.empty
-
-let register key value = derive_table := Map_string.add key value !derive_table
 
 (* Derivers that used to be built in. They get a dedicated error pointing to
    the replacement instead of the generic "is not supported". *)
@@ -56,11 +44,20 @@ let removed_deriver_hint = function
        are no longer needed."
   | _ -> None
 
-let dispatch (({txt = name; loc}, _) as action : Ast_payload.action) =
-  match removed_deriver_hint name with
-  | Some hint ->
-    Location.raise_errorf ~loc "@deriving(%s) has been removed. %s" name hint
-  | None -> Ast_payload.table_dispatch !derive_table action
+(* The derivers [@deriving(...)] supports, by name. *)
+let dispatch (({txt = name; loc}, config) : Ast_payload.action) =
+  match name with
+  | "accessors" ->
+    Ast_derive_projector.check_config config;
+    {
+      structure_gen = Ast_derive_projector.structure_gen;
+      signature_gen = Ast_derive_projector.signature_gen;
+    }
+  | _ -> (
+    match removed_deriver_hint name with
+    | Some hint ->
+      Location.raise_errorf ~loc "@deriving(%s) has been removed. %s" name hint
+    | None -> Location.raise_errorf ~loc "%s is not supported" name)
 
 let gen_signature tdcls (actions : Ast_payload.action list)
     (explict_nonrec : Asttypes.rec_flag) : Ast_signature.t =

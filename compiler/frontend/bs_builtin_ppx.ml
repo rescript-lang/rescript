@@ -47,8 +47,6 @@
    And if it is inlined some where
 *)
 
-let () = Ast_derive_projector.init ()
-
 let succeed attr attrs =
   match attrs with
   | [_] -> ()
