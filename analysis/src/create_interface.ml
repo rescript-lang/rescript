@@ -1,30 +1,99 @@
 module Source_file_extractor = struct
-  let extract lines ~pos_start ~pos_end =
+  let leading_spaces line =
+    let len = String.length line in
+    let rec go i = if i < len && line.[i] = ' ' then go (i + 1) else i in
+    go 0
+
+  (* For each line from [line_start] to [line_end], whether it begins inside
+     a string or template literal that starts on an earlier line. Such lines
+     are part of the literal's value, so reindenting them would change it. *)
+  let literal_lines lines ~line_start ~col_start ~line_end =
+    let first = lines.(line_start) in
+    let col_start = max 0 (min col_start (String.length first)) in
+    let src =
+      String.concat "\n"
+        (String.sub first col_start (String.length first - col_start)
+        :: Array.to_list
+             (Array.sub lines (line_start + 1) (line_end - line_start)))
+    in
+    let inside = Array.make (line_end - line_start + 1) false in
+    let mark (start_pos : Lexing.position) (end_pos : Lexing.position) =
+      for n = start_pos.pos_lnum to end_pos.pos_lnum - 1 do
+        inside.(n) <- true
+      done
+    in
+    let scanner = Res_scanner.make ~filename:"" src in
+    (* Scan the rest of a template literal, whose backtick is at [start_pos],
+       including the expressions in its interpolations. *)
+    let rec template start_pos =
+      let _, end_pos, token = Res_scanner.scan_template_literal_token scanner in
+      match token with
+      | Res_token.TemplatePart _ ->
+        if interpolation 0 then template start_pos else mark start_pos end_pos
+      | _ -> mark start_pos end_pos
+    (* Scan up to the [}] closing an interpolation; false at the end of the
+       text. *)
+    and interpolation depth =
+      match Res_scanner.scan scanner with
+      | _, _, Res_token.Eof -> false
+      | _, _, Rbrace when depth = 0 -> true
+      | _, _, Rbrace -> interpolation (depth - 1)
+      | _, _, Lbrace -> interpolation (depth + 1)
+      | start_pos, _, Backtick ->
+        template start_pos;
+        interpolation depth
+      | _ -> interpolation depth
+    in
+    let rec go () =
+      match Res_scanner.scan scanner with
+      | _, _, Res_token.Eof -> ()
+      | start_pos, end_pos, String _ ->
+        mark start_pos end_pos;
+        go ()
+      | start_pos, _, Backtick ->
+        template start_pos;
+        go ()
+      | _ -> go ()
+    in
+    go ();
+    inside
+
+  (* The source text from [pos_start] to [pos_end], indented by [indent]:
+     the lines after the first keep their indentation relative to the line
+     the text starts on, except lines inside a string or template literal,
+     which are copied verbatim. *)
+  let extract lines ~indent ~pos_start ~pos_end =
     let line_start, col_start = pos_start in
     let line_end, col_end = pos_end in
     let res = ref [] in
     if line_start < 0 || line_start > line_end || line_end >= Array.length lines
     then []
-    else (
+    else
+      let base = min col_start (leading_spaces lines.(line_start)) in
+      let in_literal = literal_lines lines ~line_start ~col_start ~line_end in
+      let reindent n line =
+        let drop = min base (leading_spaces line) in
+        if in_literal.(n - line_start) then line
+        else if drop = String.length line then ""
+        else indent ^ String.sub line drop (String.length line - drop)
+      in
       for n = line_end downto line_start do
         let line = lines.(n) in
         let len = String.length line in
         if n = line_start && n = line_end then (
           if col_start >= 0 && col_start < col_end && col_end <= len then
-            let indent = String.make col_start ' ' in
             res :=
               (indent ^ String.sub line col_start (col_end - col_start)) :: !res)
         else if n = line_start then (
           if col_start >= 0 && col_start < len then
-            let indent = String.make col_start ' ' in
             res :=
               (indent ^ String.sub line col_start (len - col_start)) :: !res)
         else if n = line_end then (
           if col_end > 0 && col_end <= len then
-            res := String.sub line 0 col_end :: !res)
-        else res := line :: !res
+            res := reindent n (String.sub line 0 col_end) :: !res)
+        else res := reindent n line :: !res
       done;
-      !res)
+      !res
 end
 
 module Attributes_utils : sig
@@ -280,7 +349,7 @@ let print_signature ~path ~extractor ~signature =
       (* Rescript primitive name, e.g. @val external ... *)
       let lines =
         let pos_start, pos_end = Loc.range val_loc in
-        extractor |> Source_file_extractor.extract ~pos_start ~pos_end
+        extractor |> Source_file_extractor.extract ~indent ~pos_start ~pos_end
       in
       let attributes = Attributes_utils.make lines in
 
@@ -304,7 +373,8 @@ let print_signature ~path ~extractor ~signature =
          let lines =
            let pos_start, pos_end = Loc.range type_decl.type_loc in
            let pos_start = attributes_start ~extractor type_decl pos_start in
-           extractor |> Source_file_extractor.extract ~pos_start ~pos_end
+           extractor
+           |> Source_file_extractor.extract ~indent ~pos_start ~pos_end
          in
          (* Copy the type declaration verbatim to preserve attributes *)
          Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n")
