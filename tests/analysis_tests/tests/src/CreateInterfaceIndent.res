@@ -17,3 +17,16 @@ module P = {
     | A
     | B
 }
+
+module Q = {
+  type w = {
+    @as("first
+second") field: int,
+  }
+  @module("a
+b") external multi: unit => unit = "default"
+  type x = {
+    @as(`one
+  two`) other: int,
+  }
+}
