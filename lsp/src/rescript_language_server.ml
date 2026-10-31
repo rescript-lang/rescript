@@ -1,7 +1,7 @@
 open Lsp
 open Lsp.Types
 
-let initialization () =
+let initialization (client_capabilities : ClientCapabilities.t) =
   let textDocumentSync =
     `TextDocumentSyncOptions
       (TextDocumentSyncOptions.create ~openClose:true
@@ -72,6 +72,20 @@ let initialization () =
       (DiagnosticOptions.create ~workspaceDiagnostics:false
          ~identifier:"rescript" ~interFileDependencies:false ())
   in
+  let positionEncoding =
+    let options =
+      Option.bind client_capabilities.general (fun g -> g.positionEncodings)
+    in
+    match options with
+    | None -> None
+    | Some xs ->
+      List.find_map
+        (fun encondig ->
+          match encondig with
+          | (PositionEncodingKind.UTF16 | UTF8) as kind -> Some kind
+          | _ -> None)
+        xs
+  in
   let capabilities =
     ServerCapabilities.create ~textDocumentSync ~completionProvider
       ~codeLensProvider ~hoverProvider:(`Bool true) ~signatureHelpProvider
@@ -79,7 +93,7 @@ let initialization () =
       ~definitionProvider:(`Bool true) ~typeDefinitionProvider:(`Bool true)
       ~codeActionProvider ~documentSymbolProvider:(`Bool true)
       ~referencesProvider:(`Bool true) ~documentFormattingProvider:(`Bool true)
-      ~executeCommandProvider ~diagnosticProvider ()
+      ~executeCommandProvider ~diagnosticProvider ?positionEncoding ()
   in
   let serverInfo =
     InitializeResult.create_serverInfo ~name:"rescript-language-server" ()
@@ -233,10 +247,19 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
     discover_project_context ~notify_errors:true ~workspace_root server
   in
 
+  let initialization_info = initialization params.capabilities in
+
+  let position_encoding =
+    match initialization_info.capabilities.positionEncoding with
+    | None | Some UTF16 -> `UTF16
+    | Some UTF8 -> `UTF8
+    | Some UTF32 | Some (Other _) -> assert false
+  in
+
   let state =
     State.initialize state ~params ~diagnostics ~analysis_state ~compiler_config
+      ~position_encoding
   in
-  let initialization_info = initialization () in
   (initialization_info, state)
 
 let on_request (Client_request.E request) (server : State.t Server.t) =
@@ -549,7 +572,10 @@ let on_notification notification (server : State.t Server.t) =
 
   match notification with
   | Client_notification.TextDocumentDidOpen did_open_params ->
-    let doc = Document.make did_open_params in
+    let doc =
+      Document.make did_open_params
+        ~position_encoding:(State.position_encoding state)
+    in
     let store = Document_store.add ~doc state.store in
 
     let diagnostics =
@@ -649,6 +675,7 @@ let on_notification notification (server : State.t Server.t) =
           State.initialize state ~params:(State.params state)
             ~diagnostics:(State.diagnostics state) ~analysis_state
             ~compiler_config
+            ~position_encoding:(State.position_encoding state)
         else state
       else state
     in

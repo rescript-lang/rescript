@@ -7,6 +7,7 @@ type status =
       diagnostics: Diagnostics.t;
       analysis_state: Analysis.Shared_types.state;
       compiler_config: Compiler_config.t;
+      position_encoding: [`UTF16 | `UTF8];
     }
 
 type t = {
@@ -19,10 +20,19 @@ type t = {
 let make ~store ~configuration ~fs =
   {status = Uninitialized; store; configuration; fs}
 
-let initialize t ~params ~diagnostics ~analysis_state ~compiler_config =
+let initialize t ~params ~diagnostics ~analysis_state ~compiler_config
+    ~position_encoding =
   {
     t with
-    status = Initialized {params; diagnostics; analysis_state; compiler_config};
+    status =
+      Initialized
+        {
+          params;
+          diagnostics;
+          analysis_state;
+          compiler_config;
+          position_encoding;
+        };
   }
 
 let diagnostics t =
@@ -35,16 +45,28 @@ let params t =
   | Uninitialized -> assert false
   | Initialized init -> init.params
 
+let position_encoding t =
+  match t.status with
+  | Uninitialized -> assert false
+  | Initialized init -> init.position_encoding
+
 (* TODO: Consider storing initialized state in a separate record so updates do
    not need to reconstruct the full Initialized payload by hand. *)
 let update_diagnostics diagnostics t =
   match t.status with
   | Uninitialized -> assert false
-  | Initialized {params; analysis_state; compiler_config} ->
+  | Initialized {params; analysis_state; compiler_config; position_encoding} ->
     {
       t with
       status =
-        Initialized {params; analysis_state; diagnostics; compiler_config};
+        Initialized
+          {
+            params;
+            analysis_state;
+            diagnostics;
+            compiler_config;
+            position_encoding;
+          };
     }
 
 let analysis_state t =

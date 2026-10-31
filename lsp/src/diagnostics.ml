@@ -347,6 +347,7 @@ let%expect_test "compiler syntax diagnostics don't clear type diagnostics" =
          ~textDocument:
            (TextDocumentItem.create ~languageId:"rescript" ~uri:uri_a
               ~text:"let x =" ~version:1))
+      ~position_encoding:`UTF16
   in
   ignore (Document_store.add doc_store ~doc);
   let t = update_syntax ~uri:uri_a ~new_diagnostics:[diagnostic "syntax A"] t in

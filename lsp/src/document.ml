@@ -25,8 +25,8 @@ let extension_of_kind (kind : kind) =
   | Resi -> "resi"
   | Other -> assert false
 
-let make (doc : DidOpenTextDocumentParams.t) =
-  let t_doc = Text_document.make ~position_encoding:`UTF8 doc in
+let make (doc : DidOpenTextDocumentParams.t) ~position_encoding =
+  let t_doc = Text_document.make ~position_encoding doc in
   t_doc
 
 let text t = Text_document.text t
