@@ -434,10 +434,8 @@ let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
   | Texp_record {fields} ->
     add_for_record ~env ~extra ~record_type:expression.exp_type
       (fields |> Array.to_list
-      |> Utils.filter_map (fun (desc, item, opt) ->
-          match item with
-          | Typedtree.Overridden (loc, _) -> Some (loc, desc, (), opt)
-          | _ -> None))
+      |> List.map (fun (desc, (loc : Longident.t Location.loc), _) ->
+          (loc, desc, (), false)))
   | Texp_constant constant ->
     add_loc_item extra expression.exp_loc (Constant constant)
   (* Skip unit and list literals *)

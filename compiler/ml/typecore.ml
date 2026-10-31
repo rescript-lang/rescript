@@ -384,6 +384,23 @@ let type_option ty = newty (Tconstr (Predef.path_option, [ty], ref Mnil))
 let mkexp exp_desc exp_type exp_loc exp_env =
   {exp_desc; exp_type; exp_loc; exp_env; exp_extra = []; exp_attributes = []}
 
+(* Which labels of a record a literal writes, indexed by [lbl_pos]. *)
+let written_labels (lbl_all : label_description array) lbl_exp_list =
+  let written = Array.make (Array.length lbl_all) false in
+  List.iter (fun (_, lbl, _, _) -> written.(lbl.lbl_pos) <- true) lbl_exp_list;
+  written
+
+(* The fields of a [Texp_record]: the written ones, ordered by [lbl_pos]. *)
+let record_fields lbl_exp_list =
+  let fields =
+    Array.of_list
+      (List.map (fun (lid, lbl, exp, _) -> (lbl, lid, exp)) lbl_exp_list)
+  in
+  Array.sort
+    (fun (l1, _, _) (l2, _, _) -> Int.compare l1.lbl_pos l2.lbl_pos)
+    fields;
+  fields
+
 let option_none ty loc =
   let lid = Longident.Lident "None" and env = Env.initial_safe_string () in
   let cnone = Env.lookup_constructor lid env in
@@ -2070,10 +2087,7 @@ let rec is_nonexpansive exp =
   | Texp_variant (_, arg) -> is_nonexpansive_opt arg
   | Texp_record {fields; extended_expression} ->
     Array.for_all
-      (fun (lbl, definition, _) ->
-        match definition with
-        | Overridden (_, exp) -> lbl.lbl_mut = Immutable && is_nonexpansive exp
-        | Kept _ -> true)
+      (fun (lbl, _, exp) -> lbl.lbl_mut = Immutable && is_nonexpansive exp)
       fields
     && is_nonexpansive_opt extended_expression
   | Texp_field (exp, _, _) -> is_nonexpansive exp
@@ -3039,39 +3053,24 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
         if fields = [] && repr_opt <> None then ([||], Record_regular)
         else raise (Error (loc, env, Empty_record_literal))
     in
-    let labels_missing = ref [] in
-    let label_definitions =
-      let matching_label lbl =
-        List.find
-          (fun (_, lbl', _, _) -> lbl'.lbl_pos = lbl.lbl_pos)
-          lbl_exp_list
-      in
-      Array.map
-        (fun lbl ->
-          match matching_label lbl with
-          | lid, _lbl, lbl_exp, _ -> Overridden (lid, lbl_exp)
-          | exception Not_found ->
-            if not (label_is_optional lbl) then
-              labels_missing := lbl.lbl_name :: !labels_missing;
-            Overridden
-              ({loc; txt = Lident lbl.lbl_name}, option_none lbl.lbl_arg loc))
-        label_descriptions
+    let written = written_labels label_descriptions lbl_exp_list in
+    let labels_missing =
+      Array.to_list label_descriptions
+      |> List.filter_map (fun lbl ->
+          if written.(lbl.lbl_pos) || label_is_optional lbl then None
+          else Some lbl.lbl_name)
     in
-    if !labels_missing <> [] then
+    if labels_missing <> [] then
       raise
         (Error
            ( loc,
              env,
              Labels_missing
                {
-                 labels = List.rev !labels_missing;
+                 labels = labels_missing;
                  jsx_component_info = jsx_component_error_info;
                } ));
-    let fields =
-      Array.map2
-        (fun descr def -> (descr, def, false))
-        label_descriptions label_definitions
-    in
+    let fields = record_fields lbl_exp_list in
     re
       {
         exp_desc =
@@ -3126,30 +3125,22 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     in
     unify_exp_types ~context:None loc env ty_record (instance env ty_expected);
     check_duplicates ~get_jsx_component_error_info loc env lbl_exp_list;
-    let opt_exp, label_definitions =
+    let opt_exp =
       let _lid, lbl, _lbl_exp, _opt = List.hd lbl_exp_list in
-      let matching_label lbl =
-        List.find
-          (fun (_, lbl', _, _) -> lbl'.lbl_pos = lbl.lbl_pos)
-          lbl_exp_list
-      in
+      let written = written_labels lbl.lbl_all lbl_exp_list in
       let ty_exp = instance env exp.exp_type in
       let unify_kept lbl =
         let _, ty_arg1, ty_res1 = instance_label false lbl in
         unify_exp_types ~context:None exp.exp_loc env ty_exp ty_res1;
-        match matching_label lbl with
-        | lid, _lbl, lbl_exp, _ ->
-          (* do not connect result types for overridden labels *)
-          Overridden (lid, lbl_exp)
-        | exception Not_found ->
+        (* do not connect result types for overridden labels *)
+        if not written.(lbl.lbl_pos) then (
           let _, ty_arg2, ty_res2 = instance_label false lbl in
           unify_exp_types ~context:None loc env ty_arg1 ty_arg2;
           unify_exp_types ~context:None loc env (instance env ty_expected)
-            ty_res2;
-          Kept ty_arg1
+            ty_res2)
       in
-      let label_definitions = Array.map unify_kept lbl.lbl_all in
-      (Some {exp with exp_type = ty_exp}, label_definitions)
+      Array.iter unify_kept lbl.lbl_all;
+      Some {exp with exp_type = ty_exp}
     in
     let num_fields =
       match lbl_exp_list with
@@ -3162,15 +3153,11 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
         None)
       else opt_exp
     in
-    let label_descriptions, representation =
-      let _, {lbl_all; lbl_repres}, _, _ = List.hd lbl_exp_list in
-      (lbl_all, lbl_repres)
+    let representation =
+      let _, {lbl_repres}, _, _ = List.hd lbl_exp_list in
+      lbl_repres
     in
-    let fields =
-      Array.map2
-        (fun descr def -> (descr, def, false))
-        label_descriptions label_definitions
-    in
+    let fields = record_fields lbl_exp_list in
     re
       {
         exp_desc =

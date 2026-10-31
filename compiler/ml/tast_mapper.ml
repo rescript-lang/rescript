@@ -229,10 +229,7 @@ let expr sub x =
     | Texp_record {fields; representation; extended_expression} ->
       let fields =
         Array.map
-          (function
-            | label, Kept t, o -> (label, Kept t, o)
-            | label, Overridden (lid, exp), o ->
-              (label, Overridden (lid, sub.expr sub exp), o))
+          (fun (label, lid, exp) -> (label, lid, sub.expr sub exp))
           fields
       in
       Texp_record

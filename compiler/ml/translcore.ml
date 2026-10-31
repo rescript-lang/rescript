@@ -958,7 +958,7 @@ type jsx_props =
   | Jsx_props_spread of expression
       (** The PPX passes the spread itself when there are no other props *)
   | Jsx_props_record of {
-      fields: (label_description * record_label_definition * bool) array;
+      fields: (label_description * Longident.t loc * expression) array;
       init: expression option;
       copy_fields: bool;
           (** [transl_record]'s choice: copy the fields of [init] one by one,
@@ -1017,19 +1017,37 @@ let jsx_children ~multi (lbl : label_description) (child : expression) =
       Some children
     | _ -> None
 
+(* All labels of the record a [Texp_record] builds. Its [fields] hold only the
+   written ones. *)
+let all_labels
+    (fields : (label_description * Longident.t loc * expression) array) =
+  match fields with
+  | [||] -> [||]
+  | _ ->
+    let lbl, _, _ = fields.(0) in
+    lbl.lbl_all
+
+(* Each label of the record with the expression the literal writes for it, if
+   any, in position order. *)
+let fields_by_position fields =
+  let written = Array.map (fun _ -> None) (all_labels fields) in
+  Array.iter (fun (lbl, _, exp) -> written.(lbl.lbl_pos) <- Some exp) fields;
+  Array.mapi (fun i lbl -> (lbl, written.(i))) (all_labels fields)
+
 (* How [transl_record] builds a record: by copying the fields of [init] one
    by one (or with no [init] at all), or by taking a shallow copy of [init]
    and setting the other fields. JSX props follow the same rule.
    TODO: More strategies
    3 + 2 * List.length lbl_expr_list >= size (density) *)
 let record_copies_fields
-    (fields : (label_description * record_label_definition * bool) array)
+    (fields : (label_description * Longident.t loc * expression) array)
     ~(init : expression option) =
   match init with
   | None -> true
   | Some _ ->
-    Array.length fields < 20
-    && not (Array.exists (fun (lbl, _, _) -> lbl.lbl_optional) fields)
+    let lbl_all = all_labels fields in
+    Array.length lbl_all < 20
+    && not (Array.exists (fun lbl -> lbl.lbl_optional) lbl_all)
 
 let jsx_props_of ~multi (props : expression) =
   match props.exp_desc with
@@ -1044,12 +1062,10 @@ let jsx_props_of ~multi (props : expression) =
     in
     let children =
       Array.to_list fields
-      |> List.find_map (fun ((lbl : label_description), definition, _) ->
-          match definition with
-          | Overridden (_, child)
-            when lbl.lbl_name = "children" && not (is_omitted lbl child) ->
+      |> List.find_map (fun ((lbl : label_description), _, child) ->
+          if lbl.lbl_name = "children" && not (is_omitted lbl child) then
             Some (lbl, child)
-          | Overridden _ | Kept _ -> None)
+          else None)
     in
     let copy_fields = record_copies_fields fields ~init in
     let record children =
@@ -1058,9 +1074,9 @@ let jsx_props_of ~multi (props : expression) =
     let is_array =
       Lambda.record_fields_are_array
         (Array.map
-           (fun ((lbl : label_description), _, _) ->
+           (fun (lbl : label_description) ->
              (lbl.lbl_runtime_name, lbl.lbl_optional))
-           fields)
+           (all_labels fields))
     in
     match children with
     (* a record with the runtime names "0", "1", ... is an array *)
@@ -1689,27 +1705,32 @@ and transl_jsx_element loc
       (* An optional prop that is statically [undefined] can be left out,
          unless it overrides a prop of the spread *)
       let has_spread = Option.is_some init && not copy_fields in
+      let field (lbl : label_description) value =
+        Some (lbl.lbl_runtime_name, lbl.lbl_optional && not has_spread, value)
+      in
+      let written (lbl : label_description) value =
+        if lbl.lbl_name = "children" && Option.is_some children then None
+        else field lbl (transl_exp value)
+      in
       let fields =
-        Array.to_list fields
-        |> List.mapi (fun i (lbl, definition, _) -> (i, lbl, definition))
-        |> List.filter_map (fun (i, (lbl : label_description), definition) ->
-            let field value =
-              Some
-                (lbl.lbl_runtime_name, lbl.lbl_optional && not has_spread, value)
-            in
-            match definition with
-            | Overridden _
-              when lbl.lbl_name = "children" && Option.is_some children ->
-              None
-            | Overridden (_, value) -> field (transl_exp value)
-            | Kept _ when copy_fields ->
-              field
-                (prim
-                   ~primitive:
-                     (Pfield (i, Lambda.fld_record lbl.lbl_runtime_name))
-                   ~args:[var init_id]
-                   loc)
-            | Kept _ -> None)
+        match init with
+        | Some _ when copy_fields ->
+          (* the props the literal leaves out are copied from [init] *)
+          fields_by_position fields |> Array.to_list
+          |> List.filter_map (fun ((lbl : label_description), value) ->
+              match value with
+              | Some value -> written lbl value
+              | None ->
+                field lbl
+                  (prim
+                     ~primitive:
+                       (Pfield
+                          (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))
+                     ~args:[var init_id]
+                     loc))
+        | _ ->
+          Array.to_list fields
+          |> List.filter_map (fun (lbl, _, value) -> written lbl value)
       in
       let children = Option.map transl_list children in
       let init, spread =
@@ -1749,15 +1770,15 @@ and transl_jsx_element loc
 and transl_record loc env fields repres opt_init_expr =
   (* The runtime shape of the record: each field's runtime name, and whether
      it is optional. *)
+  let lbl_all = all_labels fields in
   let field_shape () =
-    fields
-    |> Array.map (fun ((lbl : Types.label_description), _, _) ->
+    lbl_all
+    |> Array.map (fun (lbl : Types.label_description) ->
         (lbl.lbl_runtime_name, lbl.lbl_optional))
   in
   let field_names () =
-    fields
-    |> Array.map (fun ((lbl : Types.label_description), _, _) ->
-        lbl.lbl_runtime_name)
+    lbl_all
+    |> Array.map (fun (lbl : Types.label_description) -> lbl.lbl_runtime_name)
   in
   match (opt_init_expr, repres, fields) with
   | _ -> (
@@ -1767,9 +1788,12 @@ and transl_record loc env fields repres opt_init_expr =
       let init_id = Ident.create "init" in
       let lv =
         Array.mapi
-          (fun i (lbl, definition, _) ->
-            match definition with
-            | Kept _ ->
+          (fun i (lbl, value) ->
+            match (value, opt_init_expr) with
+            | Some expr, _ -> transl_exp expr
+            (* an optional field the literal leaves out *)
+            | None, None -> const const_shape_none
+            | None, Some _ ->
               let access =
                 match repres with
                 | Record_regular ->
@@ -1781,14 +1805,12 @@ and transl_record loc env fields repres opt_init_expr =
                   Pfield
                     (i + 1, Lambda.fld_record_extension lbl.lbl_runtime_name)
               in
-              prim ~primitive:access ~args:[var init_id] loc
-            | Overridden (_lid, expr) -> transl_exp expr)
-          fields
+              prim ~primitive:access ~args:[var init_id] loc)
+          (fields_by_position fields)
       in
       let ll = Array.to_list lv in
       let mut =
-        if Array.exists (fun (lbl, _, _) -> lbl.lbl_mut = Mutable) fields then
-          Mutable
+        if Array.exists (fun lbl -> lbl.lbl_mut = Mutable) lbl_all then Mutable
         else Immutable
       in
       let lam =
@@ -1847,7 +1869,7 @@ and transl_record loc env fields repres opt_init_expr =
             | _ -> assert false)
           | Record_extension ->
             let path =
-              let label, _, _ = fields.(0) in
+              let label = lbl_all.(0) in
               match label.lbl_res.desc with
               | Tconstr (p, _, _) -> p
               | _ -> assert false
@@ -1865,26 +1887,21 @@ and transl_record loc env fields repres opt_init_expr =
       (* Take a shallow copy of the init record, then mutate the fields
          of the copy *)
       let copy_id = Ident.create "newrecord" in
-      let update_field cont (lbl, definition, _opt) =
-        match definition with
-        | Kept _type -> cont
-        | Overridden (_lid, expr) ->
-          let upd =
-            match repres with
-            | Record_regular ->
-              Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl.lbl_runtime_name)
-            | Record_inlined _ ->
-              Psetfield
-                (lbl.lbl_pos, Lambda.fld_record_inline_set lbl.lbl_runtime_name)
-            | Record_unboxed _ -> assert false
-            | Record_extension ->
-              Psetfield
-                ( lbl.lbl_pos + 1,
-                  Lambda.fld_record_extension_set lbl.lbl_runtime_name )
-          in
-          seq
-            (prim ~primitive:upd ~args:[var copy_id; transl_exp expr] loc)
-            cont
+      let update_field cont (lbl, _lid, expr) =
+        let upd =
+          match repres with
+          | Record_regular ->
+            Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl.lbl_runtime_name)
+          | Record_inlined _ ->
+            Psetfield
+              (lbl.lbl_pos, Lambda.fld_record_inline_set lbl.lbl_runtime_name)
+          | Record_unboxed _ -> assert false
+          | Record_extension ->
+            Psetfield
+              ( lbl.lbl_pos + 1,
+                Lambda.fld_record_extension_set lbl.lbl_runtime_name )
+        in
+        seq (prim ~primitive:upd ~args:[var copy_id; transl_exp expr] loc) cont
       in
       match opt_init_expr with
       | None -> assert false

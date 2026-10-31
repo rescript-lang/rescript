@@ -119,3 +119,28 @@ References src/References.res 23:15
   }
 ]
 
+References src/References.res 29:19
+[
+  {
+    "range": {
+      "end": { "character": 36, "line": 26 },
+      "start": { "character": 31, "line": 26 }
+    },
+    "uri": "file:///References.res"
+  },
+  {
+    "range": {
+      "end": { "character": 33, "line": 27 },
+      "start": { "character": 28, "line": 27 }
+    },
+    "uri": "file:///References.res"
+  },
+  {
+    "range": {
+      "end": { "character": 23, "line": 29 },
+      "start": { "character": 18, "line": 29 }
+    },
+    "uri": "file:///References.res"
+  }
+]
+

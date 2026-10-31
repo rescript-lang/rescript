@@ -974,16 +974,7 @@ module Compile = struct
     | Texp_field (e, _lid, _desc) -> e |> expression ~ctx
     | Texp_record {fields; extended_expression} ->
       extended_expression
-      :: (fields |> Array.to_list
-         |> List.map
-              (fun
-                ( _desc,
-                  (record_label_definition : Typedtree.record_label_definition),
-                  _ )
-              ->
-                match record_label_definition with
-                | Kept _typeExpr -> None
-                | Overridden (_loc, e) -> Some e))
+      :: (fields |> Array.to_list |> List.map (fun (_desc, _lid, e) -> Some e))
       |> List.map (expression_opt ~ctx)
       |> Command.unordered_sequence
     | Texp_setfield (e1, _loc, _desc, e2) ->

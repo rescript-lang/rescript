@@ -169,11 +169,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_construct (_, _, args) -> List.iter (sub.expr sub) args
   | Texp_variant (_, expo) -> Option.iter (sub.expr sub) expo
   | Texp_record {fields; extended_expression; _} ->
-    Array.iter
-      (function
-        | _, Kept _, _ -> ()
-        | _, Overridden (_, exp), _ -> sub.expr sub exp)
-      fields;
+    Array.iter (fun (_, _, exp) -> sub.expr sub exp) fields;
     Option.iter (sub.expr sub) extended_expression
   | Texp_field (exp, _, _) -> sub.expr sub exp
   | Texp_setfield (exp1, _, _, exp2) ->

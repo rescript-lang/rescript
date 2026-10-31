@@ -288,9 +288,9 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~direct_callees
         ~pos_from:loc_from.loc_start
   | Texp_record {fields} ->
     fields
-    |> Array.iter (fun (_, record_label_definition, _) ->
-        match record_label_definition with
-        | Typedtree.Overridden (_, ({exp_loc} as e)) when exp_loc.loc_ghost ->
+    |> Array.iter (fun (_, _, (e : Typedtree.expression)) ->
+        match e with
+        | {exp_loc} when exp_loc.loc_ghost ->
           (* Punned field in OCaml projects has ghost location in expression *)
           let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
           collect_expr ~config ~decls ~refs ~file_deps ~cross_file

@@ -296,10 +296,7 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
       | Record_unboxed _ -> fun x -> x
       | Record_regular | Record_inlined _ | Record_extension -> Use.guard
     in
-    let field env = function
-      | _, Kept _, _ -> Use.empty
-      | _, Overridden (_, e), _ -> expression env e
-    in
+    let field env (_, _, e) = expression env e in
     Use.join (use (array field env es)) (option expression env eo)
   | Texp_ifthenelse (cond, ifso, ifnot) ->
     Use.(
@@ -499,10 +496,10 @@ let check_recursive_bindings valbinds =
   in
   Ext_list.iter valbinds (fun {vb_expr} ->
       match vb_expr.exp_desc with
-      | Texp_record
-          {fields = [|(_, Overridden (_, {exp_desc = Texp_function _}), _)|]}
-      | Texp_function _ ->
+      | Texp_record {fields = [|(lbl, _, {exp_desc = Texp_function _})|]}
+        when Array.length lbl.lbl_all = 1 ->
         ()
+      | Texp_function _ -> ()
       (*TODO: add uncurried function too*)
       | _ -> check_recursive_expression ids vb_expr)
 

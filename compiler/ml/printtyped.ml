@@ -738,11 +738,9 @@ and value_binding i ppf x =
   pattern (i + 1) ppf x.vb_pat;
   expression (i + 1) ppf x.vb_expr
 
-and record_field i ppf = function
-  | _, Overridden (li, e), opt ->
-    line i ppf "%a%s\n" fmt_longident li (if opt then "?" else "");
-    expression (i + 1) ppf e
-  | _, Kept _, _ -> line i ppf "<kept>"
+and record_field i ppf (_, li, e) =
+  line i ppf "%a\n" fmt_longident li;
+  expression (i + 1) ppf e
 
 and label_x_expression i ppf (l, e) =
   line i ppf "<arg>\n";

@@ -88,11 +88,7 @@ and expr_opt_no_side_effects eo =
   | None -> true
   | Some e -> e |> expr_no_side_effects
 
-and field_no_side_effects
-    ((_ld, rld, _) : _ * Typedtree.record_label_definition * _) =
-  match rld with
-  | Kept _typeExpr -> true
-  | Overridden (_lid, e) -> e |> expr_no_side_effects
+and field_no_side_effects (_ld, _lid, e) = e |> expr_no_side_effects
 
 and case_no_side_effects : Typedtree.case -> _ =
  fun {c_guard; c_rhs} ->

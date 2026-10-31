@@ -23,3 +23,9 @@ let dd = M.aa
 
 let _ = <ComponentInner/>
 //             ^ref
+
+type labelled = {name: string, label?: string}
+let withLabel = {name: "a", label: "b"}
+let withoutLabel = {name: "c"}
+let _ = withLabel.label
+//                 ^ref
