@@ -106,4 +106,4 @@
  (modules rescript_ocaml)
  (flags
   (:standard -open Rewatch_ocaml_lib))
- (libraries rewatch_ocaml_lib))
+ (libraries rewatch_ocaml_lib rescript_language_server eio_main))

@@ -1,7 +1,7 @@
 # OCaml rewatch
 
 This directory contains the OCaml implementation of ReScript's build system and
-CLI (`rescript build`, `watch`, `clean`, `format`, and `compiler-args`). It
+CLI (`rescript build`, `watch`, `clean`, `format`, `compiler-args`, and `lsp`). It
 ships as `rescript` in the `@rescript/<platform>` packages. The Rust
 implementation in [`../rewatch`](../rewatch) ships next to it as
 `rescript-rust`, and both are tested with the shared integration suite in
@@ -85,6 +85,12 @@ under the process owners described below.
 
 These are intentional:
 
+- `rescript lsp --stdio` runs the `rescript_language_server`
+  library in-process through `Eio_main.run`. It needs no separate server binary
+  or project in the current directory. Stdio is reserved for the protocol,
+  and the server owns its LSP lifecycle. The Rust CLI does not expose this
+  command. `--stdio` is required; `--quiet` and `--verbose` are not supported
+  for this subcommand. `lsp_command_tests.ml` covers the embedded server.
 - `rescript.json` maps that the build system interprets reject duplicate keys
   instead of using the last one.
 - A `namespace-entry` without a namespace is an error.
