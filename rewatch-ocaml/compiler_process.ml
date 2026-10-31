@@ -95,15 +95,29 @@ let run ?poll request =
   Option.iter (fun poll -> poll ()) poll;
   result
 
-let task request =
+let sequential_task requests =
   let cancelled = Atomic.make false in
   Process.concurrent_task
     ~cancel:(fun () -> Atomic.set cancelled true)
     (fun () ->
-      run_in_process
-        ~poll:(fun () ->
-          if Atomic.get cancelled then raise (Process.Interrupted 15))
-        request)
+      let poll () =
+        if Atomic.get cancelled then raise (Process.Interrupted 15)
+      in
+      List.fold_left
+        (fun result request ->
+          if not (Process.succeeded result) then result
+          else (
+            poll ();
+            let next = run_in_process ~poll request in
+            {
+              next with
+              Process.stdout = result.stdout ^ next.stdout;
+              stderr = result.stderr ^ next.stderr;
+            }))
+        Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""}
+        requests)
+
+let task request = sequential_task [request]
 
 let run_requests ?poll ?on_complete requests =
   requests |> List.map task
@@ -158,7 +172,7 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
 let namespace_task ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty ~force
     namespace modules =
   let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
-  let contents =
+  let namespace_contents modules =
     let buffer = Buffer.create 128 in
     Buffer.add_string buffer "randjbuildsystem\n";
     Source.namespace_members ~entry modules
@@ -169,6 +183,23 @@ let namespace_task ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty ~force
         Buffer.add_char buffer '\n');
     Buffer.contents buffer
   in
+  let contents = namespace_contents modules in
+  let public_contents =
+    namespace_contents
+      (List.filter (fun module_ -> not module_.Source.is_dev) modules)
+  in
+  (* Local dev sources need the full namespace; consumers and namespace entries
+     must share the filtered interface. Stage that interface before publication. *)
+  let artifact_dir =
+    if public_contents = contents then build_dir
+    else Filename.concat build_dir ".public-namespace"
+  in
+  let internal_cmi = Filename.concat build_dir (namespace ^ ".cmi") in
+  let previous_cmi =
+    if File_util.is_regular_file internal_cmi then
+      Some (File_util.digest_file internal_cmi)
+    else None
+  in
   let previous_contents =
     try Some (File_util.read_file mlmap)
     with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
@@ -177,15 +208,16 @@ let namespace_task ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty ~force
   if mlmap_changed then
     File_util.write_file_atomic ~ensure_parent:false mlmap contents;
   let outputs_exist =
-    ["cmi"; "cmj"; "cmt"; "mlmap"]
-    |> List.for_all (fun extension ->
-        File_util.is_regular_file
-          (Filename.concat ocaml_dir (namespace ^ "." ^ extension)))
+    Option.is_some previous_cmi
+    && ["cmi"; "cmj"; "cmt"; "mlmap"]
+       |> List.for_all (fun extension ->
+           File_util.is_regular_file
+             (Filename.concat ocaml_dir (namespace ^ "." ^ extension)))
   in
   let published_mlmap_matches =
     try
       File_util.read_file (Filename.concat ocaml_dir (namespace ^ ".mlmap"))
-      = contents
+      = public_contents
     with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> false
   in
   if
@@ -194,39 +226,62 @@ let namespace_task ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty ~force
       || (not published_mlmap_matches)
       || not outputs_exist)
   then None
-  else
+  else (
+    if artifact_dir <> build_dir then (
+      File_util.ensure_dir artifact_dir;
+      File_util.write_file_atomic ~ensure_parent:false
+        (Filename.concat artifact_dir (namespace ^ ".mlmap"))
+        public_contents);
+    let request cwd =
+      {
+        args =
+          [
+            "-runtime-path";
+            runtime;
+            "-w";
+            "-49";
+            "-color";
+            "always";
+            "-no-alias-deps";
+            Filename.basename mlmap;
+          ];
+        cwd;
+      }
+    in
+    let requests =
+      if artifact_dir = build_dir then [request build_dir]
+      else [request build_dir; request artifact_dir]
+    in
     Some
       Compiler_scheduler.
         {
-          task =
-            task
-              {
-                args =
-                  [
-                    "-runtime-path";
-                    runtime;
-                    "-w";
-                    "-49";
-                    "-color";
-                    "always";
-                    "-no-alias-deps";
-                    Filename.basename mlmap;
-                  ];
-                cwd = build_dir;
-              };
+          task = sequential_task requests;
           publish =
             (fun result ->
               if not (Process.succeeded result) then
                 raise
                   (Compiler_scheduler.Build_failure
                      (result.Process.stderr ^ result.stdout));
+              let internal_changed =
+                previous_cmi <> Some (File_util.digest_file internal_cmi)
+              in
+              let include_internal_change change =
+                if internal_changed then Compiler_scheduler.Cmi_changed
+                else change
+              in
               let cmi_change =
-                publish_compiler_artifacts ~artifact_dir:build_dir ~ocaml_dir
-                  ~basename:namespace
-                  [Cmi; Required "cmj"; Required "cmt"; Required "mlmap"]
+                try
+                  publish_compiler_artifacts ~artifact_dir ~ocaml_dir
+                    ~basename:namespace
+                    [Cmi; Required "cmj"; Required "cmt"; Required "mlmap"]
+                  |> include_internal_change
+                with Compiler_scheduler.Publication_failure (error, change) ->
+                  raise
+                    (Compiler_scheduler.Publication_failure
+                       (error, include_internal_change change))
               in
               Compiler_scheduler.{stderr = result.stderr; cmi_change});
-        }
+        })
 
 let post_build_tasks (config : Config.t) path =
   match config.js_post_build with

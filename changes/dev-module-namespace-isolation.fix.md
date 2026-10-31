@@ -1,0 +1,1 @@
+- Keep dependency dev modules out of exported namespaces, while preserving local dev access and compatible namespace-entry interfaces.
