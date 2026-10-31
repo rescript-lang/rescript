@@ -40,6 +40,14 @@ let get_int ~key fields =
   | None -> None
   | Some s -> int_of_string_opt s
 
+let get_version_expr fields =
+  List.find_map
+    (fun ({lid; x = expr} : expression record_element) ->
+      match lid with
+      | {txt = Lident "version"} -> Some expr
+      | _ -> None)
+    fields
+
 let get_string ~key fields = fields |> get_jsx_config_by_key ~key ~type_:String
 
 let update_config config payload =
@@ -50,10 +58,17 @@ let update_config config payload =
     | Some "react" | None -> false
     | Some _ -> true
   in
-  (match (is_generic, get_int ~key:"version" fields) with
-  | true, _ -> config.Jsx_common.version <- 4
-  | false, Some i -> config.Jsx_common.version <- i
-  | _ -> ());
+  (* Only JSX v4 exists. Any other version used to turn the transform off
+     silently, so reject it at the version value. *)
+  (match get_version_expr fields with
+  | Some expr -> (
+    match get_int ~key:"version" fields with
+    | Some 4 -> config.Jsx_common.version <- 4
+    | _ ->
+      Jsx_common.raise_error ~loc:expr.pexp_loc
+        "Unsupported JSX version. Only `version: 4` is supported.")
+  | None -> ());
+  if is_generic then config.Jsx_common.version <- 4;
   match module_raw with
   | None -> ()
   | Some s -> config.module_ <- s

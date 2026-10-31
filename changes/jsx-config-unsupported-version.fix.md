@@ -1,0 +1,1 @@
+- Report an error for `@@jsxConfig` versions other than 4 instead of silently disabling the JSX transform.
