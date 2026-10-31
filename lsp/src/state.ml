@@ -119,12 +119,16 @@ let to_yojson (t : t) : Yojson.Safe.t =
 
   let status_to_yojson = function
     | Uninitialized -> `Assoc [("kind", `String "Uninitialized")]
-    | Initialized {params; diagnostics; compiler_config} ->
+    | Initialized {params; diagnostics; compiler_config; position_encoding} ->
       `Assoc
         [
           ("kind", `String "Initialized");
           ("diagnostics", diagnostics_to_yojson diagnostics);
           ("compiler_config", compiler_config_to_yojson compiler_config);
+          ( "position_encoding",
+            match position_encoding with
+            | `UTF16 -> `String "UTF-16"
+            | `UTF8 -> `String "UTF-8" );
           ("params", InitializeParams.yojson_of_t params);
         ]
   in
