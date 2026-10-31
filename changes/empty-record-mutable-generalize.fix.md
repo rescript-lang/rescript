@@ -1,0 +1,1 @@
+- Stop generalizing the type of an empty record literal `{}` whose record has a mutable field, which let a value be stored at one type and read at another.
