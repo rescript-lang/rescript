@@ -22,4 +22,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val init : unit -> unit
+val check_config : Parsetree.expression option -> unit
+(** Rejects any payload: [@deriving(accessors)] takes no configuration. *)
+
+val structure_gen :
+  Parsetree.type_declaration list -> Asttypes.rec_flag -> Ast_structure.t
+
+val signature_gen :
+  Parsetree.type_declaration list -> Asttypes.rec_flag -> Ast_signature.t
