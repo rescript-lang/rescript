@@ -2095,7 +2095,14 @@ let rec is_nonexpansive exp =
     | None -> (
       (* The optional fields the literal leaves out are allocated too *)
       match fields with
-      | [||] -> true
+      | [||] -> (
+        (* [{}] has no field to find the record's labels through *)
+        match extract_concrete_record exp.exp_env exp.exp_type with
+        | _, _, decls, _ ->
+          List.for_all
+            (fun (ld : Types.label_declaration) -> ld.ld_mutable = Immutable)
+            decls
+        | exception Not_found -> false)
       | _ ->
         let lbl, _, _ = fields.(0) in
         Array.for_all (fun lbl -> lbl.lbl_mut = Immutable) lbl.lbl_all))
