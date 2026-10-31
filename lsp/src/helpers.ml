@@ -93,7 +93,8 @@ let to_camel_case (text : string) : string =
   loop 0 true
 
 let get_cmi_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
-    ~(fs : Fs.fs) ~workspace_root =
+    ~(fs : Fs.fs) =
+  let path = Uri.to_path uri in
   let config_roots =
     compiler_config |> Compiler_config.Uri_map.to_seq
     |> Seq.map (fun (uri, config) -> (uri |> Uri.to_path, config))
@@ -101,9 +102,7 @@ let get_cmi_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
   in
 
   let config =
-    match
-      config_roots |> best_root_match ~path:(workspace_root |> Uri.to_path)
-    with
+    match config_roots |> best_root_match ~path with
     | Some root ->
       Compiler_config.Uri_map.find_opt (Uri.of_path root) compiler_config
     | None -> None
@@ -119,7 +118,6 @@ let get_cmi_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
     let suffix_to_append =
       if String.length namespace > 0 then "-" ^ namespace else ""
     in
-    let path = Uri.to_path uri in
     let resi_file =
       match best_root_match ~path config_roots with
       | Some package_root_path ->
@@ -146,7 +144,8 @@ let get_cmi_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
   | None -> None
 
 let get_compiled_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
-    ~(fs : Fs.fs) ~workspace_root =
+    ~(fs : Fs.fs) =
+  let path = Uri.to_path uri in
   let config_roots =
     compiler_config |> Compiler_config.Uri_map.to_seq
     |> Seq.map (fun (uri, config) -> (uri |> Uri.to_path, config))
@@ -154,9 +153,7 @@ let get_compiled_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
   in
 
   let config =
-    match
-      config_roots |> best_root_match ~path:(workspace_root |> Uri.to_path)
-    with
+    match config_roots |> best_root_match ~path with
     | Some root ->
       Compiler_config.Uri_map.find_opt (Uri.of_path root) compiler_config
     | None -> None
@@ -168,8 +165,6 @@ let get_compiled_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
     in
 
     let js_file_path =
-      let path = Uri.to_path uri in
-
       let file_path =
         let open Filename in
         let ( /+ ) = concat in

@@ -436,7 +436,6 @@ module Open_compiled_file = struct
       Helpers.get_compiled_file ~uri
         ~compiler_config:(State.compiler_config state)
         ~fs:state.fs
-        ~workspace_root:(State.workspace_root state)
     in
     match compiled_uri with
     | Some uri ->
@@ -465,7 +464,6 @@ module Create_interface_file = struct
     let cmi_file =
       Helpers.get_cmi_file ~uri ~fs:state.fs
         ~compiler_config:(State.compiler_config state)
-        ~workspace_root:(State.workspace_root state)
     in
 
     match (should_create, cmi_file) with
