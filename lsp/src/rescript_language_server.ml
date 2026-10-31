@@ -67,9 +67,6 @@ let initialization () =
         ]
       ()
   in
-  (* TODO: Revisit interFileDependencies when pull diagnostics can report
-     dependency-aware invalidation. For now compiler-log diagnostics are
-     refreshed as full snapshots, so advertising false is more accurate. *)
   let diagnosticProvider =
     `DiagnosticOptions
       (DiagnosticOptions.create ~workspaceDiagnostics:false
