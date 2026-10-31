@@ -1,1 +1,1 @@
-- Stop generalizing the type of an empty record literal `{}` whose record has a mutable field, which let a value be stored at one type and read at another.
+- Stop generalizing the type of an empty record literal `{}` whose record has a mutable field, which let a value be stored at one type and read at another. A shared `let empty: t<'a> = {}` of such a record is no longer polymorphic: make it a function (`let empty = () => {}`) or give it a concrete type.
