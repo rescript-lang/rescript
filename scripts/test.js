@@ -1,7 +1,6 @@
 // @ts-check
 
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import {
   buildTestDir,
@@ -184,54 +183,49 @@ if (buildTest) {
 }
 
 if (runtimeDocstrings) {
-  if (process.platform === "darwin" && os.release().startsWith("22")) {
-    // Workaround for intermittent hangs in CI
-    console.log("Skipping docstrings tests on macOS 13");
-  } else {
-    console.log("Running runtime docstrings tests");
+  console.log("Running runtime docstrings tests");
 
-    const generated_mocha_test_res = path.join(
-      docstringTestDir,
-      "generated_mocha_test.res",
-    );
+  const generated_mocha_test_res = path.join(
+    docstringTestDir,
+    "generated_mocha_test.res",
+  );
 
-    // This generated source file is checked during the initial build below, so
-    // a stale copy from an earlier run can fail before we regenerate it.
-    await fs.promises.rm(generated_mocha_test_res, { force: true });
+  // This generated source file is checked during the initial build below, so
+  // a stale copy from an earlier run can fail before we regenerate it.
+  await fs.promises.rm(generated_mocha_test_res, { force: true });
 
-    await execClean([], {
-      cwd: docstringTestDir,
-      stdio: "inherit",
-    });
+  await execClean([], {
+    cwd: docstringTestDir,
+    stdio: "inherit",
+  });
 
-    await execBuild([], {
-      cwd: docstringTestDir,
-      stdio: "inherit",
-    });
+  await execBuild([], {
+    cwd: docstringTestDir,
+    stdio: "inherit",
+  });
 
-    // Generate rescript file with all tests `generated_mocha_test.res`
-    await node(path.join(docstringTestDir, "DocTest.res.js"), [], {
-      cwd: projectDir,
-      stdio: "inherit",
-    });
+  // Generate rescript file with all tests `generated_mocha_test.res`
+  await node(path.join(docstringTestDir, "DocTest.res.js"), [], {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
 
-    // Build again to check if generated_mocha_test.res has syntax or type erros
-    await execBuild([], {
-      cwd: docstringTestDir,
-      stdio: "inherit",
-    });
+  // Build again to check if generated_mocha_test.res has syntax or type erros
+  await execBuild([], {
+    cwd: docstringTestDir,
+    stdio: "inherit",
+  });
 
-    // Format generated_mocha_test.res
-    console.log("Formatting generated_mocha_test.res");
-    await rescript("format", [generated_mocha_test_res], {
-      cwd: projectDir,
-      stdio: "inherit",
-    });
+  // Format generated_mocha_test.res
+  console.log("Formatting generated_mocha_test.res");
+  await rescript("format", [generated_mocha_test_res], {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
 
-    console.log("Run mocha test");
-    await mocha([path.join(docstringTestDir, "generated_mocha_test.res.js")], {
-      cwd: projectDir,
-      stdio: "inherit",
-    });
-  }
+  console.log("Run mocha test");
+  await mocha([path.join(docstringTestDir, "generated_mocha_test.res.js")], {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
 }

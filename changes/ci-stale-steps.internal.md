@@ -1,0 +1,1 @@
+- Remove the unused syntax benchmark CI step and the macOS 13 docstring test workaround.
