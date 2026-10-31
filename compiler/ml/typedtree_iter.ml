@@ -252,11 +252,7 @@ end = struct
       | None -> ()
       | Some exp -> iter_expression exp)
     | Texp_record {fields; extended_expression; _} -> (
-      Array.iter
-        (function
-          | _, Kept _, _ -> ()
-          | _, Overridden (_, exp), _ -> iter_expression exp)
-        fields;
+      Array.iter (fun (_, _, exp) -> iter_expression exp) fields;
       match extended_expression with
       | None -> ()
       | Some exp -> iter_expression exp)

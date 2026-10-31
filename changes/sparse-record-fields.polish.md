@@ -1,0 +1,1 @@
+- Stop storing a `None` expression for every optional field a record literal leaves out. Modules with many JSX DOM elements now compile up to 10× faster, use far less memory, and get `.cmt` files up to 30× smaller.
