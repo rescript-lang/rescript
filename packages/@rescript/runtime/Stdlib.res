@@ -30,6 +30,7 @@ module Result = Stdlib_Result
 module String = Stdlib_String
 module Symbol = Stdlib_Symbol
 module TaggedTemplate = Stdlib_TaggedTemplate
+module Temporal = Stdlib_Temporal
 module Type = Stdlib_Type
 
 module Iterable = Stdlib_Iterable
@@ -169,6 +170,7 @@ null->Nullable.toOption == None
 ```
 */
 external null: nullable<'a> = "#null"
+
 /**
 `undefined` returns the JavaScript `undefined` value as a `nullable<'a>`.
 Use the `Nullable` helpers to convert it into an `option` or to read the value.
@@ -180,6 +182,7 @@ undefined->Nullable.toOption == None
 ```
 */
 external undefined: nullable<'a> = "#undefined"
+
 /**
 `typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.
 It helps you inspect values that come from JavaScript APIs.

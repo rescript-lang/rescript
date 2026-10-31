@@ -77,6 +77,7 @@ See [`Math.LOG10E`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
   */
   @val
   external log10e: float = "Math.LOG10E"
+
   /**
   `Math.Constants.pi` returns Pi - ratio of the circumference to the diameter
 of a circle, ≈ 3.141592653589793.
@@ -90,6 +91,7 @@ See [`Math.PI`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referenc
   */
   @val
   external pi: float = "Math.PI"
+
   /**
   `Math.Constants.sqrt1_2` returns Square root of 1/2, ≈ 0.7071067811865476.
 See [`Math.SQRT1_2`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/SQRT1_2) on MDN.
@@ -102,6 +104,7 @@ See [`Math.SQRT1_2`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Ref
   */
   @val
   external sqrt1_2: float = "Math.SQRT1_2"
+
   /**
   `Math.Constants.e` returns Absolute value for integer argument.
 See [`Math.abs`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/abs) on MDN.

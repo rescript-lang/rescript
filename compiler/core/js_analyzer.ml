@@ -184,6 +184,35 @@ let no_side_effect_statement st =
     true
   with _ -> false
 
+(* The value of a number literal as JavaScript sees it, so that [1] and
+   [1.0] are the same number. [None] for a bigint, which is never [===] to
+   a number. *)
+let number_value (n : J.number) : float option =
+  match n with
+  | Int {i} -> Some (Int32.to_float i)
+  | Float {f} -> float_of_string_opt f
+  | BigInt _ -> None
+
+let eq_literal (x : J.expression_desc) (y : J.expression_desc) : bool option =
+  match (x, y) with
+  | ( Number (BigInt {positive = p0; value = v0}),
+      Number (BigInt {positive = p1; value = v1}) ) ->
+    Some (p0 = p1 && v0 = v1)
+  | Number (BigInt _), Number _ | Number _, Number (BigInt _) -> Some false
+  | Number n0, Number n1 -> (
+    match (number_value n0, number_value n1) with
+    (* Float [=] is IEEE equality like [===]: NaN differs from itself, and
+       [0.] equals [-0.] *)
+    | Some f0, Some f1 -> Some (f0 = f1)
+    | _ -> None)
+  | Bool b0, Bool b1 -> Some (b0 = b1)
+  | Str s0, Str s1 -> Some (s0 = s1)
+  | Null, Null | Undefined _, Undefined _ -> Some true
+  | ( (Bool _ | Number _ | Str _ | Null | Undefined _),
+      (Bool _ | Number _ | Str _ | Null | Undefined _) ) ->
+    Some false
+  | _ -> None
+
 (* TODO: generate [fold2]
    This make sense, for example:
    {[

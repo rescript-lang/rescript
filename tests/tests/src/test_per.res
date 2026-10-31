@@ -35,6 +35,7 @@ let min = (x, y) =>
   } else {
     y
   }
+
 let max = (x, y) =>
   if x >= y {
     x
@@ -127,6 +128,7 @@ type fpclass =
   | FP_zero
   | FP_infinite
   | FP_nan
+
 external classify_float: float => fpclass = "?classify_float"
 
 external string_length: string => int = "%string_length"
@@ -135,6 +137,7 @@ external string_length: string => int = "%string_length"
 
 external int_of_char: char => int = "%identity"
 external unsafe_char_of_int: int => char = "%identity"
+
 let char_of_int = n =>
   if n < 0 || n > 255 {
     invalid_arg("char_of_int")

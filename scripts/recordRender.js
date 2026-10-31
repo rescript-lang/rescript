@@ -194,6 +194,19 @@ export function parseRecord(commit) {
 }
 
 /**
+ * Whether a record says why its commit is made, as the format requires: a
+ * paragraph of prose or a `Why:` section with content. A subject with only
+ * trailers, object blocks or code has no description.
+ * @param {CommitRecord} r
+ */
+export const described = r =>
+  r.sections.some(
+    s =>
+      (s.name === "" && s.text.length > 0) ||
+      (s.name === "Why" && (s.text.length > 0 || s.block.some(l => l.trim()))),
+  );
+
+/**
  * Who made a commit, as `A Person + Claude`: its author, by the GitHub login
  * when known, and its co-authors, each name drawn by `name` and the login
  * as a link to the profile by `profile` (a link, not an `@` mention, which

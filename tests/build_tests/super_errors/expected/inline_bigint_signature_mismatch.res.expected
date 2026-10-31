@@ -11,21 +11,9 @@
   8 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-  let pos: bigint
-  let neg: bigint
-}
-  is not included in
-    {
-  @inline(12n) let pos: bigint
-  @inline(-5n) let neg: bigint
-}
-  Values do not match:
+  
+  Actual declaration ([36m/.../fixtures/inline_bigint_signature_mismatch.res[0m:[2m5:7-9[0m):
     let pos: bigint
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/inline_bigint_signature_mismatch.res[0m:[2m2:3-30[0m):
     @inline(12n) let pos: bigint
-  [36m/.../fixtures/inline_bigint_signature_mismatch.res[0m:[2m2:3-30[0m:
-    Expected declaration
-  [36m/.../fixtures/inline_bigint_signature_mismatch.res[0m:[2m5:7-9[0m:
-    Actual declaration

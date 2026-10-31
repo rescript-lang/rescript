@@ -20,8 +20,6 @@ open Format
 
 val type_structure :
   Env.t -> Parsetree.structure -> Typedtree.structure * Types.signature * Env.t
-val type_toplevel_phrase :
-  Env.t -> Parsetree.structure -> Typedtree.structure * Types.signature * Env.t
 
 val rescript_hide : Typedtree.structure_item_desc -> bool
 
@@ -38,7 +36,6 @@ val transl_signature : Env.t -> Parsetree.signature -> Typedtree.signature
 val check_js_names : toplevel:bool -> Types.signature -> unit
 val type_open_ :
   ?used_slot:bool ref ->
-  ?toplevel:bool ->
   Asttypes.override_flag ->
   Env.t ->
   Location.t ->

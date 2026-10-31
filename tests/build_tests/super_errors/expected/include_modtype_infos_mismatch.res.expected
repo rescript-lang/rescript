@@ -12,38 +12,11 @@
   10 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-  module type T = {
+  
+  In module type T:
+  
+  Actual declaration ([36m/.../fixtures/include_modtype_infos_mismatch.res[0m:[2m7:5-17[0m):
     let x: string
-  }
-}
-  is not included in
-    {
-  module type T = {
+  
+  Expected declaration ([36m/.../fixtures/include_modtype_infos_mismatch.res[0m:[2m3:5-14[0m):
     let x: int
-  }
-}
-  Module type declarations do not match:
-    module type T = {
-  let x: string
-}
-  does not match
-    module type T = {
-  let x: int
-}
-  At position module type T = <here>
-  Modules do not match:
-    {
-  let x: string
-}
-  is not included in
-    {
-  let x: int
-}
-  At position module type T = <here>
-  Values do not match: let x: string is not included in let x: int
-  [36m/.../fixtures/include_modtype_infos_mismatch.res[0m:[2m3:5-14[0m:
-    Expected declaration
-  [36m/.../fixtures/include_modtype_infos_mismatch.res[0m:[2m7:5-17[0m:
-    Actual declaration

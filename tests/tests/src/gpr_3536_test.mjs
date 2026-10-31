@@ -10,8 +10,8 @@ function xx(obj, a0, a1, a2, a3, a4, a5) {
 }
 
 Mocha.describe("Gpr_3536_test", () => {
-  Mocha.test("method chaining with + operator", () => Test_utils.eq("File \"gpr_3536_test.res\", line 19, characters 7-14", 5, 5));
-  Mocha.test("complex method chaining", () => Test_utils.eq("File \"gpr_3536_test.res\", line 23, characters 7-14", xx(3, (prim0, prim1) => prim0 - prim1 | 0, 2, (prim0, prim1) => prim0 + prim1 | 0, 4, (prim0, prim1) => prim0 * prim1 | 0, 3), 11));
+  Mocha.test("method chaining with + operator", () => Test_utils.eq("File \"gpr_3536_test.res\", line 20, characters 7-14", 5, 5));
+  Mocha.test("complex method chaining", () => Test_utils.eq("File \"gpr_3536_test.res\", line 24, characters 7-14", xx(3, (prim0, prim1) => prim0 - prim1 | 0, 2, (prim0, prim1) => prim0 + prim1 | 0, 4, (prim0, prim1) => prim0 * prim1 | 0, 3), 11));
 });
 
 let v = 5;

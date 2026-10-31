@@ -8,18 +8,21 @@ let _ = React.jsxKeyed(C.make, {}, ~key?, ())
 let _ = ReactDOM.jsxKeyed("div", {}, ~key="k", ())
 let _ = ReactDOM.jsxKeyed("div", {}, ~key=?Some("k"), ())
 let _ = ReactDOM.jsxKeyed("div", {}, ~key?, ())
+
 let _ = ReactDOM.jsxsKeyed(
   "div",
   {children: React.array([ReactDOM.jsx("br", {}), ReactDOM.jsx("br", {})])},
   ~key="k",
   (),
 )
+
 let _ = ReactDOM.jsxsKeyed(
   "div",
   {children: React.array([ReactDOM.jsx("br", {}), ReactDOM.jsx("br", {})])},
   ~key=?Some("k"),
   (),
 )
+
 let _ = ReactDOM.jsxsKeyed(
   "div",
   {children: React.array([ReactDOM.jsx("br", {}), ReactDOM.jsx("br", {})])},

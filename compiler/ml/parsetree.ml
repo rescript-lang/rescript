@@ -361,6 +361,11 @@ and expression_desc =
   | Pexp_setfield of expression * Longident.t loc * expression (* E1.l <- E2 *)
   | Pexp_array of expression list (* [| E1; ...; En |] *)
   | Pexp_dict of dict_entry list (* dict{"k1": E1, ...E2} *)
+  | Pexp_spread of spread_kind * spread_element list
+    (* [E1, ...E2] (Spread_array) or list{...E1, E2} (Spread_list).
+       The parser produces it only for literals that need it: an array
+       literal without a spread is [Pexp_array], and a list literal whose only
+       spread is its tail, list{E1, ...E2}, is a chain of [::] constructors. *)
   | Pexp_ifthenelse of expression * expression * expression option
     (* if E1 then E2 else E3 *)
   | Pexp_ternary of expression * expression * expression
@@ -437,6 +442,12 @@ and 'a record_element = {lid: Longident.t loc; x: 'a; opt: bool (* optional *)}
 and dict_entry =
   | Pdict_entry of string loc * expression (* "k": E *)
   | Pdict_spread of expression (* ...E *)
+
+and spread_kind = Spread_array | Spread_list
+
+and spread_element =
+  | Pspread_item of expression (* E *)
+  | Pspread of expression (* ...E *)
 
 and jsx_element =
   | Jsx_fragment of jsx_fragment

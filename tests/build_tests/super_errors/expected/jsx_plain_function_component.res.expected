@@ -1,11 +1,11 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/jsx_plain_function_component.res[0m:[2m26:10-16[0m
+  [36m/.../fixtures/jsx_plain_function_component.res[0m:[2m28:10-16[0m
 
-  24 [2m│[0m }
-  25 [2m│[0m 
-  [1;31m26[0m [2m│[0m let _ = <[1;31mWrapper[0m value="hello" />
+  26 [2m│[0m }
   27 [2m│[0m 
+  [1;31m28[0m [2m│[0m let _ = <[1;31mWrapper[0m value="hello" />
+  29 [2m│[0m 
 
   This JSX tag has type: [1;31mWrapper.props => Jsx.element[0m
   But JSX component positions require:

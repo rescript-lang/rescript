@@ -1,4 +1,5 @@
 type t<+'a>
+
 module Array = {
   open Belt
   type array2<'a> = (array<'a>, array<'a>)

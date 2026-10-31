@@ -1,6 +1,7 @@
 type rec t<'a> =
   | Empty
   | Node(t<'a>, 'a, t<'a>, int)
+
 let rec height = x =>
   switch x {
   | Empty => 0

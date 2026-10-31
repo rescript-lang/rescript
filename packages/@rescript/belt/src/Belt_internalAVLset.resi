@@ -80,6 +80,7 @@ let fromArray: (array<'a>, ~cmp: cmp<'a, 'b>) => t<'a>
 
 let addMutate: (~cmp: cmp<'a, 'b>, t<'a>, 'a) => t<'a>
 let balMutate: node<'a> => node<'a>
+
 /**
 `removeMinAuxWithRootMutate(root, n)` remove the minimum of n in place and store
 its value in the `key root`

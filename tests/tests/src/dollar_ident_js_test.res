@@ -11,8 +11,10 @@ let update$ = {...record$, count$: 5}
 let fn$ = (~count$, ~inc$) => count$ + inc$
 
 let $ = count$ + $count
+
 let $$ = value$ => {
   Console.log(value$)
   value$ + $count
 }
+
 let call$$ = $$($)

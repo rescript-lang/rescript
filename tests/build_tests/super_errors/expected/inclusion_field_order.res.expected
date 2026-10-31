@@ -1,0 +1,23 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inclusion_field_order.res[0m:[2m5:5-7:1[0m
+
+  3 [2m│[0m module M: {
+  4 [2m│[0m   type t = {a: int, b: int, c: int, d: int}
+  [1;31m5[0m [2m│[0m } = [1;31m{[0m
+  [1;31m6[0m [2m│[0m [1;31m  type t = {c: int, a: int, b: int, e: int}[0m
+  [1;31m7[0m [2m│[0m [1;31m}[0m
+  8 [2m│[0m 
+
+  Signature mismatch:
+  
+  Actual declaration ([36m/.../fixtures/inclusion_field_order.res[0m:[2m6:3-43[0m):
+    type t = {c: int, a: int, b: int, e: int}
+  
+  Expected declaration ([36m/.../fixtures/inclusion_field_order.res[0m:[2m4:3-43[0m):
+    type t = {a: int, b: int, c: int, d: int}
+  
+  The field d is only present in the expected declaration.
+  The field e is only present in the actual declaration.
+  The fields are in another order in the expected declaration:
+  a, b, c.

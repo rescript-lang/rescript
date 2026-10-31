@@ -175,6 +175,7 @@ let rfind_with_index = (arr, cmp, v) => {
 }
 
 type split<'a> = [#No_split | #Split(array<'a>, array<'a>)]
+
 let rfind_and_split = (arr, cmp, v): split<_> => {
   let i = rfind_with_index(arr, cmp, v)
   if i < 0 {

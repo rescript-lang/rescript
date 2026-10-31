@@ -18,6 +18,7 @@ eq(__LOC__, parseInt("13"), 13)
 eq(__LOC__, parseInt("+0x32"), 50)
 eq(__LOC__, parseInt("-0x32"), -50)
 eq(__LOC__, parseInt("0x32"), 50)
+
 describe(__MODULE__, () => {
   test("bad_inlining_test", () => {
     eq(__LOC__, badInlining({"field": "3"}), ())

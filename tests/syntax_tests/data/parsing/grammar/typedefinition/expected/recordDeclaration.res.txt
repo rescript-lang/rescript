@@ -55,6 +55,6 @@ type nonrec domProps =
   list: string [@optional ];
   loop: bool [@optional ]}
 type nonrec t = {
-  x: int }
+  x: int }[@@attr ]
 type nonrec t = {
-  x: int }
+  x: int }[@@attr ][@@res.doc {js|doc before record|js}]

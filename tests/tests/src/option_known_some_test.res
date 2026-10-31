@@ -18,6 +18,7 @@ let poly = (y: 'a) =>
 
 // A payload with side effects is evaluated once.
 let calls = ref(0)
+
 let next = () => {
   calls := calls.contents + 1
   calls.contents > 1 ? Some(calls.contents) : None

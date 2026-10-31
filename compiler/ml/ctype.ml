@@ -87,6 +87,7 @@ type subtype_context =
       right_record_name: Path.t;
       issues: Record_coercion.record_field_subtype_violation list;
     }
+  | Coercion_into_private_type of {typename: Path.t}
 
 exception Subtype of type_pairs * type_pairs * subtype_context option
 
@@ -932,6 +933,16 @@ let new_declaration newtype manifest =
     type_inlined_types = [];
   }
 
+(* The constructor binding each existential type created by
+   [instance_constructor], by the stamp of its identifier, for explaining an
+   escaping one. Names are not unique: their counter is reset per binding. *)
+let existential_constructors_key =
+  Request_local.new_key (fun () -> Hashtbl.create 8)
+let existential_constructor id =
+  Hashtbl.find_opt
+    (Domain.DLS.get existential_constructors_key)
+    (Ident.binding_time id)
+
 let instance_constructor ?in_pattern cstr =
   with_copy_session (fun () ->
       (match in_pattern with
@@ -939,12 +950,18 @@ let instance_constructor ?in_pattern cstr =
       | Some (env, newtype_lev) ->
         let process existential =
           let decl = new_declaration (Some (newtype_lev, newtype_lev)) None in
+          (* [$a] for the variable ['a], numbered when the name is taken,
+             so that distinct existentials print differently *)
           let name =
             match repr existential with
-            | {desc = Tvar (Some name)} -> "$" ^ cstr.cstr_name ^ "_'" ^ name
+            | {desc = Tvar (Some name)} -> "$" ^ name
             | _ -> "$" ^ cstr.cstr_name
           in
-          let path = Path.Pident (Ident.create (get_new_abstract_name name)) in
+          let id = Ident.create (get_new_abstract_name name) in
+          Hashtbl.replace
+            (Domain.DLS.get existential_constructors_key)
+            (Ident.binding_time id) cstr.cstr_name;
+          let path = Path.Pident id in
           let new_env = Env.add_local_type path decl !env in
           env := new_env;
           let to_unify = newty (Tconstr (path, [], ref Mnil)) in
@@ -1392,7 +1409,7 @@ let type_changed () = Domain.DLS.get type_changed_key
 let merge r b = if b then r := true
 
 let occur env ty0 ty =
-  let allow_recursive = (*!Clflags.recursive_types ||*) !(umode ()) = Pattern in
+  let allow_recursive = !(umode ()) = Pattern in
   let old = !(type_changed ()) in
   try
     while
@@ -3500,6 +3517,20 @@ let extract_concrete_typedecl_opt env t =
   | v -> Some v
   | exception Not_found -> None
 
+(* Whether [t2] is a private record or variant that [t1], another type, would
+   be coerced into *)
+let coerces_into_private_type env t1 t2 =
+  match extract_concrete_typedecl_opt env t2 with
+  | Some
+      ( p2,
+        _,
+        {type_private = Private; type_kind = Type_record _ | Type_variant _} )
+    -> (
+    match extract_concrete_typedecl_opt env t1 with
+    | Some (p1, _, _) -> not (Path.same p1 p2)
+    | None -> true)
+  | Some _ | None -> false
+
 let rec subtype_rec env trace t1 t2 cstrs =
   let t1 = repr t1 in
   let t2 = repr t2 in
@@ -3564,6 +3595,20 @@ let rec subtype_rec env trace t1 t2 cstrs =
           (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
       | Tconstr (p1, _, _), _ when generic_private_abbrev env p1 ->
         subtype_rec env trace (expand_abbrev_opt env t1) t2 cstrs
+      | _, Tconstr _ when coerces_into_private_type env t1 t2 ->
+        (* Only the module defining a private record or variant builds its
+           values; a coercion from another type would build one anywhere *)
+        let typename =
+          match extract_concrete_typedecl_opt env t2 with
+          | Some (p2, _, _) -> p2
+          | None -> assert false
+        in
+        ( trace,
+          t1,
+          t2,
+          !(current_univar_pairs ()),
+          Some (Coercion_into_private_type {typename}) )
+        :: cstrs
       | Tconstr (p1, [], _), Tconstr (p2, [], _)
         when Path.same p1 Predef.path_int && Path.same p2 Predef.path_float ->
         (* Int can always be coerced to float *)

@@ -103,6 +103,7 @@ module Doc = {
     | Group({shouldBreak: bool, doc: t})
     | CustomLayout(list<t>)
     | BreakParent
+
   /* | Cursor */
 
   let nil = Nil
@@ -2944,6 +2945,7 @@ module ParsetreeViewer: {
   let shouldIndentBinaryExpr: Parsetree.expression => bool
   let shouldInlineRhsBinaryExpr: Parsetree.expression => bool
   let filterPrinteableAttributes: Parsetree.attributes => Parsetree.attributes
+
   let partitionPrinteableAttributes: Parsetree.attributes => (
     Parsetree.attributes,
     Parsetree.attributes,
@@ -2953,6 +2955,7 @@ module ParsetreeViewer: {
     Asttypes.arg_label,
     Parsetree.expression,
   )> => bool
+
   let requiresSpecialCallbackPrintingFirstArg: list<(
     Asttypes.arg_label,
     Parsetree.expression,
@@ -4255,6 +4258,7 @@ module CommentTable = {
     ->Doc.toString(~width=80)
     ->print_endline
   }
+
   let attach = (tbl, loc, comments) =>
     switch comments {
     | list{} => ()
@@ -12602,6 +12606,7 @@ module Parser = {
   }
 
   let beginRegion = p => p.regions = list{ref(Report), ...p.regions}
+
   let endRegion = p =>
     try p.regions = List.tl(p.regions) catch {
     | Failure(_) => ()
@@ -12759,6 +12764,7 @@ module NapkinScript = {
       let id = Location.mknoloc("napkinscript.patternhole")
       Ast_helper.Pat.extension((id, PStr(list{})))
     }
+
     /* Ast_helper.Pat.any  () */
 
     let defaultModuleExpr = () => Ast_helper.Mod.structure(list{})

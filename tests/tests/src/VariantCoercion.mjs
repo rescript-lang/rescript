@@ -104,6 +104,18 @@ let CoerceVariantBinaryOp = {
   z: z
 };
 
+let PrivateColor = {
+  red: "Red"
+};
+
+function colorToPlain(c) {
+  return c;
+}
+
+function colorToString(c) {
+  return c;
+}
+
 let a$2 = "Three";
 
 let b = "Three";
@@ -115,6 +127,8 @@ let d = 1;
 let ii = 1.1;
 
 let dd = 1.1;
+
+let redName = "Red";
 
 export {
   a$2 as a,
@@ -131,5 +145,9 @@ export {
   CoerceFromBigintToVariant,
   CoerceFromPolyvariantToVariant,
   CoerceVariantBinaryOp,
+  PrivateColor,
+  colorToPlain,
+  colorToString,
+  redName,
 }
 /*  Not a pure module */

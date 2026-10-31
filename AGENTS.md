@@ -78,6 +78,10 @@ relevant guidance from each.
 - Write each commit message as a record in the format of
   [`.agents/skills/records/SKILL.md`](.agents/skills/records/SKILL.md), and
   render review pages from records with `make semantic-diff`
+- Every commit needs a description below its subject: a line or two of
+  prose or a `Why:` section. This includes small follow-ups like adding a
+  changelog fragment or fixing CI; a subject alone fails the Semantic Diff
+  check (`node scripts/commitRecords.js --check origin/master..HEAD`)
 
 ### Stacked pull requests
 

@@ -97,11 +97,13 @@ let pm0 = switch ir0 {
 | V0({x0, x3}) => (x0, x3)
 | V1({y0, y1}) => (y0, y1)
 }
+
 let pm1 = switch ir1 {
 | V0({x0, x1, x3}) => (x0, x1, x3)
 | V0({x0, x1: ?None, x3}) => (x0, "n/a", x3)
 | V1({y0, y1}) => (y0, "n/a", y1)
 }
+
 let pm2 = switch ir2 {
 | V0({x0, x1, x2, x3}) => (x0, x1, x2, x3)
 | V0({x0, x1: ?None, x2, x3}) => (x0, "n/a", x2, x3)
@@ -109,6 +111,7 @@ let pm2 = switch ir2 {
 | V0({x0, x1: ?None, x2: ?None, x3}) => (x0, "n/a", 0, x3)
 | V1({y0, y1}) => (y0, "n/a", 0, y1)
 }
+
 let inlinedRecord = ir =>
   switch ir {
   | V0({x0, x1: ?Some("x1"), x2, x3}) => (x0, "x1", x2, x3)
@@ -119,6 +122,7 @@ let inlinedRecord = ir =>
   | V0({x0, x1: ?None, x2: ?None, x3}) => (x0, "n/a", 0, x3)
   | V1({y0, y1}) => (y0, "n/a", 0, y1)
   }
+
 let pm3 = inlinedRecord(ir2)
 let pm4 = inlinedRecord(ir3)
 

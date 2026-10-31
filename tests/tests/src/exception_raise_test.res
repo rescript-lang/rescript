@@ -7,6 +7,7 @@ exception Local
 exception B(list<int>)
 exception C(int, int)
 exception D((int, int))
+
 let appf = (g, x) => {
   module U = {
     exception A(int)
@@ -59,8 +60,10 @@ let fff0 = (x, g) =>
   | exception _ => 1
   | _ => g()
   }
+
 type in_channel
 @val external input_line: in_channel => string = "input_line"
+
 let rec input_lines = (ic, acc) =>
   switch input_line(ic) {
   | exception _ => List.reverse(acc)

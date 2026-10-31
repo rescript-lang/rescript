@@ -145,8 +145,8 @@ function f(x) {
 
 Mocha.describe("Int_poly_var_test", () => {
   Mocha.test("int poly var test", () => {
-    Test_utils.eq("File \"int_poly_var_test.res\", line 102, characters 7-14", hihi, 3);
-    Test_utils.eq("File \"int_poly_var_test.res\", line 103, characters 7-14", tuple, [
+    Test_utils.eq("File \"int_poly_var_test.res\", line 106, characters 7-14", hihi, 3);
+    Test_utils.eq("File \"int_poly_var_test.res\", line 107, characters 7-14", tuple, [
       0,
       1,
       2,

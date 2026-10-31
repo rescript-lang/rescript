@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/gadt_nonrec_later_constructor.res[0m:[2m1:19-40[0m
+
+  [1;31m1[0m [2m│[0m type t<_> = Plain [1;31m| Indexed(int): t<int>[0m
+  2 [2m│[0m 
+
+  GADTs require recursive type syntax.
+  Define your type using `type rec` instead of `type`.

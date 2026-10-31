@@ -1,11 +1,11 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/record_coercion_as_payload_mismatch_left.res[0m:[2m15:10-15[0m
+  [36m/.../fixtures/record_coercion_as_payload_mismatch_left.res[0m:[2m16:10-15[0m
 
-  13 [2m│[0m }
-  14 [2m│[0m 
-  [1;31m15[0m [2m│[0m let y = ([1;31mx :> y[0m)
-  16 [2m│[0m 
+  14 [2m│[0m }
+  15 [2m│[0m 
+  [1;31m16[0m [2m│[0m let y = ([1;31mx :> y[0m)
+  17 [2m│[0m 
 
   Type x is not a subtype of y 
 

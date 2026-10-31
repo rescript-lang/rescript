@@ -24,9 +24,11 @@ type localeOptions = {
 @new external makeWithYM: (~year: int, ~month: int) => t = "Date"
 @new external makeWithYMD: (~year: int, ~month: int, ~day: int) => t = "Date"
 @new external makeWithYMDH: (~year: int, ~month: int, ~day: int, ~hours: int) => t = "Date"
+
 @new
 external makeWithYMDHM: (~year: int, ~month: int, ~day: int, ~hours: int, ~minutes: int) => t =
   "Date"
+
 @new
 external makeWithYMDHMS: (
   ~year: int,
@@ -36,6 +38,7 @@ external makeWithYMDHMS: (
   ~minutes: int,
   ~seconds: int,
 ) => t = "Date"
+
 @new
 external makeWithYMDHMSM: (
   ~year: int,
@@ -50,9 +53,11 @@ external makeWithYMDHMSM: (
 module UTC = {
   @val external makeWithYM: (~year: int, ~month: int) => msSinceEpoch = "Date.UTC"
   @val external makeWithYMD: (~year: int, ~month: int, ~day: int) => msSinceEpoch = "Date.UTC"
+
   @val
   external makeWithYMDH: (~year: int, ~month: int, ~day: int, ~hours: int) => msSinceEpoch =
     "Date.UTC"
+
   @val
   external makeWithYMDHM: (
     ~year: int,
@@ -61,6 +66,7 @@ module UTC = {
     ~hours: int,
     ~minutes: int,
   ) => msSinceEpoch = "Date.UTC"
+
   @val
   external makeWithYMDHMS: (
     ~year: int,
@@ -70,6 +76,7 @@ module UTC = {
     ~minutes: int,
     ~seconds: int,
   ) => msSinceEpoch = "Date.UTC"
+
   @val
   external makeWithYMDHMSM: (
     ~year: int,
@@ -109,13 +116,17 @@ let compare = (a, b) => Stdlib_Float.compare(a->getTime, b->getTime)
 @send external setHours: (t, int) => unit = "setHours"
 @send external setHoursM: (t, ~hours: int, ~minutes: int) => unit = "setHours"
 @send external setHoursMS: (t, ~hours: int, ~minutes: int, ~seconds: int) => unit = "setHours"
+
 @send
 external setHoursMSMs: (t, ~hours: int, ~minutes: int, ~seconds: int, ~milliseconds: int) => unit =
   "setHours"
+
 @send external setMinutes: (t, int) => unit = "setMinutes"
 @send external setMinutesS: (t, ~minutes: int, ~seconds: int) => unit = "setMinutes"
+
 @send
 external setMinutesSMs: (t, ~minutes: int, ~seconds: int, ~milliseconds: int) => unit = "setMinutes"
+
 @send external setSeconds: (t, int) => unit = "setSeconds"
 @send external setSecondsMs: (t, ~seconds: int, ~milliseconds: int) => unit = "setSeconds"
 @send external setMilliseconds: (t, int) => unit = "setMilliseconds"
@@ -132,14 +143,18 @@ external setMinutesSMs: (t, ~minutes: int, ~seconds: int, ~milliseconds: int) =>
 
 @send external setUTCFullYear: (t, int) => unit = "setUTCFullYear"
 @send external setUTCFullYearM: (t, ~year: int, ~month: int) => unit = "setUTCFullYear"
+
 @send
 external setUTCFullYearMD: (t, ~year: int, ~month: int, ~day: int) => unit = "setUTCFullYear"
+
 @send external setUTCMonth: (t, int) => unit = "setUTCMonth"
 @send external setUTCDate: (t, int) => unit = "setUTCDate"
 @send external setUTCHours: (t, int) => unit = "setUTCHours"
 @send external setUTCHoursM: (t, ~hours: int, ~minutes: int) => unit = "setUTCHours"
+
 @send
 external setUTCHoursMS: (t, ~hours: int, ~minutes: int, ~seconds: int) => unit = "setUTCHours"
+
 @send
 external setUTCHoursMSMs: (
   t,
@@ -148,11 +163,14 @@ external setUTCHoursMSMs: (
   ~seconds: int,
   ~milliseconds: int,
 ) => unit = "setUTCHours"
+
 @send external setUTCMinutes: (t, int) => unit = "setUTCMinutes"
 @send external setUTCMinutesS: (t, ~minutes: int, ~seconds: int) => unit = "setUTCMinutes"
+
 @send
 external setUTCMinutesSMs: (t, ~minutes: int, ~seconds: int, ~milliseconds: int) => unit =
   "setUTCMinutes"
+
 @send external setUTCSeconds: (t, int) => unit = "setUTCSeconds"
 @send external setUTCSecondsMs: (t, ~seconds: int, ~milliseconds: int) => unit = "setUTCSeconds"
 @send external setUTCMilliseconds: (t, int) => unit = "setUTCMilliseconds"
@@ -163,15 +181,20 @@ external setUTCMinutesSMs: (t, ~minutes: int, ~seconds: int, ~milliseconds: int)
 
 @send external toLocaleDateString: t => string = "toLocaleDateString"
 @send external toLocaleDateStringWithLocale: (t, string) => string = "toLocaleDateString"
+
 @send
 external toLocaleDateStringWithLocaleAndOptions: (t, string, localeOptions) => string =
   "toLocaleDateString"
+
 @send external toLocaleString: t => string = "toLocaleString"
 @send external toLocaleStringWithLocale: (t, string) => string = "toLocaleString"
+
 @send
 external toLocaleStringWithLocaleAndOptions: (t, string, localeOptions) => string = "toLocaleString"
+
 @send external toLocaleTimeString: t => string = "toLocaleTimeString"
 @send external toLocaleTimeStringWithLocale: (t, string) => string = "toLocaleTimeString"
+
 @send
 external toLocaleTimeStringWithLocaleAndOptions: (t, string, localeOptions) => string =
   "toLocaleTimeString"
@@ -179,5 +202,6 @@ external toLocaleTimeStringWithLocaleAndOptions: (t, string, localeOptions) => s
 @send external toISOString: t => string = "toISOString"
 @send external toUTCString: t => string = "toUTCString"
 @return(nullable) @send external toJSON: t => option<string> = "toJSON"
+@send external toTemporalInstant: t => Stdlib_Temporal_Common.instant = "toTemporalInstant"
 
 external ignore: t => unit = "%ignore"

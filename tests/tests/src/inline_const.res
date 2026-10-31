@@ -7,6 +7,7 @@
 @inline let f2 = `中文`
 
 @inline let escapedValue = `\x61\n\uD83D\uDE00`
+
 /* Do we need fix 
   let f2 : string = blabla
 */
@@ -22,6 +23,7 @@ module N1 = () => {
   @inline let xx = 3e-6
   let xx0 = 3e-6
 }
+
 let h = f
 
 let hh = f ++ f

@@ -9,9 +9,12 @@ module Env = {
   @val
   external viteDefaultCompilerVersion: option<string> =
     "import.meta.env.VITE_DEFAULT_COMPILER_VERSION"
+
   @val external viteCompilerVersions: option<string> = "import.meta.env.VITE_COMPILER_VERSIONS"
+
   @val
   external viteCompilerPreviewRoot: option<string> = "import.meta.env.VITE_COMPILER_PREVIEW_ROOT"
+
   @val external viteBaseUrl: option<string> = "import.meta.env.BASE_URL"
 }
 
@@ -32,13 +35,17 @@ module Instance = {
   @send external setJsxPreserveMode: (compilerInstance, bool) => unit = "setJsxPreserveMode"
   @send external setGentypeEnabled: (compilerInstance, bool) => unit = "setGentypeEnabled"
   @send external setSourceMapMode: (compilerInstance, string) => unit = "setSourceMapMode"
+
   @send
   external setSourceMapSourcesContent: (compilerInstance, bool) => unit =
     "setSourceMapSourcesContent"
+
   @send external setSourceMapRoot: (compilerInstance, string) => unit = "setSourceMapRoot"
+
   @send
   external setExperimentalFeatures: (compilerInstance, array<string>) => unit =
     "setExperimentalFeatures"
+
   @get external rescript: compilerInstance => rescriptCompiler = "rescript"
   @send external getConfig: compilerInstance => compilerConfig = "getConfig"
   @get external version: compilerInstance => option<string> = "version"
@@ -55,12 +62,16 @@ module Config = {
   @get external moduleSystem: compilerConfig => option<string> = "module_system"
   @get external warnFlags: compilerConfig => option<string> = "warn_flags"
   @get external jsxPreserveMode: compilerConfig => option<bool> = "jsx_preserve_mode"
+
   @get
   external experimentalFeatures: compilerConfig => option<array<string>> = "experimental_features"
+
   @get external gentypeEnabled: compilerConfig => option<bool> = "gentype_enabled"
   @get external sourceMapMode: compilerConfig => option<string> = "source_map_mode"
+
   @get
   external sourceMapSourcesContent: compilerConfig => option<bool> = "source_map_sources_content"
+
   @get external sourceMapRoot: compilerConfig => option<string> = "source_map_root"
 }
 
@@ -142,6 +153,7 @@ module EventTarget = {
   let setValue = (target: {..}, value: string) => target["value"] = value
   let selectionStart = (target: {..}): int => target["selectionStart"]
   let selectionEnd = (target: {..}): int => target["selectionEnd"]
+
   let setSelectionRange = (target: {..}, start, end_) => {
     let setSelectionRange: (int, int) => unit = target["setSelectionRange"]
     setSelectionRange(start, end_)
@@ -178,11 +190,14 @@ module ClassList = {
 
 module Element = {
   @send external setAttribute: (Dom.element, string, string) => unit = "setAttribute"
+
   @send
   external addEventListener: (Dom.element, string, Dom.event => unit) => unit = "addEventListener"
+
   @send
   external removeEventListener: (Dom.element, string, Dom.event => unit) => unit =
     "removeEventListener"
+
   @send external appendChild: (Dom.element, Dom.element) => unit = "appendChild"
   @send external removeChild: (Dom.element, Dom.element) => unit = "removeChild"
   @send external focus: Dom.element => unit = "focus"
@@ -191,16 +206,22 @@ module Element = {
   @send external hasPointerCapture: (Dom.element, int) => bool = "hasPointerCapture"
   @send external getBoundingClientRect: Dom.element => boundingRect = "getBoundingClientRect"
   @get external classList: Dom.element => classList = "classList"
+
   @send @return(nullable)
   external querySelector: (Dom.element, string) => option<Dom.element> = "querySelector"
+
   @get @return(nullable)
   external parentElement: Dom.element => option<Dom.element> = "parentElement"
+
   @send
   external scrollIntoView: (Dom.element, scrollIntoViewOptions) => unit = "scrollIntoView"
+
   @get external style: Dom.element => CssStyle.t = "style"
+
   @get @return(nullable)
   external getScrollHandler: Dom.element => option<Dom.event => unit> =
     "__devPlaygroundScrollHandler"
+
   @set
   external setScrollHandler: (Dom.element, Dom.event => unit) => unit =
     "__devPlaygroundScrollHandler"
@@ -243,8 +264,10 @@ module Document = {
   @get external body: {..} => Dom.element = "body"
   @send external createScriptElement: ({..}, @as("script") _) => Dom.element = "createElement"
   @send external createTextAreaElement: ({..}, @as("textarea") _) => Dom.element = "createElement"
+
   @send @return(nullable)
   external getElementById: ({..}, string) => option<Dom.element> = "getElementById"
+
   @send external execCommand: ({..}, string) => bool = "execCommand"
 }
 

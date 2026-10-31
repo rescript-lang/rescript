@@ -9,15 +9,13 @@
   11 [2m│[0m 
 
   Signature mismatch:
-  ...
-  Type declarations do not match:
-    type dog = A_classes.dog
-  is not included in
-    type dog
-  [36m/.../fixtures/Cross_runtime_annotation_functor_argument/B_user.res[0m:[2m4:24-31[0m:
-    Expected declaration
-  [36m/.../fixtures/Cross_runtime_annotation_functor_argument/A_classes.res[0m:[2m2:20-44[0m:
-    Actual declaration
+  
+  Actual declaration ([36m/.../fixtures/Cross_runtime_annotation_functor_argument/A_classes.res[0m:[2m2:20-44[0m):
+    @instanceOf("Dog") type dog = A_classes.dog
+  
+  Expected declaration ([36m/.../fixtures/Cross_runtime_annotation_functor_argument/B_user.res[0m:[2m4:24-31[0m):
+    @instanceOf("Dog") type dog
+  
   Their runtime representations differ:
-  the first declaration states instances of Dog, a subclass of Animal,
-  the second declaration states instances of Dog.
+    Actual declaration: instances of Dog, a subclass of Animal
+    Expected declaration: instances of Dog

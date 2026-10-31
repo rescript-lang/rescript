@@ -7,6 +7,7 @@ module L = Belt.List
 let {push} = module(A)
 
 type t<'a> = array<'a>
+
 let () =
   [1, 2, 3, 4]
   ->Array.filter(x => x > 2)

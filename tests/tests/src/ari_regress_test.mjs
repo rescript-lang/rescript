@@ -18,10 +18,10 @@ function v(__x) {
 }
 
 Mocha.describe("Ari_regress_test", () => {
-  Mocha.test("curry", () => Test_utils.eq("File \"ari_regress_test.res\", line 25, characters 7-14", 7, 7));
-  Mocha.test("curry2", () => Test_utils.eq("File \"ari_regress_test.res\", line 30, characters 6-13", 14, (v(1), v(1))));
-  Mocha.test("curry3", () => Test_utils.eq("File \"ari_regress_test.res\", line 40, characters 7-14", x, 14));
-  Mocha.test("ref count", () => Test_utils.eq("File \"ari_regress_test.res\", line 44, characters 7-14", h, 2));
+  Mocha.test("curry", () => Test_utils.eq("File \"ari_regress_test.res\", line 26, characters 7-14", 7, 7));
+  Mocha.test("curry2", () => Test_utils.eq("File \"ari_regress_test.res\", line 31, characters 6-13", 14, (v(1), v(1))));
+  Mocha.test("curry3", () => Test_utils.eq("File \"ari_regress_test.res\", line 41, characters 7-14", x, 14));
+  Mocha.test("ref count", () => Test_utils.eq("File \"ari_regress_test.res\", line 45, characters 7-14", h, 2));
 });
 
 /*  Not a pure module */

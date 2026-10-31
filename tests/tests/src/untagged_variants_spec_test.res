@@ -14,6 +14,7 @@ external raw: 'a => 'b = "%identity"
 
 // Rule 1: `@unboxed` and `@tag` on the type apply to every constructor.
 @unboxed type whole = WA(int) | WB({x: int}) | WC
+
 let wholeName = v =>
   switch v {
   | WA(_) => "WA"
@@ -33,6 +34,7 @@ type literals =
   | @as(null) Null
   | @as(undefined) Undefined
   | Payload({x: int})
+
 @unboxed @tag("kind") type tagIgnored = TI({x: int}) | TS(string)
 @unboxed type asIgnored = | @as("x") AsX(string) | AsY(int)
 
@@ -45,6 +47,7 @@ type kinds =
   | KBool(bool)
   | KFunction(int => int)
   | KObject({x: int})
+
 let kindName = v =>
   switch v {
   | KString(_) => "string"
@@ -57,13 +60,16 @@ let kindName = v =>
 
 // Rule 4: arrays, tuples and dicts.
 @unboxed type tuples = Tuple((int, string)) | TDict(dict<int>)
+
 let tupleName = v =>
   switch v {
   | Tuple(_) => "array"
   | TDict(_) => "object"
   }
+
 type myDict = Dict.t<int>
 @unboxed type aliasDict = ADict(myDict) | AArray(array<int>)
+
 let aliasDictName = v =>
   switch v {
   | ADict(_) => "object"
@@ -72,6 +78,7 @@ let aliasDictName = v =>
 
 // Rules 4 and 5: instance cases, written directly and through an alias.
 type myDate = Date.t
+
 @unboxed
 type instances =
   | IDate(myDate)
@@ -85,6 +92,7 @@ type instances =
   | IDataView(DataView.t)
   | IFloat64(Float64Array.t)
   | IString(string)
+
 let instanceName = v =>
   switch v {
   | IDate(_) => "Date"
@@ -102,6 +110,7 @@ let instanceName = v =>
 
 // Rule 4: a payload of no recognized kind is the only payload case.
 @unboxed type unknown = | @as(null) UNull | @as("none") UNone | UList(list<int>)
+
 let unknownName = v =>
   switch v {
   | UNull => "null"
@@ -111,24 +120,31 @@ let unknownName = v =>
 
 // Rule 7: literal cases are tested first.
 @unboxed type overlapString = | @as("a") LitA | AnyString(string)
+
 let overlapStringName = v =>
   switch v {
   | LitA => "LitA"
   | AnyString(_) => "AnyString"
   }
+
 @unboxed type overlapNumber = | @as(1) LitOne | AnyInt(int)
+
 let overlapNumberName = v =>
   switch v {
   | LitOne => "LitOne"
   | AnyInt(_) => "AnyInt"
   }
+
 @unboxed type overlapBool = | @as(true) LitTrue | AnyBool(bool)
+
 let overlapBoolName = v =>
   switch v {
   | LitTrue => "LitTrue"
   | AnyBool(_) => "AnyBool"
   }
+
 @unboxed type overlapNull = | @as(null) LitNull | AnyObject({x: int})
+
 let overlapNullName = v =>
   switch v {
   | LitNull => "LitNull"
@@ -137,6 +153,7 @@ let overlapNullName = v =>
 
 // Rule 8: instance checks precede the `typeof` checks.
 @unboxed type objectFirst = OObject({x: int}) | ODate(Date.t)
+
 let objectFirstName = v =>
   switch v {
   | OObject(_) => "object"
@@ -145,6 +162,7 @@ let objectFirstName = v =>
 
 // Rule 8: an int case is recognized as any number.
 @unboxed type intOrString = I(int) | S(string)
+
 let intOrStringName = v =>
   switch v {
   | I(_) => "int"
@@ -153,12 +171,14 @@ let intOrStringName = v =>
 
 // Rule 9: `null` and arrays do not reach the object case.
 @unboxed type guarded = GArray(array<int>) | GObject({x: int}) | @as(null) GNull
+
 let guardedName = v =>
   switch v {
   | GArray(_) => "array"
   | GObject(_) => "object"
   | GNull => "null"
   }
+
 let guardedObjectOnly = v =>
   switch v {
   | GObject(_) => "object"
@@ -167,12 +187,15 @@ let guardedObjectOnly = v =>
 
 // Rule 10: in a two-way test the second case has no check.
 @unboxed type twoInstances = TDate(Date.t) | TRegExp(RegExp.t)
+
 let twoInstancesName = v =>
   switch v {
   | TDate(_) => "Date"
   | TRegExp(_) => "RegExp"
   }
+
 @unboxed type promiseOrFloat = PPromise(promise<int>) | PFloat(float)
+
 let promiseOrFloatName = v =>
   switch v {
   | PPromise(_) => "promise"
@@ -200,14 +223,19 @@ type record = {y: option<int>}
 @unboxed type withRecord = RRecord(record) | RString(string)
 @inline(never) let someWithRecord = (v: withRecord): option<withRecord> => Some(v)
 @unboxed type withInlineRecord = INone | IRecord({x: option<int>})
+
 @inline(never)
 let someWithInlineRecord = (v: withInlineRecord): option<withInlineRecord> => Some(v)
+
 @unboxed type unboxedOption = {x: option<int>}
 @unboxed type withUnboxedOption = | @as("n") UONone | UOption(unboxedOption)
+
 @inline(never)
 let someWithUnboxedOption = (v: withUnboxedOption): option<withUnboxedOption> => Some(v)
+
 @unboxed type unboxedString = {s: string}
 @unboxed type withUnboxedString = | @as("n") USNone | UString(unboxedString)
+
 @inline(never)
 let someWithUnboxedString = (v: withUnboxedString): option<withUnboxedString> => Some(v)
 

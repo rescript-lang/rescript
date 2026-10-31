@@ -24,6 +24,20 @@ let ignoreRuntimeTests = [
     24,
     ["Stdlib_DataView.getFloat16", "Stdlib_DataView.setFloat16"],
   ),
+  (
+    // Require Node.js v26+ (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toTemporalInstant#browser_compatibility)
+    26,
+    ["Stdlib_Date.toTemporalInstant"],
+  ),
+]
+
+// Like `ignoreRuntimeTests`, for all tests of the modules whose names start with a prefix
+let ignoreRuntimeTestModules = [
+  (
+    // Require Node.js v26+ (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal#browser_compatibility)
+    26,
+    "Stdlib_Temporal",
+  ),
 ]
 
 let getOutput = buffer =>
@@ -118,41 +132,48 @@ let main = async () => {
       let ignoreExample =
         ignoreRuntimeTests->Array.some(
           ((version, tests)) => nodeVersion < version && tests->Array.includes(example.id),
-        )
+        ) ||
+          ignoreRuntimeTestModules->Array.some(
+            ((version, prefix)) => nodeVersion < version && example.id->String.startsWith(prefix),
+          )
 
-      if ignoreExample {
+      // Ignored examples are still generated as skipped tests, so that they
+      // keep being type checked.
+      let (test, testAsync) = if ignoreExample {
         Console.warn(
           `Ignoring ${example.id} tests. Not supported by Node ${nodeVersion->Int.toString}`,
         )
-        None
+        ("testSkip", "testAsyncSkip")
       } else {
-        let code = example.code
+        ("test", "testAsync")
+      }
 
-        if code->String.length === 0 {
-          None
-        } else if code->String.includes("await") {
-          // Same as below, but wrap in async to make top-level awaits work.
-          Some(
-            `testAsync("${example.name}", async () => {
+      let code = example.code
+
+      if code->String.length === 0 {
+        None
+      } else if code->String.includes("await") {
+        // Same as below, but wrap in async to make top-level awaits work.
+        Some(
+          `${testAsync}("${example.name}", async () => {
   module Test = {
     ${code}
   }
   ()
 })`,
-          )
-        } else {
-          // Let's add the examples inside a Test module because some examples
-          // have type definitions that are not supported inside a block.
-          // Also add unit type `()`.
-          Some(
-            `test("${example.name}", () => {
+        )
+      } else {
+        // Let's add the examples inside a Test module because some examples
+        // have type definitions that are not supported inside a block.
+        // Also add unit type `()`.
+        Some(
+          `${test}("${example.name}", () => {
   module Test = {
     ${code}
   }
   ()
 })`,
-          )
-        }
+        )
       }
     })
 

@@ -1,11 +1,11 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/variant_coercion_mismatching_types.res[0m:[2m9:10-15[0m
+  [36m/.../fixtures/variant_coercion_mismatching_types.res[0m:[2m10:10-15[0m
 
-   7 [2m│[0m let x: x = One(true)
-   8 [2m│[0m 
-   [1;31m9[0m [2m│[0m let y = ([1;31mx :> y[0m)
-  10 [2m│[0m 
+   8 [2m│[0m let x: x = One(true)
+   9 [2m│[0m 
+  [1;31m10[0m [2m│[0m let y = ([1;31mx :> y[0m)
+  11 [2m│[0m 
 
   Type x is not a subtype of y 
 

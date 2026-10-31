@@ -6,6 +6,7 @@ module M: {
   type t = | @as("C") A({x: int}) | @as("A") C({x: int})
   let a = A({x: 1})
 }
+
 Console.log(
   switch M.a {
   | M.A(_) => "A"

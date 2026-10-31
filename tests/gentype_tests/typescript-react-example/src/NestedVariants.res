@@ -7,9 +7,11 @@ let makeVariant = () => NonUnary(5, 3)
 type typeC =
   | C(string)
   | D(string)
+
 type typeB = {c: typeC}
 type typeD = Int(int)
 type typeE = int
+
 type typeA<'a> =
   | A('a, int)
   | B('a, int)
@@ -17,9 +19,11 @@ type typeA<'a> =
 type typeF<'a> =
   | F('a)
   | G('a)
+
 type typeH =
   | H(typeD, int)
   | I(typeD, int)
+
 type typeJ = J(typeD, typeD)
 type typeK = K((typeD, typeD))
 
@@ -54,8 +58,10 @@ let makeK = (): typeK => K((Int(5), Int(3)))
 type boxedBinary =
   | BB(typeD, int)
   | Z(int)
+
 @genType
 type unboxedBinary = UB(typeD, int)
+
 @genType
 type inline =
   | I({i: int, j: int})

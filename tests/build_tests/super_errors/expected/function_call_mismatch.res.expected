@@ -1,12 +1,12 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/function_call_mismatch.res[0m:[2m6:3-10[0m
+  [36m/.../fixtures/function_call_mismatch.res[0m:[2m7:3-10[0m
 
-  4 [2m│[0m 
-  5 [2m│[0m let cloneInTemp = (temp: string): string => {
-  [1;31m6[0m [2m│[0m   [1;31mcd(temp)[0m
-  7 [2m│[0m   exec("git clone git@github.com:myorg/myrepo.git")
-  8 [2m│[0m }
+  5 [2m│[0m 
+  6 [2m│[0m let cloneInTemp = (temp: string): string => {
+  [1;31m7[0m [2m│[0m   [1;31mcd(temp)[0m
+  8 [2m│[0m   exec("git clone git@github.com:myorg/myrepo.git")
+  9 [2m│[0m }
 
   This function call returns: [1;31mstring[0m
   But it's expected to return: [1;33munit[0m

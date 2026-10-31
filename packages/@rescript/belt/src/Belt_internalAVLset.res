@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 @@config({flags: ["-bs-noassertfalse"]})
+
 type rec node<'value> = {
   @as("v") mutable value: 'value,
   @as("h") mutable height: int,
@@ -66,6 +67,7 @@ let heightGe = (l, r) =>
   | (Some(hl), Some(hr)) => hl.height >= hr.height
   | (None, Some(_)) => false
   }
+
 /* Same as create, but performs one step of rebalancing if necessary.
    Assumes l and r balanced and | treeHeight l - treeHeight r | <= 3.
    Inline expansion of create for better speed in the most frequent case
@@ -575,6 +577,7 @@ let rotateWithLeftChild = k2 =>
     k1.height = Pervasives.max(hlk1, hk2) + 1
     k1
   }
+
 /* right rotation */
 let rotateWithRightChild = k1 =>
   switch k1.right {

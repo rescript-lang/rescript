@@ -7,7 +7,7 @@ if (1 !== 1) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "gpr_3980_test.res",
-      15,
+      16,
       7
     ],
     Error: new Error()
@@ -22,7 +22,7 @@ if (match !== 1) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "gpr_3980_test.res",
-        13,
+        14,
         9
       ],
       Error: new Error()

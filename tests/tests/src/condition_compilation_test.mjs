@@ -12,8 +12,8 @@ v.contents = v.contents + 1 | 0;
 let a = v.contents;
 
 Mocha.describe("Condition_compilation_test", () => {
-  Mocha.test("condition compilation vv", () => Test_utils.eq("File \"condition_compilation_test.res\", line 52, characters 44-51", 3, 3));
-  Mocha.test("condition compilation v", () => Test_utils.eq("File \"condition_compilation_test.res\", line 53, characters 43-50", v.contents, 2));
+  Mocha.test("condition compilation vv", () => Test_utils.eq("File \"condition_compilation_test.res\", line 53, characters 44-51", 3, 3));
+  Mocha.test("condition compilation v", () => Test_utils.eq("File \"condition_compilation_test.res\", line 54, characters 43-50", v.contents, 2));
 });
 
 let b = "u";

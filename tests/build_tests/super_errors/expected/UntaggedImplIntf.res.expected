@@ -10,21 +10,12 @@
   6 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-  type t = @as(null) A
-}
-  is not included in
-    {
-  @unboxed type t = @as(null) A
-}
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/UntaggedImplIntf.res[0m:[2m4:3-24[0m):
     type t = @as(null) A
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/UntaggedImplIntf.res[0m:[2m2:12-33[0m):
     @unboxed type t = @as(null) A
-  [36m/.../fixtures/UntaggedImplIntf.res[0m:[2m2:12-33[0m:
-    Expected declaration
-  [36m/.../fixtures/UntaggedImplIntf.res[0m:[2m4:3-24[0m:
-    Actual declaration
+  
   Their internal representations differ:
-  the second declaration uses unboxed representation.
+    The expected declaration uses unboxed representation.

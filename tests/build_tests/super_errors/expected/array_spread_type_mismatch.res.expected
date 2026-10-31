@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/array_spread_type_mismatch.res[0m:[2m4:16-17[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m // The error points at the spread list
+  [1;31m4[0m [2m│[0m let a = [1, ...[1;31mxs[0m]
+  5 [2m│[0m 
+
+  This has type: [1;31mlist<int>[0m
+  But it's expected to have type: [1;33marray<int>[0m

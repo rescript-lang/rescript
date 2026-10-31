@@ -74,6 +74,7 @@ Path CompletionSupport.TestComponent.make
     "sortText": "A Three(_)",
     "tags": []
   },
+  { "detail": "module Temporal", "kind": 9, "label": "Temporal", "tags": [] },
   {
     "detail": "module TypedArray",
     "kind": 9,

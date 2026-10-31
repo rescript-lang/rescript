@@ -28,6 +28,7 @@ type u = [
   | #on_open
   | #in_
 ]
+
 /* [@as "in"] TODO: warning test */
 /* indeed we have a warning here */
 /* TODO: add warning test
@@ -57,11 +58,13 @@ let uu = [
 let vv = [test_int_type(#on_open), test_int_type(#on_closed), test_int_type(#in_)]
 let option = #on_closed
 let v = test_string_type(~flag=option)
+
 let p_is_int_test = x =>
   switch x {
   | #a => 2
   | #b(_) => 3
   }
+
 let u = #b(2)
 type t = [#"🚀" | #"🔥"]
 

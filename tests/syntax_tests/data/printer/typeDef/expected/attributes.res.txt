@@ -1,8 +1,10 @@
 @attr type t = float
+
 @attr
 type t = float
 
 @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr type t = int
+
 @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr
 type t = int
 
@@ -11,8 +13,89 @@ type t = int
 @attrWithSuperLongIdentifeirName
 @attrWithSuperLongIdentifeirName
 type t = string
+
 @attrWithSuperLongIdentifeirName
 @attrWithSuperLongIdentifeirName
 @attrWithSuperLongIdentifeirName
 @attrWithSuperLongIdentifeirName
 type t = string
+
+// attributes in front of a record or `..` move to the declaration
+@schema @s.strict
+type t = {
+  email: string,
+  name: string,
+}
+
+@attr /** doc */ type t = {x: int}
+@attr type t = ..
+
+/** doc */
+type t = {x: int}
+
+/** doc */
+type t = ..
+
+/** doc */
+@attr type t = {x: int}
+
+@attr /** doc */ @attr2 type t = ..
+
+/** d1 */
+@attr /** d2 */ type t = {x: int}
+
+@outer /** doc */ type t = {/* c1 */ /* c2 */ x: int} // trail
+
+type t =
+  /** doc */
+  | A
+  | B
+
+type t =
+  /** doc */
+  | A
+  /** doc2 */
+  | B
+
+@attr type t = private {x: int}
+
+/** doc */
+@attr type t = private ..
+
+type t = private @attr int
+type t = private /** doc */ int
+
+type t =
+  private
+  /** doc */
+  | A
+  | B
+
+type t = /** doc */ int
+type t = /** doc */ {"a": int}
+type t = /** doc */ (int, int)
+type t = /** doc */ [#A]
+type t = /** doc */ M.t = A | B
+
+/** doc */
+type t = {...base, y: int}
+
+type t = /** doc */ {.."a": int}
+
+/** doc */
+type t = private {...base, y: int}
+
+type t = private /** doc */ {.}
+
+type t =
+  /** doc */
+  | ...base
+  | C
+
+type t =
+  private
+  /** doc */
+  | ...base
+  | C
+
+type t = /** doc */ 'a

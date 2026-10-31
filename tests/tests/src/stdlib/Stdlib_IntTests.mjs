@@ -119,7 +119,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    25,
+    26,
     13,
     51
   ],
@@ -134,7 +134,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    31,
+    33,
     13,
     51
   ],
@@ -150,7 +150,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    37,
+    40,
     13,
     51
   ],
@@ -165,7 +165,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    43,
+    47,
     13,
     51
   ],
@@ -177,7 +177,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    48,
+    53,
     20,
     50
   ],
@@ -189,7 +189,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    50,
+    56,
     13,
     52
   ],
@@ -201,7 +201,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    56,
+    63,
     13,
     51
   ],
@@ -213,7 +213,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    62,
+    70,
     13,
     52
   ],
@@ -228,7 +228,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    68,
+    77,
     13,
     52
   ],
@@ -243,7 +243,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    74,
+    84,
     13,
     52
   ],
@@ -259,7 +259,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    80,
+    91,
     13,
     52
   ],
@@ -274,7 +274,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    86,
+    98,
     13,
     62
   ],
@@ -290,7 +290,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    92,
+    105,
     13,
     62
   ],
@@ -307,7 +307,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    98,
+    112,
     13,
     62
   ],
@@ -324,7 +324,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    104,
+    119,
     13,
     62
   ],
@@ -340,7 +340,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    110,
+    126,
     13,
     62
   ],
@@ -353,7 +353,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    116,
+    133,
     13,
     54
   ],
@@ -366,7 +366,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    122,
+    140,
     13,
     63
   ],
@@ -379,7 +379,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    128,
+    147,
     13,
     62
   ],
@@ -392,7 +392,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    134,
+    154,
     13,
     63
   ],
@@ -408,7 +408,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    140,
+    161,
     13,
     63
   ],
@@ -425,7 +425,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    146,
+    168,
     13,
     63
   ],
@@ -442,7 +442,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    152,
+    175,
     13,
     63
   ],
@@ -458,7 +458,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    158,
+    181,
     20,
     27
   ],
@@ -468,7 +468,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    159,
+    182,
     20,
     35
   ],
@@ -478,7 +478,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    160,
+    183,
     20,
     35
   ],
@@ -488,7 +488,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    161,
+    184,
     20,
     35
   ],
@@ -498,7 +498,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    162,
+    185,
     20,
     35
   ],
@@ -508,7 +508,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    163,
+    186,
     20,
     42
   ],
@@ -518,7 +518,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    164,
+    187,
     20,
     42
   ],
@@ -528,7 +528,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    165,
+    188,
     20,
     42
   ],
@@ -538,7 +538,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    166,
+    189,
     20,
     42
   ],
@@ -548,7 +548,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_IntTests.res",
-    168,
+    191,
     20,
     44
   ],

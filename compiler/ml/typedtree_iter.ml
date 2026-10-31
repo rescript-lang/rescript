@@ -252,11 +252,7 @@ end = struct
       | None -> ()
       | Some exp -> iter_expression exp)
     | Texp_record {fields; extended_expression; _} -> (
-      Array.iter
-        (function
-          | _, Kept _, _ -> ()
-          | _, Overridden (_, exp), _ -> iter_expression exp)
-        fields;
+      Array.iter (fun (_, _, exp) -> iter_expression exp) fields;
       match extended_expression with
       | None -> ()
       | Some exp -> iter_expression exp)
@@ -270,6 +266,7 @@ end = struct
         (function
           | Tdict_entry (_, exp) | Tdict_spread exp -> iter_expression exp)
         entries
+    | Texp_spread (_, parts) -> List.iter iter_expression parts
     | Texp_ifthenelse (exp1, exp2, expo) -> (
       iter_expression exp1;
       iter_expression exp2;

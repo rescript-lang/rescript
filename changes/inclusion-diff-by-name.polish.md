@@ -1,0 +1,1 @@
+- Report every difference between the record fields or variant constructors of an implementation and its interface, matched by name: missing, extra, renamed and reordered entries, and say which side is the actual and which the expected declaration.

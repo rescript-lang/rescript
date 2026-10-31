@@ -2,4 +2,13 @@ let f = (@res.doc("The runner") run: string) => run
 let f = (/** The runner */ run: string) => run
 let f = (/** Positional */ x, /** Labelled */ ~y, /** Typed */ ~z: int) => x + y + z
 let f = (/** Optional */ ~a=?, /** Default */ ~b=1, /** Aliased */ ~c as d) => d
+let f = (/** Typed alias */ ~a as x: int=3) => x
 let f = (/** Locally abstract */ type a, x: a) => x
+
+// A doc comment on a single parameter that would be hugged
+let f = (/** Record */ {x, y}) => x
+let f = (/** Array */ [a]) => a
+let f = (/** Tuple */ (a, b)) => a
+let f = (/** Unit */ ()) => 1
+let f = (@a /** After an attribute */ {x, y}) => x
+

@@ -1,30 +1,99 @@
 module Source_file_extractor = struct
-  let extract lines ~pos_start ~pos_end =
+  let leading_spaces line =
+    let len = String.length line in
+    let rec go i = if i < len && line.[i] = ' ' then go (i + 1) else i in
+    go 0
+
+  (* For each line from [line_start] to [line_end], whether it begins inside
+     a string or template literal that starts on an earlier line. Such lines
+     are part of the literal's value, so reindenting them would change it. *)
+  let literal_lines lines ~line_start ~col_start ~line_end =
+    let first = lines.(line_start) in
+    let col_start = max 0 (min col_start (String.length first)) in
+    let src =
+      String.concat "\n"
+        (String.sub first col_start (String.length first - col_start)
+        :: Array.to_list
+             (Array.sub lines (line_start + 1) (line_end - line_start)))
+    in
+    let inside = Array.make (line_end - line_start + 1) false in
+    let mark (start_pos : Lexing.position) (end_pos : Lexing.position) =
+      for n = start_pos.pos_lnum to end_pos.pos_lnum - 1 do
+        inside.(n) <- true
+      done
+    in
+    let scanner = Res_scanner.make ~filename:"" src in
+    (* Scan the rest of a template literal, whose backtick is at [start_pos],
+       including the expressions in its interpolations. *)
+    let rec template start_pos =
+      let _, end_pos, token = Res_scanner.scan_template_literal_token scanner in
+      match token with
+      | Res_token.TemplatePart _ ->
+        if interpolation 0 then template start_pos else mark start_pos end_pos
+      | _ -> mark start_pos end_pos
+    (* Scan up to the [}] closing an interpolation; false at the end of the
+       text. *)
+    and interpolation depth =
+      match Res_scanner.scan scanner with
+      | _, _, Res_token.Eof -> false
+      | _, _, Rbrace when depth = 0 -> true
+      | _, _, Rbrace -> interpolation (depth - 1)
+      | _, _, Lbrace -> interpolation (depth + 1)
+      | start_pos, _, Backtick ->
+        template start_pos;
+        interpolation depth
+      | _ -> interpolation depth
+    in
+    let rec go () =
+      match Res_scanner.scan scanner with
+      | _, _, Res_token.Eof -> ()
+      | start_pos, end_pos, String _ ->
+        mark start_pos end_pos;
+        go ()
+      | start_pos, _, Backtick ->
+        template start_pos;
+        go ()
+      | _ -> go ()
+    in
+    go ();
+    inside
+
+  (* The source text from [pos_start] to [pos_end], indented by [indent]:
+     the lines after the first keep their indentation relative to the line
+     the text starts on, except lines inside a string or template literal,
+     which are copied verbatim. *)
+  let extract lines ~indent ~pos_start ~pos_end =
     let line_start, col_start = pos_start in
     let line_end, col_end = pos_end in
     let res = ref [] in
     if line_start < 0 || line_start > line_end || line_end >= Array.length lines
     then []
-    else (
+    else
+      let base = min col_start (leading_spaces lines.(line_start)) in
+      let in_literal = literal_lines lines ~line_start ~col_start ~line_end in
+      let reindent n line =
+        let drop = min base (leading_spaces line) in
+        if in_literal.(n - line_start) then line
+        else if drop = String.length line then ""
+        else indent ^ String.sub line drop (String.length line - drop)
+      in
       for n = line_end downto line_start do
         let line = lines.(n) in
         let len = String.length line in
         if n = line_start && n = line_end then (
           if col_start >= 0 && col_start < col_end && col_end <= len then
-            let indent = String.make col_start ' ' in
             res :=
               (indent ^ String.sub line col_start (col_end - col_start)) :: !res)
         else if n = line_start then (
           if col_start >= 0 && col_start < len then
-            let indent = String.make col_start ' ' in
             res :=
               (indent ^ String.sub line col_start (len - col_start)) :: !res)
         else if n = line_end then (
           if col_end > 0 && col_end <= len then
-            res := String.sub line 0 col_end :: !res)
-        else res := line :: !res
+            res := reindent n (String.sub line 0 col_end) :: !res)
+        else res := reindent n line :: !res
       done;
-      !res)
+      !res
 end
 
 module Attributes_utils : sig
@@ -95,8 +164,61 @@ end = struct
       !res |> List.rev |> String.concat "\n"
 end
 
-let print_signature ~extractor ~signature =
+let loc_within ~(outer : Location.t) (loc : Location.t) =
+  outer.loc_start.pos_cnum <= loc.loc_start.pos_cnum
+  && loc.loc_end.pos_cnum <= outer.loc_end.pos_cnum
+
+(* The locations of the functors in a signature, nested ones included. *)
+let rec functor_locs (signature : Types.signature) =
+  signature
+  |> List.concat_map (function
+    | Types.Sig_module (_, {md_type; md_loc}, _) -> (
+      match md_type with
+      | Mty_functor _ -> [md_loc]
+      | Mty_signature signature -> functor_locs signature
+      | Mty_ident _ | Mty_alias _ -> [])
+    | _ -> [])
+
+(* The source text of a type declaration can be copied when it says what the
+   type is at this point of the interface: when the type is declared in this
+   file, and either inside the module being printed or outside any functor.
+   A type of an applied functor is located in the functor's body, where its
+   definition mentions the functor's parameters, and a type included from
+   another file is located there; both are printed from the signature. *)
+let declared_in ~path ~functors ~(scope : Location.t option) (loc : Location.t)
+    =
+  Filename.basename loc.loc_start.pos_fname = Filename.basename path
+  &&
+  match scope with
+  | Some scope when loc_within ~outer:scope loc -> true
+  | _ -> not (List.exists (fun outer -> loc_within ~outer loc) functors)
+
+(* A declaration's location starts at [type], after the attributes written
+   in front of it, such as [@tag("kind")] or a doc comment: the position of
+   the first of those, when it comes before [pos_start]. An attribute's
+   location may start at its name, after the [@]. *)
+let attributes_start ~extractor (type_decl : Types.type_declaration) pos_start =
+  type_decl.type_attributes
+  |> List.fold_left
+       (fun pos_start (({loc}, _) : Parsetree.attribute) ->
+         if loc.loc_ghost then pos_start
+         else
+           let line, col = Loc.start loc in
+           let col =
+             if
+               col > 0
+               && line < Array.length extractor
+               && col <= String.length extractor.(line)
+               && extractor.(line).[col - 1] = '@'
+             then col - 1
+             else col
+           in
+           min pos_start (line, col))
+       pos_start
+
+let print_signature ~path ~extractor ~signature =
   Printtyp.reset_names ();
+  let functors = functor_locs signature in
   let sig_item_to_string (item : Outcometree.out_sig_item) =
     item |> Res_outcome_printer.print_out_sig_item_doc
     |> Res_doc.to_string ~width:Res_printer.default_print_width
@@ -140,7 +262,8 @@ let print_signature ~extractor ~signature =
     | _ -> None
   in
 
-  let rec process_signature ~indent (signature : Types.signature) : unit =
+  let rec process_signature ~scope ~indent (signature : Types.signature) : unit
+      =
     match signature with
     | Sig_type
         (props_id, {type_params; type_kind = Type_record (label_decls, _)}, _)
@@ -193,7 +316,7 @@ let print_signature ~extractor ~signature =
       in
       Buffer.add_string buf (indent ^ "@react.component\n");
       Buffer.add_string buf (indent ^ new_item_str ^ "\n");
-      process_signature ~indent rest
+      process_signature ~scope ~indent rest
     | Sig_module (id, mod_decl, rec_status) :: rest ->
       let colon_or_equals =
         match mod_decl.md_type with
@@ -207,9 +330,9 @@ let print_signature ~extractor ~signature =
           | Trec_first -> "module rec "
           | Trec_next -> "and ")
         ^ Ident.name id ^ colon_or_equals);
-      process_module_type ~indent mod_decl.md_type;
+      process_module_type ~scope:(Some mod_decl.md_loc) ~indent mod_decl.md_type;
       Buffer.add_string buf "\n";
-      process_signature ~indent rest
+      process_signature ~scope ~indent rest
     | Sig_modtype (id, mtd) :: rest ->
       let () =
         match mtd.mtd_type with
@@ -217,16 +340,16 @@ let print_signature ~extractor ~signature =
           Buffer.add_string buf (indent ^ "module type " ^ Ident.name id ^ "\n")
         | Some mt ->
           Buffer.add_string buf (indent ^ "module type " ^ Ident.name id ^ " = ");
-          process_module_type ~indent mt;
+          process_module_type ~scope:(Some mtd.mtd_loc) ~indent mt;
           Buffer.add_string buf "\n"
       in
-      process_signature ~indent rest
+      process_signature ~scope ~indent rest
     | Sig_value (id, ({val_kind = Val_prim prim; val_loc} as vd)) :: items
       when prim.prim_kind <> Primitive.Kind_intrinsic ->
       (* Rescript primitive name, e.g. @val external ... *)
       let lines =
         let pos_start, pos_end = Loc.range val_loc in
-        extractor |> Source_file_extractor.extract ~pos_start ~pos_end
+        extractor |> Source_file_extractor.extract ~indent ~pos_start ~pos_end
       in
       let attributes = Attributes_utils.make lines in
 
@@ -238,34 +361,43 @@ let print_signature ~extractor ~signature =
         (* Copy the external declaration verbatim from the implementation file *)
         Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n");
 
-      process_signature ~indent items
+      process_signature ~scope ~indent items
     | Sig_value (id, vd) :: items ->
       let new_item_str =
         sig_item_to_string (Printtyp.tree_of_value_description id vd)
       in
       Buffer.add_string buf (indent ^ new_item_str ^ "\n");
-      process_signature ~indent items
-    | Sig_type (_id, type_decl, _recStatus) :: items ->
-      let lines =
-        let pos_start, pos_end = Loc.range type_decl.type_loc in
-        extractor |> Source_file_extractor.extract ~pos_start ~pos_end
-      in
-      (* Copy the type declaration verbatim to preserve attributes *)
-      Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n");
-      process_signature ~indent items
+      process_signature ~scope ~indent items
+    | Sig_type (id, type_decl, rec_status) :: items ->
+      (if declared_in ~path ~functors ~scope type_decl.type_loc then
+         let lines =
+           let pos_start, pos_end = Loc.range type_decl.type_loc in
+           let pos_start = attributes_start ~extractor type_decl pos_start in
+           extractor
+           |> Source_file_extractor.extract ~indent ~pos_start ~pos_end
+         in
+         (* Copy the type declaration verbatim to preserve attributes *)
+         Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n")
+       else
+         let new_item_str =
+           sig_item_to_string
+             (Printtyp.tree_of_type_declaration id type_decl rec_status)
+         in
+         Buffer.add_string buf (indent ^ new_item_str ^ "\n"));
+      process_signature ~scope ~indent items
     | Sig_typext (id, ext_constr, ext_status) :: items ->
       let new_item_str =
         sig_item_to_string
           (Printtyp.tree_of_extension_constructor id ext_constr ext_status)
       in
       Buffer.add_string buf (indent ^ new_item_str ^ "\n");
-      process_signature ~indent items
+      process_signature ~scope ~indent items
     | [] -> ()
-  and process_module_type ~indent (mt : Types.module_type) =
+  and process_module_type ~scope ~indent (mt : Types.module_type) =
     match mt with
     | Mty_signature signature ->
       Buffer.add_string buf "{\n";
-      process_signature ~indent:(indent ^ "  ") signature;
+      process_signature ~scope ~indent:(indent ^ "  ") signature;
       Buffer.add_string buf (indent ^ "}")
     | Mty_functor _ ->
       let rec collect_functor_args ~args (mt : Types.module_type) =
@@ -286,11 +418,11 @@ let print_signature ~extractor ~signature =
           | None -> Buffer.add_string buf (Ident.name id)
           | Some mt ->
             Buffer.add_string buf (Ident.name id ^ ": ");
-            process_module_type ~indent:(indent ^ "  ") mt);
+            process_module_type ~scope ~indent:(indent ^ "  ") mt);
           Buffer.add_string buf ",");
       if args <> [] then Buffer.add_string buf ("\n" ^ indent);
       Buffer.add_string buf (") =>\n" ^ indent);
-      process_module_type ~indent ret_mt
+      process_module_type ~scope ~indent ret_mt
     | Mty_ident path | Mty_alias (_, path) ->
       let rec out_ident_to_string (ident : Outcometree.out_ident) =
         match ident with
@@ -302,12 +434,12 @@ let print_signature ~extractor ~signature =
       Buffer.add_string buf (out_ident_to_string (Printtyp.tree_of_path path))
   in
 
-  process_signature ~indent:"" signature;
+  process_signature ~scope:None ~indent:"" signature;
   Buffer.contents buf
 
-let command ~source ~cmi_file =
+let command ~path ~source ~cmi_file =
   match Shared.try_read_cmi cmi_file with
   | Some cmi_info ->
     let extractor = source |> String.split_on_char '\n' |> Array.of_list in
-    Ok (print_signature ~extractor ~signature:cmi_info.cmi_sign)
+    Ok (print_signature ~path ~extractor ~signature:cmi_info.cmi_sign)
   | None -> Error ("Failed to read cmi file " ^ cmi_file)

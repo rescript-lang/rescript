@@ -25,9 +25,17 @@ val interface_doc :
   Parsetree.signature -> comments:Res_comment.t list -> Res_doc.t
 
 val print_implementation :
-  ?width:int -> Parsetree.structure -> comments:Res_comment.t list -> string
+  ?width:int ->
+  ?newline:string ->
+  Parsetree.structure ->
+  comments:Res_comment.t list ->
+  string
 val print_interface :
-  ?width:int -> Parsetree.signature -> comments:Res_comment.t list -> string
+  ?width:int ->
+  ?newline:string ->
+  Parsetree.signature ->
+  comments:Res_comment.t list ->
+  string
 
 val print_ident_like :
   ?allow_uident:bool -> ?allow_hyphen:bool -> string -> Res_doc.t

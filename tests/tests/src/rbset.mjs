@@ -259,7 +259,7 @@ function unbalanced_left(x) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "rbset.res",
-      64,
+      65,
       9
     ],
     Error: new Error()
@@ -325,7 +325,7 @@ function unbalanced_right(x) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "rbset.res",
-      75,
+      76,
       9
     ],
     Error: new Error()
@@ -547,7 +547,7 @@ function remove_min(x) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "rbset.res",
-        138,
+        140,
         4
       ],
       Error: new Error()
@@ -583,7 +583,7 @@ function remove_min(x) {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "rbset.res",
-          138,
+          140,
           4
         ],
         Error: new Error()

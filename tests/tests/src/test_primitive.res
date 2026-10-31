@@ -35,6 +35,7 @@ let test_abs = Math.abs(3.0)
 let v = [1.0, 2.0]
 let xxx = "a"
 let a = String.get(xxx, 0)
+
 let u = b => {
   let a = if b {
     Console.log(1)
@@ -44,6 +45,7 @@ let u = b => {
   }
   a
 }
+
 let f = (h, b, ()) =>
   h(
     if b {
@@ -53,6 +55,7 @@ let f = (h, b, ()) =>
       3 + 4
     },
   )
+
 let f2 = (h, b, ()) =>
   h(
     if b {
@@ -61,7 +64,9 @@ let f2 = (h, b, ()) =>
       3 + 4
     },
   )
+
 @@warning("-26")
+
 let f2 = (h, b, ()) =>
   h(
     if b {
@@ -71,12 +76,14 @@ let f2 = (h, b, ()) =>
       3 + 4
     },
   )
+
 let () = v[1] = 3.0
 
 type u = {
   mutable u: float,
   v: float,
 }
+
 let xx = (0., 0.)
 let unboxed_x = {u: 0., v: 0.}
 let f = ({u}) => u

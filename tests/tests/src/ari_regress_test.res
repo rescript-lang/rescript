@@ -16,6 +16,7 @@ let g1 = (x, y) => {
   let () = h.contents = h.contents + 1
   (xx, yy) => xx + yy + u
 }
+
 let x = gg(3, 5)(6)
 
 let v = g1(3, 4)(6, _)

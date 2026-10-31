@@ -51,6 +51,9 @@ type subtype_context =
       right_record_name: Path.t;
       issues: Record_coercion.record_field_subtype_violation list;
     }  (** Records have fields that are not compatible. *)
+  | Coercion_into_private_type of {typename: Path.t}
+      (** The target is a private record or variant, whose values only its own
+          module can build. *)
 
 type type_pairs = (type_expr * type_expr) list
 exception Unify of type_pairs
@@ -171,6 +174,10 @@ val instance_constructor :
   constructor_description ->
   type_expr list * type_expr
 (* Same, for a constructor *)
+
+val existential_constructor : Ident.t -> string option
+(* The constructor that binds this existential type, created by
+   [instance_constructor] in the current request *)
 
 val instance_parameterized_type :
   ?keep_names:bool -> type_expr list -> type_expr -> type_expr list * type_expr

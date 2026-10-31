@@ -9,11 +9,9 @@
 
   The implementation /.../fixtures/Cross_private_variant_manifest_mismatch/Priv.res
   does not match the interface /.../fixtures/Cross_private_variant_manifest_mismatch/priv.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Cross_private_variant_manifest_mismatch/Priv.res[0m:[2m2:1-14[0m):
     type w = A | B
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Cross_private_variant_manifest_mismatch/Priv.resi[0m:[2m2:1-26[0m):
     type w = v = private A | B
-  [36m/.../fixtures/Cross_private_variant_manifest_mismatch/Priv.resi[0m:[2m2:1-26[0m:
-    Expected declaration
-  [36m/.../fixtures/Cross_private_variant_manifest_mismatch/Priv.res[0m:[2m2:1-14[0m:
-    Actual declaration

@@ -146,7 +146,6 @@ val add_signature : signature -> t -> t
 val open_signature :
   ?used_slot:bool ref ->
   ?loc:Location.t ->
-  ?toplevel:bool ->
   Asttypes.override_flag ->
   Path.t ->
   t ->

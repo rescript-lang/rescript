@@ -690,14 +690,6 @@ let emit_translation_as_string ~config ~file_name
     | true -> Emit_type.emit_import_react ~emitters
     | false -> emitters
   in
-  let env =
-    match config.emit_import_curry with
-    | true ->
-      Module_name.curry
-      |> require_module ~import:true ~env
-           ~import_path:(Import_path.bs_curry_path ~config)
-    | false -> env
-  in
   let final_env = env in
   let emitters =
     module_items_emitter

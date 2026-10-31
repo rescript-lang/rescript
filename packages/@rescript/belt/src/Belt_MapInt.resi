@@ -11,6 +11,7 @@ let has: (t<'v>, key) => bool
 
 @deprecated("Use `cmp` instead")
 let cmpU: (t<'v>, t<'v>, ('v, 'v) => int) => int
+
 let cmp: (t<'v>, t<'v>, ('v, 'v) => int) => int
 
 @deprecated("Use `eq` instead")
@@ -126,6 +127,7 @@ let set: (t<'v>, key, 'v) => t<'v>
 
 @deprecated("Use `update` instead")
 let updateU: (t<'v>, key, option<'v> => option<'v>) => t<'v>
+
 let update: (t<'v>, key, option<'v> => option<'v>) => t<'v>
 
 @deprecated("Use `merge` instead")
@@ -180,4 +182,5 @@ let map: (t<'v>, 'v => 'v2) => t<'v2>
 
 @deprecated("Use `mapWithKey` instead")
 let mapWithKeyU: (t<'v>, (key, 'v) => 'v2) => t<'v2>
+
 let mapWithKey: (t<'v>, (key, 'v) => 'v2) => t<'v2>

@@ -8,17 +8,16 @@
    [1;31m6[0m [2m│[0m [1;31m  type t = | @as("C") A({x: int}) | @as("A") C({x: int})[0m
    [1;31m7[0m [2m│[0m [1;31m  let a = A({x: 1})[0m
    [1;31m8[0m [2m│[0m [1;31m}[0m
-   9 [2m│[0m Console.log(
-  10 [2m│[0m   switch M.a {
+   9 [2m│[0m 
+  10 [2m│[0m Console.log(
 
   Signature mismatch:
-  ...
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/variant_payload_tag_mismatch.res[0m:[2m6:3-56[0m):
     type t = @as("C") A({x: int}) | @as("A") C({x: int})
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/variant_payload_tag_mismatch.res[0m:[2m3:3-36[0m):
     type t = A({x: int}) | C({x: int})
-  [36m/.../fixtures/variant_payload_tag_mismatch.res[0m:[2m3:3-36[0m:
-    Expected declaration
-  [36m/.../fixtures/variant_payload_tag_mismatch.res[0m:[2m6:3-56[0m:
-    Actual declaration
+  
   The internal representations for case A are not equal.
+  The internal representations for case C are not equal.

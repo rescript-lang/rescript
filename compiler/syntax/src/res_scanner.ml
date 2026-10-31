@@ -85,11 +85,15 @@ let next scanner =
       then 2
       else 1
   in
+  (* A line ends at LF, or at a CR not followed by LF. CRLF ends a line once,
+     at its LF. *)
   let newline =
-    scanner.ch = '\n'
-    (* What about CRLF (\r + \n) on windows?
-       \r\n will always be terminated by a \n
-       -> we can just bump the line count on \n *)
+    match scanner.ch with
+    | '\n' -> true
+    | '\r' ->
+      next_offset >= String.length scanner.src
+      || String.unsafe_get scanner.src next_offset <> '\n'
+    | _ -> false
   in
   if newline then (
     scanner.line_offset <- next_offset;
@@ -141,15 +145,24 @@ let peek_char scanner target_char =
 
 let peek_slash scanner = peek_char scanner '/'
 
+let byte_order_mark src =
+  let bom = "\xEF\xBB\xBF" in
+  if String.starts_with ~prefix:bom src then bom else ""
+
 let make ~filename src =
+  (* Skip a byte order mark: it is not part of the program, and the first line
+     starts after it, as in an editor *)
+  let offset = String.length (byte_order_mark src) in
   {
     filename;
     src;
     err = (fun ~start_pos:_ ~end_pos:_ _ -> ());
-    ch = (if src = "" then hacky_eof_char else String.unsafe_get src 0);
-    offset = 0;
+    ch =
+      (if offset >= String.length src then hacky_eof_char
+       else String.unsafe_get src offset);
+    offset;
     offset16 = 0;
-    line_offset = 0;
+    line_offset = offset;
     lnum = 1;
   }
 
@@ -619,7 +632,7 @@ let scan_regex ~start_pos:opening_pos ~prefix_length scanner =
         scan_flags ()
       in
       (pattern, flags)
-    | ch when ch == '\n' || ch == hacky_eof_char ->
+    | ch when ch == '\n' || ch == '\r' || ch == hacky_eof_char ->
       let end_pos = position scanner in
       scanner.err ~start_pos ~end_pos (Diagnostics.message "unterminated regex");
       let pattern =

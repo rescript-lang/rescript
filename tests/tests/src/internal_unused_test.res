@@ -1,5 +1,6 @@
 @@warning("A")
 @@warnerror("a")
+
 @internal.local
 module P0 = {
   {
@@ -8,6 +9,7 @@ module P0 = {
     (a + 2)->ignore
   }
 }
+
 open! P0
 
 @internal.local
@@ -15,6 +17,7 @@ module P1 = {
   exception A
   let _a = 2
 }
+
 open! P1
 
 let f = () => throw(A)

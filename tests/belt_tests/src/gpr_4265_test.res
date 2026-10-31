@@ -3,10 +3,12 @@ open Test_utils
 
 open Belt
 let mockMap = MutableMap.Int.make()
+
 let add = id => {
   mockMap->MutableMap.Int.set(id, id)
   id
 }
+
 let remove = id => mockMap->MutableMap.Int.remove(id)
 let _ = add(1726)
 let n = add(6667)

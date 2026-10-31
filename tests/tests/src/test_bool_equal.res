@@ -29,6 +29,7 @@ let f0 = x =>
   } else {
     2
   }
+
 let f1 = x =>
   if !(x == true) {
     1
@@ -42,6 +43,7 @@ let f2 = x =>
   } else {
     2
   }
+
 let f3 = x =>
   if x == false {
     1

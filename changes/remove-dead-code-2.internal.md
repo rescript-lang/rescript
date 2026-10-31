@@ -1,0 +1,1 @@
+- Remove dead code: the `js_stdout` flag, gentype's Curry import path, an unused analysis type cache, the OCaml toplevel entry point, commented-out OCaml code and the unused `Otyp_attribute` outcome node.

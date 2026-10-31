@@ -110,11 +110,7 @@ and expression_desc =
       Longident.t loc * constructor_description * expression list
   | Texp_variant of label * expression option
   | Texp_record of {
-      fields:
-        (Types.label_description
-        * record_label_definition
-        * bool (* optional *))
-        array;
+      fields: (Types.label_description * Longident.t loc * expression) array;
       representation: Types.record_representation;
       extended_expression: expression option;
     }
@@ -123,6 +119,9 @@ and expression_desc =
       expression * Longident.t loc * label_description * expression
   | Texp_array of expression list
   | Texp_dict of dict_entry list
+  | Texp_spread of Parsetree.spread_kind * expression list
+    (* An array or list literal with spreads: the arrays or lists it
+       concatenates, see [Ast_spread] *)
   | Texp_ifthenelse of expression * expression * expression option
   | Texp_sequence of expression * expression
   | Texp_break
@@ -182,10 +181,6 @@ and function_param = {
          the label -- and the user's pattern is bound by a let at the head
          of the body. *)
 }
-
-and record_label_definition =
-  | Kept of Types.type_expr
-  | Overridden of Longident.t loc * expression
 
 (* Value expressions for the module language *)
 and module_expr = {

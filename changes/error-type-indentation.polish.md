@@ -1,0 +1,1 @@
+- Multi-line types, signatures and module types in error messages are indented under their heading instead of starting at column 0.

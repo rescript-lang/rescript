@@ -62,15 +62,5 @@ let find_type_constructors (tel : Types.type_expr list) =
 let decl_to_string ?print_name_as_is ?(rec_status = Types.Trec_not) name t =
   Print_type.print_decl ?print_name_as_is ~rec_status name t
 
-let cache_type_to_string = ref false
-let type_tbl = Hashtbl.create 1
-
 let type_to_string ?line_width (t : Types.type_expr) =
-  match
-    if !cache_type_to_string then Hashtbl.find_opt type_tbl (t.id, t) else None
-  with
-  | None ->
-    let s = Print_type.print_expr ?line_width t in
-    Hashtbl.replace type_tbl (t.id, t) s;
-    s
-  | Some s -> s
+  Print_type.print_expr ?line_width t

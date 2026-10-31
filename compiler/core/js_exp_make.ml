@@ -911,18 +911,6 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
           | Some e -> simplify_and_force ~n:(n + 1) e e2)
         | Some a_, Some b_ -> simplify_or_force ~n:(n + 1) a_ b_)
       | ( Bin
-            ( ((EqEqEq | NotEqEq) as op1),
-              {expression_desc = Var i1},
-              {expression_desc = Bool b1} ),
-          Bin
-            ( ((EqEqEq | NotEqEq) as op2),
-              {expression_desc = Var i2},
-              {expression_desc = Bool b2} ) )
-        when Js_op_util.same_vident i1 i2 ->
-        let op_eq = op1 = op2 in
-        let consistent = if op_eq then b1 = b2 else b1 <> b2 in
-        if consistent then Some e1 else Some false_
-      | ( Bin
             ( EqEqEq,
               {expression_desc = Typeof {expression_desc = Var ia}},
               {expression_desc = Str "boolean"} ),
@@ -1161,32 +1149,41 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
       | ( Bin
             ( EqEqEq,
               {expression_desc = Var ia},
-              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-            ),
+              {
+                expression_desc =
+                  (Bool _ | Null | Undefined _ | Number _ | Str _) as v1;
+              } ),
           Bin
             ( EqEqEq,
               {expression_desc = Var ib},
-              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-            ) )
-        when Js_op_util.same_vident ia ib ->
-        (* Note: case x = y is handled above *)
-        Some false_
+              {
+                expression_desc =
+                  (Bool _ | Null | Undefined _ | Number _ | Str _) as v2;
+              } ) )
+        when Js_op_util.same_vident ia ib -> (
+        match Js_analyzer.eq_literal v1 v2 with
+        | Some true -> Some e1
+        | Some false -> Some false_
+        | None -> None)
       | ( Bin
             ( ((EqEqEq | NotEqEq) as op1),
               {expression_desc = Var ia},
-              ({
-                 expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _;
-               } as v1) ),
+              {
+                expression_desc =
+                  (Bool _ | Null | Undefined _ | Number _ | Str _) as v1;
+              } ),
           Bin
             ( ((EqEqEq | NotEqEq) as op2),
               {expression_desc = Var ib},
-              ({
-                 expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _;
-               } as v2) ) )
-        when Js_op_util.same_vident ia ib && op1 != op2 ->
-        if Js_analyzer.eq_expression v1 v2 then Some false_
-        else if op1 = EqEqEq then Some e1
-        else Some e2
+              {
+                expression_desc =
+                  (Bool _ | Null | Undefined _ | Number _ | Str _) as v2;
+              } ) )
+        when Js_op_util.same_vident ia ib && op1 != op2 -> (
+        match Js_analyzer.eq_literal v1 v2 with
+        | Some true -> Some false_
+        | Some false -> if op1 = EqEqEq then Some e1 else Some e2
+        | None -> None)
       | _ -> None
     in
     res

@@ -5,6 +5,7 @@ https://tc39.es/ecma402/#sec-segments-objects.
 
 See [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter/segment) for API details and the [ECMA-402 specification](https://tc39.es/ecma402/#sec-segments-objects) for the object shape.
 */
+
 @notUndefined
 type t
 

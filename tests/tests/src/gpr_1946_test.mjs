@@ -24,11 +24,11 @@ function f(id) {
   return id;
 }
 
-Test_utils.eq("File \"gpr_1946_test.res\", line 23, characters 3-10", ({
+Test_utils.eq("File \"gpr_1946_test.res\", line 24, characters 3-10", ({
   _5: 3
 })._5, 3);
 
-Test_utils.eq("File \"gpr_1946_test.res\", line 24, characters 3-10", [
+Test_utils.eq("File \"gpr_1946_test.res\", line 25, characters 3-10", [
   2,
   3
 ], [
@@ -37,10 +37,10 @@ Test_utils.eq("File \"gpr_1946_test.res\", line 24, characters 3-10", [
 ]);
 
 Mocha.describe("Gpr_1946_test", () => {
-  Mocha.test("test1", () => Test_utils.eq("File \"gpr_1946_test.res\", line 28, characters 7-14", ({
+  Mocha.test("test1", () => Test_utils.eq("File \"gpr_1946_test.res\", line 29, characters 7-14", ({
     _5: 3
   })._5, 3));
-  Mocha.test("test2", () => Test_utils.eq("File \"gpr_1946_test.res\", line 32, characters 7-14", [
+  Mocha.test("test2", () => Test_utils.eq("File \"gpr_1946_test.res\", line 33, characters 7-14", [
     2,
     3
   ], [

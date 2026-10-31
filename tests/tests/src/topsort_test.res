@@ -113,6 +113,7 @@ let unsafe_topsort = graph => {
 let () = assert(unsafe_topsort(grwork) == list{"wake", "shower", "dress", "eat", "washup", "go"})
 
 exception Cycle(list<string>)
+
 let pathsort = graph => {
   let visited = ref(list{})
   let empty_path = list{}

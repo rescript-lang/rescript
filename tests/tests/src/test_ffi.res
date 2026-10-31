@@ -7,6 +7,7 @@ external log: 'a => unit = "?ignore"
 @scope("console") external log2: 'a => unit = "log"
 
 external log3: 'a => unit = "log"
+
 let v = u => {
   log3(u)
   log2(u)

@@ -64,6 +64,8 @@ let rec expr_no_side_effects (expr : Typedtree.expression) =
       | Typedtree.Tdict_entry (_, e) -> e |> expr_no_side_effects
       (* Spreading a dict reads its properties *)
       | Tdict_spread _ -> false)
+  (* A call of the runtime's [spread] *)
+  | Texp_spread _ -> false
   | Texp_ifthenelse (e1, e2, eo) ->
     e1 |> expr_no_side_effects && e2 |> expr_no_side_effects
     && eo |> expr_opt_no_side_effects
@@ -86,11 +88,7 @@ and expr_opt_no_side_effects eo =
   | None -> true
   | Some e -> e |> expr_no_side_effects
 
-and field_no_side_effects
-    ((_ld, rld, _) : _ * Typedtree.record_label_definition * _) =
-  match rld with
-  | Kept _typeExpr -> true
-  | Overridden (_lid, e) -> e |> expr_no_side_effects
+and field_no_side_effects (_ld, _lid, e) = e |> expr_no_side_effects
 
 and case_no_side_effects : Typedtree.case -> _ =
  fun {c_guard; c_rhs} ->

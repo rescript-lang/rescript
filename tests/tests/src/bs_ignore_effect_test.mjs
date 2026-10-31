@@ -20,8 +20,8 @@ let h = (v.contents = v.contents + 1 | 0, {
 let z = (v.contents = v.contents + 1 | 0, "Float", add(3.0, 2.0));
 
 Mocha.describe("Bs_ignore_effect_test", () => {
-  Mocha.test("ignore effect 1", () => Test_utils.eq("File \"bs_ignore_effect_test.res\", line 29, characters 35-42", v.contents, 2));
-  Mocha.test("ignore effect 2", () => Test_utils.eq("File \"bs_ignore_effect_test.res\", line 30, characters 35-42", z, 5.0));
+  Mocha.test("ignore effect 1", () => Test_utils.eq("File \"bs_ignore_effect_test.res\", line 32, characters 35-42", v.contents, 2));
+  Mocha.test("ignore effect 2", () => Test_utils.eq("File \"bs_ignore_effect_test.res\", line 33, characters 35-42", z, 5.0));
 });
 
 export {

@@ -32,7 +32,7 @@ algorithm and representation invariants belong beside their implementation.
 
 > Most of our contributors are working on Apple machines, so all our instructions are currently macOS / Linux centric. Contributions for Windows development welcome!
 
-- [Node.js](https://nodejs.org/) v22.x or newer
+- [Node.js](https://nodejs.org/) v26.x or newer (the version in `.nvmrc`)
 - [Yarn CLI](https://yarnpkg.com/getting-started/install) (can be installed with `corepack`, Homebrew, etc)
 - C compiler toolchain (usually installed with `xcode` on Mac)
 - Rust toolchain (required to build rewatch; follow the instructions at https://www.rust-lang.org/tools/install and install the version listed as `rust-version` in `rewatch/Cargo.toml`)
@@ -569,6 +569,21 @@ Javascript Code
 ```
 
 Note that there is one design goal to keep in mind, never introduce any meaningless symbol unless necessary, we do optimizations, however, it should also compile readable output code.
+
+## Commit messages
+
+Every commit message has a subject, a description and a sign-off. The description says why the commit is made, as a line or two of prose or a `Why:` section; this applies to small follow-up commits too, such as adding a changelog fragment. Pull requests are squash-merged with their commit messages, so these descriptions end up in `master`'s history.
+
+    Warn about unused open statements
+
+    An open whose module contributes no name silently widens the scope;
+    the new warning points at it.
+
+    Signed-off-by: Random J. Developer <random@developer.example.org>
+
+The Semantic Diff workflow draws each pull request's commit messages as a review page and comments them on the pull request. It fails if a commit has no description and names that commit; add one with `git rebase -i`, marking the commit `reword`, and force-push. Run the same check locally with `node scripts/commitRecords.js --check origin/master..HEAD`.
+
+A message can also show what the commit changes, such as the parse tree, generated JavaScript or an error message, Before and After; [`.agents/skills/records/SKILL.md`](.agents/skills/records/SKILL.md) describes the format.
 
 ## PR target branch
 

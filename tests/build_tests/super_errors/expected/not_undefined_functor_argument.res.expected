@@ -10,22 +10,13 @@
   12 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-  type t = option<int>
-}
-  is not included in
-    {
-  type t
-}
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/not_undefined_functor_argument.res[0m:[2m10:3-22[0m):
     type t = option<int>
-  is not included in
-    type t
-  [36m/.../fixtures/not_undefined_functor_argument.res[0m:[2m3:19-24[0m:
-    Expected declaration
-  [36m/.../fixtures/not_undefined_functor_argument.res[0m:[2m10:3-22[0m:
-    Actual declaration
+  
+  Expected declaration ([36m/.../fixtures/not_undefined_functor_argument.res[0m:[2m3:19-24[0m):
+    @notUndefined type t
+  
   Their runtime representations differ:
-  the second declaration is @notUndefined,
-  but the first declaration can hold undefined.
+    Actual declaration: can hold undefined
+    Expected declaration: @notUndefined

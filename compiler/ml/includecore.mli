@@ -31,8 +31,16 @@ type type_mismatch =
   | Field_mutable of Ident.t
   | Field_optional of Ident.t
   | Field_arity of Ident.t
-  | Field_names of int * string * string
+  | Field_renamed of string * string
+  | Field_runtime_name of Ident.t * string * string
   | Field_missing of bool * Ident.t
+  | Field_order of string list
+  | Constructor_type of Ident.t
+  | Constructor_arity of Ident.t
+  | Constructor_renamed of string * string
+  | Constructor_missing of bool * Ident.t
+  | Constructor_order of string list
+  | Constructor_record of Ident.t * type_mismatch list
   | Record_representation of record_representation * record_representation
   | Unboxed_representation of bool
   | Immediate
@@ -63,4 +71,10 @@ val extension_constructors :
   Env.t -> Ident.t -> extension_constructor -> extension_constructor -> bool
 
 val report_type_mismatch :
-  string -> string -> string -> Format.formatter -> type_mismatch list -> unit
+  ?read_the_same:bool ->
+  string ->
+  string ->
+  string ->
+  Format.formatter ->
+  type_mismatch list ->
+  unit

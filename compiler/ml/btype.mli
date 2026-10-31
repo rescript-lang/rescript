@@ -37,13 +37,6 @@ val newgenty : type_desc -> type_expr
 val newgenvar : ?name:string -> unit -> type_expr
 (* Return a fresh generic variable *)
 
-(* Use Tsubst instead
-   val newmarkedvar: int -> type_expr
-           (* Return a fresh marked variable *)
-   val newmarkedgenvar: unit -> type_expr
-           (* Return a fresh marked generic variable *)
-*)
-
 (**** Types ****)
 
 val is_Tvar : type_expr -> bool

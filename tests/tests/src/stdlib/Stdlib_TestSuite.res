@@ -1,3 +1,7 @@
+// The installation tests in .github/workflows/ci.yml also run this suite on
+// the oldest supported Node.js version, 22. Tests of APIs that Node.js 22
+// lacks belong in a separate entry point that only scripts/test.js runs.
+
 include Stdlib_TestTests
 include Stdlib_PromiseTest
 include Stdlib_ErrorTests

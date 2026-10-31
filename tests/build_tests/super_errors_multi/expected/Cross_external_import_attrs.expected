@@ -10,13 +10,11 @@
 
   The implementation /.../fixtures/Cross_external_import_attrs/Importattrs.res
   does not match the interface /.../fixtures/Cross_external_import_attrs/importattrs.cmi:
-  Values do not match:
+  
+  Actual declaration ([36m/.../fixtures/Cross_external_import_attrs/Importattrs.res[0m:[2m1:1-2:30[0m):
     @val @module({from: "somepkg", with: {type_: "json", \"some-identifier": "nope"}}) external data: int =
-  "default"
-  is not included in
+      "default"
+  
+  Expected declaration ([36m/.../fixtures/Cross_external_import_attrs/Importattrs.resi[0m:[2m1:1-2:30[0m):
     @val @module({from: "somepkg", with: {type_: "json", \"some-identifier": "yep"}}) external data: int =
-  "default"
-  [36m/.../fixtures/Cross_external_import_attrs/Importattrs.resi[0m:[2m1:1-2:30[0m:
-    Expected declaration
-  [36m/.../fixtures/Cross_external_import_attrs/Importattrs.res[0m:[2m1:1-2:30[0m:
-    Actual declaration
+      "default"

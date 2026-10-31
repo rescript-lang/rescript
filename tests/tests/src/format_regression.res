@@ -1,10 +1,12 @@
 @@warning("-20-21")
 type tag
 type queue_elem<'a>
+
 type queue<'a> = {
   mutable insert: queue_elem<'a>,
   mutable body: queue_elem<'a>,
 }
+
 type size
 type pp_token
 let peek_queue = _ => assert(false)
@@ -12,6 +14,7 @@ let int_of_size = _ => assert(false)
 let take_queue = _ => assert(false)
 let format_pp_token = (_, _, _) => assert(false)
 let pp_infinity = 1000000010
+
 type pp_queue_elem = {
   mutable elem_size: size,
   token: pp_token,
@@ -24,6 +27,7 @@ type formatter = {
   mutable pp_right_total: int,
   mutable pp_queue: queue<pp_queue_elem>,
 }
+
 let rec advance_loop = state =>
   switch peek_queue(state.pp_queue) {
   | {elem_size: size, token: tok, length: len} =>

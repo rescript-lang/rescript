@@ -7,9 +7,11 @@ function hey(x, y) {
     return x + y;
   }
 `)
+
 @val external xx: (~x: int=?, ~y: int, unit) => int = "hey"
 
 let counter = ref(0)
+
 let side_effect = x => {
   x.contents = x.contents + 1
   x.contents
@@ -20,6 +22,7 @@ let bug_to_fix = (f, x) => xx(~x=f(x), ~y=3, ()) /* : [f x] is done once */
 let bug_to_fix2 = (f, x) => xx(~x=?f(x), ~y=3, ()) /* : [f x] is done once */
 
 let counter2 = ref(0)
+
 let side_effect2 = x => {
   x.contents = x.contents + 1
   Some(x.contents)

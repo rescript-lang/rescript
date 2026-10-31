@@ -950,10 +950,8 @@ let check_well_founded env loc path to_check ty =
     else
       let rec_ok =
         match ty.desc with
-        | Tconstr (_p, _, _) ->
-          false (*!Clflags.recursive_types && Ctype.is_contractive env p*)
         | Tobject _ | Tvariant _ -> true
-        | _ -> false (* !Clflags.recursive_types*)
+        | _ -> false
       in
       let visited' = Type_map.add ty parents !visited in
       let arg_exn =
@@ -2332,7 +2330,9 @@ let report_error ppf = function
   | Bad_unboxed_attribute msg ->
     fprintf ppf "@[This type cannot be unboxed because@ %s.@]" msg
   | Nonrec_gadt ->
-    fprintf ppf "@[GADT case syntax cannot be used in a 'nonrec' block.@]"
+    fprintf ppf
+      "@[GADTs require recursive type syntax.@ Define your type using `type \
+       rec` instead of `type`.@]"
   | Variant_runtime_representation_mismatch
       (Variant_coercion.VariantError
          {

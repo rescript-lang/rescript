@@ -249,6 +249,7 @@ let forEach: (t<'key, 'value, 'id>, ('key, 'value) => unit) => unit
 
 @deprecated("Use `reduce` instead")
 let reduceU: (t<'key, 'value, 'id>, 'c, ('c, 'key, 'value) => 'c) => 'c
+
 /**
 `reduce(tbl, init, f)` computes `(f(kN, dN) ... (f(k1, d1, init))...)`, where `k1 ... kN` are the keys of all bindings in `tbl`, and `d1 ... dN` are the associated values. Each binding is presented exactly once to `f`.
 

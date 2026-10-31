@@ -51,9 +51,11 @@ module DeepSub = {
     x: result<'a, 'b>,
     z: [#One | #Two('a) | #Three('b)],
   }
+
   type d = {
     ...t<int, int>,
   }
+
   let d: d = {
     x: Ok(1),
     z: #Two(1),

@@ -302,6 +302,7 @@ Test.run(
 )
 
 let generatorReturnValueResult = ref(None)
+
 let generatorReturnValue: Generator.t<int, string, unit> = %raw(`(function* () {
   yield 1
   return "done"
@@ -325,6 +326,7 @@ Test.run(
 )
 
 let generatorThrowErrorResult = ref(None)
+
 let generatorThrowError: Generator.t<int, string, unit> = %raw(`(function* () {
   try {
     yield 1
@@ -400,6 +402,7 @@ await asyncIterator->AsyncIterator.forEach(value => {
 Test.run(__POS_OF__("Creating your own async iterator"), asyncResult.contents, eq, Some("done"))
 
 let asyncOmittedDoneValues = ref([])
+
 let asyncOmittedDoneIterator: AsyncIterator.t<int, string, unit> = %raw(`({
   step: 0,
   next() {
@@ -453,6 +456,7 @@ Test.run(
 )
 
 let asyncGeneratorIterableValues = ref([])
+
 let asyncGeneratorIterable: AsyncGenerator.t<int, unit, unit> = %raw(`(async function* () {
   yield 2
   yield 3
@@ -472,6 +476,7 @@ Test.run(
 )
 
 let asyncIterableForAwaitValues = ref([])
+
 let asyncIterableForAwait: AsyncIterable.t<int> = %raw(`(async function* () {
   yield 1
   yield 2
@@ -485,6 +490,7 @@ for await value of asyncIterableForAwait {
 Test.run(__POS_OF__("for await...of"), asyncIterableForAwaitValues.contents, eq, [1, 2, 3])
 
 let asyncIterableForAwaitLoopControlValues = ref([])
+
 let asyncIterableForAwaitLoopControl: AsyncIterable.t<int> = %raw(`(async function* () {
   yield 1
   yield 2
@@ -552,6 +558,7 @@ let _asyncIterableView: AsyncIterable.t<int> = (
 )->AsyncGenerator.asAsyncIterable
 
 let asyncGeneratorReturnValueResult = ref(None)
+
 let asyncGeneratorReturnValue: AsyncGenerator.t<int, string, unit> = %raw(`(async function* () {
   yield 1
   return "done"
@@ -575,6 +582,7 @@ Test.run(
 )
 
 let asyncGeneratorThrowErrorResult = ref(None)
+
 let asyncGeneratorThrowError: AsyncGenerator.t<int, string, unit> = %raw(`(async function* () {
   try {
     yield 1

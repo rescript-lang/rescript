@@ -8,13 +8,12 @@
 
   The implementation /.../fixtures/Iface_unboxed_variant_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_unboxed_variant_mismatch/foo.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_unboxed_variant_mismatch/Foo.res[0m:[2m1:1-18[0m):
     type t = Wrap(int)
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_unboxed_variant_mismatch/Foo.resi[0m:[2m2:1-18[0m):
     @unboxed type t = Wrap(int)
-  [36m/.../fixtures/Iface_unboxed_variant_mismatch/Foo.resi[0m:[2m2:1-18[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_unboxed_variant_mismatch/Foo.res[0m:[2m1:1-18[0m:
-    Actual declaration
+  
   Their internal representations differ:
-  the second declaration uses unboxed representation.
+    The expected declaration uses unboxed representation.

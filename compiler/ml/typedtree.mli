@@ -218,23 +218,22 @@ and expression_desc =
          *)
   | Texp_variant of label * expression option
   | Texp_record of {
-      fields:
-        (Types.label_description
-        * record_label_definition
-        * bool (* optional *))
-        array;
+      fields: (Types.label_description * Longident.t loc * expression) array;
       representation: Types.record_representation;
       extended_expression: expression option;
     }
       (** { l1=P1; ...; ln=Pn }           (extended_expression = None)
             { E0 with l1=P1; ...; ln=Pn }   (extended_expression = Some E0)
 
-            Invariant: n > 0
+            [fields] holds only the fields the literal writes, ordered by
+            [lbl_pos]. A field it leaves out is taken from E0 when there is
+            one, and is otherwise an optional field set to [None]. The
+            record's other labels are in [lbl_all] of any written label.
 
             If the type is { l1: t1; l2: t2 }, the expression
             { E0 with t2=P2 } is represented as
             Texp_record
-              { fields = [| l1, Kept t1; l2 Override P2 |]; representation;
+              { fields = [| (l2, lid2, P2) |]; representation;
                 extended_expression = Some E0 }
         *)
   | Texp_field of expression * Longident.t loc * label_description
@@ -242,6 +241,9 @@ and expression_desc =
       expression * Longident.t loc * label_description * expression
   | Texp_array of expression list
   | Texp_dict of dict_entry list
+  | Texp_spread of Parsetree.spread_kind * expression list
+    (* An array or list literal with spreads: the arrays or lists it
+       concatenates, see [Ast_spread] *)
   | Texp_ifthenelse of expression * expression * expression option
   | Texp_sequence of expression * expression
   | Texp_break
@@ -301,10 +303,6 @@ and function_param = {
          the label -- and the user's pattern is bound by a let at the head
          of the body. *)
 }
-
-and record_label_definition =
-  | Kept of Types.type_expr
-  | Overridden of Longident.t loc * expression
 
 (* Value expressions for the module language *)
 and module_expr = {

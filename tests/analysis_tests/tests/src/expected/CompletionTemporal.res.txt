@@ -1,0 +1,25 @@
+Complete src/CompletionTemporal.res 4:17
+pos_cursor:[4:17] pos_no_white:[4:16] Found expr:[4:3->4:17]
+Completable: Cpath Value[date]->toPlainY
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[date]->toPlainY
+ContextPath Value[date]
+Path date
+CPPipe path_from_env:Stdlib_Temporal_Common found:false
+Path Stdlib_Temporal_Common.toPlainY
+Path Stdlib.Temporal.PlainDate.toPlainY
+Path toPlainY
+[
+  {
+    "detail": "t => Temporal_Common.plainYearMonth",
+    "documentation": {
+      "kind": "markdown",
+      "value": "\n`toPlainYearMonth(date)` returns the year and month of `date`.\n\nSee [`Temporal.PlainDate.prototype.toPlainYearMonth`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal/PlainDate/toPlainYearMonth) on MDN.\n\n## Examples\n\n```rescript\nTemporal.PlainDate.fromStringOrThrow(\"2024-02-29\")\n->Temporal.PlainDate.toPlainYearMonth\n->Temporal.PlainYearMonth.toString == \"2024-02\"\n```\n"
+    },
+    "kind": 12,
+    "label": "Temporal.PlainDate.toPlainYearMonth",
+    "tags": []
+  }
+]
+

@@ -119,8 +119,7 @@ type import_source =
    rather than primitives. See [builtin]. *)
 type eliminated = Identity | Ignore
 
-(* A JSX element in JSX preserve mode, built by [Translcore] from a call the
-   JSX PPX produced. The arguments of [Pjsx] are, in evaluation order: the tag,
+(* A JSX element, built by [Translcore] from a call the JSX PPX produced. The arguments of [Pjsx] are, in evaluation order: the tag,
    the spread props (if [jsx_spread]), one value per [jsx_props] entry, the
    children ([jsx_children] of them) and the key (if [jsx_key]). *)
 type jsx_element = {
@@ -287,6 +286,10 @@ type primitive =
   | Ptemplate of Asttypes.template_segment list
   (* {...target, ...sources} *)
   | Pdict_spread
+  (* [Primitive_array.spread(parts)] and [Primitive_list.spread(parts)], the
+     concatenation of an array of arrays or lists *)
+  | Parray_spread
+  | Plist_spread
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
@@ -486,6 +489,8 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   | Pmakelist
   (* dict primitives *)
   | Pmakedict | Pdict_spread | Pdict_has
+  (* spread primitives *)
+  | Parray_spread | Plist_spread
   (* promise *)
   | Pawait
   (* etc *)

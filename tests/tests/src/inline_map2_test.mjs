@@ -1928,8 +1928,8 @@ let s = Stdlib_List.reduceReverse({hd: [
 ], tl: /* [] */0}}}}, "Empty", (acc, param) => add$1(param[0], param[1], acc));
 
 Mocha.describe("Inline_map2_test", () => {
-  Mocha.test("assertion1", () => Test_utils.eq("File \"inline_map2_test.res\", line 478, characters 30-37", find(10, m), /* 'a' */97));
-  Mocha.test("assertion2", () => Test_utils.eq("File \"inline_map2_test.res\", line 479, characters 30-37", find$1("10", s), /* 'a' */97));
+  Mocha.test("assertion1", () => Test_utils.eq("File \"inline_map2_test.res\", line 479, characters 30-37", find(10, m), /* 'a' */97));
+  Mocha.test("assertion2", () => Test_utils.eq("File \"inline_map2_test.res\", line 480, characters 30-37", find$1("10", s), /* 'a' */97));
 });
 
 let eq = Test_utils.eq;

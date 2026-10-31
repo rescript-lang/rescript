@@ -2,6 +2,7 @@ exception Out_of_memory
 exception Sys_error(string)
 exception Stack_overflow
 exception Sys_blocked_io
+
 let ff = (g, x) => {
   try g(x) catch {
   | Not_found => ()
@@ -43,6 +44,7 @@ let u = () => {
   let f = 3 + 3
   f + f
 }
+
 let u1 = "bad character decimal encoding \\"
 let v = "bad character decimal encoding \\%c%c%c"
 

@@ -11,21 +11,9 @@
   8 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-  type t = ..
-  type t += E(string)
-}
-  is not included in
-    {
-  type t = ..
-  type t += E(int)
-}
-  Extension declarations do not match:
-    type t +=  E(string)
-  is not included in
-    type t +=  E(int)
-  [36m/.../fixtures/include_extension_constructors_mismatch.res[0m:[2m3:13-18[0m:
-    Expected declaration
-  [36m/.../fixtures/include_extension_constructors_mismatch.res[0m:[2m6:13-21[0m:
-    Actual declaration
+  
+  Actual declaration ([36m/.../fixtures/include_extension_constructors_mismatch.res[0m:[2m6:13-21[0m):
+    type t += E(string)
+  
+  Expected declaration ([36m/.../fixtures/include_extension_constructors_mismatch.res[0m:[2m3:13-18[0m):
+    type t += E(int)

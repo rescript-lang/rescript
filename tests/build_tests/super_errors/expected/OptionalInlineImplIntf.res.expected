@@ -10,20 +10,12 @@
   6 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-  type t = A({x: int})
-}
-  is not included in
-    {
-  type t = A({x?: int})
-}
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/OptionalInlineImplIntf.res[0m:[2m4:3-22[0m):
     type t = A({x: int})
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/OptionalInlineImplIntf.res[0m:[2m2:3-23[0m):
     type t = A({x?: int})
-  [36m/.../fixtures/OptionalInlineImplIntf.res[0m:[2m2:3-23[0m:
-    Expected declaration
-  [36m/.../fixtures/OptionalInlineImplIntf.res[0m:[2m4:3-22[0m:
-    Actual declaration
-  The optional attribute of field x is different.
+  
+  The records of constructor A differ:
+    The optional attribute of field x is different.

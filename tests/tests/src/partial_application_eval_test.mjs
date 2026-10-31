@@ -51,10 +51,10 @@ Mocha.describe("Partial_application_eval_test", () => {
       return calls;
     };
     let arg = next();
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 35, characters 7-14", 1, calls);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 36, characters 7-14", 4, add(arg, 1, 2));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 36, characters 7-14", 1, calls);
     Test_utils.eq("File \"partial_application_eval_test.res\", line 37, characters 7-14", 4, add(arg, 1, 2));
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 38, characters 7-14", 1, calls);
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 38, characters 7-14", 4, add(arg, 1, 2));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 39, characters 7-14", 1, calls);
   });
   Mocha.test("the callee is evaluated once", () => {
     let calls = 0;
@@ -65,36 +65,36 @@ Mocha.describe("Partial_application_eval_test", () => {
     let func = getAdd();
     func(1, 2, 3);
     func(1, 2, 3);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 50, characters 7-14", 1, calls);
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 51, characters 7-14", 1, calls);
   });
   Mocha.test("a closure argument is created once", () => {
     let arg = x => x + 1 | 0;
-    Test_utils.ok("File \"partial_application_eval_test.res\", line 55, characters 7-14", arg === arg);
+    Test_utils.ok("File \"partial_application_eval_test.res\", line 56, characters 7-14", arg === arg);
   });
   Mocha.test("a constant tuple argument is created once", () => {
     let arg = [
       1,
       2
     ];
-    Test_utils.ok("File \"partial_application_eval_test.res\", line 60, characters 7-14", arg === arg);
+    Test_utils.ok("File \"partial_application_eval_test.res\", line 61, characters 7-14", arg === arg);
   });
   Mocha.test("a nested None argument is created once", () => {
     let arg = Primitive_option.some(undefined);
-    Test_utils.ok("File \"partial_application_eval_test.res\", line 65, characters 7-14", arg === arg);
+    Test_utils.ok("File \"partial_application_eval_test.res\", line 66, characters 7-14", arg === arg);
     let arg$1 = Primitive_option.some(Primitive_option.some(undefined));
-    Test_utils.ok("File \"partial_application_eval_test.res\", line 67, characters 7-14", arg$1 === arg$1);
+    Test_utils.ok("File \"partial_application_eval_test.res\", line 68, characters 7-14", arg$1 === arg$1);
   });
   Mocha.test("a top-level partial application creates its arguments once", () => {
-    Test_utils.ok("File \"partial_application_eval_test.res\", line 71, characters 7-14", topLevelTuple(0) === topLevelTuple(0));
-    Test_utils.ok("File \"partial_application_eval_test.res\", line 72, characters 7-14", topLevelNone(0) === topLevelNone(0));
-    Test_utils.ok("File \"partial_application_eval_test.res\", line 73, characters 7-14", topLevelNestedNone(0) === topLevelNestedNone(0));
+    Test_utils.ok("File \"partial_application_eval_test.res\", line 72, characters 7-14", topLevelTuple(0) === topLevelTuple(0));
+    Test_utils.ok("File \"partial_application_eval_test.res\", line 73, characters 7-14", topLevelNone(0) === topLevelNone(0));
+    Test_utils.ok("File \"partial_application_eval_test.res\", line 74, characters 7-14", topLevelNestedNone(0) === topLevelNestedNone(0));
   });
   Mocha.test("an external value is read once", () => {
     let arg = partialApplicationValue;
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 78, characters 7-14", 3, add(arg, 1, 1));
     Test_utils.eq("File \"partial_application_eval_test.res\", line 79, characters 7-14", 3, add(arg, 1, 1));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 80, characters 7-14", 3, add(arg, 1, 1));
   });
-  Mocha.test("a partial application of values stays polymorphic", () => Test_utils.eq("File \"partial_application_eval_test.res\", line 84, characters 7-14", 2, 2));
+  Mocha.test("a partial application of values stays polymorphic", () => Test_utils.eq("File \"partial_application_eval_test.res\", line 85, characters 7-14", 2, 2));
   Mocha.test("callee and arguments are evaluated left to right", () => {
     let log = [];
     let getAdd = () => {
@@ -108,17 +108,17 @@ Mocha.describe("Partial_application_eval_test", () => {
     let func = getAdd();
     let arg$1 = arg("a", 1);
     let arg$2 = arg("b", 2);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 98, characters 7-14", [
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 99, characters 7-14", [
       "callee",
       "a",
       "b"
     ], log);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 99, characters 7-14", 6, func(arg$1, arg$2, 3));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 100, characters 7-14", 6, func(arg$1, arg$2, 3));
   });
   Mocha.test("an awaited argument stays in the async function", async () => {
     let arg = await Promise.resolve(1);
-    Test_utils.eq("File \"partial_application_eval_test.res\", line 104, characters 7-14", 4, add(arg, 1, 2));
-    return Test_utils.eq("File \"partial_application_eval_test.res\", line 105, characters 7-14", 6, add(arg, 2, 3));
+    Test_utils.eq("File \"partial_application_eval_test.res\", line 105, characters 7-14", 4, add(arg, 1, 2));
+    return Test_utils.eq("File \"partial_application_eval_test.res\", line 106, characters 7-14", 6, add(arg, 2, 3));
   });
 });
 

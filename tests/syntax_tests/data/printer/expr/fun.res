@@ -75,6 +75,13 @@ let f = @attr (a, b) => @attr2 (c, d) => ()
 let f = (@attr ~a, @attr ~b) => ()
 let f = (@attr ~a, @attr ~b) => ()
 
+// Attributes before a labeled alias stay in front of the label
+let f = (@attr ~a as x: int) => x
+let f = (@attr ~a as x: int=?, @attr ~b as y: int=1) => x + y
+let f = (@attr ~a as (x, y), @attr ~b as {z}, @attr ~c as _) => x + y + z
+let f = (@attr ~a as @inner (x: int)) => x
+let f = (~a as @attr x: int) => x
+
 let f = (
   thisIsAVeryLongNaaaaaaaaaaaaaaaaaaameeeeeeeeeeeee,
   thisIsAVeryLongNaaaaaaaaaaaaaaaaaaameeeeeeeeeeeee,

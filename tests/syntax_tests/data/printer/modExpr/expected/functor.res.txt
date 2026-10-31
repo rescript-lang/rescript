@@ -11,17 +11,21 @@ include (@functorAttr2 @functorAttr X: Map, @attr3 Y: Set) => Zzzzzzzzzzzzzzzzzz
 module Make = (A: X, B: Y) => {
   let a = A.a + B.b
 }
+
 // constraint on return type
 module Make = (A: X, B: Y): Set => {
   let a = A.a + B.b
 }
+
 include (@functorAttr X: Map, Y: Set, Z: SuperLongModuleTypeName, Foo: Baaaaaaaaar): Set => {
   let a = A.a + B.b
 }
+
 // with attributes
 module Make = (@functorAttr A: X, B: Y): Set => {
   let a = A.a + B.b
 }
+
 module Make = (@functorAttr A: X, @functorAttr2 B: Y): Set => {
   let a = A.a + B.b
 }
@@ -46,6 +50,7 @@ module Make = (
   type key = t
   type coll = list<key>
   let empty = list{}
+
   let add = (y: coll, e: key) =>
     if List.exists(x => eq(x, e), y) {
       y
@@ -57,6 +62,7 @@ module Make = (
 module Make = (A: X, B: Y): ((Set, Set) => Set) => {
   let a = A.a + B.b
 }
+
 module Make = (SuperLongNaaaaaaaame: X, SuperLongNaaaaaaaame: Y, SuperLongNaaaaaaaame: Z): (
   (
     Seeeeeeeeeeeeeeeeeeeeeeeeeeeeet,

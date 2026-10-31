@@ -1,0 +1,1 @@
+- Add missing JSX DOM event handlers and capture variants through React 19.3, including dialog, fullscreen, toggle, scroll-end, and transition events, with typed toggle states and source.

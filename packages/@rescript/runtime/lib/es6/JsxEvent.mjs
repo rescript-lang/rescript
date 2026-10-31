@@ -37,6 +37,8 @@ let Animation = {};
 
 let Transition = {};
 
+let Toggle = {};
+
 export {
   MakeEventWithType,
   Synthetic,
@@ -55,5 +57,6 @@ export {
   Image,
   Animation,
   Transition,
+  Toggle,
 }
 /* No side effect */

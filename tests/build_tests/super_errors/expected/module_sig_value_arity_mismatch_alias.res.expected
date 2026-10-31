@@ -10,20 +10,11 @@
   8 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-  let f: curried
-}
-  is not included in
-    {
-  let f: (int, int) => int
-}
-  Values do not match:
+  
+  Actual declaration ([36m/.../fixtures/module_sig_value_arity_mismatch_alias.res[0m:[2m6:7[0m):
     let f: curried
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/module_sig_value_arity_mismatch_alias.res[0m:[2m4:3-26[0m):
     let f: (int, int) => int
+  
   The implementation contains a function taking 1 argument where the interface expects one taking 2 arguments.
-  [36m/.../fixtures/module_sig_value_arity_mismatch_alias.res[0m:[2m4:3-26[0m:
-    Expected declaration
-  [36m/.../fixtures/module_sig_value_arity_mismatch_alias.res[0m:[2m6:7[0m:
-    Actual declaration

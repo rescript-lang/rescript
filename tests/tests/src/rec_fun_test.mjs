@@ -34,7 +34,7 @@ Primitive_object.updateDummy(x, {hd: 1, tl: y});
 Primitive_object.updateDummy(y, {hd: 2, tl: x});
 
 Mocha.describe("Rec_fun_test", () => {
-  Mocha.test("called contents", () => Test_utils.eq("File \"rec_fun_test.res\", line 25, characters 35-42", 2, called.contents));
+  Mocha.test("called contents", () => Test_utils.eq("File \"rec_fun_test.res\", line 26, characters 35-42", 2, called.contents));
 });
 
 export {

@@ -16,6 +16,7 @@ include (
     ) => {
       let u = S.add(1, 2)
     }
+
     module H = M({
       let add = (x, y) => x + y
     })

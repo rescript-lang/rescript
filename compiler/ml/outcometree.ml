@@ -37,7 +37,8 @@ type out_type =
   | Otyp_manifest of out_type * out_type
   | Otyp_object of (string * bool * out_type) list * bool option
     (* fields are (name, mutable, type) *)
-  | Otyp_record of (string * bool * bool * out_type) list
+  | Otyp_record of (string * string option * bool * bool * out_type) list
+      (** name, runtime name given with [@as], mutable, optional, type *)
   | Otyp_stuff of string
   | Otyp_sum of (string * out_type list * out_type option * string option) list
   | Otyp_tuple of out_type list
@@ -45,7 +46,6 @@ type out_type =
   | Otyp_variant of bool * out_variant * bool * string list option
   | Otyp_poly of string list * out_type
   | Otyp_module of string * string list * out_type list
-  | Otyp_attribute of out_type * out_attribute
 
 and out_variant =
   | Ovar_fields of (string * bool * out_type list) list
@@ -69,8 +69,9 @@ and out_type_decl = {
   otype_params: (string * (bool * bool)) list;
   otype_type: out_type;
   otype_private: Asttypes.private_flag;
-  otype_immediate: bool;
-  otype_unboxed: bool;
+  otype_attributes: string list;
+      (** The annotations that change what the declaration means at run time,
+          as they are written, e.g. [@unboxed] or [@tag("kind")] *)
   otype_cstrs: (out_type * out_type) list;
 }
 and out_extension_constructor = {

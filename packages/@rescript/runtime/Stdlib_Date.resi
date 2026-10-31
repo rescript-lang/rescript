@@ -286,6 +286,7 @@ external makeWithYMDHMSM: (
   ~seconds: int,
   ~milliseconds: int,
 ) => t = "Date"
+
 module UTC: {
   /**
   Returns the time, in milliseconds, since UNIX epoch (January 1, 1970 00:00:00 UTC).
@@ -1456,6 +1457,22 @@ Date.fromString("")->Date.toJSON
 */
 @return(nullable) @send
 external toJSON: t => option<string> = "toJSON"
+
+/**
+`toTemporalInstant(date)`
+
+Converts a JavaScript date to a `Temporal.Instant` representing the same point in time.
+Throws a `RangeError` for invalid dates.
+
+See [`Date.prototype.toTemporalInstant`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toTemporalInstant) on MDN.
+
+## Examples
+```rescript
+Date.fromTime(0.)->Date.toTemporalInstant->Temporal.Instant.toString == "1970-01-01T00:00:00Z"
+```
+*/
+@send
+external toTemporalInstant: t => Stdlib_Temporal_Common.instant = "toTemporalInstant"
 
 /**
   `ignore(date)` ignores the provided date and returns unit.

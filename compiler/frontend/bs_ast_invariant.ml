@@ -102,17 +102,6 @@ let emit_external_warnings : iterator =
       (fun self ext ->
         check_removed_ocaml_extension ext;
         super.extension self ext);
-    structure_item =
-      (fun self str_item ->
-        match str_item.pstr_desc with
-        | Pstr_type
-            ( Nonrecursive,
-              [{ptype_kind = Ptype_variant ({pcd_res = Some _} :: _)}] ) ->
-          Location.raise_errorf ~loc:str_item.pstr_loc
-            "GADTs require recursive type syntax.\n\
-             Define your type using `type rec` instead of `type`.\n\
-             Example: type rec t = ..."
-        | _ -> super.structure_item self str_item);
     expr =
       (fun self ({pexp_loc = loc} as a) ->
         match a.pexp_desc with

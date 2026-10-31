@@ -3,6 +3,7 @@ Bindings to JavaScript's `Intl.RelativeTimeFormat`.
 
 See [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/RelativeTimeFormat) for API details.
 */
+
 @instanceOf("Intl.RelativeTimeFormat")
 type t
 
@@ -26,6 +27,7 @@ type resolvedOptions = {
 }
 
 type relativeTimePartComponent = [#literal | #integer]
+
 type relativeTimePart = {
   \"type": relativeTimePartComponent,
   value: string,

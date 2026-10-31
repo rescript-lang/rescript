@@ -211,10 +211,11 @@ let rec classify_expression : Typedtree.expression -> sd =
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
   (* A dict literal is built by the [Pmakedict] and [Pdict_spread] primitives,
-     see [Translcore] *)
-  | Texp_apply _ | Texp_dict _ | Texp_match _ | Texp_ifthenelse _
-  | Texp_object_get _ | Texp_object_set _ | Texp_field _ | Texp_assert _
-  | Texp_try _ | Texp_tagged_template _ | Texp_template _ ->
+     and an array or list literal with spreads by [Parray_spread] or
+     [Plist_spread], see [Translcore] *)
+  | Texp_apply _ | Texp_dict _ | Texp_spread _ | Texp_match _
+  | Texp_ifthenelse _ | Texp_object_get _ | Texp_object_set _ | Texp_field _
+  | Texp_assert _ | Texp_try _ | Texp_tagged_template _ | Texp_template _ ->
     Dynamic
 
 let rec expression : Env.env -> Typedtree.expression -> Use.t =
@@ -277,6 +278,7 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
       | Tdict_entry (_, e) | Tdict_spread e -> expression env e
     in
     Use.inspect (list entry env entries)
+  | Texp_spread (_, parts) -> Use.inspect (list expression env parts)
   | Texp_construct (_, desc, exprs) ->
     let access_constructor =
       match desc.cstr_kind with
@@ -294,10 +296,7 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
       | Record_unboxed _ -> fun x -> x
       | Record_regular | Record_inlined _ | Record_extension -> Use.guard
     in
-    let field env = function
-      | _, Kept _, _ -> Use.empty
-      | _, Overridden (_, e), _ -> expression env e
-    in
+    let field env (_, _, e) = expression env e in
     Use.join (use (array field env es)) (option expression env eo)
   | Texp_ifthenelse (cond, ifso, ifnot) ->
     Use.(
@@ -497,10 +496,10 @@ let check_recursive_bindings valbinds =
   in
   Ext_list.iter valbinds (fun {vb_expr} ->
       match vb_expr.exp_desc with
-      | Texp_record
-          {fields = [|(_, Overridden (_, {exp_desc = Texp_function _}), _)|]}
-      | Texp_function _ ->
+      | Texp_record {fields = [|(lbl, _, {exp_desc = Texp_function _})|]}
+        when Array.length lbl.lbl_all = 1 ->
         ()
+      | Texp_function _ -> ()
       (*TODO: add uncurried function too*)
       | _ -> check_recursive_expression ids vb_expr)
 

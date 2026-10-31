@@ -117,7 +117,7 @@ and expression_desc =
       multi: bool;
       fragment: bool;
     }
-      (** A JSX element in JSX preserve mode, from [Lambda.Pjsx]. js_dump
+      (** A JSX element, from [Lambda.Pjsx]. In JSX preserve mode, js_dump
           prints it as JSX when every part can be written in JSX, and
           otherwise as the call
           [callee(tag, {...spread, props, children}, key)]. [props] holds

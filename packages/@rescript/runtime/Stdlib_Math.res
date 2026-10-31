@@ -58,6 +58,7 @@ module Int = {
   @val external sign: int => int = "Math.sign"
   let floor: float => int = f => f->floor->Stdlib_Float.toInt
   let ceil: float => int = f => f->ceil->Stdlib_Float.toInt
+
   let random: (int, int) => int = (min, max) =>
     floor(random() *. Stdlib_Int.toFloat(max - min)) + min
 }

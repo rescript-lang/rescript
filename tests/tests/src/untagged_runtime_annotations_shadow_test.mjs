@@ -31,13 +31,13 @@ function kind(value) {
 
 Mocha.describe("Untagged_runtime_annotations_shadow_test", () => {
   Mocha.test("a class check reads a shadowed global", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_shadow_test.res\", line 35, characters 7-14", "local module", "local module");
-    Test_utils.eq("File \"untagged_runtime_annotations_shadow_test.res\", line 36, characters 7-14", "shadowed", kind(new (globalThis.UntaggedShadowed)()));
+    Test_utils.eq("File \"untagged_runtime_annotations_shadow_test.res\", line 36, characters 7-14", "local module", "local module");
+    Test_utils.eq("File \"untagged_runtime_annotations_shadow_test.res\", line 37, characters 7-14", "shadowed", kind(new (globalThis.UntaggedShadowed)()));
   });
   Mocha.test("a class check at a dotted path reads a shadowed global", () => {
-    Test_utils.eq("File \"untagged_runtime_annotations_shadow_test.res\", line 40, characters 7-14", "local module", "local module");
-    Test_utils.eq("File \"untagged_runtime_annotations_shadow_test.res\", line 41, characters 7-14", "klass", kind(new (globalThis.UntaggedNs.Klass)()));
-    Test_utils.eq("File \"untagged_runtime_annotations_shadow_test.res\", line 42, characters 7-14", "text", "text");
+    Test_utils.eq("File \"untagged_runtime_annotations_shadow_test.res\", line 41, characters 7-14", "local module", "local module");
+    Test_utils.eq("File \"untagged_runtime_annotations_shadow_test.res\", line 42, characters 7-14", "klass", kind(new (globalThis.UntaggedNs.Klass)()));
+    Test_utils.eq("File \"untagged_runtime_annotations_shadow_test.res\", line 43, characters 7-14", "text", "text");
   });
 });
 

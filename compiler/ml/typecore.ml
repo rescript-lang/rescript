@@ -283,6 +283,11 @@ let iter_expression f e =
         (function
           | Pdict_entry (_, e) | Pdict_spread e -> expr e)
         entries
+    | Pexp_spread (_, elements) ->
+      List.iter
+        (function
+          | Pspread_item e | Pspread e -> expr e)
+        elements
     | Pexp_await _ -> assert false (* should be handled earlier *)
     | Pexp_jsx_element _ ->
       raise (Error (e.pexp_loc, Env.empty, Jsx_not_enabled))
@@ -378,6 +383,23 @@ let type_option ty = newty (Tconstr (Predef.path_option, [ty], ref Mnil))
 
 let mkexp exp_desc exp_type exp_loc exp_env =
   {exp_desc; exp_type; exp_loc; exp_env; exp_extra = []; exp_attributes = []}
+
+(* Which labels of a record a literal writes, indexed by [lbl_pos]. *)
+let written_labels (lbl_all : label_description array) lbl_exp_list =
+  let written = Array.make (Array.length lbl_all) false in
+  List.iter (fun (_, lbl, _, _) -> written.(lbl.lbl_pos) <- true) lbl_exp_list;
+  written
+
+(* The fields of a [Texp_record]: the written ones, ordered by [lbl_pos]. *)
+let record_fields lbl_exp_list =
+  let fields =
+    Array.of_list
+      (List.map (fun (lid, lbl, exp, _) -> (lbl, lid, exp)) lbl_exp_list)
+  in
+  Array.sort
+    (fun (l1, _, _) (l2, _, _) -> Int.compare l1.lbl_pos l2.lbl_pos)
+    fields;
+  fields
 
 let option_none ty loc =
   let lid = Longident.Lident "None" and env = Env.initial_safe_string () in
@@ -1956,10 +1978,15 @@ let type_pattern ~lev env spat expected_ty =
   reset_pattern true;
   let new_env = ref env in
   let pat = type_pat ~allow_existentials:true ~lev new_env spat expected_ty in
+  (* The unused-variable checks are set up here, after [type_pat] has left
+     the pattern's warning scope: enter it again so that [@warning] on the
+     pattern covers its variables. *)
   let new_env, unpacks =
-    add_pattern_variables !new_env
-      ~check:(fun s -> Warnings.Unused_var_strict s)
-      ~check_as:(fun s -> Warnings.Unused_var s)
+    Builtin_attributes.warning_scope ~ppwarning:false spat.ppat_attributes
+      (fun () ->
+        add_pattern_variables !new_env
+          ~check:(fun s -> Warnings.Unused_var_strict s)
+          ~check_as:(fun s -> Warnings.Unused_var s))
   in
   (pat, new_env, get_ref (pattern_force_ref ()), unpacks)
 
@@ -2058,14 +2085,27 @@ let rec is_nonexpansive exp =
   | Texp_tuple el -> List.for_all is_nonexpansive el
   | Texp_construct (_, _, el) -> List.for_all is_nonexpansive el
   | Texp_variant (_, arg) -> is_nonexpansive_opt arg
-  | Texp_record {fields; extended_expression} ->
+  | Texp_record {fields; extended_expression} -> (
     Array.for_all
-      (fun (lbl, definition, _) ->
-        match definition with
-        | Overridden (_, exp) -> lbl.lbl_mut = Immutable && is_nonexpansive exp
-        | Kept _ -> true)
+      (fun (lbl, _, exp) -> lbl.lbl_mut = Immutable && is_nonexpansive exp)
       fields
-    && is_nonexpansive_opt extended_expression
+    &&
+    match extended_expression with
+    | Some exp -> is_nonexpansive exp
+    | None -> (
+      (* The optional fields the literal leaves out are allocated too *)
+      match fields with
+      | [||] -> (
+        (* [{}] has no field to find the record's labels through *)
+        match extract_concrete_record exp.exp_env exp.exp_type with
+        | _, _, decls, _ ->
+          List.for_all
+            (fun (ld : Types.label_declaration) -> ld.ld_mutable = Immutable)
+            decls
+        | exception Not_found -> false)
+      | _ ->
+        let lbl, _, _ = fields.(0) in
+        Array.for_all (fun lbl -> lbl.lbl_mut = Immutable) lbl.lbl_all))
   | Texp_field (exp, _, _) -> is_nonexpansive exp
   | Texp_array [] -> false
   | Texp_ifthenelse (_cond, ifso, ifnot) ->
@@ -2539,7 +2579,8 @@ let rec type_exp ?deprecated_context ~context ?recarg env sexp =
    In the principal case, [type_expected'] may be at generic_level.
 *)
 
-and type_expect ~context ?deprecated_context ?recarg env sexp ty_expected =
+and type_expect ~context ?deprecated_context ?recarg ?match_context env sexp
+    ty_expected =
   (* Special errors for braced identifiers passed to records *)
   let context =
     match sexp.pexp_desc with
@@ -2550,14 +2591,19 @@ and type_expect ~context ?deprecated_context ?recarg env sexp ty_expected =
   let previous_saved_types = Cmt_format.get_saved_types () in
   let exp =
     Builtin_attributes.warning_scope sexp.pexp_attributes (fun () ->
-        type_expect_ ?deprecated_context ~context ?recarg env sexp ty_expected)
+        type_expect_ ?deprecated_context ~context ?recarg ?match_context env
+          sexp ty_expected)
   in
   Cmt_format.set_saved_types
     (Cmt_format.Partial_expression exp :: previous_saved_types);
   exp
 
-and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
-    ty_expected =
+(* [match_context] is set where the type checker itself rewrites source into
+   a match, and says what that match stands for in the source: it decides the
+   wording of the match's diagnostics, which would otherwise speak of a
+   switch. *)
+and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
+    ?(match_context : [`Function] option) env sexp ty_expected =
   let loc = sexp.pexp_loc in
   (* Record the expression type before unifying it with the expected type *)
   let rue exp =
@@ -2631,11 +2677,25 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
       }
   | Pexp_let
       ( Nonrecursive,
-        [{pvb_pat = spat; pvb_expr = sval; pvb_attributes = []}],
+        [
+          {
+            pvb_pat = spat;
+            pvb_expr = sval;
+            pvb_constraint = None;
+            pvb_attributes;
+          };
+        ],
         sbody )
     when contains_gadt env spat ->
-    (* TODO: allow non-empty attributes? *)
-    type_expect ~context:None env
+    (* A let destructuring a GADT constructor is typed as a one-case match,
+       whose case can bind the constructor's existential types. The rest of
+       the block is that case's body, so the match gets function-style
+       diagnostics rather than a switch's. The binding's attributes go on the
+       case pattern, where they scope over the pattern's warnings. *)
+    let spat =
+      {spat with ppat_attributes = pvb_attributes @ spat.ppat_attributes}
+    in
+    type_expect ~context:None ~match_context:`Function env
       {
         sexp with
         pexp_desc = Pexp_match (sval, [Ast_helper.Exp.case spat sbody]);
@@ -2822,16 +2882,15 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     (* Note: val_caselist = [] and exn_caselist = [], i.e. a fully
        empty pattern matching can be generated by Camlp4 with its
        revised syntax.  Let's accept it for backward compatibility. *)
-    let has_attr name =
-      Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) -> txt = name)
-    in
     let call_context =
-      (* Optional-default lowering synthesizes a match expression, but from the
-         user's point of view this is still part of a function definition. Use
-         function-style diagnostics instead of reporting a phantom switch. *)
-      if has_attr "let.unwrap" then `LetUnwrap
-      else if has_attr "#optional_arg_default" then `Function
-      else `Switch
+      match match_context with
+      | Some (`Function as context) -> context
+      | None ->
+        if
+          Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) ->
+              txt = "let.unwrap")
+        then `LetUnwrap
+        else `Switch
     in
     let val_cases, partial =
       type_cases ~call_context env arg.exp_type ty_expected true loc
@@ -3010,39 +3069,24 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         if fields = [] && repr_opt <> None then ([||], Record_regular)
         else raise (Error (loc, env, Empty_record_literal))
     in
-    let labels_missing = ref [] in
-    let label_definitions =
-      let matching_label lbl =
-        List.find
-          (fun (_, lbl', _, _) -> lbl'.lbl_pos = lbl.lbl_pos)
-          lbl_exp_list
-      in
-      Array.map
-        (fun lbl ->
-          match matching_label lbl with
-          | lid, _lbl, lbl_exp, _ -> Overridden (lid, lbl_exp)
-          | exception Not_found ->
-            if not (label_is_optional lbl) then
-              labels_missing := lbl.lbl_name :: !labels_missing;
-            Overridden
-              ({loc; txt = Lident lbl.lbl_name}, option_none lbl.lbl_arg loc))
-        label_descriptions
+    let written = written_labels label_descriptions lbl_exp_list in
+    let labels_missing =
+      Array.to_list label_descriptions
+      |> List.filter_map (fun lbl ->
+          if written.(lbl.lbl_pos) || label_is_optional lbl then None
+          else Some lbl.lbl_name)
     in
-    if !labels_missing <> [] then
+    if labels_missing <> [] then
       raise
         (Error
            ( loc,
              env,
              Labels_missing
                {
-                 labels = List.rev !labels_missing;
+                 labels = labels_missing;
                  jsx_component_info = jsx_component_error_info;
                } ));
-    let fields =
-      Array.map2
-        (fun descr def -> (descr, def, false))
-        label_descriptions label_definitions
-    in
+    let fields = record_fields lbl_exp_list in
     re
       {
         exp_desc =
@@ -3097,30 +3141,22 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     in
     unify_exp_types ~context:None loc env ty_record (instance env ty_expected);
     check_duplicates ~get_jsx_component_error_info loc env lbl_exp_list;
-    let opt_exp, label_definitions =
+    let opt_exp =
       let _lid, lbl, _lbl_exp, _opt = List.hd lbl_exp_list in
-      let matching_label lbl =
-        List.find
-          (fun (_, lbl', _, _) -> lbl'.lbl_pos = lbl.lbl_pos)
-          lbl_exp_list
-      in
+      let written = written_labels lbl.lbl_all lbl_exp_list in
       let ty_exp = instance env exp.exp_type in
       let unify_kept lbl =
         let _, ty_arg1, ty_res1 = instance_label false lbl in
         unify_exp_types ~context:None exp.exp_loc env ty_exp ty_res1;
-        match matching_label lbl with
-        | lid, _lbl, lbl_exp, _ ->
-          (* do not connect result types for overridden labels *)
-          Overridden (lid, lbl_exp)
-        | exception Not_found ->
+        (* do not connect result types for overridden labels *)
+        if not written.(lbl.lbl_pos) then (
           let _, ty_arg2, ty_res2 = instance_label false lbl in
           unify_exp_types ~context:None loc env ty_arg1 ty_arg2;
           unify_exp_types ~context:None loc env (instance env ty_expected)
-            ty_res2;
-          Kept ty_arg1
+            ty_res2)
       in
-      let label_definitions = Array.map unify_kept lbl.lbl_all in
-      (Some {exp with exp_type = ty_exp}, label_definitions)
+      Array.iter unify_kept lbl.lbl_all;
+      Some {exp with exp_type = ty_exp}
     in
     let num_fields =
       match lbl_exp_list with
@@ -3133,15 +3169,11 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
         None)
       else opt_exp
     in
-    let label_descriptions, representation =
-      let _, {lbl_all; lbl_repres}, _, _ = List.hd lbl_exp_list in
-      (lbl_all, lbl_repres)
+    let representation =
+      let _, {lbl_repres}, _, _ = List.hd lbl_exp_list in
+      lbl_repres
     in
-    let fields =
-      Array.map2
-        (fun descr def -> (descr, def, false))
-        label_descriptions label_definitions
-    in
+    let fields = record_fields lbl_exp_list in
     re
       {
         exp_desc =
@@ -3221,6 +3253,30 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected) env sexp
     re
       {
         exp_desc = Texp_dict entries;
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance env ty_expected;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_spread (kind, elements) ->
+    let container_type ty =
+      match kind with
+      | Spread_array -> Predef.type_array ty
+      | Spread_list -> newgenty (Tconstr (Predef.path_list, [ty], ref Mnil))
+    in
+    let ty = newgenvar () in
+    unify_exp_types ~context:None loc env (container_type ty) ty_expected;
+    (* The items are typed in the array and list literals they're grouped
+       into *)
+    let parts =
+      List.map
+        (fun spart -> type_expect ~context:None env spart (container_type ty))
+        (Ast_spread.parts kind elements)
+    in
+    re
+      {
+        exp_desc = Texp_spread (kind, parts);
         exp_loc = loc;
         exp_extra = [];
         exp_type = instance env ty_expected;
@@ -3871,7 +3927,6 @@ and type_function ~async loc attrs env ty_expected_
           in
           let smatch =
             Exp.match_ ~loc:sloc
-              ~attrs:[(mknoloc "#optional_arg_default", PStr [])]
               (Exp.ident ~loc (mknoloc (Longident.Lident opt_name)))
               scases
           in
@@ -4024,7 +4079,8 @@ and type_function ~async loc attrs env ty_expected_
         | Some vb ->
           let let_env = ext_env in
           let pat_exp_list, ext_env, let_unpacks =
-            type_let ~context:None ext_env Nonrecursive [vb] true
+            type_let ~context:None ~optional_default:true ext_env Nonrecursive
+              [vb] true
           in
           (* The pattern binds the option carrier under an unspellable name
              ([*opt_<label>*]), which typing needs so that user code can
@@ -4874,9 +4930,13 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
 
 (* Typing of let bindings *)
 
+(* [optional_default] marks the let that binds an optional parameter's
+   default, which [type_function] synthesizes: its variables are parameters
+   from the user's point of view, so an unused one gets the strict (parameter)
+   warning, and its match on the option gets function-style diagnostics. *)
 and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
-    ?(check_strict = fun s -> Warnings.Unused_var_strict s) env rec_flag
-    spat_sexp_list allow =
+    ?(check_strict = fun s -> Warnings.Unused_var_strict s)
+    ?(optional_default = false) env rec_flag spat_sexp_list allow =
   let spat_sexp_list =
     List.map
       (fun (vb : Parsetree.value_binding) ->
@@ -4892,17 +4952,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
       spat_sexp_list
   in
   begin_def ();
-  let is_fake_let =
-    (* the synthetic let-declaration introduced for an optional parameter's
-       default: its variables are parameters from the user's point of view,
-       so an unused one gets the strict (parameter) warning *)
-    match spat_sexp_list with
-    | [{pvb_expr = {pexp_attributes}}] ->
-      Ext_list.exists pexp_attributes (fun ({txt}, _) ->
-          txt = "#optional_arg_default")
-    | _ -> false
-  in
-  let check = if is_fake_let then check_strict else check in
+  let check = if optional_default then check_strict else check in
 
   let spatl =
     List.map
@@ -5014,7 +5064,11 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
         let type_expression expected =
           Builtin_attributes.warning_scope pvb_attributes (fun () ->
               match pvb_constraint with
-              | None -> type_expect ~context exp_env sexp expected
+              | None ->
+                let match_context =
+                  if optional_default then Some `Function else None
+                in
+                type_expect ~context ?match_context exp_env sexp expected
               | Some {pvc_newtypes; pvc_type} ->
                 let constrained =
                   Ast_helper.Exp.constraint_ ~loc:pvb_loc sexp pvc_type

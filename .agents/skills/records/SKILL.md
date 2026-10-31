@@ -177,10 +177,32 @@ The table lists the common kinds.
 ## What a commit holds
 
 Every commit says why it is made. A commit that changes what the compiler
-or a tool does gets one object block for each object it changes, with the
-smallest example that shows the change. A refactor, a test, a script or a
-review fix needs no block, only its subject and a line or two of prose; a
-review fix names the finding it answers.
+or a tool does shows each representation, rule, transformation or decision
+it changes, Before and After, at the level where it operates, then the
+representative consequences that show why it matters: the blocks go from
+the changed operation to what it affects, and one block serves both when
+the operation directly changes the output shown. Each change the prose
+names, such as an attribute the compiler adds or a case a decision takes,
+is also shown in a block. Each block has the smallest example that shows
+its change.
+
+- A printed form shows the change when one exposes it. Otherwise a block
+  shows a schematic, captioned with the function that implements it: an
+  inference rule for a changed typing judgment, a clause matrix and its
+  split for the match compiler, a mapping from inputs to results for a
+  decision, keeping the premises, priorities and side conditions that
+  matter.
+- Printing each form for the example before and after the commit finds
+  the layers it changes; the record keeps the excerpts that show the
+  changed operation and its distinct consequences.
+- When an error stops later forms from being printed, the internal forms
+  come from a related example that compiles, the diagnostic from one that
+  fails, and the prose says how they relate.
+
+A commit whose changes are only organization, tests or documentation
+needs no block, only its subject and a line or two of prose; a script or
+a review fix that changes behaviour gets blocks like any other. A review
+fix names the finding it answers.
 
 ## Rendering
 

@@ -1,6 +1,7 @@
 type t = module(S)
 type t = module(Hashmap with type key = string)
 type t = module(Hashmap with type key = string and type value = int)
+
 type t = module(Hashmap with
   type key = string
   and type value = int

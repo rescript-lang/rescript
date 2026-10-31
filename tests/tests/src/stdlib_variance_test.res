@@ -5,22 +5,31 @@ open Test_utils
 // contravariant in their resume type, so these coercions type-check.
 let widenIterator = (i: Iterator.t<[#A], [#R], [#X | #Y]>) =>
   (i :> Iterator.t<[#A | #B], [#R | #S], [#X]>)
+
 let widenAsyncIterator = (i: AsyncIterator.t<[#A], [#R], [#X | #Y]>) =>
   (i :> AsyncIterator.t<[#A | #B], [#R | #S], [#X]>)
+
 let widenRawResult = (r: Iterator.rawResult<[#A], [#R]>) =>
   (r :> Iterator.rawResult<[#A | #B], [#R | #S]>)
+
 let widenAsyncRawResult = (r: AsyncIterator.rawResult<[#A], [#R]>) =>
   (r :> AsyncIterator.rawResult<[#A | #B], [#R | #S]>)
+
 let widenGenerator = (g: Generator.t<[#A], [#R], [#X | #Y]>) =>
   (g :> Generator.t<[#A | #B], [#R | #S], [#X]>)
+
 let widenAsyncGenerator = (g: AsyncGenerator.t<[#A], [#R], [#X | #Y]>) =>
   (g :> AsyncGenerator.t<[#A | #B], [#R | #S], [#X]>)
+
 let widenIterableIterator = (i: IterableIterator.t<[#A], [#R], [#X | #Y]>) =>
   (i :> IterableIterator.t<[#A | #B], [#R | #S], [#X]>)
+
 let widenAsyncIterableIterator = (i: AsyncIterableIterator.t<[#A], [#R], [#X | #Y]>) =>
   (i :> AsyncIterableIterator.t<[#A | #B], [#R | #S], [#X]>)
+
 let widenIteratorObject = (i: IteratorObject.t<[#A], [#R], [#X | #Y]>) =>
   (i :> IteratorObject.t<[#A | #B], [#R | #S], [#X]>)
+
 let widenArrayLike = (a: Array.arrayLike<[#A]>) => (a :> Array.arrayLike<[#A | #B]>)
 
 // A tag is contravariant in its parameters and covariant in its output.

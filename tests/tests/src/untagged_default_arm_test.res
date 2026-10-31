@@ -80,6 +80,7 @@ let pair = (a: JSON.t, b: JSON.t) =>
 @unboxed type stringOrRecord = LogStr(string) | LogRec({x: int})
 
 let logged = []
+
 let logString = value => {
   switch value {
   | LogStr(_) => logged->Array.push("string")

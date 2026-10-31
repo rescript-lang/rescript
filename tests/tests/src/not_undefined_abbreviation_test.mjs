@@ -27,13 +27,13 @@ let refinedValue = {};
 
 Mocha.describe("Not_undefined_abbreviation_test", () => {
   Mocha.test("a refined abstract type is not boxed in an option", () => {
-    Test_utils.eq("File \"not_undefined_abbreviation_test.res\", line 32, characters 7-14", refinedValue === refinedValue, true);
-    Test_utils.eq("File \"not_undefined_abbreviation_test.res\", line 33, characters 7-14", unwrap(refinedValue), "some");
-    Test_utils.eq("File \"not_undefined_abbreviation_test.res\", line 34, characters 7-14", "none", "none");
+    Test_utils.eq("File \"not_undefined_abbreviation_test.res\", line 33, characters 7-14", refinedValue === refinedValue, true);
+    Test_utils.eq("File \"not_undefined_abbreviation_test.res\", line 34, characters 7-14", unwrap(refinedValue), "some");
+    Test_utils.eq("File \"not_undefined_abbreviation_test.res\", line 35, characters 7-14", "none", "none");
   });
   Mocha.test("a restated builtin keeps its payload kind", () => {
-    Test_utils.eq("File \"not_undefined_abbreviation_test.res\", line 38, characters 7-14", "count", "count");
-    Test_utils.eq("File \"not_undefined_abbreviation_test.res\", line 39, characters 7-14", "name", "name");
+    Test_utils.eq("File \"not_undefined_abbreviation_test.res\", line 39, characters 7-14", "count", "count");
+    Test_utils.eq("File \"not_undefined_abbreviation_test.res\", line 40, characters 7-14", "name", "name");
   });
 });
 

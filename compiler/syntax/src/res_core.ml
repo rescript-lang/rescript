@@ -264,8 +264,6 @@ module Error_messages = struct
     "Spreading JSX children is no longer supported."
 end
 
-let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
-
 (* Emit a deprecation warning when the legacy [(. ...)] uncurried syntax is
    encountered. Uncurried is the default since ReScript v11, so the leading
    dot is no longer meaningful; we still accept it so dependencies on older
@@ -1661,6 +1659,11 @@ and parse_list_pattern ~start_pos ~attrs p =
     else pattern
   in
   match list_patterns with
+  | [(true, pattern)] ->
+    (* [list{...p}] is [p] itself. Like [list{...e}] in expressions, it keeps
+       the location of [p], so that the comments around the spread stay
+       outside it and are printed with [p]. *)
+    {pattern with ppat_attributes = attrs}
   | (true, pattern) :: patterns ->
     let patterns = patterns |> List.map filter_spread |> List.rev in
     let pat = make_list_pattern loc patterns (Some pattern) in
@@ -4184,62 +4187,32 @@ and parse_tuple_expr ~first ~start_pos p =
   let loc = mk_loc start_pos (Parser.position p) in
   Ast_helper.Exp.tuple ~loc exprs
 
-and parse_spread_expr_region_with_loc p =
-  let start_pos = Parser.position p in
+and parse_spread_element_region p =
   match Parser.peek p with
   | DotDotDot ->
     Parser.next p;
-    let expr = parse_constrained_or_coerced_expr p in
-    Some (true, expr, start_pos, Parser.position p)
+    Some (Parsetree.Pspread (parse_constrained_or_coerced_expr p))
   | token when Grammar.is_expr_start token ->
-    Some
-      (false, parse_constrained_or_coerced_expr p, start_pos, Parser.position p)
+    Some (Parsetree.Pspread_item (parse_constrained_or_coerced_expr p))
   | _ -> None
 
 and parse_list_expr ~start_pos p =
-  let split_by_spread exprs =
-    List.fold_left
-      (fun acc curr ->
-        match (curr, acc) with
-        | (true, expr, start_pos, end_pos), _ ->
-          (* find a spread expression, prepend a new sublist *)
-          ([], Some expr, start_pos, end_pos) :: acc
-        | ( (false, expr, start_pos, _endPos),
-            (no_spreads, spread, _accStartPos, acc_end_pos) :: acc ) ->
-          (* find a non-spread expression, and the accumulated is not empty,
-           * prepend to the first sublist, and update the loc of the first sublist *)
-          (expr :: no_spreads, spread, start_pos, acc_end_pos) :: acc
-        | (false, expr, start_pos, end_pos), [] ->
-          (* find a non-spread expression, and the accumulated is empty *)
-          [([expr], None, start_pos, end_pos)])
-      [] exprs
-  in
-  let make_sub_expr = function
-    | exprs, Some spread, start_pos, end_pos ->
-      Ast_helper.Exp.make_list_expression (mk_loc start_pos end_pos) exprs
-        (Some spread)
-    | exprs, None, start_pos, end_pos ->
-      Ast_helper.Exp.make_list_expression (mk_loc start_pos end_pos) exprs None
-  in
-  let list_exprs_rev =
-    parse_comma_delimited_reversed_list p ~grammar:Grammar.ListExpr
-      ~closing:Rbrace ~f:parse_spread_expr_region_with_loc
+  let elements =
+    parse_comma_delimited_region p ~grammar:Grammar.ListExpr ~closing:Rbrace
+      ~f:parse_spread_element_region
   in
   Parser.expect Rbrace p;
   let loc = mk_loc start_pos (Parser.position p) in
-  match split_by_spread list_exprs_rev with
-  | [] -> Ast_helper.Exp.make_list_expression loc [] None
-  | [(exprs, Some spread, _, _)] ->
-    Ast_helper.Exp.make_list_expression loc exprs (Some spread)
-  | [(exprs, None, _, _)] -> Ast_helper.Exp.make_list_expression loc exprs None
-  | exprs ->
-    let list_exprs = List.map make_sub_expr exprs in
-    Ast_helper.Exp.apply ~loc
-      (Ast_helper.Exp.ident ~loc ~attrs:[spread_attr]
-         (Location.mkloc
-            (Longident.Ldot (Longident.Lident Primitive_modules.list, "spread"))
-            loc))
-      [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
+  (* Items, possibly followed by a spread, are a chain of [::] *)
+  let rec items_and_tail acc = function
+    | [] -> Some (List.rev acc, None)
+    | [Parsetree.Pspread tail] -> Some (List.rev acc, Some tail)
+    | Parsetree.Pspread_item item :: rest -> items_and_tail (item :: acc) rest
+    | Pspread _ :: _ -> None
+  in
+  match items_and_tail [] elements with
+  | Some (items, tail) -> Ast_helper.Exp.make_list_expression loc items tail
+  | None -> Ast_helper.Exp.spread ~loc Spread_list elements
 
 and parse_dict_expr ~start_pos p =
   let entries =
@@ -4253,56 +4226,22 @@ and parse_dict_expr ~start_pos p =
 and parse_array_exp p =
   let start_pos = Parser.start_pos p in
   Parser.expect Lbracket p;
-  let split_by_spread exprs =
-    List.fold_left
-      (fun acc curr ->
-        match (curr, acc) with
-        | (true, expr, start_pos, end_pos), _ ->
-          (* find a spread expression, prepend a new sublist *)
-          ([], Some expr, start_pos, end_pos) :: acc
-        | ( (false, expr, start_pos, _endPos),
-            (no_spreads, spread, _accStartPos, acc_end_pos) :: acc ) ->
-          (* find a non-spread expression, and the accumulated is not empty,
-           * prepend to the first sublist, and update the loc of the first sublist *)
-          (expr :: no_spreads, spread, start_pos, acc_end_pos) :: acc
-        | (false, expr, start_pos, end_pos), [] ->
-          (* find a non-spread expression, and the accumulated is empty *)
-          [([expr], None, start_pos, end_pos)])
-      [] exprs
-  in
-  let list_exprs_rev =
-    parse_comma_delimited_reversed_list p ~grammar:Grammar.ExprList
-      ~closing:Rbracket ~f:parse_spread_expr_region_with_loc
+  let elements =
+    parse_comma_delimited_region p ~grammar:Grammar.ExprList ~closing:Rbracket
+      ~f:parse_spread_element_region
   in
   Parser.expect Rbracket p;
   let loc = mk_loc start_pos (Parser.position p) in
-  let collect_exprs = function
-    | [], Some spread, _startPos, _endPos -> [spread]
-    | exprs, Some spread, _startPos, _endPos ->
-      let els = Ast_helper.Exp.array ~loc exprs in
-      [els; spread]
-    | exprs, None, _startPos, _endPos ->
-      let els = Ast_helper.Exp.array ~loc exprs in
-      [els]
+  let items =
+    List.filter_map
+      (function
+        | Parsetree.Pspread_item item -> Some item
+        | Pspread _ -> None)
+      elements
   in
-  match split_by_spread list_exprs_rev with
-  | [] -> Ast_helper.Exp.array ~loc:(mk_loc start_pos (Parser.position p)) []
-  | [(exprs, None, _, _)] ->
-    Ast_helper.Exp.array ~loc:(mk_loc start_pos (Parser.position p)) exprs
-  | exprs ->
-    let xs = List.map collect_exprs exprs in
-    let list_exprs =
-      List.fold_right
-        (fun exprs1 acc ->
-          List.fold_right (fun expr1 acc1 -> expr1 :: acc1) exprs1 acc)
-        xs []
-    in
-    Ast_helper.Exp.apply ~loc
-      (Ast_helper.Exp.ident ~loc ~attrs:[spread_attr]
-         (Location.mkloc
-            (Longident.Ldot (Longident.Lident Primitive_modules.array, "spread"))
-            loc))
-      [(Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
+  if List.length items = List.length elements then
+    Ast_helper.Exp.array ~loc items
+  else Ast_helper.Exp.spread ~loc Spread_array elements
 
 (* TODO: check attributes in the case of poly type vars,
  * might be context dependend: parseFieldDeclaration (see ocaml) *)
@@ -5417,14 +5356,14 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
     if Parser.optional p Token.Private then Asttypes.Private
     else Asttypes.Public
   in
-  let kind =
+  let kind, attrs =
     match Parser.peek p with
-    | Bar | Uident _ | DocComment _ ->
-      Parsetree.Ptype_variant (parse_type_constructor_declarations p)
-    | At -> (
-      (* Attributes can prefix either a variant (constructor list), a record, or an
-         open/extensible variant marker (`..`). Peek past attributes and any doc
-         comments to decide which kind it is. *)
+    | Bar | Uident _ ->
+      (Parsetree.Ptype_variant (parse_type_constructor_declarations p), [])
+    | At | DocComment _ -> (
+      (* Attributes and doc comments can prefix either a variant (constructor
+         list), a record, or an open/extensible variant marker (`..`). Peek past
+         them to decide which kind it is. *)
       let after_attrs =
         Parser.lookahead p (fun state ->
             ignore (parse_attributes state);
@@ -5433,37 +5372,39 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
       in
       match after_attrs with
       | Lbrace ->
-        (* consume the attributes and any doc comments before the record *)
-        ignore (parse_attributes p);
-        skip_doc_comments p;
-        Parsetree.Ptype_record
-          (parse_record_declaration ?current_type_name_path
-             ?inline_types_context p)
+        (* Attributes (and doc comments) before a record have no node of their
+           own: they are returned so the caller attaches them to the type
+           declaration. *)
+        let attrs = parse_attributes p in
+        ( Parsetree.Ptype_record
+            (parse_record_declaration ?current_type_name_path
+               ?inline_types_context p),
+          attrs )
       | DotDot ->
-        (* attributes before an open variant marker; consume attrs/docs then handle `..` *)
-        ignore (parse_attributes p);
-        skip_doc_comments p;
+        (* Same for attributes before an open variant marker `..`. *)
+        let attrs = parse_attributes p in
         Parser.next p;
         (* consume DotDot *)
-        Ptype_open
+        (Ptype_open, attrs)
       | _ ->
         (* fall back to variant constructor declarations; leave attributes for the
              constructor parsing so they attach to the first constructor. *)
-        Parsetree.Ptype_variant (parse_type_constructor_declarations p))
+        (Parsetree.Ptype_variant (parse_type_constructor_declarations p), []))
     | Lbrace ->
-      Parsetree.Ptype_record
-        (parse_record_declaration ?current_type_name_path ?inline_types_context
-           p)
+      ( Parsetree.Ptype_record
+          (parse_record_declaration ?current_type_name_path
+             ?inline_types_context p),
+        [] )
     | DotDot ->
       Parser.next p;
-      Ptype_open
+      (Ptype_open, [])
     | token ->
       Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
       (* TODO: I have no idea if this is even remotely a good idea *)
-      Parsetree.Ptype_variant []
+      (Parsetree.Ptype_variant [], [])
   in
   Parser.eat_breadcrumb p;
-  (private_flag, kind)
+  (private_flag, kind, attrs)
 
 (* type-param	::=
  *  | variance 'lident
@@ -5614,8 +5555,8 @@ and parse_type_equation_or_constr_decl p =
       match Parser.peek p with
       | Equal ->
         Parser.next p;
-        let priv, kind = parse_type_representation p in
-        (Some typ, priv, kind)
+        let priv, kind, attrs = parse_type_representation p in
+        (Some typ, priv, kind, attrs)
       | EqualGreater ->
         Parser.next p;
         let return_type = parse_typ_expr ~alias:false p in
@@ -5626,8 +5567,8 @@ and parse_type_equation_or_constr_decl p =
             return_type
         in
         let typ = parse_type_alias p arrow_type in
-        (Some typ, Asttypes.Public, Parsetree.Ptype_abstract)
-      | _ -> (Some typ, Asttypes.Public, Parsetree.Ptype_abstract))
+        (Some typ, Asttypes.Public, Parsetree.Ptype_abstract, [])
+      | _ -> (Some typ, Asttypes.Public, Parsetree.Ptype_abstract, []))
     | _ ->
       let uident_end_pos = Parser.position p in
       let args, res = parse_constr_decl_args p in
@@ -5641,12 +5582,12 @@ and parse_type_equation_or_constr_decl p =
       in
       ( None,
         Asttypes.Public,
-        Parsetree.Ptype_variant (parse_type_constructor_declarations p ?first)
-      ))
+        Parsetree.Ptype_variant (parse_type_constructor_declarations p ?first),
+        [] ))
   | t ->
     Parser.err p (Diagnostics.uident t);
     (* TODO: is this a good idea? *)
-    (None, Asttypes.Public, Parsetree.Ptype_abstract)
+    (None, Asttypes.Public, Parsetree.Ptype_abstract, [])
 
 and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
     ~start_pos ~spread_typ ~grammar p =
@@ -5856,18 +5797,23 @@ and parse_private_eq_or_repr p =
   match Parser.peek p with
   | Lbrace ->
     let manifest, _, kind = parse_record_or_object_decl p in
-    (manifest, Asttypes.Private, kind)
+    (manifest, Asttypes.Private, kind, [])
   | Uident _ ->
-    let manifest, _, kind = parse_type_equation_or_constr_decl p in
-    (manifest, Asttypes.Private, kind)
+    let manifest, _, kind, attrs = parse_type_equation_or_constr_decl p in
+    (manifest, Asttypes.Private, kind, attrs)
   | Bar | DotDot ->
-    let _, kind = parse_type_representation p in
-    (None, Asttypes.Private, kind)
+    let _, kind, attrs = parse_type_representation p in
+    (None, Asttypes.Private, kind, attrs)
+  | (At | DocComment _) when is_representation_after_attrs p ->
+    let _, kind, attrs = parse_type_representation p in
+    (None, Asttypes.Private, kind, attrs)
+  | DocComment _ ->
+    (Some (parse_typ_expr p), Asttypes.Private, Parsetree.Ptype_abstract, [])
   | t when Grammar.is_typ_expr_start t ->
-    (Some (parse_typ_expr p), Asttypes.Private, Parsetree.Ptype_abstract)
+    (Some (parse_typ_expr p), Asttypes.Private, Parsetree.Ptype_abstract, [])
   | _ ->
-    let _, kind = parse_type_representation p in
-    (None, Asttypes.Private, kind)
+    let _, kind, attrs = parse_type_representation p in
+    (None, Asttypes.Private, kind, attrs)
 
 (*
   polymorphic-variant-type	::=
@@ -6083,6 +6029,55 @@ and parse_polymorphic_variant_type_args p =
   Parser.expect Rparen p;
   Location.mkloc args (mk_loc start_pos (Parser.position p))
 
+(* Attributes and doc comments after `=` (or `= private`) can start a
+   representation (variant/record/open variant) or a manifest. Look ahead past
+   them: if a representation-like token follows, it is a representation;
+   otherwise a manifest type expression. *)
+and is_representation_after_attrs p =
+  let starts_with_doc_comment =
+    match Parser.peek p with
+    | DocComment _ -> true
+    | _ -> false
+  in
+  Parser.lookahead p (fun state ->
+      ignore (parse_attributes state);
+      (* optionally skip a run of doc comments before deciding *)
+      skip_doc_comments state;
+      match Parser.peek state with
+      | Lbrace -> (
+        (* Disambiguate record declaration vs object type.
+           Peek inside the braces; if it looks like an object (String/Dot/DotDot/DotDotDot),
+           then this is a manifest type expression, not a representation. If it looks like
+           a record field (e.g. Lident or attributes before one), treat as representation. *)
+        Parser.next state;
+        (* consume Lbrace *)
+        ignore (parse_attributes state);
+        skip_doc_comments state;
+        match Parser.peek state with
+        | String _ | Dot | DotDot -> false (* object type => manifest *)
+        | DotDotDot ->
+          (* A spread (`{...base, y: int}`) after a leading doc comment has
+             always been parsed as a record declaration, and after a leading
+             attribute as an object type. *)
+          starts_with_doc_comment
+        | _ -> true
+        (* record decl => representation *))
+      | Bar -> true (* variant constructor list *)
+      | DotDot -> true (* extensible/open variant ".." *)
+      | DotDotDot ->
+        (* A variant spread (`...base | C`) after a leading doc comment has
+           always been parsed as a constructor list. *)
+        starts_with_doc_comment
+      | Uident _ -> (
+        (* constructor vs module-qualified manifest *)
+        Parser.next state;
+        match Parser.peek state with
+        | Dot -> false (* M.t => manifest *)
+        | _ -> true
+        (* Uident starting a constructor *))
+      | DocComment _ -> true (* doc before constructor list *)
+      | _ -> false)
+
 and parse_type_equation_and_representation ?current_type_name_path
     ?inline_types_context p =
   match Parser.peek p with
@@ -6092,74 +6087,48 @@ and parse_type_equation_and_representation ?current_type_name_path
     match Parser.peek p with
     | Uident _ -> parse_type_equation_or_constr_decl p
     | Lbrace ->
-      parse_record_or_object_decl ?current_type_name_path ?inline_types_context
-        p
-    | Private -> parse_private_eq_or_repr p
-    | Bar | DotDot | DocComment _ ->
-      let priv, kind = parse_type_representation p in
-      (None, priv, kind)
-    | At -> (
-      (* Attributes can start a representation (variant/record/open variant) or a manifest.
-         Look ahead past attributes (and doc comments). If a representation-like token follows,
-         parse it as a representation; otherwise treat as a manifest. *)
-      let is_representation_after_attrs =
-        Parser.lookahead p (fun state ->
-            ignore (parse_attributes state);
-            (* optionally skip a run of doc comments before deciding *)
-            skip_doc_comments state;
-            match Parser.peek state with
-            | Lbrace -> (
-              (* Disambiguate record declaration vs object type.
-                 Peek inside the braces; if it looks like an object (String/Dot/DotDot/DotDotDot),
-                 then this is a manifest type expression, not a representation. If it looks like
-                 a record field (e.g. Lident or attributes before one), treat as representation. *)
-              Parser.next state;
-              (* consume Lbrace *)
-              ignore (parse_attributes state);
-              skip_doc_comments state;
-              match Parser.peek state with
-              | String _ | Dot | DotDot | DotDotDot ->
-                false (* object type => manifest *)
-              | _ -> true
-              (* record decl => representation *))
-            | Bar -> true (* variant constructor list *)
-            | DotDot -> true (* extensible/open variant ".." *)
-            | Uident _ -> (
-              (* constructor vs module-qualified manifest *)
-              Parser.next state;
-              match Parser.peek state with
-              | Dot -> false (* M.t => manifest *)
-              | _ -> true
-              (* Uident starting a constructor *))
-            | DocComment _ -> true (* doc before constructor list *)
-            | _ -> false)
+      let manifest, priv, kind =
+        parse_record_or_object_decl ?current_type_name_path
+          ?inline_types_context p
       in
-      if is_representation_after_attrs then
-        let priv, kind = parse_type_representation p in
-        (None, priv, kind)
+      (manifest, priv, kind, [])
+    | Private -> parse_private_eq_or_repr p
+    | Bar | DotDot ->
+      let priv, kind, attrs =
+        parse_type_representation ?current_type_name_path ?inline_types_context
+          p
+      in
+      (None, priv, kind, attrs)
+    | At | DocComment _ -> (
+      if is_representation_after_attrs p then
+        let priv, kind, attrs =
+          parse_type_representation ?current_type_name_path
+            ?inline_types_context p
+        in
+        (None, priv, kind, attrs)
       else
         let manifest = Some (parse_typ_expr p) in
         match Parser.peek p with
         | Equal ->
           Parser.next p;
-          let priv, kind =
+          let priv, kind, attrs =
             parse_type_representation ?current_type_name_path
               ?inline_types_context p
           in
-          (manifest, priv, kind)
-        | _ -> (manifest, Public, Parsetree.Ptype_abstract))
+          (manifest, priv, kind, attrs)
+        | _ -> (manifest, Public, Parsetree.Ptype_abstract, []))
     | _ -> (
       let manifest = Some (parse_typ_expr p) in
       match Parser.peek p with
       | Equal ->
         Parser.next p;
-        let priv, kind =
+        let priv, kind, attrs =
           parse_type_representation ?current_type_name_path
             ?inline_types_context p
         in
-        (manifest, priv, kind)
-      | _ -> (manifest, Public, Parsetree.Ptype_abstract)))
-  | _ -> (None, Public, Parsetree.Ptype_abstract)
+        (manifest, priv, kind, attrs)
+      | _ -> (manifest, Public, Parsetree.Ptype_abstract, [])))
+  | _ -> (None, Public, Parsetree.Ptype_abstract, [])
 
 (* type-definition	::=	type [rec] typedef  { and typedef }
  * typedef	::=	typeconstr-name [type-params] type-information
@@ -6176,11 +6145,13 @@ and parse_type_def ~attrs ~start_pos p =
     parse_type_params ~parent:constr_name p
   in
   let type_def =
-    let manifest, priv, kind = parse_type_equation_and_representation p in
+    let manifest, priv, kind, repr_attrs =
+      parse_type_equation_and_representation p
+    in
     let cstrs = parse_type_constraints p in
     let loc = mk_loc start_pos (Parser.position p) in
-    Ast_helper.Type.mk ~loc ~attrs ~priv ~kind ~params ~cstrs ?manifest
-      type_constr_name
+    Ast_helper.Type.mk ~loc ~attrs:(attrs @ repr_attrs) ~priv ~kind ~params
+      ~cstrs ?manifest type_constr_name
   in
   Parser.eat_breadcrumb p;
   type_def
@@ -6224,13 +6195,14 @@ and parse_type_extension ~params ~attrs ~name p =
 and parse_type_definitions ~current_type_name_path ~inline_types_context ~attrs
     ~name ~params ~start_pos p =
   let type_def =
-    let manifest, priv, kind =
+    let manifest, priv, kind, repr_attrs =
       parse_type_equation_and_representation ~current_type_name_path
         ~inline_types_context p
     in
     let cstrs = parse_type_constraints p in
     let loc = mk_loc start_pos (Parser.position p) in
-    Ast_helper.Type.mk ~loc ~attrs ~priv ~kind ~params ~cstrs ?manifest
+    Ast_helper.Type.mk ~loc ~attrs:(attrs @ repr_attrs) ~priv ~kind ~params
+      ~cstrs ?manifest
       {name with txt = lident_of_path name.Location.txt}
   in
   let rec loop p defs =
@@ -7272,6 +7244,7 @@ and parse_module_declaration_or_alias ~attrs p =
 
 and parse_module_type_declaration ~attrs ~start_pos p =
   Parser.expect Typ p;
+  let name_start = Parser.start_pos p in
   let module_name =
     match Parser.peek p with
     | Uident ident ->
@@ -7293,7 +7266,12 @@ and parse_module_type_declaration ~attrs ~start_pos p =
       Some (parse_module_type p)
     | _ -> None
   in
-  let module_decl = Ast_helper.Mtd.mk ~attrs ?typ module_name in
+  (* From the name, like a module type declaration in a structure *)
+  let module_decl =
+    Ast_helper.Mtd.mk ~attrs
+      ~loc:(mk_loc name_start (Parser.position p))
+      ?typ module_name
+  in
   Ast_helper.Sig.modtype ~loc:(mk_loc start_pos (Parser.position p)) module_decl
 
 and parse_sign_let_desc ~attrs p =

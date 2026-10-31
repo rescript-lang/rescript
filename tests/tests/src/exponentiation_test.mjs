@@ -25,22 +25,22 @@ function bigintPowMul(base, left, right) {
 
 Mocha.describe("Exponentiation_test", () => {
   Mocha.test("exponentiation operations", () => {
-    Test_utils.eq("File \"exponentiation_test.res\", line 17, characters 7-14", 2 ** 3 ** 2, Math.pow(2, Math.pow(3, 2)));
-    Test_utils.eq("File \"exponentiation_test.res\", line 18, characters 7-14", 2 ** (-3) ** 2, Math.pow(2, Math.pow(-3, 2)));
-    Test_utils.eq("File \"exponentiation_test.res\", line 19, characters 7-14", (2 ** 3) ** 2, Math.pow(Math.pow(2, 3), 2));
-    Test_utils.eq("File \"exponentiation_test.res\", line 20, characters 7-14", (-2) ** 2, Math.pow(-2, 2));
-    Test_utils.eq("File \"exponentiation_test.res\", line 22, characters 7-14", 512, intPow(2, intPow(3, 2)));
-    Test_utils.eq("File \"exponentiation_test.res\", line 23, characters 7-14", 512, intPow(2, intPow(-3, 2)));
-    Test_utils.eq("File \"exponentiation_test.res\", line 24, characters 7-14", 64, intPow(intPow(2, 3), 2));
-    Test_utils.eq("File \"exponentiation_test.res\", line 25, characters 7-14", -2147483648, intPow(-2, 31));
-    Test_utils.eq("File \"exponentiation_test.res\", line 26, characters 7-14", 0, intPow(2, 32));
-    Test_utils.eq("File \"exponentiation_test.res\", line 27, characters 7-14", 0, intPow(2147483647, 2));
-    Test_utils.eq("File \"exponentiation_test.res\", line 28, characters 7-14", 0, intPow(-2147483648, 2));
-    Test_utils.eq("File \"exponentiation_test.res\", line 30, characters 7-14", 256, four ** four | 0);
-    Test_utils.eq("File \"exponentiation_test.res\", line 32, characters 7-14", 2 ** (0 / 10000), 1);
-    Test_utils.eq("File \"exponentiation_test.res\", line 33, characters 7-14", 2 ** (3 * 4), 4096);
-    Test_utils.eq("File \"exponentiation_test.res\", line 34, characters 7-14", 2 ** (5 % 3), 4);
-    Test_utils.eq("File \"exponentiation_test.res\", line 35, characters 7-14", bigintPowMul(2n, 3n, 2n), 64n);
+    Test_utils.eq("File \"exponentiation_test.res\", line 18, characters 7-14", 2 ** 3 ** 2, Math.pow(2, Math.pow(3, 2)));
+    Test_utils.eq("File \"exponentiation_test.res\", line 19, characters 7-14", 2 ** (-3) ** 2, Math.pow(2, Math.pow(-3, 2)));
+    Test_utils.eq("File \"exponentiation_test.res\", line 20, characters 7-14", (2 ** 3) ** 2, Math.pow(Math.pow(2, 3), 2));
+    Test_utils.eq("File \"exponentiation_test.res\", line 21, characters 7-14", (-2) ** 2, Math.pow(-2, 2));
+    Test_utils.eq("File \"exponentiation_test.res\", line 23, characters 7-14", 512, intPow(2, intPow(3, 2)));
+    Test_utils.eq("File \"exponentiation_test.res\", line 24, characters 7-14", 512, intPow(2, intPow(-3, 2)));
+    Test_utils.eq("File \"exponentiation_test.res\", line 25, characters 7-14", 64, intPow(intPow(2, 3), 2));
+    Test_utils.eq("File \"exponentiation_test.res\", line 26, characters 7-14", -2147483648, intPow(-2, 31));
+    Test_utils.eq("File \"exponentiation_test.res\", line 27, characters 7-14", 0, intPow(2, 32));
+    Test_utils.eq("File \"exponentiation_test.res\", line 28, characters 7-14", 0, intPow(2147483647, 2));
+    Test_utils.eq("File \"exponentiation_test.res\", line 29, characters 7-14", 0, intPow(-2147483648, 2));
+    Test_utils.eq("File \"exponentiation_test.res\", line 31, characters 7-14", 256, four ** four | 0);
+    Test_utils.eq("File \"exponentiation_test.res\", line 33, characters 7-14", 2 ** (0 / 10000), 1);
+    Test_utils.eq("File \"exponentiation_test.res\", line 34, characters 7-14", 2 ** (3 * 4), 4096);
+    Test_utils.eq("File \"exponentiation_test.res\", line 35, characters 7-14", 2 ** (5 % 3), 4);
+    Test_utils.eq("File \"exponentiation_test.res\", line 36, characters 7-14", bigintPowMul(2n, 3n, 2n), 64n);
   });
 });
 

@@ -44,13 +44,6 @@ let newty2 level desc =
   {desc; level; id = state.type_node_id}
 let newgenty desc = newty2 generic_level desc
 let newgenvar ?name () = newgenty (Tvar name)
-(*
-let newmarkedvar level =
-  incr new_id; { desc = Tvar; level = pivot_level - level; id = !new_id }
-let newmarkedgenvar () =
-  incr new_id;
-  { desc = Tvar; level = pivot_level - generic_level; id = !new_id }
-*)
 
 (**** Check some types ****)
 
@@ -616,19 +609,6 @@ let rec find_expans priv p1 = function
     Some ty
   | Mcons (_, _, _, _, rem) -> find_expans priv p1 rem
   | Mlink {contents = rem} -> find_expans priv p1 rem
-
-(* debug: check for cycles in abbreviation. only works with -principal
-   let rec check_expans visited ty =
-     let ty = repr ty in
-     assert (not (List.memq ty visited));
-     match ty.desc with
-       Tconstr (path, args, abbrev) ->
-         begin match find_expans path !abbrev with
-           Some ty' -> check_expans (ty :: visited) ty'
-         | None -> ()
-         end
-     | _ -> ()
-*)
 
 let memo = Request_local.new_key (fun () -> ref [])
 (* Contains the list of saved abbreviation expansions. *)

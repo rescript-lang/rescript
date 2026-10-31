@@ -22,7 +22,7 @@ if (shadowed !== 4) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "braced_pipe_and_inline.res",
-      20,
+      24,
       0
     ],
     Error: new Error()
@@ -36,7 +36,7 @@ if (generatedName !== 12) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "braced_pipe_and_inline.res",
-      28,
+      34,
       0
     ],
     Error: new Error()
@@ -55,7 +55,7 @@ if (fanoutFirst !== 9) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "braced_pipe_and_inline.res",
-      32,
+      38,
       0
     ],
     Error: new Error()

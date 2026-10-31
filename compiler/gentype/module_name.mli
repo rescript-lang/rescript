@@ -1,7 +1,6 @@
 type t
 
 val compare : t -> t -> int
-val curry : t
 val for_js_file : t -> t
 val for_inner_module : file_name:t -> inner_module_name:string -> t
 

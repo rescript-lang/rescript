@@ -29,10 +29,6 @@ val collect_if_expressions :
   (Location.t * Parsetree.expression * Parsetree.expression) list
   * Parsetree.expression option
 
-val collect_array_expressions :
-  Parsetree.expression ->
-  Parsetree.expression list * Parsetree.expression option
-
 val collect_list_expressions :
   Parsetree.expression ->
   Parsetree.expression list * Parsetree.expression option
@@ -84,6 +80,9 @@ val should_indent_binary_expr : Parsetree.expression -> bool
 val should_inline_rhs_binary_expr : Parsetree.expression -> bool
 val mod_expr_has_attributes : Parsetree.module_expr -> bool
 val is_doc_comment_attribute : Parsetree.attribute -> bool
+
+(* The doc comments before every other attribute, and the attributes after
+   them, which may include later doc comments *)
 val partition_doc_comment_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
 
@@ -115,9 +114,6 @@ val is_block_expr : Parsetree.expression -> bool
 
 val is_template_literal : Parsetree.expression -> bool
 val is_tagged_template_literal : Parsetree.expression -> bool
-val is_spread_list : Parsetree.expression -> bool
-
-val is_spread_array : Parsetree.expression -> bool
 
 val dict_has_spread : Parsetree.dict_entry list -> bool
 val dict_expr_rows :

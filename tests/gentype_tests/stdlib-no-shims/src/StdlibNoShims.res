@@ -68,6 +68,7 @@ let idRef = (x: ref<int>) => x
 
 @genType
 let returnsUnit = (): unit => ()
+
 @genType
 let idTuple = (x: (int, string, float)) => x
 
@@ -114,6 +115,25 @@ let idTuple = (x: (int, string, float)) => x
 @genType let idIntlRelativeTimeFormat = (x: Intl.RelativeTimeFormat.t) => x
 @genType let idIntlSegmenter = (x: Intl.Segmenter.t) => x
 @genType let idIntlSegments = (x: Intl.Segments.t) => x
+
+// Temporal types
+@genType let idTemporalDuration = (x: Temporal.Duration.t) => x
+@genType let idTemporalInstant = (x: Temporal.Instant.t) => x
+@genType let idTemporalPlainDate = (x: Temporal.PlainDate.t) => x
+@genType let idTemporalPlainTime = (x: Temporal.PlainTime.t) => x
+@genType let idTemporalPlainDateTime = (x: Temporal.PlainDateTime.t) => x
+@genType let idTemporalPlainYearMonth = (x: Temporal.PlainYearMonth.t) => x
+@genType let idTemporalPlainMonthDay = (x: Temporal.PlainMonthDay.t) => x
+@genType let idTemporalZonedDateTime = (x: Temporal.ZonedDateTime.t) => x
+@genType let idTemporalCommonZonedDateTime = (x: Temporal.Common.zonedDateTime) => x
+
+@genType
+let temporalDateOfDateTime = (x: Temporal.PlainDateTime.t) => x->Temporal.PlainDateTime.toPlainDate
+
+@genType
+let temporalNextDay = (x: Temporal.PlainDate.t) => x->Temporal.PlainDate.addFields({days: 1.})
+
+@genType let temporalParseDate = (x: string) => x->Temporal.PlainDate.fromStringOrThrow
 
 // Errors
 @genType let idJsError = (x: JsError.t) => x

@@ -1,6 +1,5 @@
 type t = string
 
-let curry = "Curry"
 let rescript_pervasives = "RescriptPervasives"
 
 let sanitize_id s =

@@ -131,6 +131,30 @@ export const idIntlSegmenter: (x:Intl.Segmenter) => Intl.Segmenter = StdlibNoShi
 
 export const idIntlSegments: (x:Intl.Segments) => Intl.Segments = StdlibNoShimsJS.idIntlSegments as any;
 
+export const idTemporalDuration: (x:Temporal.Duration) => Temporal.Duration = StdlibNoShimsJS.idTemporalDuration as any;
+
+export const idTemporalInstant: (x:Temporal.Instant) => Temporal.Instant = StdlibNoShimsJS.idTemporalInstant as any;
+
+export const idTemporalPlainDate: (x:Temporal.PlainDate) => Temporal.PlainDate = StdlibNoShimsJS.idTemporalPlainDate as any;
+
+export const idTemporalPlainTime: (x:Temporal.PlainTime) => Temporal.PlainTime = StdlibNoShimsJS.idTemporalPlainTime as any;
+
+export const idTemporalPlainDateTime: (x:Temporal.PlainDateTime) => Temporal.PlainDateTime = StdlibNoShimsJS.idTemporalPlainDateTime as any;
+
+export const idTemporalPlainYearMonth: (x:Temporal.PlainYearMonth) => Temporal.PlainYearMonth = StdlibNoShimsJS.idTemporalPlainYearMonth as any;
+
+export const idTemporalPlainMonthDay: (x:Temporal.PlainMonthDay) => Temporal.PlainMonthDay = StdlibNoShimsJS.idTemporalPlainMonthDay as any;
+
+export const idTemporalZonedDateTime: (x:Temporal.ZonedDateTime) => Temporal.ZonedDateTime = StdlibNoShimsJS.idTemporalZonedDateTime as any;
+
+export const idTemporalCommonZonedDateTime: (x:Temporal.ZonedDateTime) => Temporal.ZonedDateTime = StdlibNoShimsJS.idTemporalCommonZonedDateTime as any;
+
+export const temporalDateOfDateTime: (x:Temporal.PlainDateTime) => Temporal.PlainDate = StdlibNoShimsJS.temporalDateOfDateTime as any;
+
+export const temporalNextDay: (x:Temporal.PlainDate) => Temporal.PlainDate = StdlibNoShimsJS.temporalNextDay as any;
+
+export const temporalParseDate: (x:string) => Temporal.PlainDate = StdlibNoShimsJS.temporalParseDate as any;
+
 export const idJsError: (x:Error) => Error = StdlibNoShimsJS.idJsError as any;
 
 export const idObj: (x:{}) => {} = StdlibNoShimsJS.idObj as any;

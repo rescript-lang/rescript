@@ -60,7 +60,6 @@ let filter_map f =
   aux []
 
 let dump_path path = Str.global_replace (Str.regexp_string "\\") "/" path
-let is_uncurried_internal path = starts_with (Path.name path) "Js.Fn.arity"
 
 let flatten_long_ident ?(jsx = false) ?(cut_at_offset = None) lid =
   let extend_path s path =
@@ -123,6 +122,7 @@ let identify_pexp pexp =
   | Pexp_jsx_element _ -> "Pexp_jsx_element"
   | Pexp_regexp _ -> "Pexp_regexp"
   | Pexp_dict _ -> "Pexp_dict"
+  | Pexp_spread _ -> "Pexp_spread"
   | Pexp_template _ -> "Pexp_template"
   | Pexp_tagged_template _ -> "Pexp_tagged_template"
 

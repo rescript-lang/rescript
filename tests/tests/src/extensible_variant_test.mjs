@@ -2,6 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
 
 let Str = /* @__PURE__ */Primitive_exceptions.create("Extensible_variant_test.Str");
@@ -35,27 +36,141 @@ function to_int(x) {
   };
 }
 
+let Point = /* @__PURE__ */Primitive_exceptions.create("Extensible_variant_test.Point");
+
+let IntKey = /* @__PURE__ */Primitive_exceptions.create("Extensible_variant_test.IntKey");
+
+let StringKey = /* @__PURE__ */Primitive_exceptions.create("Extensible_variant_test.StringKey");
+
+function defaultOf(key) {
+  if (key.RE_EXN_ID === IntKey) {
+    return 0;
+  } else if (key.RE_EXN_ID === StringKey) {
+    return "";
+  } else {
+    return;
+  }
+}
+
+let A = /* @__PURE__ */Primitive_exceptions.create("Extensible_variant_test.Private.A");
+
+let B = /* @__PURE__ */Primitive_exceptions.create("Extensible_variant_test.Private.B");
+
+let b = {
+  RE_EXN_ID: B
+};
+
+let Private = {
+  A: A,
+  b: b
+};
+
+function privateName(t) {
+  if (t.RE_EXN_ID === A) {
+    return "A";
+  } else {
+    return "other";
+  }
+}
+
+function makeException() {
+  let Local = /* @__PURE__ */Primitive_exceptions.create("Local");
+  let raise = () => {
+    throw {
+      RE_EXN_ID: Local,
+      Error: new Error()
+    };
+  };
+  let isLocal = exn => exn.RE_EXN_ID === Local;
+  return [
+    raise,
+    isLocal
+  ];
+}
+
 Mocha.describe("Extensible_variant_test", () => {
-  Mocha.test("test_int", () => Test_utils.eq("File \"extensible_variant_test.res\", line 24, characters 7-14", 3, to_int({
+  Mocha.test("test_int", () => Test_utils.eq("File \"extensible_variant_test.res\", line 71, characters 7-14", 3, to_int({
     RE_EXN_ID: Int,
     _1: 3,
     _2: 0
   })));
-  Mocha.test("test_int2", () => Test_utils.eq("File \"extensible_variant_test.res\", line 28, characters 7-14", 0, to_int({
+  Mocha.test("test_int2", () => Test_utils.eq("File \"extensible_variant_test.res\", line 75, characters 7-14", 0, to_int({
     RE_EXN_ID: Int$1,
     _1: 3,
     _2: 0
   })));
-  Mocha.test("test_string", () => Test_utils.eq("File \"extensible_variant_test.res\", line 32, characters 7-14", -1, to_int({
+  Mocha.test("test_string", () => Test_utils.eq("File \"extensible_variant_test.res\", line 79, characters 7-14", -1, to_int({
     RE_EXN_ID: Str,
     _1: "x"
   })));
+  Mocha.test("inline record", () => {
+    let point = {
+      RE_EXN_ID: Point,
+      "x-coord": 1,
+      y: 2
+    };
+    Test_utils.eq("File \"extensible_variant_test.res\", line 84, characters 7-14", 1, point["x-coord"]);
+    Test_utils.eq("File \"extensible_variant_test.res\", line 86, characters 6-13", 3, Point === Point ? 3 : 0);
+  });
+  Mocha.test("rebind", () => {
+    Test_utils.eq("File \"extensible_variant_test.res\", line 96, characters 7-14", -1, to_int({
+      RE_EXN_ID: Str,
+      _1: "x"
+    }));
+    Test_utils.eq("File \"extensible_variant_test.res\", line 97, characters 7-14", true, Primitive_object.equal({
+      RE_EXN_ID: Str,
+      _1: "x"
+    }, {
+      RE_EXN_ID: Str,
+      _1: "x"
+    }));
+  });
+  Mocha.test("indexed extension", () => {
+    Test_utils.eq("File \"extensible_variant_test.res\", line 101, characters 7-14", 0, defaultOf({
+      RE_EXN_ID: IntKey
+    }));
+    Test_utils.eq("File \"extensible_variant_test.res\", line 102, characters 7-14", "", defaultOf({
+      RE_EXN_ID: StringKey
+    }));
+  });
+  Mocha.test("private extensible", () => {
+    Test_utils.eq("File \"extensible_variant_test.res\", line 106, characters 7-14", "A", privateName({
+      RE_EXN_ID: A
+    }));
+    Test_utils.eq("File \"extensible_variant_test.res\", line 107, characters 7-14", "other", privateName(b));
+  });
+  Mocha.test("local exceptions are generative", () => {
+    let match = makeException();
+    let match$1 = makeException();
+    let caught;
+    try {
+      caught = match[0]();
+    } catch (raw_exn) {
+      caught = Primitive_exceptions.internalToException(raw_exn);
+    }
+    if (caught !== undefined) {
+      Test_utils.eq("File \"extensible_variant_test.res\", line 118, characters 9-16", true, match[1](caught));
+      return Test_utils.eq("File \"extensible_variant_test.res\", line 119, characters 9-16", false, match$1[1](caught));
+    } else {
+      return Test_utils.ok("File \"extensible_variant_test.res\", line 120, characters 17-24", false);
+    }
+  });
 });
+
+let StrAlias = Str;
 
 export {
   Str,
   N,
   Int$1 as Int,
   to_int,
+  Point,
+  StrAlias,
+  IntKey,
+  StringKey,
+  defaultOf,
+  Private,
+  privateName,
+  makeException,
 }
 /*  Not a pure module */

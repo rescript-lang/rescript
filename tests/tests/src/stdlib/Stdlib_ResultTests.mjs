@@ -38,7 +38,7 @@ function forEachIfErrorDoNotCallFunction() {
   Test.run([
     [
       "Stdlib_ResultTests.res",
-      17,
+      18,
       22,
       63
     ],
@@ -51,7 +51,7 @@ forEachIfErrorDoNotCallFunction();
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    25,
+    27,
     20,
     48
   ],
@@ -67,7 +67,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    28,
+    30,
     13,
     42
   ],
@@ -83,7 +83,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    34,
+    36,
     20,
     25
   ],
@@ -96,7 +96,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    35,
+    37,
     20,
     25
   ],
@@ -126,7 +126,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    36,
+    38,
     20,
     25
   ],
@@ -148,7 +148,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    37,
+    39,
     20,
     25
   ],
@@ -173,7 +173,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    38,
+    40,
     20,
     25
   ],
@@ -195,7 +195,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    39,
+    41,
     20,
     25
   ],
@@ -225,7 +225,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    40,
+    42,
     20,
     25
   ],
@@ -251,7 +251,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    41,
+    43,
     20,
     25
   ],
@@ -286,7 +286,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_ResultTests.res",
-    42,
+    44,
     20,
     25
   ],

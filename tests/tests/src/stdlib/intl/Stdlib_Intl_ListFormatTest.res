@@ -3,10 +3,12 @@ Console.log("Intl.ListFormat")
 
 let _formatter = Intl.ListFormat.make()
 let _formatter = Intl.ListFormat.make(~locales=["en-US", "en-GB"])
+
 let _formatter = Intl.ListFormat.make(
   ~locales=["en-US", "en-GB"],
   ~options={style: #long, \"type": #conjunction},
 )
+
 Intl.ListFormat.supportedLocalesOf(["en-US", "en-GB"])->ignore
 Intl.ListFormat.supportedLocalesOf(["en-US", "en-GB"], ~options={localeMatcher: #lookup})->ignore
 

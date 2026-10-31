@@ -111,7 +111,7 @@ TypedArray.length(view) == 3
 external length: t<'a> => int = "length"
 
 /**
-`copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.
+`copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.
 
 Beware this will *mutate* the typed array.
 
@@ -125,9 +125,10 @@ let _ = TypedArray.copyAllWithin(view, ~target=1)
 TypedArray.toString(view) == "10,10,20"
 ```
 */
-@send external copyAllWithin: (t<'a>, ~target: int) => array<'a> = "copyWithin"
+@send external copyAllWithin: (t<'a>, ~target: int) => t<'a> = "copyWithin"
+
 /**
-`copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.
+`copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.
 
 Beware this will *mutate* the typed array.
 
@@ -141,8 +142,8 @@ let _ = TypedArray.copyWithin(view, ~target=1, ~start=2, ~end=4)
 TypedArray.toString(view) == "1,3,4,4"
 ```
 */
-@send @send
-external copyWithin: (t<'a>, ~target: int, ~start: int, ~end: int=?) => array<'a> = "copyWithin"
+@send
+external copyWithin: (t<'a>, ~target: int, ~start: int, ~end: int=?) => t<'a> = "copyWithin"
 
 /**
 `fillAll(typedArray, value)` fills every element with `value`.
@@ -211,6 +212,7 @@ Beware this will *mutate* the typed array.
 See [`TypedArray.prototype.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/sort) on MDN.
 */
 @send external sort: (t<'a>, ('a, 'a) => Stdlib_Ordering.t) => unit = "sort"
+
 /**
 `toSorted(typedArray, comparator)` returns a new typed array containing the sorted values, leaving the original untouched.
 
@@ -264,6 +266,7 @@ TypedArray.includes(view, 10) == false
 See [`TypedArray.prototype.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/indexOf) on MDN.
 */
 @send external indexOf: (t<'a>, 'a) => int = "indexOf"
+
 /**
 `indexOfFrom(typedArray, value, fromIndex)` searches for `value` starting at `fromIndex`.
 */
@@ -289,6 +292,7 @@ TypedArray.joinWith(view, "-") == "1-2-3"
 See [`TypedArray.prototype.lastIndexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/lastIndexOf) on MDN.
 */
 @send external lastIndexOf: (t<'a>, 'a) => int = "lastIndexOf"
+
 /**
 `lastIndexOfFrom(typedArray, value, fromIndex)` searches backwards starting at `fromIndex`.
 */
@@ -300,6 +304,7 @@ See [`TypedArray.prototype.lastIndexOf`](https://developer.mozilla.org/en-US/doc
 See [`TypedArray.prototype.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/slice) on MDN.
 */
 @send external slice: (t<'a>, ~start: int, ~end: int=?) => t<'a> = "slice"
+
 /**
 `copy(typedArray)` produces a shallow copy of the typed array.
 */
@@ -324,6 +329,7 @@ See [`TypedArray.prototype.toString`](https://developer.mozilla.org/en-US/docs/W
 ```
 */
 @send external toString: t<'a> => string = "toString"
+
 /**
 `toLocaleString(typedArray)` concatenates the elements using locale-aware formatting.
 
@@ -337,6 +343,7 @@ See [`TypedArray.prototype.toLocaleString`](https://developer.mozilla.org/en-US/
 See [`TypedArray.prototype.every`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/every) on MDN.
 */
 @send external every: (t<'a>, 'a => bool) => bool = "every"
+
 /**
 `everyWithIndex(typedArray, checker)` is like `every` but provides the element index to `checker`.
 */
@@ -348,6 +355,7 @@ See [`TypedArray.prototype.every`](https://developer.mozilla.org/en-US/docs/Web/
 See [`TypedArray.prototype.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/filter) on MDN.
 */
 @send external filter: (t<'a>, 'a => bool) => t<'a> = "filter"
+
 /**
 `filterWithIndex(typedArray, predicate)` behaves like `filter` but also passes the index to `predicate`.
 */
@@ -359,6 +367,7 @@ See [`TypedArray.prototype.filter`](https://developer.mozilla.org/en-US/docs/Web
 See [`TypedArray.prototype.find`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/find) on MDN.
 */
 @send external find: (t<'a>, 'a => bool) => option<'a> = "find"
+
 /**
 `findWithIndex(typedArray, predicate)` behaves like `find`, but `predicate` also receives the index.
 */
@@ -370,6 +379,7 @@ See [`TypedArray.prototype.find`](https://developer.mozilla.org/en-US/docs/Web/J
 See [`TypedArray.prototype.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/findLast) on MDN.
 */
 @send external findLast: (t<'a>, 'a => bool) => option<'a> = "findLast"
+
 /**
 `findLastWithIndex(typedArray, predicate)` is the indexed variant of `findLast`.
 */
@@ -381,6 +391,7 @@ See [`TypedArray.prototype.findLast`](https://developer.mozilla.org/en-US/docs/W
 See [`TypedArray.prototype.findIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/findIndex) on MDN.
 */
 @send external findIndex: (t<'a>, 'a => bool) => int = "findIndex"
+
 /**
 `findIndexWithIndex(typedArray, predicate)` is the indexed variant of `findIndex`.
 */
@@ -392,6 +403,7 @@ See [`TypedArray.prototype.findIndex`](https://developer.mozilla.org/en-US/docs/
 See [`TypedArray.prototype.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/findLastIndex) on MDN.
 */
 @send external findLastIndex: (t<'a>, 'a => bool) => int = "findLastIndex"
+
 /**
 `findLastIndexWithIndex(typedArray, predicate)` is the indexed variant of `findLastIndex`.
 */
@@ -403,21 +415,23 @@ See [`TypedArray.prototype.findLastIndex`](https://developer.mozilla.org/en-US/d
 See [`TypedArray.prototype.forEach`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/forEach) on MDN.
 */
 @send external forEach: (t<'a>, 'a => unit) => unit = "forEach"
+
 /**
 `forEachWithIndex(typedArray, f)` runs `f` for every element, also providing the index.
 */
 @send external forEachWithIndex: (t<'a>, ('a, int) => unit) => unit = "forEach"
 
 /**
-`map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.
+`map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.
 
 See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.
 */
-@send external map: (t<'a>, 'a => 'b) => t<'b> = "map"
+@send external map: (t<'a>, 'a => 'a) => t<'a> = "map"
+
 /**
 `mapWithIndex(typedArray, f)` behaves like `map`, but `f` also receives the index.
 */
-@send external mapWithIndex: (t<'a>, ('a, int) => 'b) => t<'b> = "map"
+@send external mapWithIndex: (t<'a>, ('a, int) => 'a) => t<'a> = "map"
 
 /**
 `reduce(typedArray, reducer, initial)` combines the elements from left to right using `reducer`.
@@ -425,6 +439,7 @@ See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/Ja
 See [`TypedArray.prototype.reduce`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/reduce) on MDN.
 */
 @send external reduce: (t<'a>, ('b, 'a) => 'b, 'b) => 'b = "reduce"
+
 /**
 `reduceWithIndex(typedArray, reducer, initial)` is the indexed variant of `reduce`.
 */
@@ -436,6 +451,7 @@ See [`TypedArray.prototype.reduce`](https://developer.mozilla.org/en-US/docs/Web
 See [`TypedArray.prototype.reduceRight`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/reduceRight) on MDN.
 */
 @send external reduceRight: (t<'a>, ('b, 'a) => 'b, 'b) => 'b = "reduceRight"
+
 /**
 `reduceRightWithIndex(typedArray, reducer, initial)` is the indexed variant of `reduceRight`.
 */
@@ -447,6 +463,7 @@ See [`TypedArray.prototype.reduceRight`](https://developer.mozilla.org/en-US/doc
 See [`TypedArray.prototype.some`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/some) on MDN.
 */
 @send external some: (t<'a>, 'a => bool) => bool = "some"
+
 /**
 `someWithIndex(typedArray, predicate)` behaves like `some`, but `predicate` also receives the element index.
 */
@@ -582,7 +599,7 @@ module Impl = (
   external length: T.t => int = "length"
 
   /**
-  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`.
+  `copyAllWithin(typedArray, ~target)` copies values starting at index `0` over the positions beginning at `target`, and returns `typedArray`.
 
   Beware this will *mutate* the typed array.
 
@@ -597,10 +614,10 @@ module Impl = (
   ```
   */
   @send
-  external copyAllWithin: (T.t, ~target: int) => array<T.elt> = "copyWithin"
+  external copyAllWithin: (T.t, ~target: int) => T.t = "copyWithin"
 
   /**
-  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`.
+  `copyWithin(typedArray, ~target, ~start, ~end)` copies the section `[start, end)` onto the range beginning at `target`, and returns `typedArray`.
 
   Beware this will *mutate* the typed array.
 
@@ -615,7 +632,7 @@ module Impl = (
   ```
   */
   @send
-  external copyWithin: (T.t, ~target: int, ~start: int, ~end: int=?) => array<T.elt> = "copyWithin"
+  external copyWithin: (T.t, ~target: int, ~start: int, ~end: int=?) => T.t = "copyWithin"
 
   /**
   `fillAll(typedArray, value)` fills every element with `value`.
@@ -926,7 +943,7 @@ module Impl = (
   external forEachWithIndex: (T.t, (T.elt, int) => unit) => unit = "forEach"
 
   /**
-  `map(typedArray, f)` returns a new typed array whose elements are produced by applying `f` to each element.
+  `map(typedArray, f)` returns a new typed array of the same kind whose elements are produced by applying `f` to each element.
 
   See [`TypedArray.prototype.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/map) on MDN.
   */

@@ -31,12 +31,14 @@ external useState: (unit => 'state) => string = "useState"
 let _ = useState(() => 0)
 
 let fpromise = async (promise, _x) => await promise
+
 module Uncurried = {
   type f1 = int => string
   type f2 = (int, int) => string
 }
 
 let async_succ = async x => x + 1
+
 let async_foo = async (x, y) => {
   let a = async_succ(x)
   let b = async_succ(y)

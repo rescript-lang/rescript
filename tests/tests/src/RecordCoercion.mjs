@@ -11,7 +11,34 @@ let TestInlining = {
   name: "a"
 };
 
+function make(size) {
+  return {
+    size: size
+  };
+}
+
+let PrivateBlob = {
+  make: make
+};
+
+function blobToPlain(b) {
+  return b;
+}
+
+function blobToItself(b) {
+  return b;
+}
+
+let blobSize = 2;
+
+let PrivateBlob$make = make;
+
 export {
   TestInlining,
+  PrivateBlob,
+  blobToPlain,
+  blobToItself,
+  blobSize,
+  PrivateBlob$make,
 }
 /* No side effect */

@@ -18,6 +18,15 @@ val breakable_group : force_break:bool -> t -> t
  * will be checked until one fits. *)
 val custom_layout : t list -> t
 val break_parent : t
+
+val item_separator : prev:t -> next:t -> t
+(** A hard line, and a blank line when [prev] or [next], the documents printed
+    on each side of it, span several lines. It measures them but does not print
+    them. *)
+
+val comment : t -> t
+(** Prints like its argument, which [item_separator] does not measure. *)
+
 val join : sep:t -> t list -> t
 
 (* [(doc1, sep1); (doc2,sep2)] joins as doc1 sep1 doc2 *)
@@ -50,7 +59,18 @@ val will_break : t -> bool
     [will_break] to detect a forced break in a custom layout and explicitly add
     [break_parent] to propagate it to the parent document. *)
 
-val to_string : width:int -> t -> string
+val has_pending_line_suffix : t -> bool
+(** [has_pending_line_suffix doc] checks whether a line suffix (a trailing line
+    comment) in [doc] is still queued at its end, because no line break of a
+    group that breaks follows it. Groups that only break for lack of width
+    count as flat. Text after [doc] on the same line would precede the
+    comment. *)
+
+val to_string : ?newline:string -> width:int -> t -> string
+(** [to_string ~newline ~width doc] writes the line breaks of [doc] as
+    [newline] (default LF). A [literal_line] is part of a literal's contents
+    and stays LF. *)
+
 val debug : t -> unit
 
 val is_nil : t -> bool

@@ -11,15 +11,15 @@ function unary(a) {
   return a + 3 | 0;
 }
 
-Mocha.test("ppx_apply_test_unary", () => Test_utils.eq("File \"ppx_apply_test.res\", line 12, characters 5-12", 3, 3));
+Mocha.test("ppx_apply_test_unary", () => Test_utils.eq("File \"ppx_apply_test.res\", line 13, characters 5-12", 3, 3));
 
 function h(a) {
   return globalThis.xx(a);
 }
 
 Mocha.describe("Ppx_apply_test", () => {
-  Mocha.test("function_application_test", () => Test_utils.eq("File \"ppx_apply_test.res\", line 25, characters 7-14", 3, 3));
-  Mocha.test("external_function_test", () => Test_utils.ok("File \"ppx_apply_test.res\", line 30, characters 7-14", true));
+  Mocha.test("function_application_test", () => Test_utils.eq("File \"ppx_apply_test.res\", line 26, characters 7-14", 3, 3));
+  Mocha.test("external_function_test", () => Test_utils.ok("File \"ppx_apply_test.res\", line 31, characters 7-14", true));
 });
 
 let u = 3;

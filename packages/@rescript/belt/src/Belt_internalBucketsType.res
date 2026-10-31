@@ -17,6 +17,7 @@ external toOpt: opt<'a> => option<'a> = "%identity"
 external return: 'a => opt<'a> = "%identity"
 
 let emptyOpt = Primitive_js_extern.undefined
+
 let rec power_2_above = (x, n) =>
   if x >= n {
     x

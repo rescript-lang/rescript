@@ -892,14 +892,35 @@ and tree_of_type_decl id decl =
         decl.type_private,
         decl.type_representation = Unboxed )
   in
-  let immediate = Builtin_attributes.immediate decl.type_attributes in
+  let attributes =
+    let flag set attribute = if set then [attribute] else [] in
+    (* A malformed annotation was reported when the declaration was typed *)
+    let stated process =
+      try process decl.type_attributes
+      with Ast_untagged_variants.Error _ -> None
+    in
+    List.concat
+      [
+        flag (Builtin_attributes.immediate decl.type_attributes) "@immediate";
+        flag unboxed "@unboxed";
+        (match stated Ast_untagged_variants.process_tag_name with
+        | Some name ->
+          [Printf.sprintf "@tag(\"%s\")" (String_literal.encode_js_string name)]
+        | None -> []);
+        (match
+           stated (Ast_untagged_variants.process_runtime_annotation ?loc:None)
+         with
+        | Some annotation ->
+          [Ast_untagged_variants.runtime_annotation_to_string annotation]
+        | None -> []);
+      ]
+  in
   {
     otype_name = name;
     otype_params = args;
     otype_type = ty;
     otype_private = priv;
-    otype_immediate = immediate;
-    otype_unboxed = unboxed;
+    otype_attributes = attributes;
     otype_cstrs = constraints;
   }
 
@@ -951,6 +972,7 @@ and tree_of_label ?printing_context l =
     | _ -> l.ld_type
   in
   ( Ident.name l.ld_id,
+    l.ld_runtime_name,
     l.ld_mutable = Mutable,
     opt,
     tree_of_typexp ?printing_context false typ )
@@ -1299,16 +1321,31 @@ let rec mismatch = function
   | [] -> None
   | _ -> assert false
 
+let escape_explanation ppf p =
+  match p with
+  | Pident id -> (
+    match Ctype.existential_constructor id with
+    | Some constructor ->
+      fprintf ppf
+        "@,\
+         @[%s is an existential type bound by the constructor %s.@ It is only \
+         known in the scope of the pattern that matches %s.@]"
+        (Ident.name id) constructor constructor
+    | None ->
+      fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
+        path p)
+  | _ ->
+    fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
+      path p
+
 let explanation unif t3 t4 ppf =
   match (t3.desc, t4.desc) with
   | Ttuple [], Tvar _ | Tvar _, Ttuple [] ->
     fprintf ppf "@,Self type cannot escape its class"
   | Tconstr (p, _, _), Tvar _ when unif && t4.level < Path.binding_time p ->
-    fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
-      path p
+    escape_explanation ppf p
   | Tvar _, Tconstr (p, _, _) when unif && t3.level < Path.binding_time p ->
-    fprintf ppf "@,@[The type constructor@;<1 2>%a@ would escape its scope@]"
-      path p
+    escape_explanation ppf p
   | Tvar _, Tunivar _ | Tunivar _, Tvar _ ->
     fprintf ppf "@,The universal variable %a would escape its scope" type_expr
       (if is_Tunivar t3 then t3 else t4)
@@ -1707,6 +1744,13 @@ let print_record_field_subtype_violation ppf
       label
       (Path.name right_record_name)
       (Path.name left_record_name)
+  | Mutable_mismatch {label} ->
+    fprintf ppf
+      "The field @{<info>%s@} is mutable in record @{<info>%s@}, but not in \
+       record @{<info>%s@}. A coercion can't make a field writable."
+      label
+      (Path.name right_record_name)
+      (Path.name left_record_name)
 
 let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
   wrap_printing_env env (fun () ->
@@ -1781,7 +1825,12 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
               fprintf ppf "@ - ";
               print_record_field_subtype_violation ppf issue ~left_record_name
                 ~right_record_name)
-            issues)
+            issues
+        | Coercion_into_private_type {typename} ->
+          fprintf ppf
+            "@ @{<info>%s@} is private: its values can only be built in the \
+             module that defines it, so another type cannot be coerced to it."
+            (Path.name typename))
       | None -> ())
 
 let report_ambiguous_type_error ppf env (tp0, tp0') tpl txt1 txt2 txt3 =

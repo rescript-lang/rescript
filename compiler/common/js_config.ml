@@ -46,7 +46,6 @@ type t = {
   force_cmj: bool ref;
   jsx_version: jsx_version option ref;
   jsx_module: jsx_module ref;
-  js_stdout: bool ref;
   source_map: source_map ref;
   source_map_sources_content: bool ref;
   source_map_root: string ref;
@@ -76,7 +75,6 @@ let create () =
     force_cmj = ref false;
     jsx_version = ref None;
     jsx_module = ref React;
-    js_stdout = ref true;
     source_map = ref No_source_map;
     source_map_sources_content = ref false;
     source_map_root = ref "";

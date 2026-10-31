@@ -299,6 +299,7 @@ type t =
   | A297
   | A298
   | A299
+
 let to_enum = x =>
   switch x {
   | A0 => 0
@@ -602,6 +603,7 @@ let to_enum = x =>
   | A298 => 298
   | A299 => 299
   }
+
 let to_string = x =>
   switch x {
   | A0 => "A0"

@@ -265,13 +265,6 @@ You will need this decorator whenever you want to use a JSX component in ReScrip
   
 [Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#unboxed-decorator).|};
       ] );
-    ( "uncurry",
-      None,
-      [
-        {|The `@uncurry` decorator can be used to mark any callback argument within an external function as an uncurried function without the need for any explicit uncurried function syntax (`(.) => { ... }`).
-
-[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#uncurry-decorator).|};
-      ] );
     ( "unwrap",
       None,
       [

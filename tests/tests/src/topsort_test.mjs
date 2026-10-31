@@ -255,7 +255,7 @@ if (!Primitive_object.equal(pathsort(grwork), {hd: "wake", tl: {hd: "shower", tl
     RE_EXN_ID: "Assert_failure",
     _1: [
       "topsort_test.res",
-      141,
+      142,
       9
     ],
     Error: new Error()
@@ -271,7 +271,7 @@ try {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "topsort_test.res",
-      145,
+      146,
       2
     ],
     Error: new Error()
@@ -307,7 +307,7 @@ try {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "topsort_test.res",
-        148,
+        149,
         7
       ],
       Error: new Error()

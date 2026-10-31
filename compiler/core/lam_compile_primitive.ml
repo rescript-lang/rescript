@@ -39,10 +39,7 @@ let ensure_value_unit (st : Lam_compile_context.continuation) e : E.t =
 let get_module_system () =
   let package_info = Js_packages_state.get_packages_info () in
   let module_system =
-    if
-      Js_packages_info.is_empty package_info
-      && !((Js_config.current ()).js_stdout)
-    then [Ext_module_system.Commonjs]
+    if Js_packages_info.is_empty package_info then [Ext_module_system.Commonjs]
     else
       Js_packages_info.map package_info (fun {module_system} -> module_system)
   in
@@ -584,6 +581,8 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
               Some (Js_op.Lit txt, expr)
             | _ -> None))
     | _ -> assert false)
+  | Parray_spread -> E.runtime_call Primitive_modules.array "spread" args
+  | Plist_spread -> E.runtime_call Primitive_modules.list "spread" args
   | Pdict_spread ->
     (* {...target, ...source}, with the rows of dict literals in place *)
     E.obj_entries

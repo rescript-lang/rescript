@@ -5,4 +5,5 @@ module M: {
 } = {
   type t = private {.."x": int}
 }
+
 let mutate = (o: M.t) => o["x"] = 1

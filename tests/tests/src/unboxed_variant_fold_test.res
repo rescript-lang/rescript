@@ -17,6 +17,7 @@ type color =
   | @as("primary") Primary
   | @as("secondary") Secondary
   | Color(string)
+
 let colorName = v =>
   switch v {
   | Color(n) => n
@@ -24,6 +25,7 @@ let colorName = v =>
   }
 
 @unboxed type number = | @as(1) One | Number(int)
+
 let numberName = v =>
   switch v {
   | One => "one"
@@ -32,6 +34,7 @@ let numberName = v =>
 
 // No literal constructors at all, so no overlap is possible.
 @unboxed type pure = I(int) | S(string)
+
 let pureName = v =>
   switch v {
   | I(_) => "int"
@@ -43,6 +46,7 @@ type opt =
   | @as(null) Nothing
   | @as(undefined) Missing
   | Obj({x: int})
+
 let optName = v =>
   switch v {
   | Nothing => "null"
@@ -51,6 +55,7 @@ let optName = v =>
   }
 
 @unboxed type flag = | @as(true) Yes | Str(string)
+
 let flagName = v =>
   switch v {
   | Yes => "yes"
@@ -60,6 +65,7 @@ let flagName = v =>
 // A boolean payload only receives the boolean that is not a literal case. The
 // first arm can never match (warning 11); folding must not select it either.
 @unboxed type answer = | @as(true) Yes2 | Answer(bool)
+
 @warning("-11")
 let answerName = v =>
   switch v {
@@ -67,6 +73,7 @@ let answerName = v =>
   | Yes2 => "yes"
   | Answer(false) => "answer false"
   }
+
 // Yes2 also covers Answer(true), so this match is exhaustive.
 let answerName2 = v =>
   switch v {
@@ -80,6 +87,7 @@ type mixed =
   | @as(null) Unset
   | Toggle(bool)
   | Label(string)
+
 let mixedName = v =>
   switch v {
   | Off => "off"
@@ -90,6 +98,7 @@ let mixedName = v =>
 
 // @as(1) and a float payload of 1.0 are one JavaScript number.
 @unboxed type num = | @as(1) One2 | F(float)
+
 let numName = v =>
   switch v {
   | One2 => "one"
@@ -98,6 +107,7 @@ let numName = v =>
 
 // An untagged inline record stays an object rather than becoming its payload.
 @unboxed type rec_ = | @as("empty") Empty | R({y: int})
+
 let recName = v =>
   switch v {
   | Empty => "empty"
@@ -106,6 +116,7 @@ let recName = v =>
 
 // The overlapping literal is reachable only through the default arm.
 @unboxed type c2 = | @as("a") A | @as("b") B | C(string)
+
 let pick = v =>
   switch v {
   | C(s) => s
@@ -115,6 +126,7 @@ let pick = v =>
 // A payload that is itself an untagged constant.
 @unboxed type inner = | @as("primary") P | I2(string)
 @unboxed type outer = | @as("x") X | W(inner)
+
 let outerName = v =>
   switch v {
   | X => "x"
@@ -123,6 +135,7 @@ let outerName = v =>
 
 // An ordinary boxed variant keeps its constructor identity, tag and all.
 type boxed = | @as("primary") BoxedPrimary | BoxedColor(string)
+
 let boxedName = v =>
   switch v {
   | BoxedPrimary => "not Color"
@@ -131,6 +144,7 @@ let boxedName = v =>
 
 // Tuple constants emit as arrays, and must not select the object case.
 @unboxed type objects = Tuple((int, int)) | Record({x: int})
+
 let objectName = value =>
   switch value {
   | Tuple(_) => "tuple"
@@ -139,6 +153,7 @@ let objectName = value =>
 
 // The built-in empty-list constructor is the JavaScript number zero.
 @unboxed type lists = | @as(0) Zero | Values(list<int>)
+
 let listName = value =>
   switch value {
   | Zero => "zero"
@@ -148,6 +163,7 @@ let listName = value =>
 // Bigint constructor spellings can differ while their runtime values agree.
 @unboxed type bigintInner = | @as(1_0n) DecimalTen
 @unboxed type bigintOuter = | @as(10n) BigOne | Wrapped(bigintInner)
+
 let bigintName = value =>
   switch value {
   | BigOne => "one"
@@ -156,6 +172,7 @@ let bigintName = value =>
 
 // Integer constructor tags use the same 32-bit representation as int values.
 @unboxed type wide = | @as(4294967297) WideOne | WideInt(int)
+
 let wideName = value =>
   switch value {
   | WideOne => "one"
@@ -164,6 +181,7 @@ let wideName = value =>
 
 // A number and a bigint with the same digits are different values.
 @unboxed type numberOrBigint = | @as(1) NumberOne | @as(1n) BigintOne | Other(string)
+
 let numberOrBigintName = value =>
   switch value {
   | NumberOne => "number"
@@ -173,6 +191,7 @@ let numberOrBigintName = value =>
 
 // A bigint payload equal to a bigint literal folds to the literal's case
 @unboxed type bigintOrPayload = | @as(2n) BigTwo | BigOther(bigint)
+
 let bigintOrPayloadName = value =>
   switch value {
   | BigTwo => "two"

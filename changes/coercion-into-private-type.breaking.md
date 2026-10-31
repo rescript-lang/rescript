@@ -1,0 +1,1 @@
+- Coercing another type into a private record or variant is an error: only the module defining a private type can build its values. Coercing out of a private type still works.

@@ -11,6 +11,7 @@ let window = 3
 module Products = {
   @genType
   let createNew = "createNew"
+
   @genType
   let delete = "delete"
 }

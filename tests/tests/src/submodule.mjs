@@ -7,25 +7,25 @@ function a0(x, y) {
   return (x + y | 0) + 1 | 0;
 }
 
-console.log(5);
+console.log(6);
 
 function a1(x, y) {
   return a0(x, y) + 1 | 0;
 }
 
-console.log(8);
+console.log(10);
 
 function a2(x, y) {
   return a1(x, y) + 1 | 0;
 }
 
-console.log(11);
+console.log(14);
 
 function a3(x, y) {
   return a2(x, y) + 1 | 0;
 }
 
-console.log(14);
+console.log(18);
 
 function a4(x, y) {
   return a3(x, y) + 1 | 0;

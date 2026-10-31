@@ -60,6 +60,7 @@ let rec split = (x, tree: Set_gen.t<_>): (Set_gen.t<_>, bool, Set_gen.t<_>) =>
       (Set_gen.internal_join(l, v, lr), pres, rr)
     }
   }
+
 let rec add = (x, tree: Set_gen.t<_>): Set_gen.t<_> =>
   switch tree {
   | Empty => Node(Empty, x, Empty, 1)

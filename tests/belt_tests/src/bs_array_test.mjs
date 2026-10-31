@@ -25,7 +25,7 @@ Mocha.describe("Bs_array_test", () => {
       1,
       2
     ];
-    Test_utils.eq("File \"bs_array_test.res\", line 21, characters 6-13", [
+    Test_utils.eq("File \"bs_array_test.res\", line 22, characters 6-13", [
       Belt_Array.get(v, 0),
       Belt_Array.get(v, 1),
       Belt_Array.get(v, 2),
@@ -38,13 +38,13 @@ Mocha.describe("Bs_array_test", () => {
       undefined,
       undefined
     ]);
-    Test_utils.throws("File \"bs_array_test.res\", line 25, characters 11-18", () => {
+    Test_utils.throws("File \"bs_array_test.res\", line 26, characters 11-18", () => {
       Belt_Array.getExn([
         0,
         1
       ], -1);
     });
-    Test_utils.throws("File \"bs_array_test.res\", line 26, characters 11-18", () => {
+    Test_utils.throws("File \"bs_array_test.res\", line 27, characters 11-18", () => {
       Belt_Array.getExn([
         0,
         1
@@ -54,22 +54,22 @@ Mocha.describe("Bs_array_test", () => {
       0,
       1
     ];
-    Test_utils.ok("File \"bs_array_test.res\", line 28, characters 6-13", Primitive_object.equal([
+    Test_utils.ok("File \"bs_array_test.res\", line 29, characters 6-13", Primitive_object.equal([
       Belt_Array.getExn(arg, 0),
       Belt_Array.getExn(arg, 1)
     ], [
       0,
       1
     ]));
-    Test_utils.throws("File \"bs_array_test.res\", line 34, characters 11-18", () => Belt_Array.setExn([
-      0,
-      1
-    ], -1, 0));
     Test_utils.throws("File \"bs_array_test.res\", line 35, characters 11-18", () => Belt_Array.setExn([
       0,
       1
+    ], -1, 0));
+    Test_utils.throws("File \"bs_array_test.res\", line 36, characters 11-18", () => Belt_Array.setExn([
+      0,
+      1
     ], 2, 0));
-    Test_utils.ok("File \"bs_array_test.res\", line 36, characters 7-14", !Belt_Array.set([
+    Test_utils.ok("File \"bs_array_test.res\", line 37, characters 7-14", !Belt_Array.set([
       1,
       2
     ], 2, 0));
@@ -82,13 +82,13 @@ Mocha.describe("Bs_array_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_array_test.res",
-          41,
+          42,
           8
         ],
         Error: new Error()
       };
     }
-    Test_utils.ok("File \"bs_array_test.res\", line 38, characters 6-13", Belt_Array.getExn(v$1, 0) === 0);
+    Test_utils.ok("File \"bs_array_test.res\", line 39, characters 6-13", Belt_Array.getExn(v$1, 0) === 0);
     let v$2 = [
       1,
       2
@@ -98,78 +98,78 @@ Mocha.describe("Bs_array_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_array_test.res",
-          49,
+          50,
           8
         ],
         Error: new Error()
       };
     }
-    Test_utils.ok("File \"bs_array_test.res\", line 46, characters 6-13", Belt_Array.getExn(v$2, 1) === 0);
+    Test_utils.ok("File \"bs_array_test.res\", line 47, characters 6-13", Belt_Array.getExn(v$2, 1) === 0);
     let v$3 = [
       1,
       2
     ];
-    Test_utils.ok("File \"bs_array_test.res\", line 54, characters 6-13", (Belt_Array.setExn(v$3, 0, 0), Belt_Array.getExn(v$3, 0) === 0));
+    Test_utils.ok("File \"bs_array_test.res\", line 55, characters 6-13", (Belt_Array.setExn(v$3, 0, 0), Belt_Array.getExn(v$3, 0) === 0));
     let v$4 = [
       1,
       2
     ];
-    Test_utils.ok("File \"bs_array_test.res\", line 62, characters 6-13", (Belt_Array.setExn(v$4, 1, 0), Belt_Array.getExn(v$4, 1) === 0));
+    Test_utils.ok("File \"bs_array_test.res\", line 63, characters 6-13", (Belt_Array.setExn(v$4, 1, 0), Belt_Array.getExn(v$4, 1) === 0));
   });
   let add = (x, y) => x + y | 0;
   Mocha.test("bs_array_test_2", () => {
     let v = Belt_Array.makeBy(3000, i => i);
     let u = Belt_Array.shuffle(v);
-    Test_utils.ok("File \"bs_array_test.res\", line 75, characters 7-14", u !== v);
-    Test_utils.eq("File \"bs_array_test.res\", line 77, characters 7-14", Belt_Array.reduce(u, 0, add), Belt_Array.reduce(v, 0, add));
+    Test_utils.ok("File \"bs_array_test.res\", line 76, characters 7-14", u !== v);
+    Test_utils.eq("File \"bs_array_test.res\", line 78, characters 7-14", Belt_Array.reduce(u, 0, add), Belt_Array.reduce(v, 0, add));
   });
   Mocha.test("bs_array_test_3", () => {
-    Test_utils.ok("File \"bs_array_test.res\", line 82, characters 7-14", Primitive_object.equal(Belt_Array.range(0, 3), [
+    Test_utils.ok("File \"bs_array_test.res\", line 83, characters 7-14", Primitive_object.equal(Belt_Array.range(0, 3), [
       0,
       1,
       2,
       3
     ]));
-    Test_utils.ok("File \"bs_array_test.res\", line 83, characters 7-14", Primitive_object.equal(Belt_Array.range(3, 0), []));
-    Test_utils.ok("File \"bs_array_test.res\", line 84, characters 7-14", Primitive_object.equal(Belt_Array.range(3, 3), [3]));
-    Test_utils.ok("File \"bs_array_test.res\", line 86, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(0, 10, 3), [
+    Test_utils.ok("File \"bs_array_test.res\", line 84, characters 7-14", Primitive_object.equal(Belt_Array.range(3, 0), []));
+    Test_utils.ok("File \"bs_array_test.res\", line 85, characters 7-14", Primitive_object.equal(Belt_Array.range(3, 3), [3]));
+    Test_utils.ok("File \"bs_array_test.res\", line 87, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(0, 10, 3), [
       0,
       3,
       6,
       9
     ]));
-    Test_utils.ok("File \"bs_array_test.res\", line 87, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(0, 12, 3), [
+    Test_utils.ok("File \"bs_array_test.res\", line 88, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(0, 12, 3), [
       0,
       3,
       6,
       9,
       12
     ]));
-    Test_utils.ok("File \"bs_array_test.res\", line 88, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(33, 0, 1), []));
-    Test_utils.ok("File \"bs_array_test.res\", line 89, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(33, 0, -1), []));
-    Test_utils.ok("File \"bs_array_test.res\", line 90, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(3, 12, -1), []));
-    Test_utils.ok("File \"bs_array_test.res\", line 91, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(3, 3, 0), []));
-    Test_utils.ok("File \"bs_array_test.res\", line 92, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(3, 3, 1), [3]));
+    Test_utils.ok("File \"bs_array_test.res\", line 89, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(33, 0, 1), []));
+    Test_utils.ok("File \"bs_array_test.res\", line 90, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(33, 0, -1), []));
+    Test_utils.ok("File \"bs_array_test.res\", line 91, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(3, 12, -1), []));
+    Test_utils.ok("File \"bs_array_test.res\", line 92, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(3, 3, 0), []));
+    Test_utils.ok("File \"bs_array_test.res\", line 93, characters 7-14", Primitive_object.equal(Belt_Array.rangeBy(3, 3, 1), [3]));
   });
   Mocha.test("bs_array_test_4", () => {
-    Test_utils.eq("File \"bs_array_test.res\", line 96, characters 7-14", Belt_Array.reduceReverse([], 100, (a, b) => a - b | 0), 100);
-    Test_utils.eq("File \"bs_array_test.res\", line 97, characters 7-14", Belt_Array.reduceReverse([
+    Test_utils.eq("File \"bs_array_test.res\", line 97, characters 7-14", Belt_Array.reduceReverse([], 100, (a, b) => a - b | 0), 100);
+    Test_utils.eq("File \"bs_array_test.res\", line 98, characters 7-14", Belt_Array.reduceReverse([
       1,
       2
     ], 100, (a, b) => a - b | 0), 97);
-    Test_utils.eq("File \"bs_array_test.res\", line 98, characters 7-14", Belt_Array.reduceReverse([
+    Test_utils.eq("File \"bs_array_test.res\", line 99, characters 7-14", Belt_Array.reduceReverse([
       1,
       2,
       3,
       4
     ], 100, (a, b) => a - b | 0), 90);
-    Test_utils.eq("File \"bs_array_test.res\", line 99, characters 7-14", Belt_Array.reduceWithIndex([
+    Test_utils.eq("File \"bs_array_test.res\", line 100, characters 7-14", Belt_Array.reduceWithIndex([
       1,
       2,
       3,
       4
     ], 0, (acc, x, i) => (acc + x | 0) + i | 0), 16);
-    Test_utils.ok("File \"bs_array_test.res\", line 100, characters 7-14", Belt_Array.reduceReverse2([
+    Test_utils.ok("File \"bs_array_test.res\", line 101, characters 7-14", Belt_Array.reduceReverse2([
       1,
       2,
       3
@@ -184,7 +184,7 @@ Mocha.describe("Bs_array_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "bs_array_test.res",
-          106,
+          107,
           4
         ],
         Error: new Error()
@@ -201,13 +201,13 @@ Mocha.describe("Bs_array_test", () => {
     return res;
   };
   Mocha.test("bs_array_test_make_functions", () => {
-    Test_utils.eq("File \"bs_array_test.res\", line 119, characters 7-14", Belt_Array.makeBy(0, param => 1), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 120, characters 7-14", Belt_Array.makeBy(3, i => i), [
+    Test_utils.eq("File \"bs_array_test.res\", line 120, characters 7-14", Belt_Array.makeBy(0, param => 1), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 121, characters 7-14", Belt_Array.makeBy(3, i => i), [
       0,
       1,
       2
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 121, characters 7-14", makeMatrixExn(3, 4, 1), [
+    Test_utils.eq("File \"bs_array_test.res\", line 122, characters 7-14", makeMatrixExn(3, 4, 1), [
       [
         1,
         1,
@@ -227,17 +227,17 @@ Mocha.describe("Bs_array_test", () => {
         1
       ]
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 122, characters 7-14", makeMatrixExn(3, 0, 0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 123, characters 7-14", makeMatrixExn(3, 0, 0), [
       [],
       [],
       []
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 123, characters 7-14", makeMatrixExn(0, 3, 1), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 124, characters 7-14", makeMatrixExn(1, 1, 1), [[1]]);
-    Test_utils.eq("File \"bs_array_test.res\", line 125, characters 7-14", [].slice(0), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 126, characters 7-14", Belt_Array.map([], x => x + 1 | 0), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 127, characters 7-14", Belt_Array.mapWithIndex([], add), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 128, characters 7-14", Belt_Array.mapWithIndex([
+    Test_utils.eq("File \"bs_array_test.res\", line 124, characters 7-14", makeMatrixExn(0, 3, 1), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 125, characters 7-14", makeMatrixExn(1, 1, 1), [[1]]);
+    Test_utils.eq("File \"bs_array_test.res\", line 126, characters 7-14", [].slice(0), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 127, characters 7-14", Belt_Array.map([], x => x + 1 | 0), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 128, characters 7-14", Belt_Array.mapWithIndex([], add), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 129, characters 7-14", Belt_Array.mapWithIndex([
       1,
       2,
       3
@@ -246,14 +246,14 @@ Mocha.describe("Bs_array_test", () => {
       3,
       5
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 129, characters 7-14", Belt_List.fromArray([]), /* [] */0);
-    Test_utils.eq("File \"bs_array_test.res\", line 130, characters 7-14", Belt_List.fromArray([1]), {hd: 1, tl: /* [] */0});
-    Test_utils.eq("File \"bs_array_test.res\", line 131, characters 7-14", Belt_List.fromArray([
+    Test_utils.eq("File \"bs_array_test.res\", line 130, characters 7-14", Belt_List.fromArray([]), /* [] */0);
+    Test_utils.eq("File \"bs_array_test.res\", line 131, characters 7-14", Belt_List.fromArray([1]), {hd: 1, tl: /* [] */0});
+    Test_utils.eq("File \"bs_array_test.res\", line 132, characters 7-14", Belt_List.fromArray([
       1,
       2,
       3
     ]), {hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}});
-    Test_utils.eq("File \"bs_array_test.res\", line 132, characters 7-14", Belt_Array.map([
+    Test_utils.eq("File \"bs_array_test.res\", line 133, characters 7-14", Belt_Array.map([
       1,
       2,
       3
@@ -262,13 +262,13 @@ Mocha.describe("Bs_array_test", () => {
       3,
       4
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 133, characters 7-14", Belt_List.toArray(/* [] */0), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 134, characters 7-14", Belt_List.toArray({hd: 1, tl: /* [] */0}), [1]);
-    Test_utils.eq("File \"bs_array_test.res\", line 135, characters 7-14", Belt_List.toArray({hd: 1, tl: {hd: 2, tl: /* [] */0}}), [
+    Test_utils.eq("File \"bs_array_test.res\", line 134, characters 7-14", Belt_List.toArray(/* [] */0), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 135, characters 7-14", Belt_List.toArray({hd: 1, tl: /* [] */0}), [1]);
+    Test_utils.eq("File \"bs_array_test.res\", line 136, characters 7-14", Belt_List.toArray({hd: 1, tl: {hd: 2, tl: /* [] */0}}), [
       1,
       2
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 136, characters 7-14", Belt_List.toArray({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}), [
+    Test_utils.eq("File \"bs_array_test.res\", line 137, characters 7-14", Belt_List.toArray({hd: 1, tl: {hd: 2, tl: {hd: 3, tl: /* [] */0}}}), [
       1,
       2,
       3
@@ -283,20 +283,20 @@ Mocha.describe("Bs_array_test", () => {
         return x + 1 | 0;
       }
     });
-    Test_utils.eq("File \"bs_array_test.res\", line 152, characters 7-14", v0, [
+    Test_utils.eq("File \"bs_array_test.res\", line 153, characters 7-14", v0, [
       0,
       2,
       4,
       6,
       8
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 153, characters 7-14", v1, [
+    Test_utils.eq("File \"bs_array_test.res\", line 154, characters 7-14", v1, [
       0,
       3,
       6,
       9
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 154, characters 7-14", v2, [
+    Test_utils.eq("File \"bs_array_test.res\", line 155, characters 7-14", v2, [
       1,
       3,
       5,
@@ -313,26 +313,26 @@ Mocha.describe("Bs_array_test", () => {
       5
     ];
     let match = Belt_Array.partition(a, x => x % 2 === 0);
-    Test_utils.eq("File \"bs_array_test.res\", line 160, characters 7-14", match[0], [
+    Test_utils.eq("File \"bs_array_test.res\", line 161, characters 7-14", match[0], [
       2,
       4
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 161, characters 7-14", match[1], [
+    Test_utils.eq("File \"bs_array_test.res\", line 162, characters 7-14", match[1], [
       1,
       3,
       5
     ]);
     let match$1 = Belt_Array.partition(a, x => x === 2);
-    Test_utils.eq("File \"bs_array_test.res\", line 163, characters 7-14", match$1[0], [2]);
-    Test_utils.eq("File \"bs_array_test.res\", line 164, characters 7-14", match$1[1], [
+    Test_utils.eq("File \"bs_array_test.res\", line 164, characters 7-14", match$1[0], [2]);
+    Test_utils.eq("File \"bs_array_test.res\", line 165, characters 7-14", match$1[1], [
       1,
       3,
       4,
       5
     ]);
     let match$2 = Belt_Array.partition([], x => false);
-    Test_utils.eq("File \"bs_array_test.res\", line 166, characters 7-14", match$2[0], []);
-    Test_utils.eq("File \"bs_array_test.res\", line 167, characters 7-14", match$2[1], []);
+    Test_utils.eq("File \"bs_array_test.res\", line 167, characters 7-14", match$2[0], []);
+    Test_utils.eq("File \"bs_array_test.res\", line 168, characters 7-14", match$2[1], []);
   });
   Mocha.test("bs_array_test_slice_functions", () => {
     let a = [
@@ -342,64 +342,64 @@ Mocha.describe("Bs_array_test", () => {
       4,
       5
     ];
-    Test_utils.eq("File \"bs_array_test.res\", line 172, characters 7-14", Belt_Array.slice(a, 0, 2), [
+    Test_utils.eq("File \"bs_array_test.res\", line 173, characters 7-14", Belt_Array.slice(a, 0, 2), [
       1,
       2
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 173, characters 7-14", Belt_Array.slice(a, 0, 5), [
+    Test_utils.eq("File \"bs_array_test.res\", line 174, characters 7-14", Belt_Array.slice(a, 0, 5), [
       1,
       2,
       3,
       4,
       5
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 174, characters 7-14", Belt_Array.slice(a, 0, 15), [
+    Test_utils.eq("File \"bs_array_test.res\", line 175, characters 7-14", Belt_Array.slice(a, 0, 15), [
       1,
       2,
       3,
       4,
       5
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 175, characters 7-14", Belt_Array.slice(a, 5, 1), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 176, characters 7-14", Belt_Array.slice(a, 4, 1), [5]);
-    Test_utils.eq("File \"bs_array_test.res\", line 177, characters 7-14", Belt_Array.slice(a, -1, 1), [5]);
-    Test_utils.eq("File \"bs_array_test.res\", line 178, characters 7-14", Belt_Array.slice(a, -1, 2), [5]);
-    Test_utils.eq("File \"bs_array_test.res\", line 179, characters 7-14", Belt_Array.slice(a, -2, 1), [4]);
-    Test_utils.eq("File \"bs_array_test.res\", line 180, characters 7-14", Belt_Array.slice(a, -2, 2), [
+    Test_utils.eq("File \"bs_array_test.res\", line 176, characters 7-14", Belt_Array.slice(a, 5, 1), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 177, characters 7-14", Belt_Array.slice(a, 4, 1), [5]);
+    Test_utils.eq("File \"bs_array_test.res\", line 178, characters 7-14", Belt_Array.slice(a, -1, 1), [5]);
+    Test_utils.eq("File \"bs_array_test.res\", line 179, characters 7-14", Belt_Array.slice(a, -1, 2), [5]);
+    Test_utils.eq("File \"bs_array_test.res\", line 180, characters 7-14", Belt_Array.slice(a, -2, 1), [4]);
+    Test_utils.eq("File \"bs_array_test.res\", line 181, characters 7-14", Belt_Array.slice(a, -2, 2), [
       4,
       5
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 181, characters 7-14", Belt_Array.slice(a, -2, 3), [
+    Test_utils.eq("File \"bs_array_test.res\", line 182, characters 7-14", Belt_Array.slice(a, -2, 3), [
       4,
       5
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 182, characters 7-14", Belt_Array.slice(a, -10, 3), [
+    Test_utils.eq("File \"bs_array_test.res\", line 183, characters 7-14", Belt_Array.slice(a, -10, 3), [
       1,
       2,
       3
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 183, characters 7-14", Belt_Array.slice(a, -10, 4), [
+    Test_utils.eq("File \"bs_array_test.res\", line 184, characters 7-14", Belt_Array.slice(a, -10, 4), [
       1,
       2,
       3,
       4
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 184, characters 7-14", Belt_Array.slice(a, -10, 5), [
+    Test_utils.eq("File \"bs_array_test.res\", line 185, characters 7-14", Belt_Array.slice(a, -10, 5), [
       1,
       2,
       3,
       4,
       5
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 185, characters 7-14", Belt_Array.slice(a, -10, 6), [
+    Test_utils.eq("File \"bs_array_test.res\", line 186, characters 7-14", Belt_Array.slice(a, -10, 6), [
       1,
       2,
       3,
       4,
       5
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 186, characters 7-14", Belt_Array.slice(a, 0, 0), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 187, characters 7-14", Belt_Array.slice(a, 0, -1), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 187, characters 7-14", Belt_Array.slice(a, 0, 0), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 188, characters 7-14", Belt_Array.slice(a, 0, -1), []);
   });
   Mocha.test("bs_array_test_sliceToEnd_functions", () => {
     let a = [
@@ -409,33 +409,33 @@ Mocha.describe("Bs_array_test", () => {
       4,
       5
     ];
-    Test_utils.eq("File \"bs_array_test.res\", line 192, characters 7-14", Belt_Array.sliceToEnd(a, 0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 193, characters 7-14", Belt_Array.sliceToEnd(a, 0), [
       1,
       2,
       3,
       4,
       5
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 193, characters 7-14", Belt_Array.sliceToEnd(a, 5), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 194, characters 7-14", Belt_Array.sliceToEnd(a, 4), [5]);
-    Test_utils.eq("File \"bs_array_test.res\", line 195, characters 7-14", Belt_Array.sliceToEnd(a, -1), [5]);
-    Test_utils.eq("File \"bs_array_test.res\", line 196, characters 7-14", Belt_Array.sliceToEnd(a, -2), [
+    Test_utils.eq("File \"bs_array_test.res\", line 194, characters 7-14", Belt_Array.sliceToEnd(a, 5), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 195, characters 7-14", Belt_Array.sliceToEnd(a, 4), [5]);
+    Test_utils.eq("File \"bs_array_test.res\", line 196, characters 7-14", Belt_Array.sliceToEnd(a, -1), [5]);
+    Test_utils.eq("File \"bs_array_test.res\", line 197, characters 7-14", Belt_Array.sliceToEnd(a, -2), [
       4,
       5
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 197, characters 7-14", Belt_Array.sliceToEnd(a, -10), [
+    Test_utils.eq("File \"bs_array_test.res\", line 198, characters 7-14", Belt_Array.sliceToEnd(a, -10), [
       1,
       2,
       3,
       4,
       5
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 198, characters 7-14", Belt_Array.sliceToEnd(a, 6), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 199, characters 7-14", Belt_Array.sliceToEnd(a, 6), []);
   });
   Mocha.test("bs_array_test_fill_functions", () => {
     let a = Belt_Array.makeBy(10, x => x);
     Belt_Array.fill(a, 0, 3, 0);
-    Test_utils.eq("File \"bs_array_test.res\", line 204, characters 7-14", a.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 205, characters 7-14", a.slice(0), [
       0,
       0,
       0,
@@ -448,7 +448,7 @@ Mocha.describe("Bs_array_test", () => {
       9
     ]);
     Belt_Array.fill(a, 2, 8, 1);
-    Test_utils.eq("File \"bs_array_test.res\", line 206, characters 7-14", a.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 207, characters 7-14", a.slice(0), [
       0,
       0,
       1,
@@ -461,7 +461,7 @@ Mocha.describe("Bs_array_test", () => {
       1
     ]);
     Belt_Array.fill(a, 8, 1, 9);
-    Test_utils.eq("File \"bs_array_test.res\", line 208, characters 7-14", a.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 209, characters 7-14", a.slice(0), [
       0,
       0,
       1,
@@ -474,7 +474,7 @@ Mocha.describe("Bs_array_test", () => {
       1
     ]);
     Belt_Array.fill(a, 8, 2, 9);
-    Test_utils.eq("File \"bs_array_test.res\", line 210, characters 7-14", a.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 211, characters 7-14", a.slice(0), [
       0,
       0,
       1,
@@ -487,7 +487,7 @@ Mocha.describe("Bs_array_test", () => {
       9
     ]);
     Belt_Array.fill(a, 8, 3, 12);
-    Test_utils.eq("File \"bs_array_test.res\", line 212, characters 7-14", a.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 213, characters 7-14", a.slice(0), [
       0,
       0,
       1,
@@ -500,7 +500,7 @@ Mocha.describe("Bs_array_test", () => {
       12
     ]);
     Belt_Array.fill(a, -2, 3, 11);
-    Test_utils.eq("File \"bs_array_test.res\", line 214, characters 7-14", a.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 215, characters 7-14", a.slice(0), [
       0,
       0,
       1,
@@ -513,7 +513,7 @@ Mocha.describe("Bs_array_test", () => {
       11
     ]);
     Belt_Array.fill(a, -3, 3, 10);
-    Test_utils.eq("File \"bs_array_test.res\", line 216, characters 7-14", a.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 217, characters 7-14", a.slice(0), [
       0,
       0,
       1,
@@ -526,7 +526,7 @@ Mocha.describe("Bs_array_test", () => {
       10
     ]);
     Belt_Array.fill(a, -3, 1, 7);
-    Test_utils.eq("File \"bs_array_test.res\", line 218, characters 7-14", a.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 219, characters 7-14", a.slice(0), [
       0,
       0,
       1,
@@ -539,7 +539,7 @@ Mocha.describe("Bs_array_test", () => {
       10
     ]);
     Belt_Array.fill(a, -13, 1, 7);
-    Test_utils.eq("File \"bs_array_test.res\", line 220, characters 7-14", a.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 221, characters 7-14", a.slice(0), [
       7,
       0,
       1,
@@ -552,22 +552,22 @@ Mocha.describe("Bs_array_test", () => {
       10
     ]);
     Belt_Array.fill(a, -13, 12, 7);
-    Test_utils.eq("File \"bs_array_test.res\", line 222, characters 7-14", a.slice(0), Belt_Array.make(10, 7));
+    Test_utils.eq("File \"bs_array_test.res\", line 223, characters 7-14", a.slice(0), Belt_Array.make(10, 7));
     Belt_Array.fill(a, 0, -1, 2);
-    Test_utils.eq("File \"bs_array_test.res\", line 224, characters 7-14", a.slice(0), Belt_Array.make(10, 7));
+    Test_utils.eq("File \"bs_array_test.res\", line 225, characters 7-14", a.slice(0), Belt_Array.make(10, 7));
     let b = [
       1,
       2,
       3
     ];
     Belt_Array.fill(b, 0, 0, 0);
-    Test_utils.eq("File \"bs_array_test.res\", line 227, characters 7-14", b, [
+    Test_utils.eq("File \"bs_array_test.res\", line 228, characters 7-14", b, [
       1,
       2,
       3
     ]);
     Belt_Array.fill(b, 4, 1, 0);
-    Test_utils.eq("File \"bs_array_test.res\", line 229, characters 7-14", b, [
+    Test_utils.eq("File \"bs_array_test.res\", line 230, characters 7-14", b, [
       1,
       2,
       3
@@ -577,7 +577,7 @@ Mocha.describe("Bs_array_test", () => {
     let a0 = Belt_Array.makeBy(10, x => x);
     let b0 = Belt_Array.make(10, 3);
     Belt_Array.blit(a0, 1, b0, 2, 5);
-    Test_utils.eq("File \"bs_array_test.res\", line 236, characters 7-14", b0.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 237, characters 7-14", b0.slice(0), [
       3,
       3,
       1,
@@ -590,7 +590,7 @@ Mocha.describe("Bs_array_test", () => {
       3
     ]);
     Belt_Array.blit(a0, -1, b0, 2, 5);
-    Test_utils.eq("File \"bs_array_test.res\", line 238, characters 7-14", b0.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 239, characters 7-14", b0.slice(0), [
       3,
       3,
       9,
@@ -603,7 +603,7 @@ Mocha.describe("Bs_array_test", () => {
       3
     ]);
     Belt_Array.blit(a0, -1, b0, -2, 5);
-    Test_utils.eq("File \"bs_array_test.res\", line 240, characters 7-14", b0.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 241, characters 7-14", b0.slice(0), [
       3,
       3,
       9,
@@ -616,7 +616,7 @@ Mocha.describe("Bs_array_test", () => {
       3
     ]);
     Belt_Array.blit(a0, -2, b0, -2, 2);
-    Test_utils.eq("File \"bs_array_test.res\", line 242, characters 7-14", b0.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 243, characters 7-14", b0.slice(0), [
       3,
       3,
       9,
@@ -629,12 +629,12 @@ Mocha.describe("Bs_array_test", () => {
       9
     ]);
     Belt_Array.blit(a0, -11, b0, -11, 100);
-    Test_utils.eq("File \"bs_array_test.res\", line 244, characters 7-14", b0.slice(0), a0);
+    Test_utils.eq("File \"bs_array_test.res\", line 245, characters 7-14", b0.slice(0), a0);
     Belt_Array.blit(a0, -11, b0, -11, 2);
-    Test_utils.eq("File \"bs_array_test.res\", line 246, characters 7-14", b0.slice(0), a0);
+    Test_utils.eq("File \"bs_array_test.res\", line 247, characters 7-14", b0.slice(0), a0);
     let aa = Belt_Array.makeBy(10, x => x);
     Belt_Array.blit(aa, -1, aa, 1, 2);
-    Test_utils.eq("File \"bs_array_test.res\", line 249, characters 7-14", aa.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 250, characters 7-14", aa.slice(0), [
       0,
       9,
       2,
@@ -647,7 +647,7 @@ Mocha.describe("Bs_array_test", () => {
       9
     ]);
     Belt_Array.blit(aa, -2, aa, 1, 2);
-    Test_utils.eq("File \"bs_array_test.res\", line 251, characters 7-14", aa.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 252, characters 7-14", aa.slice(0), [
       0,
       8,
       9,
@@ -660,7 +660,7 @@ Mocha.describe("Bs_array_test", () => {
       9
     ]);
     Belt_Array.blit(aa, -5, aa, 4, 3);
-    Test_utils.eq("File \"bs_array_test.res\", line 253, characters 7-14", aa.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 254, characters 7-14", aa.slice(0), [
       0,
       8,
       9,
@@ -673,7 +673,7 @@ Mocha.describe("Bs_array_test", () => {
       9
     ]);
     Belt_Array.blit(aa, 4, aa, 5, 3);
-    Test_utils.eq("File \"bs_array_test.res\", line 255, characters 7-14", aa.slice(0), [
+    Test_utils.eq("File \"bs_array_test.res\", line 256, characters 7-14", aa.slice(0), [
       0,
       8,
       9,
@@ -685,22 +685,22 @@ Mocha.describe("Bs_array_test", () => {
       8,
       9
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 256, characters 7-14", Belt_Array.make(0, 3), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 257, characters 7-14", Belt_Array.make(-1, 3), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 257, characters 7-14", Belt_Array.make(0, 3), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 258, characters 7-14", Belt_Array.make(-1, 3), []);
     let c = [
       0,
       1,
       2
     ];
     Belt_Array.blit(c, 4, c, 1, 1);
-    Test_utils.eq("File \"bs_array_test.res\", line 260, characters 7-14", c, [
+    Test_utils.eq("File \"bs_array_test.res\", line 261, characters 7-14", c, [
       0,
       1,
       2
     ]);
   });
   Mocha.test("bs_array_test_zip_functions", () => {
-    Test_utils.eq("File \"bs_array_test.res\", line 264, characters 7-14", Belt_Array.zip([
+    Test_utils.eq("File \"bs_array_test.res\", line 265, characters 7-14", Belt_Array.zip([
       1,
       2,
       3
@@ -723,7 +723,7 @@ Mocha.describe("Bs_array_test", () => {
         4
       ]
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 265, characters 7-14", Belt_Array.zip([
+    Test_utils.eq("File \"bs_array_test.res\", line 266, characters 7-14", Belt_Array.zip([
       2,
       3,
       4,
@@ -746,7 +746,7 @@ Mocha.describe("Bs_array_test", () => {
         3
       ]
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 266, characters 7-14", Belt_Array.zipBy([
+    Test_utils.eq("File \"bs_array_test.res\", line 267, characters 7-14", Belt_Array.zipBy([
       2,
       3,
       4,
@@ -760,7 +760,7 @@ Mocha.describe("Bs_array_test", () => {
       1,
       1
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 267, characters 7-14", Belt_Array.zipBy([
+    Test_utils.eq("File \"bs_array_test.res\", line 268, characters 7-14", Belt_Array.zipBy([
       1,
       2,
       3
@@ -774,7 +774,7 @@ Mocha.describe("Bs_array_test", () => {
       1,
       1
     ], x => -x | 0));
-    Test_utils.eq("File \"bs_array_test.res\", line 268, characters 7-14", Belt_Array.unzip([
+    Test_utils.eq("File \"bs_array_test.res\", line 269, characters 7-14", Belt_Array.unzip([
       [
         1,
         2
@@ -808,37 +808,37 @@ Mocha.describe("Bs_array_test", () => {
     return v;
   };
   Mocha.test("bs_array_test_iteration_functions", () => {
-    Test_utils.eq("File \"bs_array_test.res\", line 280, characters 7-14", sumUsingForEach([
+    Test_utils.eq("File \"bs_array_test.res\", line 281, characters 7-14", sumUsingForEach([
       0,
       1,
       2,
       3,
       4
     ]), 10);
-    Test_utils.ok("File \"bs_array_test.res\", line 281, characters 7-14", !Belt_Array.every([
+    Test_utils.ok("File \"bs_array_test.res\", line 282, characters 7-14", !Belt_Array.every([
       0,
       1,
       2,
       3,
       4
     ], x => x > 2));
-    Test_utils.ok("File \"bs_array_test.res\", line 282, characters 7-14", Belt_Array.some([
+    Test_utils.ok("File \"bs_array_test.res\", line 283, characters 7-14", Belt_Array.some([
       1,
       3,
       7,
       8
     ], x => x % 2 === 0));
-    Test_utils.ok("File \"bs_array_test.res\", line 283, characters 7-14", !Belt_Array.some([
+    Test_utils.ok("File \"bs_array_test.res\", line 284, characters 7-14", !Belt_Array.some([
       1,
       3,
       7
     ], x => x % 2 === 0));
-    Test_utils.ok("File \"bs_array_test.res\", line 284, characters 7-14", !Belt_Array.eq([
+    Test_utils.ok("File \"bs_array_test.res\", line 285, characters 7-14", !Belt_Array.eq([
       0,
       1
     ], [1], (prim0, prim1) => prim0 === prim1));
     let c = 0;
-    Test_utils.ok("File \"bs_array_test.res\", line 286, characters 6-13", (Belt_Array.forEachWithIndex([
+    Test_utils.ok("File \"bs_array_test.res\", line 287, characters 6-13", (Belt_Array.forEachWithIndex([
       1,
       1,
       1
@@ -848,21 +848,21 @@ Mocha.describe("Bs_array_test", () => {
   });
   let id = (loc, x) => {
     let u = x.slice(0);
-    Test_utils.eq("File \"bs_array_test.res\", line 297, characters 6-13", Belt_Array.reverse(x), (Belt_Array.reverseInPlace(u), u));
+    Test_utils.eq("File \"bs_array_test.res\", line 298, characters 6-13", Belt_Array.reverse(x), (Belt_Array.reverseInPlace(u), u));
   };
   Mocha.test("bs_array_test_id_functions", () => {
-    id("File \"bs_array_test.res\", line 307, characters 7-14", []);
-    id("File \"bs_array_test.res\", line 308, characters 7-14", [1]);
-    id("File \"bs_array_test.res\", line 309, characters 7-14", [
+    id("File \"bs_array_test.res\", line 308, characters 7-14", []);
+    id("File \"bs_array_test.res\", line 309, characters 7-14", [1]);
+    id("File \"bs_array_test.res\", line 310, characters 7-14", [
       1,
       2
     ]);
-    id("File \"bs_array_test.res\", line 310, characters 7-14", [
+    id("File \"bs_array_test.res\", line 311, characters 7-14", [
       1,
       2,
       3
     ]);
-    id("File \"bs_array_test.res\", line 311, characters 7-14", [
+    id("File \"bs_array_test.res\", line 312, characters 7-14", [
       1,
       2,
       3,
@@ -872,19 +872,19 @@ Mocha.describe("Bs_array_test", () => {
   Mocha.test("bs_array_test_every2_some2", () => {
     let every2 = (xs, ys, x) => Belt_Array.every2(Belt_List.toArray(xs), Belt_List.toArray(ys), x);
     let some2 = (xs, ys, x) => Belt_Array.some2(Belt_List.toArray(xs), Belt_List.toArray(ys), x);
-    Test_utils.eq("File \"bs_array_test.res\", line 319, characters 7-14", every2(/* [] */0, {hd: 1, tl: /* [] */0}, (x, y) => x > y), true);
-    Test_utils.eq("File \"bs_array_test.res\", line 320, characters 7-14", every2({hd: 2, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: /* [] */0}, (x, y) => x > y), true);
-    Test_utils.eq("File \"bs_array_test.res\", line 321, characters 7-14", every2({hd: 2, tl: /* [] */0}, {hd: 1, tl: /* [] */0}, (x, y) => x > y), true);
-    Test_utils.eq("File \"bs_array_test.res\", line 322, characters 7-14", every2({hd: 2, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: {hd: 4, tl: /* [] */0}}, (x, y) => x > y), false);
-    Test_utils.eq("File \"bs_array_test.res\", line 323, characters 7-14", every2({hd: 2, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: {hd: 0, tl: /* [] */0}}, (x, y) => x > y), true);
-    Test_utils.eq("File \"bs_array_test.res\", line 324, characters 7-14", some2(/* [] */0, {hd: 1, tl: /* [] */0}, (x, y) => x > y), false);
-    Test_utils.eq("File \"bs_array_test.res\", line 325, characters 7-14", some2({hd: 2, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: /* [] */0}, (x, y) => x > y), true);
-    Test_utils.eq("File \"bs_array_test.res\", line 326, characters 7-14", some2({hd: 2, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: {hd: 4, tl: /* [] */0}}, (x, y) => x > y), true);
-    Test_utils.eq("File \"bs_array_test.res\", line 327, characters 7-14", some2({hd: 0, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: {hd: 4, tl: /* [] */0}}, (x, y) => x > y), false);
-    Test_utils.eq("File \"bs_array_test.res\", line 328, characters 7-14", some2({hd: 0, tl: {hd: 3, tl: /* [] */0}}, {hd: 3, tl: {hd: 2, tl: /* [] */0}}, (x, y) => x > y), true);
+    Test_utils.eq("File \"bs_array_test.res\", line 320, characters 7-14", every2(/* [] */0, {hd: 1, tl: /* [] */0}, (x, y) => x > y), true);
+    Test_utils.eq("File \"bs_array_test.res\", line 321, characters 7-14", every2({hd: 2, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: /* [] */0}, (x, y) => x > y), true);
+    Test_utils.eq("File \"bs_array_test.res\", line 322, characters 7-14", every2({hd: 2, tl: /* [] */0}, {hd: 1, tl: /* [] */0}, (x, y) => x > y), true);
+    Test_utils.eq("File \"bs_array_test.res\", line 323, characters 7-14", every2({hd: 2, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: {hd: 4, tl: /* [] */0}}, (x, y) => x > y), false);
+    Test_utils.eq("File \"bs_array_test.res\", line 324, characters 7-14", every2({hd: 2, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: {hd: 0, tl: /* [] */0}}, (x, y) => x > y), true);
+    Test_utils.eq("File \"bs_array_test.res\", line 325, characters 7-14", some2(/* [] */0, {hd: 1, tl: /* [] */0}, (x, y) => x > y), false);
+    Test_utils.eq("File \"bs_array_test.res\", line 326, characters 7-14", some2({hd: 2, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: /* [] */0}, (x, y) => x > y), true);
+    Test_utils.eq("File \"bs_array_test.res\", line 327, characters 7-14", some2({hd: 2, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: {hd: 4, tl: /* [] */0}}, (x, y) => x > y), true);
+    Test_utils.eq("File \"bs_array_test.res\", line 328, characters 7-14", some2({hd: 0, tl: {hd: 3, tl: /* [] */0}}, {hd: 1, tl: {hd: 4, tl: /* [] */0}}, (x, y) => x > y), false);
+    Test_utils.eq("File \"bs_array_test.res\", line 329, characters 7-14", some2({hd: 0, tl: {hd: 3, tl: /* [] */0}}, {hd: 3, tl: {hd: 2, tl: /* [] */0}}, (x, y) => x > y), true);
   });
   Mocha.test("bs_array_test_concat_functions", () => {
-    Test_utils.eq("File \"bs_array_test.res\", line 332, characters 7-14", Belt_Array.concat([], [
+    Test_utils.eq("File \"bs_array_test.res\", line 333, characters 7-14", Belt_Array.concat([], [
       1,
       2,
       3
@@ -893,31 +893,14 @@ Mocha.describe("Bs_array_test", () => {
       2,
       3
     ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 333, characters 7-14", Belt_Array.concat([], []), []);
-    Test_utils.eq("File \"bs_array_test.res\", line 334, characters 7-14", Belt_Array.concat([
+    Test_utils.eq("File \"bs_array_test.res\", line 334, characters 7-14", Belt_Array.concat([], []), []);
+    Test_utils.eq("File \"bs_array_test.res\", line 335, characters 7-14", Belt_Array.concat([
       3,
       2
     ], [
       1,
       2,
       3
-    ]), [
-      3,
-      2,
-      1,
-      2,
-      3
-    ]);
-    Test_utils.eq("File \"bs_array_test.res\", line 335, characters 7-14", Belt_Array.concatMany([
-      [
-        3,
-        2
-      ],
-      [
-        1,
-        2,
-        3
-      ]
     ]), [
       3,
       2,
@@ -934,19 +917,15 @@ Mocha.describe("Bs_array_test", () => {
         1,
         2,
         3
-      ],
-      [],
-      [0]
+      ]
     ]), [
       3,
       2,
       1,
       2,
-      3,
-      0
+      3
     ]);
     Test_utils.eq("File \"bs_array_test.res\", line 337, characters 7-14", Belt_Array.concatMany([
-      [],
       [
         3,
         2
@@ -968,11 +947,32 @@ Mocha.describe("Bs_array_test", () => {
     ]);
     Test_utils.eq("File \"bs_array_test.res\", line 338, characters 7-14", Belt_Array.concatMany([
       [],
+      [
+        3,
+        2
+      ],
+      [
+        1,
+        2,
+        3
+      ],
+      [],
+      [0]
+    ]), [
+      3,
+      2,
+      1,
+      2,
+      3,
+      0
+    ]);
+    Test_utils.eq("File \"bs_array_test.res\", line 339, characters 7-14", Belt_Array.concatMany([
+      [],
       []
     ]), []);
   });
   Mocha.test("bs_array_test_cmp_functions", () => {
-    Test_utils.ok("File \"bs_array_test.res\", line 342, characters 7-14", Belt_Array.cmp([
+    Test_utils.ok("File \"bs_array_test.res\", line 343, characters 7-14", Belt_Array.cmp([
       1,
       2,
       3
@@ -982,7 +982,7 @@ Mocha.describe("Bs_array_test", () => {
       2,
       3
     ], Primitive_int.compare) < 0);
-    Test_utils.ok("File \"bs_array_test.res\", line 343, characters 7-14", Belt_Array.cmp([
+    Test_utils.ok("File \"bs_array_test.res\", line 344, characters 7-14", Belt_Array.cmp([
       0,
       1,
       2,
@@ -992,7 +992,7 @@ Mocha.describe("Bs_array_test", () => {
       2,
       3
     ], Primitive_int.compare) > 0);
-    Test_utils.ok("File \"bs_array_test.res\", line 344, characters 7-14", Belt_Array.cmp([
+    Test_utils.ok("File \"bs_array_test.res\", line 345, characters 7-14", Belt_Array.cmp([
       1,
       2,
       3
@@ -1001,7 +1001,7 @@ Mocha.describe("Bs_array_test", () => {
       1,
       2
     ], Primitive_int.compare) > 0);
-    Test_utils.ok("File \"bs_array_test.res\", line 345, characters 7-14", Belt_Array.cmp([
+    Test_utils.ok("File \"bs_array_test.res\", line 346, characters 7-14", Belt_Array.cmp([
       1,
       2,
       3
@@ -1010,7 +1010,7 @@ Mocha.describe("Bs_array_test", () => {
       2,
       3
     ], Primitive_int.compare) === 0);
-    Test_utils.ok("File \"bs_array_test.res\", line 346, characters 7-14", Belt_Array.cmp([
+    Test_utils.ok("File \"bs_array_test.res\", line 347, characters 7-14", Belt_Array.cmp([
       1,
       2,
       4
@@ -1021,24 +1021,24 @@ Mocha.describe("Bs_array_test", () => {
     ], Primitive_int.compare) > 0);
   });
   Mocha.test("bs_array_test_getBy_functions", () => {
-    Test_utils.eq("File \"bs_array_test.res\", line 350, characters 7-14", Belt_Array.getBy([
+    Test_utils.eq("File \"bs_array_test.res\", line 351, characters 7-14", Belt_Array.getBy([
       1,
       2,
       3
     ], x => x > 1), 2);
-    Test_utils.eq("File \"bs_array_test.res\", line 351, characters 7-14", Belt_Array.getBy([
+    Test_utils.eq("File \"bs_array_test.res\", line 352, characters 7-14", Belt_Array.getBy([
       1,
       2,
       3
     ], x => x > 3), undefined);
   });
   Mocha.test("bs_array_test_getIndexBy_functions", () => {
-    Test_utils.eq("File \"bs_array_test.res\", line 355, characters 7-14", Belt_Array.getIndexBy([
+    Test_utils.eq("File \"bs_array_test.res\", line 356, characters 7-14", Belt_Array.getIndexBy([
       1,
       2,
       3
     ], x => x > 1), 1);
-    Test_utils.eq("File \"bs_array_test.res\", line 356, characters 7-14", Belt_Array.getIndexBy([
+    Test_utils.eq("File \"bs_array_test.res\", line 357, characters 7-14", Belt_Array.getIndexBy([
       1,
       2,
       3
@@ -1049,7 +1049,7 @@ Mocha.describe("Bs_array_test", () => {
     arr.push(3);
     arr.push(2);
     arr.push(1);
-    Test_utils.eq("File \"bs_array_test.res\", line 364, characters 7-14", arr, [
+    Test_utils.eq("File \"bs_array_test.res\", line 365, characters 7-14", arr, [
       3,
       2,
       1

@@ -288,6 +288,7 @@ Test.run(
   eq,
   "bar",
 )
+
 Test.run(
   __POS_OF__("getUnsafe - missing"),
   Dict.make()->Dict.getUnsafe("foo"),
@@ -305,6 +306,7 @@ module Has = {
   Test.run(__POS_OF__("has - existing None"), dict->Dict.has("key2"), eq, true)
   Test.run(__POS_OF__("has - missing"), dict->Dict.has("key3"), eq, false)
   Test.run(__POS_OF__("has - prototype"), dict->Dict.has("toString"), eq, true)
+
   Test.run(
     __POS_OF__("has - parantesis in generated code"),
     typeof(dict->Dict.has("key1")),

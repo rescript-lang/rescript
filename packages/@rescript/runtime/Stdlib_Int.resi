@@ -28,6 +28,7 @@ on MDN.
   */
   @inline
   let minValue: int
+
   /**
   The largest positive number represented in JavaScript.
 See [`Number.MAX_VALUE`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_VALUE)

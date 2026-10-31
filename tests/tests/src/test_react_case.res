@@ -10,11 +10,15 @@ var CommentBox = React.createClass({
 });
 */
 type obj_spec
+
 type react_dom_element
+
 @val
 external react_create_class: obj_spec => react_dom_element /* "createClass" "React" */ =
   "react_create_class"
+
 type react_dom_component
+
 @obj
 external mk_obj_spec: (
   ~display_name: string=?,

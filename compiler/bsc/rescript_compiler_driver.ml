@@ -28,7 +28,11 @@ module Error_message_utils_support = struct
            Res_driver.parse_implementation_from_source
              ~display_filename:"<none>" ~source
          in
-         (res.parsetree, res.comments |> List.map to_comment));
+         (* Hints rewrite source text extracted at a location. Text that does
+            not parse cleanly (e.g. a location that leaves out the parentheses
+            around an operand) must not be turned into a suggestion. *)
+         if res.invalid then ([], [])
+         else (res.parsetree, res.comments |> List.map to_comment));
 
     Error_message_utils.Parser.reprint_source :=
       fun parsetree comments ->

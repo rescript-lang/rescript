@@ -76,27 +76,27 @@ let a7 = Stdlib_Lazy.get(a5);
 let a8 = Stdlib_Lazy.get(a6);
 
 Mocha.describe("Lazy_test", () => {
-  Mocha.test("simple", () => Test_utils.eq("File \"lazy_test.res\", line 72, characters 26-33", lazy_test(), [
+  Mocha.test("simple", () => Test_utils.eq("File \"lazy_test.res\", line 74, characters 26-33", lazy_test(), [
     3,
     32
   ]));
-  Mocha.test("lazy_force", () => Test_utils.eq("File \"lazy_test.res\", line 74, characters 30-37", u_v.contents, 2));
-  Mocha.test("lazy_from_fun", () => Test_utils.eq("File \"lazy_test.res\", line 75, characters 33-40", Stdlib_Lazy.get(l_from_fun), 3));
-  Mocha.test("lazy_from_val", () => Test_utils.eq("File \"lazy_test.res\", line 76, characters 33-40", Stdlib_Lazy.get(Stdlib_Lazy.make(() => 3)), 3));
-  Mocha.test("lazy_from_val2", () => Test_utils.eq("File \"lazy_test.res\", line 78, characters 7-14", Stdlib_Lazy.get(Stdlib_Lazy.get(Stdlib_Lazy.make(() => Stdlib_Lazy.make(() => 3)))), 3));
+  Mocha.test("lazy_force", () => Test_utils.eq("File \"lazy_test.res\", line 76, characters 30-37", u_v.contents, 2));
+  Mocha.test("lazy_from_fun", () => Test_utils.eq("File \"lazy_test.res\", line 77, characters 33-40", Stdlib_Lazy.get(l_from_fun), 3));
+  Mocha.test("lazy_from_val", () => Test_utils.eq("File \"lazy_test.res\", line 78, characters 33-40", Stdlib_Lazy.get(Stdlib_Lazy.make(() => 3)), 3));
+  Mocha.test("lazy_from_val2", () => Test_utils.eq("File \"lazy_test.res\", line 80, characters 7-14", Stdlib_Lazy.get(Stdlib_Lazy.get(Stdlib_Lazy.make(() => Stdlib_Lazy.make(() => 3)))), 3));
   Mocha.test("lazy_from_val3", () => {
     debugger;
-    Test_utils.eq("File \"lazy_test.res\", line 82, characters 6-13", Stdlib_Lazy.get(Stdlib_Lazy.get(Stdlib_Lazy.make(() => forward_test))), 4);
+    Test_utils.eq("File \"lazy_test.res\", line 84, characters 6-13", Stdlib_Lazy.get(Stdlib_Lazy.get(Stdlib_Lazy.make(() => forward_test))), 4);
   });
-  Mocha.test("lazy_test.res", () => Test_utils.eq("File \"lazy_test.res\", line 90, characters 26-33", Stdlib_Lazy.get(a3), Stdlib_Lazy.get(a4)));
-  Mocha.test("lazy_test.res", () => Test_utils.eq("File \"lazy_test.res\", line 91, characters 26-33", a7, undefined));
-  Mocha.test("lazy_test.res", () => Test_utils.eq("File \"lazy_test.res\", line 92, characters 26-33", a8, undefined));
-  Mocha.test("File \"lazy_test.res\", line 93, characters 7-14", () => {
+  Mocha.test("lazy_test.res", () => Test_utils.eq("File \"lazy_test.res\", line 92, characters 26-33", Stdlib_Lazy.get(a3), Stdlib_Lazy.get(a4)));
+  Mocha.test("lazy_test.res", () => Test_utils.eq("File \"lazy_test.res\", line 93, characters 26-33", a7, undefined));
+  Mocha.test("lazy_test.res", () => Test_utils.eq("File \"lazy_test.res\", line 94, characters 26-33", a8, undefined));
+  Mocha.test("File \"lazy_test.res\", line 95, characters 7-14", () => {
     let evaluated = Stdlib_Lazy.make(() => 3);
     Stdlib_Lazy.get(evaluated);
-    Test_utils.ok("File \"lazy_test.res\", line 96, characters 7-14", Stdlib_Lazy.isEvaluated(evaluated));
+    Test_utils.ok("File \"lazy_test.res\", line 98, characters 7-14", Stdlib_Lazy.isEvaluated(evaluated));
   });
-  Mocha.test("File \"lazy_test.res\", line 98, characters 7-14", () => Test_utils.ok("File \"lazy_test.res\", line 98, characters 25-32", !Stdlib_Lazy.isEvaluated(Stdlib_Lazy.make(() => {
+  Mocha.test("File \"lazy_test.res\", line 100, characters 7-14", () => Test_utils.ok("File \"lazy_test.res\", line 100, characters 25-32", !Stdlib_Lazy.isEvaluated(Stdlib_Lazy.make(() => {
     throw {
       RE_EXN_ID: "Not_found",
       Error: new Error()

@@ -49,7 +49,8 @@ type print_engine = {
 
 val parsing_engine : Res_diagnostics.t list parsing_engine
 
-val print_engine : print_engine
+(* Prints ReScript with line breaks written as [newline] *)
+val print_engine : newline:string -> print_engine
 
 exception Already_reported
 

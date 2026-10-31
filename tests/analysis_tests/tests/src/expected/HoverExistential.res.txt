@@ -1,0 +1,5 @@
+Hover src/HoverExistential.res 2:19
+{
+  "contents": { "kind": "markdown", "value": "```rescript\narray<$a>\n```" }
+}
+

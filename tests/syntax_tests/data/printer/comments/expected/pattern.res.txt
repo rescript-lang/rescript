@@ -23,6 +23,7 @@ let /* here */ Black /* there */ = color
 let /* here */ Black(/* inside */) /* there */ = color
 let Black(/* inside */ /* inside2 */) = color
 let Black(/* inside */ /* inside2 */ /* inside 3 */) = color
+
 let Black(
   // singleLineComment
 ) = color
@@ -45,7 +46,18 @@ let [/* inside */] = []
 let list{/* inside */} = list{}
 
 let /* before */ list{/* a1 */ a /* a2 */, /* b1 */ b /* b2 */} /* after */ = list{1, 2}
-let /* before */ list{/* a1 */ a /* a2 */, .../* b1 */ b /* b2 */} /* after */ = list{1, 2}
+let /* before */ list{/* a1 */ a /* a2 */, /* b1 */ ...b /* b2 */} /* after */ = list{1, 2}
+
+// A list pattern that is only a spread is the spread's operand
+let /* d */ r = list{1, 2}
+let r /* after */ = list{1, 2}
+let /* d1 */ /* d2 */ /* e */ r = list{1, 2}
+let f = /* d */ r => r
+
+let f = x =>
+  switch x {
+  /* d */ | r => r
+  }
 
 // Ppat_record
 let /* before */ {/* c0 */ name /* c1 */, /* c2 */ age /* c3 */} /* after */ = {

@@ -166,6 +166,7 @@ module Int_array: {
       append(smaller, push_front(larger, head))
     }
   }
+
   let of_array = arr => {
     let v = ref(empty)
     for i in 0 to Array.length(arr) - 1 {

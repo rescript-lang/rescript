@@ -3,6 +3,7 @@
 type t = Date.t
 @unboxed type v = | @as("n") N | P(t)
 let make = () => P(Date.make())
+
 let isPayload = v =>
   switch v {
   | N => false

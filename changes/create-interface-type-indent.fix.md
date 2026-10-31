@@ -1,0 +1,1 @@
+- Indent type declarations and externals copied by `createInterface` at their place in the interface instead of by their source column.

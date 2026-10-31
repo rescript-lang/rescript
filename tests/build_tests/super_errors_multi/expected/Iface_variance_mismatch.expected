@@ -8,12 +8,11 @@
 
   The implementation /.../fixtures/Iface_variance_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_variance_mismatch/foo.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_variance_mismatch/Foo.res[0m:[2m1:1-21[0m):
     type t<'a> = 'a => 'a
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_variance_mismatch/Foo.resi[0m:[2m1:1-11[0m):
     type t<+'a>
-  [36m/.../fixtures/Iface_variance_mismatch/Foo.resi[0m:[2m1:1-11[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_variance_mismatch/Foo.res[0m:[2m1:1-21[0m:
-    Actual declaration
+  
   Their variances do not agree.

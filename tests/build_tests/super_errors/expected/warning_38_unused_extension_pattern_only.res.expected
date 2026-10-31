@@ -5,8 +5,8 @@
   3 [2m│[0m } = {
   4 [2m│[0m   type t = ..
   [1;33m5[0m [2m│[0m   type t += [1;33mFoo[0m
-  6 [2m│[0m   let _describe = (x: t) =>
-  7 [2m│[0m     switch x {
+  6 [2m│[0m 
+  7 [2m│[0m   let _describe = (x: t) =>
 
   extension constructor Foo is never used to build values.
 (However, this constructor appears in patterns.)

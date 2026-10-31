@@ -8,12 +8,11 @@
 
   The implementation /.../fixtures/Iface_immediate_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_immediate_mismatch/foo.cmi:
-  Type declarations do not match:
+  
+  Actual declaration ([36m/.../fixtures/Iface_immediate_mismatch/Foo.res[0m:[2m1:1-15[0m):
     type t = string
-  is not included in
+  
+  Expected declaration ([36m/.../fixtures/Iface_immediate_mismatch/Foo.resi[0m:[2m2:1-6[0m):
     @immediate type t
-  [36m/.../fixtures/Iface_immediate_mismatch/Foo.resi[0m:[2m2:1-6[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_immediate_mismatch/Foo.res[0m:[2m1:1-15[0m:
-    Actual declaration
-  the first is not an immediate type.
+  
+  the actual declaration is not an immediate type.

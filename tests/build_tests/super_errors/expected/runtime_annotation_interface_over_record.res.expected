@@ -10,19 +10,13 @@
   6 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-  type t = {y: int}
-}
-  is not included in
-    {
-  type t
-}
-  Type declarations do not match: type t = {y: int} is not included in type t
-  [36m/.../fixtures/runtime_annotation_interface_over_record.res[0m:[2m2:21-26[0m:
-    Expected declaration
-  [36m/.../fixtures/runtime_annotation_interface_over_record.res[0m:[2m4:3-19[0m:
-    Actual declaration
+  
+  Actual declaration ([36m/.../fixtures/runtime_annotation_interface_over_record.res[0m:[2m4:3-19[0m):
+    type t = {y: int}
+  
+  Expected declaration ([36m/.../fixtures/runtime_annotation_interface_over_record.res[0m:[2m2:21-26[0m):
+    @typeOf("string") type t
+  
   Their runtime representations differ:
-  the first declaration states values whose typeof is "object",
-  the second declaration states values whose typeof is "string".
+    Actual declaration: typeof "object"
+    Expected declaration: typeof "string"

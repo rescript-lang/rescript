@@ -3,6 +3,7 @@ Represents the `useGrouping` option accepted by `Intl.NumberFormat`.
 
 See [`Intl.NumberFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat) on MDN for full option details.
 */
+
 @notUndefined
 type t
 
@@ -23,6 +24,7 @@ formatter->Intl.NumberFormat.format(1234.) == "1234"
 ```
 */
 external fromBool: bool => t = "%identity"
+
 /**
 Constructs a grouping setting from a string literal.
 

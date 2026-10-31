@@ -1,0 +1,1 @@
+- The formatter keeps `let f: type a. t => a = x =>` on one line when it fits, instead of breaking after `:` and `=` whenever the body spans several lines.

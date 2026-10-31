@@ -55,10 +55,10 @@ let empty = Object.keys(3);
 let v = $$test(1, 2);
 
 Mocha.describe("Unsafe_ppx_test", () => {
-  Mocha.test("unsafe_max", () => Test_utils.eq("File \"unsafe_ppx_test.res\", line 56, characters 7-14", 2, max(1, 2)));
-  Mocha.test("unsafe_test", () => Test_utils.eq("File \"unsafe_ppx_test.res\", line 59, characters 7-14", 3, v));
-  Mocha.test("unsafe_max2", () => Test_utils.eq("File \"unsafe_ppx_test.res\", line 62, characters 7-14", 2, Math.max(1, 2)));
-  Mocha.test("ffi_keys", () => Test_utils.eq("File \"unsafe_ppx_test.res\", line 65, characters 7-14", ["a"], Ffi_js_test.keys({a : 3})));
+  Mocha.test("unsafe_max", () => Test_utils.eq("File \"unsafe_ppx_test.res\", line 58, characters 7-14", 2, max(1, 2)));
+  Mocha.test("unsafe_test", () => Test_utils.eq("File \"unsafe_ppx_test.res\", line 61, characters 7-14", 3, v));
+  Mocha.test("unsafe_max2", () => Test_utils.eq("File \"unsafe_ppx_test.res\", line 64, characters 7-14", 2, Math.max(1, 2)));
+  Mocha.test("ffi_keys", () => Test_utils.eq("File \"unsafe_ppx_test.res\", line 67, characters 7-14", ["a"], Ffi_js_test.keys({a : 3})));
 });
 
 export {

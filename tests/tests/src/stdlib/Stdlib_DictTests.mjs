@@ -508,7 +508,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    292,
+    293,
     13,
     34
   ],
@@ -523,7 +523,7 @@ let dict = {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    304,
+    305,
     22,
     38
   ],
@@ -533,7 +533,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    305,
+    306,
     22,
     43
   ],
@@ -543,7 +543,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    306,
+    307,
     22,
     37
   ],
@@ -553,7 +553,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    307,
+    308,
     22,
     39
   ],
@@ -563,7 +563,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    309,
+    311,
     15,
     51
   ],
@@ -594,7 +594,7 @@ function classify(d) {
 Test.run([
   [
     "Stdlib_DictTests.res",
-    326,
+    328,
     22,
     49
   ],
@@ -606,7 +606,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    327,
+    329,
     22,
     47
   ],
@@ -619,7 +619,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    328,
+    330,
     22,
     50
   ],
@@ -631,7 +631,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    329,
+    331,
     22,
     49
   ],
@@ -643,7 +643,7 @@ Test.run([
 Test.run([
   [
     "Stdlib_DictTests.res",
-    330,
+    332,
     22,
     47
   ],

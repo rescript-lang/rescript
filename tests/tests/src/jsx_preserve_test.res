@@ -47,14 +47,17 @@ let _unary_element_with_spread_props = <input {...baseProps} type_="text" />
 let otherProps: JsxDOM.domProps = {
   id: "bar",
 }
+
 let _unary_element_with_props_of_two_spreads =
   <input {...dict{...baseProps->Obj.magic, ...otherProps->Obj.magic}->Obj.magic} />
 
 // including keys that aren't JSX attribute names
 let _unary_element_with_spread_and_spaced_key =
   <input {...dict{...baseProps->Obj.magic, "foo bar": "x"}->Obj.magic} />
+
 let _unary_element_with_spread_and_proto_key =
   <input {...dict{...baseProps->Obj.magic, "__proto__": "x"}->Obj.magic} />
+
 let _unary_element_with_spread_and_hyphenated_key =
   <input {...dict{...baseProps->Obj.magic, "aria-label": "x"}->Obj.magic} />
 
@@ -67,8 +70,10 @@ let _container_with_spread_and_repeated_children =
       "children": React.string("second"),
     }->Obj.magic}
   />
+
 let _unary_element_with_spread_and_repeated_key =
   <input {...dict{...baseProps->Obj.magic, "title": "x", "title": "y"}->Obj.magic} />
+
 // and a "key" property next to the key attribute
 let _unary_element_with_spread_and_key_prop_keyed =
   <input {...dict{...baseProps->Obj.magic, "key": "inner"}->Obj.magic} key="outer" />
@@ -172,6 +177,7 @@ let _youtube_iframe =
 
 module X = {
   type props = {}
+
   @react.componentWithProps
   let make = (_props: props) => React.null
 }
@@ -202,12 +208,14 @@ let make = (~children) => {
 
 let _comment_only_host = <div>{/* no children prop */}</div>
 let _comment_only_fragment = <>{/* no children */}</>
+
 let _comment_single_child =
   <div>
     {/* before */}
     <span />
     {/* after */}
   </div>
+
 let _comment_multiple_children =
   <div>
     <span />

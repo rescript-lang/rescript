@@ -43,6 +43,7 @@ let f1 = x =>
 
 type myvariant2 = [#Tag3(int) | #Tag4 | myvariant]
 type x = [#a | #b | #c]
+
 let f2 = x =>
   switch x {
   | #...myvariant2 as x =>

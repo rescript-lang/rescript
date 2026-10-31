@@ -1,0 +1,1 @@
+- Evaluate JSX children after the other props in plain JSX mode, as in preserve mode.

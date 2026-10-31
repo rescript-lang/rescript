@@ -11,12 +11,11 @@
 
   The implementation /.../fixtures/Iface_tag_name_mismatch/Foo.res
   does not match the interface /.../fixtures/Iface_tag_name_mismatch/foo.cmi:
-  Type declarations do not match:
-    type t = @as("a") A | B
-  is not included in
-    type t = @as("a") A | B
-  [36m/.../fixtures/Iface_tag_name_mismatch/Foo.resi[0m:[2m2:1-4:5[0m:
-    Expected declaration
-  [36m/.../fixtures/Iface_tag_name_mismatch/Foo.res[0m:[2m2:1-4:5[0m:
-    Actual declaration
+  
+  Actual declaration ([36m/.../fixtures/Iface_tag_name_mismatch/Foo.res[0m:[2m2:1-4:5[0m):
+    @tag("type") type t = @as("a") A | B
+  
+  Expected declaration ([36m/.../fixtures/Iface_tag_name_mismatch/Foo.resi[0m:[2m2:1-4:5[0m):
+    @tag("kind") type t = @as("a") A | B
+  
   Their @tag annotations differ.

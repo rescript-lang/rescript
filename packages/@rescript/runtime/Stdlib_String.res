@@ -21,6 +21,7 @@ external compare: (string, string) => Stdlib_Ordering.t = "%compare"
 
 @val @scope("Number") external isNaN: float => bool = "isNaN"
 @send external charCodeAt: (string, int) => float = "charCodeAt"
+
 let charCodeAt = (s, i) => {
   let c = charCodeAt(s, i)
   isNaN(c) ? None : Some(c->Stdlib_Int.fromFloat)
@@ -38,19 +39,23 @@ let charCodeAt = (s, i) => {
 @send external includesFrom: (string, string, int) => bool = "includes"
 
 @send external indexOf: (string, string) => int = "indexOf"
+
 let indexOfOpt = (s, search) =>
   switch indexOf(s, search) {
   | -1 => None
   | index => Some(index)
   }
+
 @send external indexOfFrom: (string, string, int) => int = "indexOf"
 
 @send external lastIndexOf: (string, string) => int = "lastIndexOf"
+
 let lastIndexOfOpt = (s, search) =>
   switch lastIndexOf(s, search) {
   | -1 => None
   | index => Some(index)
   }
+
 @send external lastIndexOfFrom: (string, string, int) => int = "lastIndexOf"
 
 @return(nullable) @send
@@ -103,6 +108,7 @@ external replaceRegExpBy3Unsafe: (
 ) => string = "replace"
 
 @send external search: (string, Stdlib_RegExp.t) => int = "search"
+
 let searchOpt = (s, re) =>
   switch search(s, re) {
   | -1 => None
@@ -114,6 +120,7 @@ let searchOpt = (s, re) =>
 @send external split: (string, string) => array<string> = "split"
 @send external splitAtMost: (string, string, ~limit: int) => array<string> = "split"
 @send external splitByRegExp: (string, Stdlib_RegExp.t) => array<option<string>> = "split"
+
 @send
 external splitByRegExpAtMost: (string, Stdlib_RegExp.t, ~limit: int) => array<option<string>> =
   "split"

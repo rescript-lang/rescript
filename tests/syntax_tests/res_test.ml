@@ -25,13 +25,19 @@ let x: int
 |})
 
 (* Formatting keeps a file's line endings, also inside comments, template
-   literals and raw JS, and formatting the result again changes nothing *)
+   literals and raw JS, and formatting the result again changes nothing. The
+   line breaks inside literals are part of the program and keep their bytes,
+   whatever the file's line endings, and so do the ones inside comments. *)
 let () =
+  let to_crlf text = String.concat "\r\n" (String.split_on_char '\n' text) in
   let lf =
     "/* a\n\
     \ multi-line comment */\n\
+     /* a comment\n\
+    \ * with stars\n\
+    \ */\n\
      let s = `line 1\n\
-     line 2`\n\
+     line 2`\n\n\
      let r = %raw(`\n\
     \  function () {\n\
     \    return 1\n\
@@ -53,9 +59,94 @@ let () =
       let formatted = format source in
       assert (formatted = source);
       assert (format formatted = formatted))
-    [lf; Res_line_endings.to_crlf lf]
+    [
+      lf;
+      to_crlf lf;
+      "let x = 1\r\n\r\nlet s = \"a\nb\"\r\n";
+      "let x = 1\n\nlet s = \"a\r\nb\"\n";
+      "let x = 1\r\n\
+       \r\n\
+       let t = `a\n\
+       b`\r\n\
+       \r\n\
+       let c = '\n\
+       '\r\n\
+       \r\n\
+       let p = #\"a\n\
+       b\"\r\n";
+      "let x = 1\n\nlet t = `a\r\nb`\n\nlet c = '\r'\n\nlet p = #\"a\r\nb\"\n";
+      "let x = 1\n/* a\r\r\nb\nc */\nlet y = 2\n";
+      "let x = 1\r\n/* a\nb\r\nc */\r\nlet y = 2\r\n";
+    ];
+  (* Formatting keeps a byte order mark, and a lone CR ends a line *)
+  let bom = "\xEF\xBB\xBF" in
+  List.iter
+    (fun source ->
+      let formatted = format source in
+      assert (formatted = source);
+      assert (format formatted = formatted))
+    [bom ^ "let x = 1\n"; bom ^ "// c\r\nlet x = 1\r\n"];
+  assert (format "let x = 1 // c\rlet y = 2\n" = "let x = 1 // c\nlet y = 2\n");
+  assert (format "let x = 1\rlet y = 2\r" = "let x = 1\nlet y = 2\n");
+  (* The printer writes the line breaks of a comment it reindents *)
+  let formatted = format "let x = 1\n/* a\r\r\n b */\nlet y = 2\n" in
+  assert (formatted = "let x = 1\n/* a\n b */\nlet y = 2\n");
+  assert (format (to_crlf formatted) = to_crlf formatted)
 
 let () = print_endline "✅ multi printer api tests"
+
+(* The scanner skips a UTF-8 byte order mark and ends a line at a CR without an
+   LF, and code frames show the lines the positions refer to *)
+let () =
+  let parse source =
+    let result =
+      Res_driver.parse_implementation_from_source ~display_filename:"bom.res"
+        ~source
+    in
+    assert (not result.invalid);
+    result.parsetree
+  in
+  let position_of_y source =
+    match parse source with
+    | _ :: {Parsetree.pstr_loc = {loc_start}} :: _ -> loc_start
+    | _ -> assert false
+  in
+  let line_and_column (pos : Lexing.position) =
+    (pos.pos_lnum, pos.pos_cnum - pos.pos_bol)
+  in
+  let bom = "\xEF\xBB\xBF" in
+  (match parse (bom ^ "let x = 1") with
+  | [{pstr_loc = {loc_start}}] -> assert (line_and_column loc_start = (1, 0))
+  | _ -> assert false);
+  List.iter
+    (fun (source, expected) ->
+      assert (line_and_column (position_of_y source) = expected))
+    [
+      ("let x = 1\rlet y = 2", (2, 0));
+      ("let x = 1 // c\rlet y = 2", (2, 0));
+      ("let x = 1 /* c */\r  let y = 2", (2, 2));
+      ("let x = 1\r\nlet y = 2", (2, 0));
+      ("let x = 1\r\rlet y = 2", (3, 0));
+      ("let x = 1\n\rlet y = 2", (3, 0));
+      (bom ^ "let x = 1; let y = 2", (1, 11));
+      (bom ^ "let x = 1\rlet y = 2", (2, 0));
+    ];
+  (* A regex literal ends at a line break *)
+  assert
+    (Res_driver.parse_implementation_from_source ~display_filename:"regex.res"
+       ~source:"let r = /a\rb/")
+      .invalid;
+  Code_frame.setup (Some Misc.Color.Never);
+  let frame source =
+    let start_pos = position_of_y source in
+    Code_frame.print ~is_warning:false ~src:source ~start_pos
+      ~end_pos:{start_pos with pos_cnum = start_pos.pos_cnum + 3}
+  in
+  assert (frame (bom ^ "let x = 1; let y = 2") = "  1 │ let x = 1; let y = 2\n");
+  assert (
+    frame "let x = 1\rlet y = 2\rlet z = 3"
+    = "  1 │ let x = 1\n  2 │ let y = 2\n  3 │ let z = 3\n");
+  print_endline "✅ byte order mark and lone CR"
 
 let () =
   let filename =
@@ -469,7 +560,7 @@ module Outcome_printer_tests = struct
     let env = Res_compmisc.initial_env () in
     try
       let _typedStructure, signature, _newenv =
-        Typemod.type_toplevel_phrase env structure
+        Typemod.type_structure env structure
       in
       signature |> Printtyp.tree_of_signature
       |> !Oprint.out_signature Format.str_formatter;
@@ -556,6 +647,138 @@ module Parser_api_test = struct
     windows_crlf ()
 end
 
+(* Res_doc.item_separator puts a blank line next to an item that prints on
+   several lines, measuring the documents on each side as to_string lays them
+   out. Res_doc.comment hides comments from the measurement. *)
+module Multiline_item_spacing_test = struct
+  module Doc = Res_doc
+
+  let check name ~expected actual =
+    if actual <> expected then
+      failwith
+        (Printf.sprintf "%s:\nexpected:\n%S\nactual:\n%S" name expected actual)
+
+  (* Module items are printed inside a broken group, like print_structure. *)
+  let print ?(width = 80) doc =
+    Doc.to_string ~width (Doc.breakable_group ~force_break:true doc)
+  let items prev next = Doc.concat [prev; Doc.item_separator ~prev ~next; next]
+  let a = Doc.text "let a = 1"
+  let b = Doc.text "let b = 2"
+
+  (* A function call that fits on one line at width 80 but not at width 10. *)
+  let call =
+    Doc.group
+      (Doc.concat
+         [
+           Doc.text "f(";
+           Doc.indent
+             (Doc.concat
+                [
+                  Doc.soft_line;
+                  Doc.text "x,";
+                  Doc.line;
+                  Doc.text "y";
+                  Doc.trailing_comma;
+                ]);
+           Doc.soft_line;
+           Doc.text ")";
+         ])
+
+  let measuring () =
+    check "one-line items stay together" ~expected:"let a = 1\nlet b = 2"
+      (print (items a b));
+    check "a hard line spans lines" ~expected:"x\ny\n\nlet b = 2"
+      (print (items (Doc.concat [Doc.text "x"; Doc.hard_line; Doc.text "y"]) b));
+    check "a literal line spans lines" ~expected:"`x\ny`\n\nlet b = 2"
+      (print
+         (items (Doc.concat [Doc.text "`x"; Doc.literal_line; Doc.text "y`"]) b));
+    check "a newline inside text spans lines" ~expected:"`x\ny`\n\nlet b = 2"
+      (print (items (Doc.text "`x\ny`") b));
+    check "an item list spans lines"
+      ~expected:"let a = 1\nlet b = 2\n\nlet c = 3"
+      (print (items (items a b) (Doc.text "let c = 3")));
+    check "a group that fits is one line" ~expected:"f(x, y)\nlet b = 2"
+      (print (items call b));
+    check "a group that breaks spans lines"
+      ~expected:"f(\n  x,\n  y,\n)\n\nlet b = 2"
+      (print ~width:5 (items call b));
+    check "a chosen custom layout is measured" ~expected:"let a = 1\nlet b = 2"
+      (print (items (Doc.custom_layout [a]) b));
+    check "break parents and line suffixes do not span lines"
+      ~expected:"let a = 1 // c\nlet b = 2"
+      (print
+         (items
+            (Doc.concat
+               [a; Doc.break_parent; Doc.line_suffix (Doc.text " // c")])
+            b));
+    check "a comment above an item does not count"
+      ~expected:"let a = 1\n// c\nlet b = 2"
+      (print
+         (items a
+            (Doc.concat
+               [Doc.comment (Doc.concat [Doc.text "// c"; Doc.hard_line]); b])));
+    let forced_if_breaks =
+      Doc.if_breaks (Doc.text "a") (Doc.concat [Doc.text "b"; Doc.hard_line])
+    in
+    check "an if-breaks broken by its flat branch takes the break branch"
+      ~expected:"xa\nlet b = 2"
+      (print (items (Doc.concat [Doc.text "x"; forced_if_breaks]) b));
+    check "an if-breaks in a broken group takes the break branch"
+      ~expected:"{\n}\n\nlet b = 2"
+      (print
+         (items
+            (Doc.breakable_group ~force_break:true
+               (Doc.concat
+                  [
+                    Doc.if_breaks (Doc.text "{") (Doc.text "(");
+                    Doc.line;
+                    Doc.text "}";
+                  ]))
+            b))
+
+  let trailing_comments () =
+    let block =
+      Doc.concat [Doc.text "let a = {"; Doc.hard_line; Doc.text "}"]
+    in
+    let after_block suffix =
+      items (Doc.concat [block; Doc.line_suffix suffix]) b
+    in
+    check "a same-line trailing comment stays on its line"
+      ~expected:"let a = {\n} // c\n\nlet b = 2"
+      (print (after_block (Doc.text " // c")));
+    check "an own-line trailing comment moves below the blank line"
+      ~expected:"let a = {\n}\n\n// c\nlet b = 2"
+      (print (after_block (Doc.concat [Doc.hard_line; Doc.text "// c"])));
+    check "an empty own-line trailing comment prints an empty line"
+      ~expected:"let a = {\n}\n\n\nlet b = 2"
+      (print (after_block Doc.hard_line));
+    let own_line txt =
+      Doc.line_suffix (Doc.concat [Doc.hard_line; Doc.text txt])
+    in
+    check "later own-line trailing comments keep their line break"
+      ~expected:"let a = {\n}\n\n// c\n// d\nlet b = 2"
+      (print (items (Doc.concat [block; own_line "// c"; own_line "// d"]) b))
+
+  let predicates () =
+    let separator = Doc.item_separator ~prev:a ~next:b in
+    assert (Doc.will_break separator);
+    assert (not (Doc.is_nil separator));
+    (* A separator breaks its group, which flushes a pending line suffix. *)
+    assert (
+      not
+        (Doc.has_pending_line_suffix
+           (Doc.group (Doc.concat [Doc.line_suffix a; separator]))));
+    check "an empty custom layout prints nothing" ~expected:""
+      (print (Doc.custom_layout []))
+
+  let run () =
+    measuring ();
+    trailing_comments ();
+    predicates ();
+    print_endline "✅ multi-line item spacing"
+end
+
 let () = Outcome_printer_tests.run ()
 let () = Parser_api_test.run ()
 let () = Res_utf8_test.run ()
+let () = Multiline_item_spacing_test.run ()

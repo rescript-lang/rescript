@@ -75,11 +75,13 @@ let remove: (t<'a, 'id>, 'a) => unit
 
 @deprecated("Use `forEach` instead")
 let forEachU: (t<'a, 'id>, 'a => unit) => unit
+
 /** Order unspecified. */
 let forEach: (t<'a, 'id>, 'a => unit) => unit
 
 @deprecated("Use `reduce` instead")
 let reduceU: (t<'a, 'id>, 'c, ('c, 'a) => 'c) => 'c
+
 /** Order unspecified. */
 let reduce: (t<'a, 'id>, 'c, ('c, 'a) => 'c) => 'c
 

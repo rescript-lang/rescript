@@ -5,6 +5,7 @@ type t = {
   stderr: array<Buffer.t>,
   code: Null.t<float>,
 }
+
 let run = async (~command, ~args, ~options=?) => {
   let spawn = ChildProcess.spawn(command, args, ~options?)
   let stdout = []

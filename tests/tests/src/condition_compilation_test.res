@@ -46,6 +46,7 @@ let ocaml_veriosn = "unknown"
    #end
 */
 open Mocha
+
 open Test_utils
 
 describe(__MODULE__, () => {

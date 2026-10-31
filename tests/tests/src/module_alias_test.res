@@ -23,6 +23,7 @@ let a = {
 }
 
 eq(__LOC__, a, 3)
+
 describe(__MODULE__, () => {
   test("module_alias_test", () => {
     eq(__LOC__, a, 3)

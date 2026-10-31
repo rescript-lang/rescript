@@ -4,12 +4,15 @@ module AsProp = {
     @as("data-x") dataX: string,
     @as("class") klass: string,
   }
+
   @react.componentWithProps
   let make = (_: props) => React.null
 }
+
 let asProp = <AsProp fooBar="a" dataX="b" klass="c" />
 
 let sideEffect = ref(0)
+
 let seqValue =
   <div
     title={
@@ -29,6 +32,7 @@ module WithElement = {
   @react.component
   let make = (~el: React.element) => el
 }
+
 let elementValue = <WithElement el={<span />} />
 
 let optTitle: option<string> = Some("x")
@@ -59,6 +63,7 @@ module Opt = {
     <div title=b />
   }
 }
+
 let optComponent = <Opt b="x" />
 let optComponentSome = <Opt a=1 b="x" />
 let optComponentWithOpt = <Opt a=?Some(2) b="x" />
@@ -69,9 +74,11 @@ module ArrayProps = {
     @as("0") first: string,
     @as("1") second: string,
   }
+
   @react.componentWithProps
   let make = (_: props) => React.null
 }
+
 let arrayProps = <ArrayProps first="a" second="b" />
 
 // Prop value that is an await-free conditional element

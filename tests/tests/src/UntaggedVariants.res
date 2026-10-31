@@ -1,5 +1,6 @@
 @unboxed
 type t = A | I(int) | S(string)
+
 @unboxed
 type t2 = S2(string) | I2(float)
 
@@ -270,26 +271,32 @@ module OptionUnboxingHeuristic = {
 
   @unboxed
   type untaggedWithOptionPayload = A | B(option<string>)
+
   let untaggedWithOptionPayload = (x: untaggedWithOptionPayload) => Some(x)
 
   @unboxed
   type untaggedWithIntPayload = A | B(int)
+
   let untaggedWithIntPayload = (x: untaggedWithIntPayload) => Some(x)
 
   @unboxed
   type untaggedInlineNoOption = A | B({x: int})
+
   let untaggedInlineNoOptions = (x: untaggedInlineNoOption) => Some(x)
 
   @unboxed
   type untaggedInlineUnaryWihtExplicitOption = A | B({x: option<int>})
+
   let untaggedInlineUnaryWihtExplicitOption = (x: untaggedInlineUnaryWihtExplicitOption) => Some(x)
 
   @unboxed
   type untaggedInlineUnaryWihtImplicitOption = A | B({x?: int})
+
   let untaggedInlineUnaryWihtImplicitOption = (x: untaggedInlineUnaryWihtImplicitOption) => Some(x)
 
   @unboxed
   type untaggedInlineMultinaryOption = A | B({x: option<int>, y?: string})
+
   let untaggedInlineMultinaryOption = (x: untaggedInlineMultinaryOption) => Some(x)
 }
 

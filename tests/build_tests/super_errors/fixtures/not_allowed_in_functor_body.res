@@ -14,6 +14,7 @@ module F = (
       let v = 1
     }
   )
+
   module M = unpack(pack)
   let _ = M.v
 }

@@ -2,17 +2,23 @@
 type t
 
 @val external make: string => t = "Symbol"
+
 @val @scope("Symbol")
 external getFor: string => option<t> = "for"
+
 @val @scope("Symbol") external keyFor: t => option<string> = "keyFor"
+
 @get
 external description: t => option<string> = "description"
+
 @send external toString: t => string = "toString"
 
 @val @scope("Symbol")
 external asyncIterator: t = "asyncIterator"
+
 @val @scope("Symbol")
 external hasInstance: t = "hasInstance"
+
 @val @scope("Symbol") external isConcatSpreadable: t = "isConcatSpreadable"
 @val @scope("Symbol") external iterator: t = "iterator"
 @val @scope("Symbol") external match: t = "match"

@@ -1,0 +1,26 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inclusion_field_several.res[0m:[2m4:5-6:1[0m
+
+  2 [2m│[0m module M: {
+  3 [2m│[0m   type t = {id: int, mutable name: string, age: int, @as("e-mail") email
+    [2m│[0m ?: string}
+  [1;31m4[0m [2m│[0m } = [1;31m{[0m
+  [1;31m5[0m [2m│[0m [1;31m  type t = {id: string, name: string, age: float, email: string}[0m
+  [1;31m6[0m [2m│[0m [1;31m}[0m
+  7 [2m│[0m 
+
+  Signature mismatch:
+  
+  Actual declaration ([36m/.../fixtures/inclusion_field_several.res[0m:[2m5:3-64[0m):
+    type t = {id: string, name: string, age: float, email: string}
+  
+  Expected declaration ([36m/.../fixtures/inclusion_field_several.res[0m:[2m3:3-82[0m):
+    type t = {id: int, mutable name: string, age: int, @as("e-mail") email?: string}
+  
+  The types for field id are not equal.
+  The mutability of field name is different.
+  The types for field age are not equal.
+  The optional attribute of field email is different.
+  The field email has the runtime name "email" in the actual declaration,
+  but "e-mail" in the expected declaration.

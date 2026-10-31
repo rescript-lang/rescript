@@ -98,10 +98,6 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
   | Otyp_var (ng, s) ->
     Doc.concat [Doc.text ("'" ^ if ng then "_" else ""); Doc.text s]
   | Otyp_object (fields, rest) -> print_object_fields fields rest
-  | Otyp_attribute (typ, attribute) ->
-    Doc.group
-      (Doc.concat
-         [print_out_attribute_doc attribute; Doc.line; print_out_type_doc typ])
   (* example: Red | Blue | Green | CustomColour(float, float, float) *)
   | Otyp_sum constructors -> print_out_constructors_doc constructors
   (* example: {"name": string, "age": int} *)
@@ -392,10 +388,14 @@ and print_out_constructor_doc (name, args, gadt, repr) =
   in
   Doc.group (Doc.concat [repr_doc; Doc.text name; args_doc; gadt_doc])
 
-and print_record_decl_row_doc (name, mut, opt, arg) =
+and print_record_decl_row_doc (name, runtime_name, mut, opt, arg) =
   Doc.group
     (Doc.concat
        [
+         (match runtime_name with
+         | Some runtime_name ->
+           Doc.text ("@as(\"" ^ String.escaped runtime_name ^ "\") ")
+         | None -> Doc.nil);
          (if mut then Doc.text "mutable " else Doc.nil);
          Printer.print_ident_like ~allow_uident:false name;
          (if opt then Doc.text "?" else Doc.nil);
@@ -423,9 +423,23 @@ and print_record_declaration_doc ~inline rows =
   in
   if not inline then Doc.group content else content
 
-let print_out_type fmt out_type =
-  Format.pp_print_string fmt
-    (Doc.to_string ~width:80 (print_out_type_doc out_type))
+(* A printed doc can span several lines. Each line break is emitted as a
+   newline of the enclosing Format box, so that the following lines are
+   indented with the box instead of starting at column 0. The first line of
+   a multi-line doc claims the whole margin, so that the box breaks around
+   it instead of continuing the doc's last line on the same line. *)
+let pp_doc fmt doc =
+  match String.split_on_char '\n' (Doc.to_string ~width:80 doc) with
+  | [line] -> Format.pp_print_string fmt line
+  | lines ->
+    lines
+    |> List.iteri (fun i line ->
+        if i = 0 then Format.pp_print_as fmt (Format.pp_get_margin fmt ()) line
+        else (
+          Format.pp_force_newline fmt ();
+          Format.pp_print_string fmt line))
+
+let print_out_type fmt out_type = pp_doc fmt (print_out_type_doc out_type)
 
 let print_type_parameter_doc (typ, (co, cn)) =
   Doc.concat
@@ -643,11 +657,10 @@ let rec print_out_sig_item_doc ?(print_name_as_is = false)
   | Osig_type (out_type_decl, out_rec_status) ->
     (* TODO: manifest ? *)
     let attrs =
-      match (out_type_decl.otype_immediate, out_type_decl.otype_unboxed) with
-      | false, false -> Doc.nil
-      | true, false -> Doc.concat [Doc.text "@immediate"; Doc.line]
-      | false, true -> Doc.concat [Doc.text "@unboxed"; Doc.line]
-      | true, true -> Doc.concat [Doc.text "@immediate @unboxed"; Doc.line]
+      match out_type_decl.otype_attributes with
+      | [] -> Doc.nil
+      | attributes ->
+        Doc.concat [Doc.text (String.concat " " attributes); Doc.line]
     in
     let kw =
       Doc.text
@@ -875,7 +888,7 @@ and print_out_extension_constructor_doc
          Doc.text "type ";
          Printer.print_ident_like ~allow_uident:false out_ext.oext_type_name;
          type_params;
-         Doc.text " += ";
+         Doc.text " +=";
          Doc.line;
          (if out_ext.oext_private = Asttypes.Private then Doc.text "private "
           else Doc.nil);
@@ -926,16 +939,13 @@ and print_out_type_extension_doc
        ])
 
 let print_out_sig_item fmt out_sig_item =
-  Format.pp_print_string fmt
-    (Doc.to_string ~width:80 (print_out_sig_item_doc out_sig_item))
+  pp_doc fmt (print_out_sig_item_doc out_sig_item)
 
 let print_out_signature fmt signature =
-  Format.pp_print_string fmt
-    (Doc.to_string ~width:80 (print_out_signature_doc signature))
+  pp_doc fmt (print_out_signature_doc signature)
 
 let print_out_module_type fmt out_module_type =
-  Format.pp_print_string fmt
-    (Doc.to_string ~width:80 (print_out_module_type_doc out_module_type))
+  pp_doc fmt (print_out_module_type_doc out_module_type)
 
 (* Not supported in ReScript *)
 (* Oprint.out_class_type *)

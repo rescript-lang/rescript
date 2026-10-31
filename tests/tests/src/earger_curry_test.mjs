@@ -95,11 +95,11 @@ let c = g(0)(3, 4);
 let d = g(0)(3, 5);
 
 Mocha.describe("Earger_curry_test", () => {
-  Mocha.test("earger curry a", () => Test_utils.eq("File \"earger_curry_test.res\", line 137, characters 34-41", a, 10));
-  Mocha.test("earger curry b", () => Test_utils.eq("File \"earger_curry_test.res\", line 138, characters 34-41", b, 11));
-  Mocha.test("earger curry c", () => Test_utils.eq("File \"earger_curry_test.res\", line 139, characters 34-41", c, 10));
-  Mocha.test("earger curry d", () => Test_utils.eq("File \"earger_curry_test.res\", line 140, characters 34-41", d, 11));
-  Mocha.test("earger curry all_v", () => Test_utils.eq("File \"earger_curry_test.res\", line 141, characters 38-45", all_v.contents, {hd: 8, tl: {hd: 6, tl: {hd: 6, tl: {hd: 4, tl: {hd: 4, tl: {hd: 2, tl: /* [] */0}}}}}}));
+  Mocha.test("earger curry a", () => Test_utils.eq("File \"earger_curry_test.res\", line 139, characters 34-41", a, 10));
+  Mocha.test("earger curry b", () => Test_utils.eq("File \"earger_curry_test.res\", line 140, characters 34-41", b, 11));
+  Mocha.test("earger curry c", () => Test_utils.eq("File \"earger_curry_test.res\", line 141, characters 34-41", c, 10));
+  Mocha.test("earger curry d", () => Test_utils.eq("File \"earger_curry_test.res\", line 142, characters 34-41", d, 11));
+  Mocha.test("earger curry all_v", () => Test_utils.eq("File \"earger_curry_test.res\", line 143, characters 38-45", all_v.contents, {hd: 8, tl: {hd: 6, tl: {hd: 6, tl: {hd: 4, tl: {hd: 4, tl: {hd: 2, tl: /* [] */0}}}}}}));
 });
 
 export {

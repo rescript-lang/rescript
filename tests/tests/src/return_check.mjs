@@ -20,7 +20,7 @@ function f_undefined(xs, i) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "return_check.res",
-      23,
+      24,
       12
     ],
     Error: new Error()
@@ -61,7 +61,7 @@ function f_null(xs, i) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "return_check.res",
-      51,
+      52,
       12
     ],
     Error: new Error()
@@ -77,7 +77,7 @@ function f_null_undefined(xs, i) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "return_check.res",
-      59,
+      60,
       12
     ],
     Error: new Error()

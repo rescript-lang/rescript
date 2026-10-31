@@ -89,6 +89,7 @@ try myDangerousFn() finally {
 }
 
 let finally = x => x
+
 let afterTry = () => {
   try {
     ()

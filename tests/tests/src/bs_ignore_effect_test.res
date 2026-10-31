@@ -6,9 +6,11 @@ function add(x,y){
   return x + y
 }
 `)
+
 type rec kind<_> =
   | Float: kind<float>
   | String: kind<string>
+
 @val external add: (@ignore kind<'a>, 'a, 'a) => 'a = "add"
 
 let v = ref(0)
@@ -16,6 +18,7 @@ let v = ref(0)
 @obj external config: (~hi: int, ~lo: int, unit) => _ = ""
 
 let h = config(~hi=2, ~lo=0, ignore(v.contents = v.contents + 1))
+
 let z = add(
   {
     v.contents = v.contents + 1

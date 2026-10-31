@@ -75,6 +75,13 @@ let f = @attr (a, b) => @attr2 (c, d) => ()
 let f = (@attr ~a, @attr ~b) => ()
 let f = (@attr ~a, @attr ~b) => ()
 
+// Attributes before a labeled alias stay in front of the label
+let f = (@attr ~a as x: int) => x
+let f = (@attr ~a as x: int=?, @attr ~b as y: int=1) => x + y
+let f = (@attr ~a as (x, y), @attr ~b as {z}, @attr ~c as _) => x + y + z
+let f = (@attr @inner ~a as x: int) => x
+let f = (~a as @attr x: int) => x
+
 let f = (
   thisIsAVeryLongNaaaaaaaaaaaaaaaaaaameeeeeeeeeeeee,
   thisIsAVeryLongNaaaaaaaaaaaaaaaaaaameeeeeeeeeeeee,
@@ -190,6 +197,7 @@ let make = (~onChange: option<({"testing": bool}, array<string>) => unit>=?, chi
 let add = (a, b): int => a + b
 
 let add = (a, b): {"field1": int, "field2": string, "field3": int, "field4": int} => a + b
+
 let add = (superLongParameterName1, superLongParameterName2, superLongParameterName3): {
   "field1": int,
   "field2": string,
@@ -206,12 +214,14 @@ let add = (superLongParameterName1, superLongParameterName2, superLongParameterN
 } => a + b
 
 let add = ((a, b)): (int, string, int, int) => a + b
+
 let add = ((a, b)): (
   intWithSuperLongName,
   stringWithSuperLongName,
   intWithSuperLongName,
   intWithSuperLongName,
 ) => a + b
+
 let add = ((
   superLongParameterName,
   bsuperLongParameterName,
@@ -226,6 +236,7 @@ let add = (list{a, b}): list<
   intWithSuperLongName,
   intWithSuperLongName,
 > => a + b
+
 let add = (list{
   superLongParameterName,
   bsuperLongParameterName,
@@ -244,6 +255,7 @@ let add = ([a, b]): array<
   intWithSuperLongName,
   intWithSuperLongName,
 > => a + b
+
 let add = ([
   superLongParameterName,
   bsuperLongParameterName,
@@ -258,8 +270,10 @@ let add = ([
 
 let add = ({x: superLongParameterName, y: superLongParameterName, z: superLongParameterName}) =>
   x + y + z
+
 let add = ({x: superLongParameterName, y: superLongParameterName, z: superLongParameterName}) =>
   x + y + z
+
 let add = ({
   x: x as superLongParameterName,
   y: y as superLongParameterName,
@@ -268,6 +282,7 @@ let add = ({
 
 let add = (Color(superLongParameterName, superLongParameterName, superLongParameterNameeeeeee)) =>
   x + y + z
+
 let add = (Color(
   superLongParameterName,
   superLongParameterName,

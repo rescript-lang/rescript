@@ -1,5 +1,6 @@
 let x = []
 let x = [a, b, c]
+
 let x = [
   superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
   superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
@@ -22,3 +23,16 @@ let x =
   ]
 
 let x = [biggerThanZero ? 1 : 0, biggerThanZero ? 1 : 0]
+
+let x = [...xs]
+let x = [1, ...xs, 2, 3, ...ys]
+let x = [...[1, 2], 3, ...[]]
+let x = [...[...xs, 1], ...ys]
+let x = @attr [1, ...xs]
+let x = [...(xs: array<int>), ...ys->Array.map(f)]
+
+let x = [
+  ...superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+  superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+  ...superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+]

@@ -469,10 +469,7 @@ let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
 let lambda_as_module (lambda_output : J.deps_program) (output_prefix : string) :
     unit =
   let package_info = Js_packages_state.get_packages_info () in
-  if
-    Js_packages_info.is_empty package_info
-    && !((Js_config.current ()).js_stdout)
-  then
+  if Js_packages_info.is_empty package_info then
     match !((Js_config.current ()).source_map) with
     | Inline ->
       let target_file =

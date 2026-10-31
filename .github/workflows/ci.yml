@@ -47,10 +47,9 @@ jobs:
           - os: ubuntu-26.04-arm # ARM
             ocaml_compiler: ocaml-variants.5.5.2+options,ocaml-option-static
             upload_binaries: true
-            # Build the playground compiler and run the benchmarks on the fastest runner
+            # Build the playground compiler on the fastest runner
             build_playground: true
             generate_api_docs: true
-            benchmarks: true
             test_commit_records: true
             node-target: linux-arm64
             rust-target: aarch64-unknown-linux-musl
@@ -349,42 +348,6 @@ jobs:
         run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe
         shell: bash
 
-      - name: Run syntax benchmarks
-        if: matrix.benchmarks
-        run: |
-          set -o pipefail
-          ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
-
-      # Benchmarking is disabled for now because of inconsistent run times on different runners
-      #
-      # - name: Restore previous benchmark data
-      #   if: matrix.benchmarks
-      #   uses: actions/cache/restore@v6
-      #   with:
-      #     path: ./tests/benchmark-cache
-      #     key: syntax-benchmark-v1
-
-      # - name: Create new benchmark data and comment on alert
-      #   # Do not run for PRs created from other repos as those won't be able to write to the pull request
-      #   if: ${{ matrix.benchmarks && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.repository.full_name) }}
-      #   uses: benchmark-action/github-action-benchmark@v1
-      #   with:
-      #     name: Syntax Benchmarks
-      #     tool: customSmallerIsBetter
-      #     output-file-path: tests/benchmark-output.json
-      #     external-data-json-path: ./tests/benchmark-cache/benchmark-data.json
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     alert-threshold: "105%"
-      #     comment-always: false
-      #     comment-on-alert: true
-
-      # - name: Save benchmark data as new baseline
-      #   if: matrix.benchmarks && github.ref == 'refs/heads/master'
-      #   uses: actions/cache/save@v6
-      #   with:
-      #     path: ./tests/benchmark-cache
-      #     key: syntax-benchmark-v1
-
       - name: Build playground compiler
         if: matrix.build_playground
         run: opam exec -- make playground
@@ -638,6 +601,10 @@ jobs:
           fi
           echo "path=$dir" >> "$GITHUB_OUTPUT"
           cp -r tests/package_tests/installation_test/* "$dir"
+          # The compiled stdlib tests run against the installed runtime. Their
+          # Test.mjs imports @babel/code-frame, which tests/tests depends on.
+          cp -r tests/tests/src/stdlib "$dir/stdlib"
+          echo "code-frame=$(node -p 'require("./tests/tests/package.json").dependencies["@babel/code-frame"]')" >> "$GITHUB_OUTPUT"
 
       - name: Install ReScript package
         run: |
@@ -645,7 +612,8 @@ jobs:
           npm i --no-audit \
             "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
             "https://pkg.pr.new/rescript-lang/rescript/@rescript/runtime@${COMMIT_SHA}" \
-            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}"
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}" \
+            "@babel/code-frame@${{ steps.tmp-dir.outputs.code-frame }}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -666,6 +634,16 @@ jobs:
 
       - name: Test packaged CLI subcommands and watch shutdown
         run: node packaged-cli-smoke.mjs
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
+      # build-compiler runs the stdlib tests on the Node.js version in .nvmrc,
+      # this job on the oldest supported one, so tests of APIs missing there
+      # must stay out of Stdlib_TestSuite and Stdlib_TempTests.
+      - name: Run stdlib tests
+        run: |
+          node stdlib/Stdlib_TestSuite.mjs
+          node stdlib/Stdlib_TempTests.mjs
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -708,6 +686,10 @@ jobs:
           fi
           echo "path=$dir" >> "$GITHUB_OUTPUT"
           cp -r tests/package_tests/installation_test/* "$dir"
+          # The compiled stdlib tests run against the installed runtime. Their
+          # Test.mjs imports @babel/code-frame, which tests/tests depends on.
+          cp -r tests/tests/src/stdlib "$dir/stdlib"
+          echo "code-frame=$(node -p 'require("./tests/tests/package.json").dependencies["@babel/code-frame"]')" >> "$GITHUB_OUTPUT"
 
       - name: Install ReScript package
         run: |
@@ -716,7 +698,8 @@ jobs:
           pnpm --config.block-exotic-subdeps=false i \
             "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
             "https://pkg.pr.new/rescript-lang/rescript/@rescript/runtime@${COMMIT_SHA}" \
-            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}"
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}" \
+            "@babel/code-frame@${{ steps.tmp-dir.outputs.code-frame }}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -732,6 +715,16 @@ jobs:
           cp rescript-with-belt.json rescript.json
           pnpm rescript build
           node src/BeltTest.mjs
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
+      # build-compiler runs the stdlib tests on the Node.js version in .nvmrc,
+      # this job on the oldest supported one, so tests of APIs missing there
+      # must stay out of Stdlib_TestSuite and Stdlib_TempTests.
+      - name: Run stdlib tests
+        run: |
+          node stdlib/Stdlib_TestSuite.mjs
+          node stdlib/Stdlib_TempTests.mjs
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 

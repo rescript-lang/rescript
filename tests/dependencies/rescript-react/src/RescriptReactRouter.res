@@ -34,6 +34,7 @@ type makeEventOptions = {
   cancelable?: bool,
   composed?: bool,
 }
+
 @new external makeEvent: (string, ~options: makeEventOptions=?) => Dom.event = "Event"
 
 /* This is copied from array.ml. We want to cut dependencies for rescript-react so
@@ -47,6 +48,7 @@ let arrayToList = a => {
     }
   tolist(a->Array.length - 1, list{})
 }
+
 /* if we ever roll our own parser in the future, make sure you test all url combinations
    e.g. foo.com/?#bar
  */
@@ -74,12 +76,14 @@ let pathParse = str =>
 
     raw->String.split("/")->Array.filter(item => item->String.length != 0)->arrayToList
   }
+
 let path = (~serverUrlString=?, ()) =>
   switch (serverUrlString, window) {
   | (None, None) => list{}
   | (Some(serverUrlString), _) => pathParse(serverUrlString)
   | (_, Some(window: Dom.window)) => pathParse(window->location->pathname)
   }
+
 let hash = () =>
   switch window {
   | None => ""
@@ -93,6 +97,7 @@ let hash = () =>
       raw->String.slice(~start=1)
     }
   }
+
 let searchParse = str =>
   switch str {
   | ""

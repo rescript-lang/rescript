@@ -41,12 +41,14 @@ let nested = x => {
 let base: int = %raw("1")
 
 let y = base * 2
+
 let topShadow = {
   let y = y + y1
   y + y
 }
 
 let z = base * 2
+
 let topSibling = if z < 0 {
   let z$1 = z * 10
   z$1 + z$1

@@ -2,6 +2,7 @@ open Mocha
 open Test_utils
 
 module Block = {}
+
 type t =
   | A0(int)
   | A(int, int)
@@ -18,6 +19,7 @@ module Caml_obj = {}
 module V = {
   module List = {}
 }
+
 let f = (a, b) => a == b
 
 let h = List.length

@@ -31,8 +31,17 @@ let ignoreRuntimeTests = [
       "Stdlib_DataView.getFloat16",
       "Stdlib_DataView.setFloat16"
     ]
+  ],
+  [
+    26,
+    ["Stdlib_Date.toTemporalInstant"]
   ]
 ];
+
+let ignoreRuntimeTestModules = [[
+    26,
+    "Stdlib_Temporal"
+  ]];
 
 function getOutput(buffer) {
   return buffer.map(e => e.toString()).join("");
@@ -108,23 +117,32 @@ async function main() {
         } else {
           return false;
         }
+      }) || ignoreRuntimeTestModules.some(param => {
+        if (nodeVersion < param[0]) {
+          return example.id.startsWith(param[1]);
+        } else {
+          return false;
+        }
       });
-      if (ignoreExample) {
-        console.warn(`Ignoring ${example.id} tests. Not supported by Node ${nodeVersion.toString()}`);
-        return;
-      }
+      let match = ignoreExample ? (console.warn(`Ignoring ${example.id} tests. Not supported by Node ${nodeVersion.toString()}`), [
+          "testSkip",
+          "testAsyncSkip"
+        ]) : [
+          "test",
+          "testAsync"
+        ];
       let code = example.code;
       if (code.length === 0) {
         return;
       } else if (code.includes("await")) {
-        return `testAsync("${example.name}", async () => {
+        return `${match[1]}("${example.name}", async () => {
   module Test = {
     ${code}
   }
   ()
 })`;
       } else {
-        return `test("${example.name}", () => {
+        return `${match[0]}("${example.name}", () => {
   module Test = {
     ${code}
   }

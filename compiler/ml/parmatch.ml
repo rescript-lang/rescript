@@ -1337,29 +1337,6 @@ let rec try_many_gadt f = function
   | [] -> Rnone
   | (p, pss) :: rest -> rappend (f (p, pss)) (try_many_gadt f rest)
 
-(*
-let print_pat pat =
-  let rec string_of_pat pat =
-    match pat.pat_desc with
-        Tpat_var _ -> "v"
-      | Tpat_any -> "_"
-      | Tpat_alias (p, x) -> Printf.sprintf "(%s) as ?"  (string_of_pat p)
-      | Tpat_constant n -> "0"
-      | Tpat_construct (_, lid, _) ->
-        Printf.sprintf "%s" (String.concat "." (Longident.flatten lid.txt))
-      | Tpat_lazy p ->
-        Printf.sprintf "(lazy %s)" (string_of_pat p)
-      | Tpat_or (p1,p2,_) ->
-        Printf.sprintf "(%s | %s)" (string_of_pat p1) (string_of_pat p2)
-      | Tpat_tuple list ->
-        Printf.sprintf "(%s)" (String.concat "," (List.map string_of_pat list))
-      | Tpat_variant (_, _, _) -> "variant"
-      | Tpat_record (_, _, _) -> "record"
-      | Tpat_array _ -> "array"
-  in
-  Printf.fprintf stderr "PAT[%s]\n%!" (string_of_pat pat)
-*)
-
 (* strictly more powerful than exhaust; however, exhaust
    was kept for backwards compatibility *)
 
@@ -1518,22 +1495,6 @@ type answer =
     - right ->  elements to be processed
 *)
 type 'a row = {no_ors: 'a list; ors: 'a list; active: 'a list}
-
-(*
-let pretty_row {ors=ors ; no_ors=no_ors; active=active} =
-  pretty_line ors ; prerr_string " *" ;
-  pretty_line no_ors ; prerr_string " *" ;
-  pretty_line active
-
-let pretty_rows rs =
-  prerr_endline "begin matrix" ;
-  List.iter
-    (fun r ->
-      pretty_row r ;
-      prerr_endline "")
-    rs ;
-  prerr_endline "end matrix"
-*)
 
 (* Initial build *)
 let make_row ps = {ors = []; no_ors = []; active = ps}

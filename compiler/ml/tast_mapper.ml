@@ -229,10 +229,7 @@ let expr sub x =
     | Texp_record {fields; representation; extended_expression} ->
       let fields =
         Array.map
-          (function
-            | label, Kept t, o -> (label, Kept t, o)
-            | label, Overridden (lid, exp), o ->
-              (label, Overridden (lid, sub.expr sub exp), o))
+          (fun (label, lid, exp) -> (label, lid, sub.expr sub exp))
           fields
       in
       Texp_record
@@ -252,6 +249,8 @@ let expr sub x =
              | Tdict_entry (key, exp) -> Tdict_entry (key, sub.expr sub exp)
              | Tdict_spread exp -> Tdict_spread (sub.expr sub exp))
            entries)
+    | Texp_spread (kind, parts) ->
+      Texp_spread (kind, List.map (sub.expr sub) parts)
     | Texp_ifthenelse (exp1, exp2, expo) ->
       Texp_ifthenelse
         (sub.expr sub exp1, sub.expr sub exp2, opt (sub.expr sub) expo)

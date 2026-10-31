@@ -10,15 +10,8 @@
   7 [2m│[0m 
 
   Signature mismatch:
-  Modules do not match:
-    {
-  let x: int
-}
-  is not included in
-    {
-  let x: int
-  let y: string
-}
-  The value `y' is required but not provided
-  [36m/.../fixtures/include_missing_field.res[0m:[2m3:3-15[0m:
-    Expected declaration
+  
+  The value `y` is required but not provided.
+  
+  Expected declaration ([36m/.../fixtures/include_missing_field.res[0m:[2m3:3-15[0m):
+    let y: string

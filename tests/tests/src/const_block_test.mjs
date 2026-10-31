@@ -35,7 +35,7 @@ function h() {
 
 function g() {
   f();
-  Test_utils.eq("File \"const_block_test.res\", line 25, characters 5-12", [
+  Test_utils.eq("File \"const_block_test.res\", line 26, characters 5-12", [
     a[0],
     b[0]
   ], [
@@ -49,7 +49,7 @@ Mocha.describe("Const_block_test", () => {
   Mocha.test("avoid_mutable_inline_test", () => {
     c[0] = 3;
     c[1] = 4;
-    Test_utils.eq("File \"const_block_test.res\", line 40, characters 7-14", [
+    Test_utils.eq("File \"const_block_test.res\", line 41, characters 7-14", [
       3,
       4,
       2,

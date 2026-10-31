@@ -54,6 +54,7 @@ module Result: {
   */
   @send
   external matches: (t, @as(1) _) => array<option<string>> = "slice"
+
   @get external index: t => int = "index"
 
   /**
