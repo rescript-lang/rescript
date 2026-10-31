@@ -17,7 +17,7 @@
 </p>
 
 <h3 align="center">
-  <a href="https://rescript-lang.org/docs/manual/latest/introduction">Introduction</a>
+  <a href="https://rescript-lang.org/docs/manual/introduction">Introduction</a>
   <span> · </span>
   <a href="https://rescript-lang.org/docs/manual/installation">Installation</a>
   <span> · </span>
@@ -63,7 +63,7 @@ The source for the ReScript documentation and website is hosted in a [separate r
 
 ## 🚀 Upgrading
 
-See the [Upgrading Guide](https://rescript-lang.org/docs/manual/latest/installation) for instructions on upgrading to newer ReScript versions.
+See the [Upgrading Guide](https://rescript-lang.org/docs/manual/installation) for instructions on upgrading to newer ReScript versions.
 
 ## 👏 How to Contribute
 
