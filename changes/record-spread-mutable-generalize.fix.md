@@ -1,0 +1,1 @@
+- Stop generalizing the type of a record spread `{...base, field: value}` that copies a mutable field from `base`, which let a value be stored at one type and read at another.

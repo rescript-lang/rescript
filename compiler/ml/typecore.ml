@@ -2086,26 +2086,23 @@ let rec is_nonexpansive exp =
   | Texp_construct (_, _, el) -> List.for_all is_nonexpansive el
   | Texp_variant (_, arg) -> is_nonexpansive_opt arg
   | Texp_record {fields; extended_expression} -> (
-    Array.for_all
-      (fun (lbl, _, exp) -> lbl.lbl_mut = Immutable && is_nonexpansive exp)
-      fields
+    Array.for_all (fun (_, _, exp) -> is_nonexpansive exp) fields
+    && is_nonexpansive_opt extended_expression
     &&
-    match extended_expression with
-    | Some exp -> is_nonexpansive exp
-    | None -> (
-      (* The optional fields the literal leaves out are allocated too *)
-      match fields with
-      | [||] -> (
-        (* [{}] has no field to find the record's labels through *)
-        match extract_concrete_record exp.exp_env exp.exp_type with
-        | _, _, decls, _ ->
-          List.for_all
-            (fun (ld : Types.label_declaration) -> ld.ld_mutable = Immutable)
-            decls
-        | exception Not_found -> false)
-      | _ ->
-        let lbl, _, _ = fields.(0) in
-        Array.for_all (fun lbl -> lbl.lbl_mut = Immutable) lbl.lbl_all))
+    (* The literal allocates every field of the record: written, copied from
+       the spread, or left out *)
+    match fields with
+    | [||] -> (
+      (* [{}] has no field to find the record's labels through *)
+      match extract_concrete_record exp.exp_env exp.exp_type with
+      | _, _, decls, _ ->
+        List.for_all
+          (fun (ld : Types.label_declaration) -> ld.ld_mutable = Immutable)
+          decls
+      | exception Not_found -> false)
+    | _ ->
+      let lbl, _, _ = fields.(0) in
+      Array.for_all (fun lbl -> lbl.lbl_mut = Immutable) lbl.lbl_all)
   | Texp_field (exp, _, _) -> is_nonexpansive exp
   | Texp_array [] -> false
   | Texp_ifthenelse (_cond, ifso, ifnot) ->
