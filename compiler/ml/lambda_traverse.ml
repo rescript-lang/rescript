@@ -243,6 +243,17 @@ let free_variables l =
       | _ -> [])
     l
 
+let assigned_variables l =
+  let assigned = ref Set_ident.empty in
+  let rec walk l =
+    (match l with
+    | Lassign (id, _) -> assigned := Set_ident.add id !assigned
+    | _ -> ());
+    iter walk l
+  in
+  walk l;
+  !assigned
+
 (* Substitution rebuilds through [shallow_map_sharing], so the result is
    normalized and an untouched subterm is returned physically unchanged. *)
 let subst_lambda s lam =

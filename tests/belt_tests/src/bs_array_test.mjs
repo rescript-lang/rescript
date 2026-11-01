@@ -847,8 +847,9 @@ Mocha.describe("Bs_array_test", () => {
     }), c === 6));
   });
   let id = (loc, x) => {
+    let tmp = Belt_Array.reverse(x);
     let u = x.slice(0);
-    Test_utils.eq("File \"bs_array_test.res\", line 298, characters 6-13", Belt_Array.reverse(x), (Belt_Array.reverseInPlace(u), u));
+    Test_utils.eq("File \"bs_array_test.res\", line 298, characters 6-13", tmp, (Belt_Array.reverseInPlace(u), u));
   };
   Mocha.test("bs_array_test_id_functions", () => {
     id("File \"bs_array_test.res\", line 308, characters 7-14", []);
