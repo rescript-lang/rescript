@@ -1,0 +1,1 @@
+- Reject `await` in a function that an async function returns directly, as in `async x => y => await y`, which produced JavaScript with `await` outside an async function.
