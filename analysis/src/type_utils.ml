@@ -378,15 +378,16 @@ let with_completion_scope ~file ~module_path ~pos ~scope f =
 (* The constructor written [path] in a payload position, with the
    environment its payload is typed in. An ordinary constructor is found by
    its name. An extension constructor is named by its module path from the
-   cursor: written qualified, it is the one that path names; unqualified, it
-   is looked up in the scope at the cursor as the compiler does, the most
-   recent declaration or open bringing a constructor of that name and type
-   into scope. *)
+   cursor, so [path] is looked up in the scope at the cursor as the compiler
+   does: the most recent declaration of the constructor, of the path's first
+   module, or open naming it decides. *)
 let find_payload_constructor ~(env : Query_env.t) ~constructors ~extension_envs
     path =
   let with_env c =
     (c, List.assq_opt c extension_envs |> Option.value ~default:env)
   in
+  let parts (c : Constructor.t) = String.split_on_char '.' c.cname.txt in
+  let exact path = constructors |> List.find_opt (fun c -> parts c = path) in
   let rec ends_with l suffix =
     l = suffix
     ||
@@ -394,93 +395,72 @@ let find_payload_constructor ~(env : Query_env.t) ~constructors ~extension_envs
     | _ :: l -> ends_with l suffix
     | [] -> false
   in
-  let parts (c : Constructor.t) = String.split_on_char '.' c.cname.txt in
-  (* The constructors [path] names, possibly from an opened module, or
-     written from further out than the cursor. *)
-  let named path =
-    constructors
-    |> List.filter (fun c ->
-        ends_with (parts c) path || ends_with path (parts c))
+  (* Written from further out than the cursor, a path names its modules
+     from there. *)
+  let from_further_out path =
+    constructors |> List.find_opt (fun c -> ends_with path (parts c))
   in
-  let exact path = constructors |> List.find_opt (fun c -> parts c = path) in
-  let last l =
-    match List.rev l with
-    | x :: _ -> Some x
-    | [] -> None
+  let qualified path =
+    match exact path with
+    | Some c -> Some c
+    | None -> from_further_out path
   in
-  (* [path] with a leading module alias declared in [scope] replaced by the
-     path it aliases, which is resolved in the scope of the alias. *)
-  let rec unalias (file : File.t) (scope : Scope_types.item list) path =
-    match path with
-    | m :: (_ :: _ as rest) -> (
-      let rec find_module (scope : Scope_types.item list) =
-        match scope with
-        | [] -> None
-        | Module (n, loc) :: outer when n = m -> Some (loc, outer)
-        | _ :: scope -> find_module scope
+  let found =
+    match (extension_envs, !completion_scope) with
+    | [], _ ->
+      let name = List.nth_opt (List.rev path) 0 in
+      constructors
+      |> List.find_opt (fun (c : Constructor.t) -> Some c.cname.txt = name)
+    | _, None -> qualified path
+    | _, Some ((file : File.t), _, _, scope) ->
+      let declared_at loc (c : Constructor.t) =
+        (snd (with_env c) : Query_env.t).file.uri = file.uri
+        && Loc.has_pos ~pos:(Loc.start c.cname.loc) loc
       in
-      match find_module scope with
-      | None -> path
-      | Some (loc, outer) -> (
-        let aliased = ref None in
+      let aliased m loc =
+        let found = ref None in
         file.stamps
         |> Stamps.iter_modules (fun _ (declared : Module.t Declared.t) ->
             match declared.item with
             | Ident p
               when declared.name.txt = m
                    && Loc.start declared.extent_loc = Loc.start loc ->
-              aliased := Some p
+              found := Some (String.split_on_char '.' (Path.name p))
             | _ -> ());
-        match !aliased with
-        | Some p ->
-          unalias file outer (String.split_on_char '.' (Path.name p) @ rest)
-        | None -> path))
-    | _ -> path
-  in
-  let found =
-    match (extension_envs, path, !completion_scope) with
-    | [], _, _ ->
-      constructors
-      |> List.find_opt (fun (c : Constructor.t) -> Some c.cname.txt = last path)
-    | _, [name], Some ((file : File.t), _, _, scope) ->
-      let declared_at loc (c : Constructor.t) =
-        (snd (with_env c) : Query_env.t).file.uri = file.uri
-        && Loc.has_pos ~pos:(Loc.start c.cname.loc) loc
+        !found
       in
-      let rec lookup (scope : Scope_types.item list) =
-        match scope with
-        | [] -> exact path
-        | Constructor (n, loc) :: scope when n = name -> (
+      (* [path] with its leading module aliases resolved. *)
+      let rec unalias (scope : Scope_types.item list) path =
+        match (scope, path) with
+        | Module (n, loc) :: scope, m :: (_ :: _ as rest) when n = m -> (
+          match aliased m loc with
+          | Some p -> unalias scope (p @ rest)
+          | None -> path)
+        | _ :: scope, _ -> unalias scope path
+        | [], _ -> path
+      in
+      let rec lookup (scope : Scope_types.item list) path =
+        match (scope, path) with
+        | [], _ -> qualified path
+        | Constructor (n, loc) :: scope, [name] when n = name -> (
           match constructors |> List.find_opt (declared_at loc) with
           | Some c -> Some c
-          | None -> lookup scope)
-        | Open opened :: scope -> (
+          | None -> lookup scope path)
+        | Module (n, _) :: _, m :: _ :: _ when n = m ->
+          qualified (unalias scope path)
+        | Open opened :: scope, _ -> (
           (* A raw open ends in a placeholder for the name it qualifies. *)
           let opened =
             List.filteri (fun i _ -> i < List.length opened - 1) opened
           in
+          match exact (unalias scope (opened @ path)) with
           (* A constructor named without a module path is declared around
              the cursor, so no open brings it into scope. *)
-          let in_module (c : Constructor.t) = List.length (parts c) > 1 in
-          match
-            last
-              (named (unalias file scope (opened @ path))
-              |> List.filter in_module)
-          with
-          | Some c -> Some c
-          | None -> lookup scope)
-        | _ :: scope -> lookup scope
+          | Some c when List.length (parts c) > 1 -> Some c
+          | _ -> lookup scope path)
+        | _ :: scope, _ -> lookup scope path
       in
-      lookup scope
-    | _ -> (
-      let path =
-        match !completion_scope with
-        | Some (file, _, _, scope) -> unalias file scope path
-        | None -> path
-      in
-      match exact path with
-      | Some c -> Some c
-      | None -> last (named path))
+      lookup scope path
   in
   found |> Option.map with_env
 
