@@ -47,6 +47,34 @@ let ast_header_tests _context =
         (List.length long.dependencies = 600 && long.source = Some "/long.res")
         "a header longer than the first read is read whole")
 
+let copy_tests _context =
+  with_temp_dir (fun root ->
+      let source = Filename.concat root "A.cmi" in
+      let destination = Filename.concat root "published.cmi" in
+      let missing = Filename.concat root "Missing.map" in
+      Build_file_store.with_build (fun () ->
+          Build_file_store.write source "interface";
+          check
+            (File_util.copy_build_file_if_different source destination)
+            "a new destination is copied";
+          check
+            (not (File_util.copy_build_file_if_different source destination))
+            "an equal destination is kept";
+          Build_file_store.write source "changed";
+          check
+            (File_util.copy_build_file_if_different source destination)
+            "a changed source is copied";
+          File_util.copy_optional_build_file source missing;
+          File_util.copy_optional_build_file
+            (Filename.concat root "Absent.map")
+            missing;
+          check
+            (not (Sys.file_exists missing))
+            "a missing optional source removes the destination");
+      check
+        (File_util.read_file destination = "changed")
+        "copies are written to disk")
+
 let parallel_map_tests _context =
   let items = List.init 1000 Fun.id in
   check
@@ -66,5 +94,6 @@ let tests =
   "build_file_tests"
   >::: [
          "ast_header" >:: ast_header_tests;
+         "copy" >:: copy_tests;
          "parallel_map" >:: parallel_map_tests;
        ]

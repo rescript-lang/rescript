@@ -188,9 +188,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let parse_results =
     parse_entries
     |> List.map (fun ((package : Package_plan.t), path, _) ->
-        Compiler_process.parse_request ~build_dir:package.build_dir
-          ~config:package.compile_config path)
-    |> Compiler_process.run_requests ?poll:attempt.process_poll
+        (package.build_dir, package.ocaml_dir, package.compile_config, path))
+    |> Compiler_process.run_parses ?poll:attempt.process_poll
          ~on_complete:parse_completed
   in
   let failed_parse_paths = Hashtbl.create 8 in

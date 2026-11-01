@@ -165,9 +165,11 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
   let results =
     sources
     |> List.map (fun source ->
-        Compiler_process.parse_request ~build_dir:source.package.build_dir
-          ~config:source.package.compile_config source.source.relative_path)
-    |> Compiler_process.run_requests ?poll:attempt.process_poll
+        ( source.package.build_dir,
+          source.package.ocaml_dir,
+          source.package.compile_config,
+          source.source.relative_path ))
+    |> Compiler_process.run_parses ?poll:attempt.process_poll
          ~on_complete:parse_completed
   in
   let affected_modules = Hashtbl.create (List.length sources) in

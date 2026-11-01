@@ -6,14 +6,30 @@ type request = {args: string list; cwd: string}
     input file, and the directory it runs in. *)
 
 val parse_request : build_dir:string -> config:Config.t -> string -> request
-val ast_dependencies : build_dir:string -> string -> string list
 val run : ?poll:(unit -> unit) -> request -> Process.result
+
 val run_requests :
   ?poll:(unit -> unit) ->
   ?on_complete:(int -> unit) ->
+  ?on_success:(int -> unit) ->
   request list ->
   Process.result list
-val task : request -> Process.task
+(** [on_success index] runs on the worker domain after the request at [index]
+    succeeds. *)
+
+val publish_parse :
+  build_dir:string -> ocaml_dir:string -> config:Config.t -> string -> unit
+(** Publishes the AST and the source of a successful parse into [ocaml_dir]. *)
+
+val run_parses :
+  ?poll:(unit -> unit) ->
+  ?on_complete:(int -> unit) ->
+  (string * string * Config.t * string) list ->
+  Process.result list
+(** Parses each [(build_dir, ocaml_dir, config, path)], publishing every
+    successful parse with {!publish_parse} on the worker that parsed it. *)
+
+val task : ?on_success:(unit -> unit) -> request -> Process.task
 
 val namespace_task :
   runtime:string ->

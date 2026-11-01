@@ -53,9 +53,9 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
       (fun path result -> (path, Build_attempt.preliminary_parse result))
       parse_paths_to_run
       (List.map
-         (fun path -> Compiler_process.parse_request ~build_dir ~config path)
+         (fun path -> (build_dir, ocaml_dir, config, path))
          parse_paths_to_run
-      |> Compiler_process.run_requests ?poll:attempt.process_poll)
+      |> Compiler_process.run_parses ?poll:attempt.process_poll)
     @ (dirty_parse_paths
       |> List.filter_map (fun path ->
           Hashtbl.find_opt attempt.preliminary_parses
@@ -66,7 +66,7 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
     (fun (path, result) ->
       let absolute_path = Filename.concat root path in
       let pending_path = Platform.normalize_path_for_comparison absolute_path in
-      let publish_successful_parse stderr =
+      let publish_successful_parse ~published stderr =
         let stderr =
           if is_local then stderr
           else Compiler_process.retain_critical_external_warnings stderr
@@ -86,14 +86,11 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         let published_ast =
           Build_artifacts.published_ast_path ~ocaml_dir path
         in
-        File_util.copy_existing_file
-          (Filename.concat build_dir ast)
-          published_ast;
+        (* A parse in this build published its outputs on its worker. *)
+        if not published then
+          Compiler_process.publish_parse ~build_dir ~ocaml_dir ~config path;
         Compile_assets.refresh_ast compile_assets ~source:absolute_path
           ~path:published_ast;
-        File_util.copy_existing_file
-          (Filename.concat config.root path)
-          (Filename.concat ocaml_dir (Filename.basename path));
         if is_local && stderr <> "" then
           Build_session.mark_parse_pending attempt.session pending_path
         else Build_session.clear_parse_pending attempt.session pending_path
@@ -108,7 +105,8 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         attempt.parse_messages <-
           Build_attempt.Parse_error output :: attempt.parse_messages
       | Build_attempt.Parsed_successfully {stderr} ->
-        publish_successful_parse stderr
-      | Build_attempt.Use_existing_ast -> publish_successful_parse "")
+        publish_successful_parse ~published:true stderr
+      | Build_attempt.Use_existing_ast ->
+        publish_successful_parse ~published:false "")
     parsed;
   dirty_modules
