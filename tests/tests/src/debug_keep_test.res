@@ -1,1 +1,1 @@
-let () = %debugger
+let () = debugger()
