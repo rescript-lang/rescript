@@ -446,3 +446,79 @@ Signature help src/CompletionExtensibleVariant.res 90:32
   ]
 }
 
+Complete src/CompletionExtensibleVariant.res 98:28
+pos_cursor:[98:28] pos_no_white:[98:27] Found expr:[94:11->106:1]
+pos_cursor:[98:28] pos_no_white:[98:27] Found expr:[95:2->105:15]
+pos_cursor:[98:28] pos_no_white:[98:27] Found expr:[98:5->105:15]
+Completable: Cexpression Type[attr]=InL
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[
+  {
+    "detail": "Local.InLocal",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nLocal.InLocal\n```\n\n```rescript\ntype attr = ..\n```"
+    },
+    "insertText": "Local.InLocal",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Local.InLocal",
+    "tags": []
+  }
+]
+
+Xform src/CompletionExtensibleVariant.res 102:4
+pos_cursor:[100:17] pos_no_white:[100:15] Found expr:[94:11->106:1]
+pos_cursor:[100:17] pos_no_white:[100:15] Found expr:[95:2->105:15]
+pos_cursor:[100:17] pos_no_white:[100:15] Found expr:[100:2->105:15]
+pos_cursor:[100:17] pos_no_white:[100:15] Found expr:[100:10->104:3]
+Completable: Cpath Value[value]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 5, "line": 102 },
+  "start": { "character": 4, "line": 102 }
+}
+newText:
+    <--here
+    Num(_) | Sub.Flag | Sub.Toggle(_) | Later | Nested.Inner | Nested.AfterAction | Local.InLocal | _
+
+Complete src/CompletionExtensibleVariant.res 108:28
+XXX Not found!
+Completable: Cexpression Type[attr]=InL
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[attr]
+Path attr
+[]
+
+Xform src/CompletionExtensibleVariant.res 113:2
+pos_cursor:[111:16] pos_no_white:[111:14] Found expr:[111:9->115:1]
+Completable: Cpath Value[value]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 3, "line": 113 },
+  "start": { "character": 2, "line": 113 }
+}
+newText:
+  <--here
+  Num(_) | Sub.Flag | Sub.Toggle(_) | Later | Nested.Inner | Nested.AfterAction | _
+
