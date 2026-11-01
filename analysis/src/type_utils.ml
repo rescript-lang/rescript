@@ -362,7 +362,7 @@ let extract_function_type2 ?type_arg_context ~state ~env ~package typ =
   loop ?type_arg_context ~env [] typ
 
 (* The file being edited, the module path at the cursor and the scope there,
-   while a completion request runs. Extension constructors are named
+   while a completion request or a code action runs. Extension constructors are named
    relative to it: unlike ordinary constructors they can't be found from the
    expected type, so they have to be written so that they are in scope
    there. *)
@@ -370,9 +370,31 @@ let completion_scope :
     (File.t * string list * Pos.t * Scope_types.item list) option ref =
   ref None
 
-let with_completion_scope ~file ~module_path ~pos ~scope f =
+(* The names of the modules around [pos] in [file], outermost first. *)
+let module_path_at ~(file : File.t) ~pos =
+  let rec in_items (items : Module.item list) =
+    match
+      items
+      |> List.find_opt (fun (item : Module.item) ->
+          Loc.has_pos ~pos item.loc
+          &&
+          match item.kind with
+          | Module _ -> true
+          | _ -> false)
+    with
+    | Some {name; kind = Module {type_}} -> name :: in_module type_
+    | _ -> []
+  and in_module (m : Module.t) =
+    match m with
+    | Structure {items} -> in_items items
+    | Constraint (implementation, _) -> in_module implementation
+    | Ident _ -> []
+  in
+  in_items file.structure.items
+
+let with_completion_scope ~file ~pos ~scope f =
   let previous = !completion_scope in
-  completion_scope := Some (file, module_path, pos, scope);
+  completion_scope := Some (file, module_path_at ~file ~pos, pos, scope);
   Fun.protect ~finally:(fun () -> completion_scope := previous) f
 
 (* The constructor written [path] in a payload position, with the
@@ -463,6 +485,14 @@ let find_payload_constructor ~(env : Query_env.t) ~constructors ~extension_envs
       lookup scope path
   in
   found |> Option.map with_env
+
+(* Other files can extend an open type, so a switch on it or the expansion
+   of its catch-all keeps a catch-all case after the constructors known
+   here. *)
+let open_type_catch_all (decl : Types.type_declaration) =
+  match decl.type_kind with
+  | Type_open -> ["_"]
+  | Type_abstract | Type_record _ | Type_variant _ -> []
 
 (* The stamp under which [typ] is declared in [file]. *)
 let type_stamp (file : File.t) (typ : Type.t) =

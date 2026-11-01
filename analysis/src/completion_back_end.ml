@@ -2593,14 +2593,8 @@ let rec process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
                   | Args [] -> ""
                   | _ -> "(_)")
             in
-            (* An open type can be extended elsewhere, so only a catch-all
-               case makes the switch exhaustive. *)
-            let cases =
-              match v.variant_decl.type_kind with
-              | Type_open -> cases @ ["_"]
-              | _ -> cases
-            in
-            with_exhaustive_item c ~cases
+            with_exhaustive_item c
+              ~cases:(cases @ Type_utils.open_type_catch_all v.variant_decl)
           | Some (Tpolyvariant v, _) ->
             with_exhaustive_item c
               ~cases:
@@ -2649,36 +2643,8 @@ let rec process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
       ]
     else []
 
-(* The names of the modules around [pos] in [file], outermost first. *)
-let module_path_at ~(full : full) ~pos =
-  let rec in_items (items : Module.item list) =
-    match
-      items
-      |> List.find_opt (fun (item : Module.item) ->
-          Loc.has_pos ~pos item.loc
-          &&
-          match item.kind with
-          | Module _ -> true
-          | _ -> false)
-    with
-    | Some {name; kind = Module {type_}} -> name :: in_module type_
-    | _ -> []
-  and in_module (m : Module.t) =
-    match m with
-    | Structure {items} -> in_items items
-    | Constraint (implementation, _) -> in_module implementation
-    | Ident _ -> []
-  in
-  in_items full.file.structure.items
-
-(* Runs [f] with extension constructors named as written at [pos]. *)
-let with_completion_scope ~full ~pos ~scope f =
-  Type_utils.with_completion_scope ~file:full.file
-    ~module_path:(module_path_at ~full ~pos)
-    ~pos ~scope f
-
 let process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     completable =
-  with_completion_scope ~full ~pos ~scope (fun () ->
+  Type_utils.with_completion_scope ~file:full.file ~pos ~scope (fun () ->
       process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
         ~for_hover completable)
