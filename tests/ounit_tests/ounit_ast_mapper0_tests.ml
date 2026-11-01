@@ -2030,6 +2030,74 @@ let assert_raw_extension_payload ~name ~expected expression =
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected actual
   | _ -> assert_failure "Expected a raw node with a string payload"
 
+let test_todo_roundtrips_through_ast0 _ =
+  let source =
+    {|let a = %todo
+let b = @attr %todo("message")
+let c = %todo(`template`)
+let d = %todo(1)|}
+  in
+  let parsed =
+    Res_driver.parse_implementation_from_source ~display_filename:"Todo.res"
+      ~source
+  in
+  OUnit.assert_bool "expected valid ReScript source" (not parsed.invalid);
+  let expressions structure =
+    List.map
+      (function
+        | {Parsetree.pstr_desc = Pstr_value (_, [{pvb_expr}])} -> pvb_expr
+        | _ -> assert_failure "Expected a let binding")
+      structure
+  in
+  (match
+     List.map (fun e -> e.Parsetree.pexp_desc) (expressions parsed.parsetree)
+   with
+  | [
+   Pexp_todo {message = None};
+   Pexp_todo {message = Some {pexp_desc = Pexp_constant (Pconst_string _)}};
+   Pexp_todo {message = Some {pexp_desc = Pexp_template _}};
+   Pexp_extension ({txt = "todo"}, _);
+  ] ->
+    ()
+  | _ -> assert_failure "Expected three todo nodes and an extension");
+  let structure0 =
+    Ast_mapper_to0.default_mapper.structure Ast_mapper_to0.default_mapper
+      parsed.parsetree
+  in
+  (* On the ast0 wire, a todo node is the extension it is written as. *)
+  (match structure0 with
+  | {
+      pstr_desc =
+        Pstr_value
+          ( _,
+            [
+              {pvb_expr = {pexp_desc = Pexp_extension ({txt = "todo"}, PStr [])}};
+            ] );
+    }
+    :: _ ->
+    ()
+  | _ -> assert_failure "Expected a %todo extension on the ast0 wire");
+  (* Locations included: the tree comes back as it was parsed. *)
+  OUnit.assert_equal parsed.parsetree
+    (Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+       structure0);
+  (* A PPX that builds %todo("x") on the ast0 wire produces a todo node. *)
+  let ppx_todo =
+    Ast_helper0.Exp.extension ~loc
+      ( Location.mknoloc "todo",
+        Parsetree0.PStr
+          [
+            Ast_helper0.Str.eval ~loc
+              (Ast_helper0.Exp.constant ~loc
+                 (Parsetree0.Pconst_string ("x", None)));
+          ] )
+  in
+  match (map_expr0 ppx_todo).pexp_desc with
+  | Pexp_todo {message = Some message} ->
+    OUnit.assert_equal ~printer:(Printf.sprintf "%S") "x"
+      (Option.get (Ast_payload.semantic_string_of_expression message))
+  | _ -> assert_failure "Expected a todo node"
+
 let test_raw_extension_payloads_roundtrip_through_ast0 _ =
   let encoded = {|'\\n'|} in
   List.iter
@@ -2892,6 +2960,7 @@ let suites =
          >:: test_raw_structure_item_roundtrips_through_ast0;
          "template_locations_roundtrip_through_ast0"
          >:: test_template_locations_roundtrip_through_ast0;
+         "todo_roundtrips_through_ast0" >:: test_todo_roundtrips_through_ast0;
          "raw_source_prints_with_fitting_quotes"
          >:: test_raw_source_prints_with_fitting_quotes;
          "raw_source_template_fallback_reparses"

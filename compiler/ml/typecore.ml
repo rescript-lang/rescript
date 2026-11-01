@@ -211,7 +211,7 @@ let iter_expression f e =
     match e.pexp_desc with
     | Pexp_braces {expr = inner} -> expr inner
     | Pexp_extension _ (* we don't iterate under extension point *) | Pexp_raw _
-    | Pexp_ident _ | Pexp_constant _ ->
+    | Pexp_todo _ | Pexp_ident _ | Pexp_constant _ ->
       ()
     | Pexp_fun {params; body} ->
       List.iter (fun {p_default} -> may expr p_default) params;
@@ -3813,6 +3813,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     raise
       (Error_forward
          (Ast_raw.uninterpreted ~loc:name_loc (Ast_raw.extension_name kind)))
+  | Pexp_todo {name_loc} ->
+    (* The built-in PPX lowers %todo before type checking. *)
+    raise (Error_forward (Ast_raw.uninterpreted ~loc:name_loc Ast_todo.name))
   | Pexp_await _ -> (* should be handled earlier *) assert false
   | Pexp_jsx_element _ ->
     raise (Error (sexp.pexp_loc, Env.empty, Jsx_not_enabled))

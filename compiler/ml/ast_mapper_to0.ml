@@ -878,6 +878,9 @@ module E = struct
     | Pexp_raw {kind; name_loc; source} ->
       extension ~loc ~attrs
         (raw_extension sub ~name:(Ast_raw.extension_name kind) ~name_loc source)
+    | Pexp_todo {name_loc; message} ->
+      extension ~loc ~attrs
+        (sub.extension sub (Ast_todo.to_extension ~name_loc message))
     | Pexp_await e ->
       (* Single v0 attribute slot for two nodes: the await node's own
          attributes go in front of the [res.await] marker, the inner

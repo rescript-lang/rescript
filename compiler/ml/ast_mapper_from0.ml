@@ -1481,7 +1481,15 @@ module E = struct
       match (Ast_raw.kind_of_name name, raw_source_from0 sub payload) with
       | Some kind, Some source ->
         raw ~loc ~attrs ~name_loc:(sub.location sub name_loc) kind source
-      | _ -> extension ~loc ~attrs (sub.extension sub x))
+      | _ -> (
+        let (({txt = name; loc = name_loc}, payload) as x) =
+          sub.extension sub x
+        in
+        match
+          if name = Ast_todo.name then Ast_todo.of_payload payload else None
+        with
+        | Some message -> todo ~loc ~attrs ~name_loc message
+        | None -> extension ~loc ~attrs x))
     | Pexp_unreachable -> assert false
 end
 
