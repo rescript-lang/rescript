@@ -30,7 +30,7 @@ type gen = {
 }
 
 (* Derivers that used to be built in. They get a dedicated error pointing to
-   the replacement instead of the generic "is not supported". *)
+   the replacement instead of the generic "is not supported" one. *)
 let removed_deriver_hint = function
   | "abstract" ->
     Some
@@ -57,7 +57,11 @@ let dispatch (({txt = name; loc}, config) : Ast_payload.action) =
     match removed_deriver_hint name with
     | Some hint ->
       Location.raise_errorf ~loc "@deriving(%s) has been removed. %s" name hint
-    | None -> Location.raise_errorf ~loc "%s is not supported" name)
+    | None ->
+      Location.raise_errorf ~loc
+        "@deriving(%s) is not supported. The only deriver is \
+         @deriving(accessors)."
+        name)
 
 let gen_signature tdcls (actions : Ast_payload.action list)
     (explict_nonrec : Asttypes.rec_flag) : Ast_signature.t =

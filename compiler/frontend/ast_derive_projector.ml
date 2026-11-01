@@ -4,7 +4,7 @@ let check_config (config : Parsetree.expression option) =
   Option.iter
     (fun (config : Parsetree.expression) ->
       Location.raise_errorf ~loc:config.pexp_loc
-        "such configuration is not supported")
+        "@deriving(accessors) takes no configuration.")
     config
 
 let raise_unsupported_vaiant_record_arg loc =

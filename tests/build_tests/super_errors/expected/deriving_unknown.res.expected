@@ -6,4 +6,4 @@
   2 [2m│[0m type t = {name: string}
   3 [2m│[0m 
 
-  lenses is not supported
+  @deriving(lenses) is not supported. The only deriver is @deriving(accessors).

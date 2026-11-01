@@ -6,4 +6,4 @@
   2 [2m│[0m type t = {name: string}
   3 [2m│[0m 
 
-  such configuration is not supported
+  @deriving(accessors) takes no configuration.
