@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/await_in_returned_function.res[0m:[2m3:28-36[0m
+
+  1 [2m│[0m let a = async () => 3
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let foo = async x => y => ([1;31mawait a()[0m) + x + y
+  4 [2m│[0m 
+
+  Await on expression not in an async context

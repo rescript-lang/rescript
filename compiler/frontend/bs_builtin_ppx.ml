@@ -113,10 +113,7 @@ let local_module_type_decl ~await_context
           (Mtd.mk ~loc {txt = name; loc} ~typ:(Mty.typeof_ ~loc me)));
     ])
 
-let expr_mapper ~async_context ~in_function_def (self : mapper)
-    (e : Parsetree.expression) =
-  let old_in_function_def = !in_function_def in
-  in_function_def := false;
+let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
   match e.pexp_desc with
   (* Its output should not be rewritten anymore *)
   | Pexp_regexp {pattern; flags} ->
@@ -168,8 +165,10 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_fun {newtypes; params; body; async} -> (
     match Ast_attributes.process_attributes_rev e.pexp_attributes with
     | Nothing, _ ->
-      (* Handle @async x => y => ... is in async context *)
-      async_context := (old_in_function_def && !async_context) || async;
+      (* A [Pexp_fun] holds all parameters of one function, so a [Pexp_fun]
+         in its body is another function: in [async x => y => await y], the
+         inner function is not async and compiles to a plain arrow. *)
+      async_context := async;
       let attrs = self.attributes self e.pexp_attributes in
       let params =
         Ext_list.map params (fun (p : Parsetree.fun_param) ->
@@ -179,13 +178,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
               p_pat = self.pat self p.p_pat;
             })
       in
-      let saved_in_function_def = !in_function_def in
-      in_function_def := true;
-      (* Keep reporting the body as part of a function definition so nested
-         functions propagate async context exactly like the legacy curried
-         mapper did (GH #7974). *)
       let body = self.expr self body in
-      in_function_def := saved_in_function_def;
       let newtypes =
         Ext_list.map newtypes (fun (name, nt_attrs) ->
             (name, self.attributes self nt_attrs))
@@ -432,10 +425,9 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
     | Some (_, _, Some _) | None -> default_expr_mapper self e)
   | _ -> default_expr_mapper self e
 
-let expr_mapper ~async_context ~in_function_def (self : mapper)
-    (e : Parsetree.expression) =
+let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
   let async_saved = !async_context in
-  let result = expr_mapper ~async_context ~in_function_def self e in
+  let result = expr_mapper ~async_context self e in
   async_context := async_saved;
   let check_await () =
     if !async_context = false then
@@ -690,7 +682,6 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
 
 type mapper_context = {
   async_context: bool ref;
-  in_function_def: bool ref;
   await_context: (string, string) Hashtbl.t ref;
 }
 
@@ -699,11 +690,7 @@ type mapper_context = {
    function body must not change whether an await is accepted here. *)
 let mapper_context_key =
   Request_local.new_key (fun () ->
-      {
-        async_context = ref true;
-        in_function_def = ref false;
-        await_context = ref (Hashtbl.create 10);
-      })
+      {async_context = ref true; await_context = ref (Hashtbl.create 10)})
 
 let mapper_context () = Domain.DLS.get mapper_context_key
 
@@ -897,8 +884,7 @@ let mapper : mapper =
     expr =
       (fun self expression ->
         let context = mapper_context () in
-        expr_mapper ~async_context:context.async_context
-          ~in_function_def:context.in_function_def self expression);
+        expr_mapper ~async_context:context.async_context self expression);
     pat = pat_mapper;
     typ = typ_mapper;
     signature_item = signature_item_mapper;
