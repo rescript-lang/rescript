@@ -403,7 +403,40 @@ let find_payload_constructor ~(env : Query_env.t) ~constructors ~extension_envs
         ends_with (parts c) path || ends_with path (parts c))
   in
   let exact path = constructors |> List.find_opt (fun c -> parts c = path) in
-  let last l = List.nth_opt l (List.length l - 1) in
+  let last l =
+    match List.rev l with
+    | x :: _ -> Some x
+    | [] -> None
+  in
+  (* [path] with a leading module alias declared in [scope] replaced by the
+     path it aliases, which is resolved in the scope of the alias. *)
+  let rec unalias (file : File.t) (scope : Scope_types.item list) path =
+    match path with
+    | m :: (_ :: _ as rest) -> (
+      let rec find_module (scope : Scope_types.item list) =
+        match scope with
+        | [] -> None
+        | Module (n, loc) :: outer when n = m -> Some (loc, outer)
+        | _ :: scope -> find_module scope
+      in
+      match find_module scope with
+      | None -> path
+      | Some (loc, outer) -> (
+        let aliased = ref None in
+        file.stamps
+        |> Stamps.iter_modules (fun _ (declared : Module.t Declared.t) ->
+            match declared.item with
+            | Ident p
+              when declared.name.txt = m
+                   && Loc.start declared.extent_loc = Loc.start loc ->
+              aliased := Some p
+            | _ -> ());
+        match !aliased with
+        | Some p ->
+          unalias file outer (String.split_on_char '.' (Path.name p) @ rest)
+        | None -> path))
+    | _ -> path
+  in
   let found =
     match (extension_envs, path, !completion_scope) with
     | [], _, _ ->
@@ -429,13 +462,22 @@ let find_payload_constructor ~(env : Query_env.t) ~constructors ~extension_envs
           (* A constructor named without a module path is declared around
              the cursor, so no open brings it into scope. *)
           let in_module (c : Constructor.t) = List.length (parts c) > 1 in
-          match last (named (opened @ path) |> List.filter in_module) with
+          match
+            last
+              (named (unalias file scope (opened @ path))
+              |> List.filter in_module)
+          with
           | Some c -> Some c
           | None -> lookup scope)
         | _ :: scope -> lookup scope
       in
       lookup scope
     | _ -> (
+      let path =
+        match !completion_scope with
+        | Some (file, _, _, scope) -> unalias file scope path
+        | None -> path
+      in
       match exact path with
       | Some c -> Some c
       | None -> last (named path))
