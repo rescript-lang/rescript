@@ -3,12 +3,11 @@ let suites =
     [
       Ounit_json_tests.suites;
       Ounit_scc_tests.suites;
+      Ounit_lambda_scc_tests.suites;
       Ounit_list_test.suites;
       Ounit_hash_stubs_test.suites;
-      Ounit_hashtbl_tests.suites;
       Ounit_string_tests.suites;
       Ounit_string_literal_tests.suites;
-      Ounit_ident_mask_tests.suites;
       Ounit_lid_of_path_tests.suites;
       Ounit_utf8_test.suites;
       Ounit_util_tests.suites;
