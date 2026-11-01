@@ -186,7 +186,8 @@ type constructor_info = {
   args: constructor_args;
 }
 
-let find_constructor_args ~full ~env ~state ~constructor_name loc =
+let find_constructor_args ~full ~env ~state ~constructor_name ~constructor_path
+    loc =
   match
     References.get_loc_item ~debug:false ~full
       ~pos:(Pos.of_lexing loc.Location.loc_end)
@@ -235,13 +236,10 @@ let find_constructor_args ~full ~env ~state ~constructor_name loc =
             args = Args [(error_type, Location.none)];
           }
       | _ -> None)
-    | Some (Tvariant {constructors}, _) ->
-      constructors
-      (* An extension constructor is named by its module path. *)
-      |> List.find_opt (fun (c : Constructor.t) ->
-          List.rev (String.split_on_char '.' c.cname.txt)
-          |> List.hd = constructor_name)
-      |> Option.map (fun (c : Constructor.t) ->
+    | Some (Tvariant {env; constructors; extension_envs}, _) ->
+      Type_utils.find_payload_constructor ~env ~constructors ~extension_envs
+        constructor_path
+      |> Option.map (fun ((c : Constructor.t), _) ->
           {docstring = c.docstring; name = c.cname.txt; args = c.args})
     | _ -> None)
   | _ -> None
@@ -567,9 +565,16 @@ let signature_help ~debug ~source ~kind_file ~pos
           let {file} = full in
           let env = Query_env.from_file file in
           let constructor_name = Longident.last lid.txt in
+          (* An extension constructor is resolved in the scope at the
+             cursor, as in payload completion. *)
+          let scope =
+            Completion_front_end.scope_at ~source ~kind_file ~pos_cursor:pos
+          in
           match
-            find_constructor_args ~full ~state ~env ~constructor_name
-              {lid.loc with loc_start = lid.loc.loc_end}
+            Type_utils.with_completion_scope ~file ~pos ~scope (fun () ->
+                find_constructor_args ~full ~state ~env ~constructor_name
+                  ~constructor_path:(Longident.flatten lid.txt)
+                  {lid.loc with loc_start = lid.loc.loc_end})
           with
           | None ->
             if Debug.verbose () then
