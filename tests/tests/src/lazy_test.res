@@ -83,7 +83,7 @@ describe(__MODULE__, () => {
     eq(
       __LOC__,
       {
-        %debugger
+        debugger()
         Lazy.get(Lazy.get(Lazy.make(() => forward_test)))
       },
       4,

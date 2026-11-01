@@ -14,7 +14,7 @@ let node = %raw(
 let f: (int, int) => int = %raw((a, b) => "{return a + b}");
 
 let f = (x, y) => {
-  %debugger
+  %foo
   x + y
 }
 

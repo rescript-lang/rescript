@@ -56,8 +56,6 @@ let handle_extension e (_self : Ast_mapper.mapper)
       ]
   | "ffi" -> Ast_exp_handle_external.handle_ffi ~loc ~payload
   | "raw" -> Ast_exp_handle_external.handle_raw loc payload
-  | "debugger" ->
-    {e with pexp_desc = Ast_exp_handle_external.handle_debugger loc payload}
   | _ -> e
 (* For an unknown extension, we don't really need to process further*)
 (* Exp.extension ~loc ~attrs:e.pexp_attributes (

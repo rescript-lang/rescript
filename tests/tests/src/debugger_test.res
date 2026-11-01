@@ -5,17 +5,17 @@ let f = (x, y) => {
 
 let g = () => {
   ignore(f(1, 2))
-  %debugger
+  debugger()
   ignore(f(1, 2))
-  %debugger
+  debugger()
   3
 }
 
 let exterme_g = () => {
   ignore(f(1, 2))
-  let v = %debugger
+  let v = debugger()
   Console.log(v)
   ignore(f(1, 2))
-  %debugger
+  debugger()
   3
 }

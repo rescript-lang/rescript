@@ -31,6 +31,23 @@ external __LOC_OF__: 'a => (string, 'a) = "%loc_LOC"
 external __LINE_OF__: 'a => (int, 'a) = "%loc_LINE"
 external __POS_OF__: 'a => ((string, int, int, int), 'a) = "%loc_POS"
 
+/**
+`debugger()` compiles to a JavaScript `debugger` statement, which pauses
+execution in the caller when a debugger is attached.
+
+See [`debugger`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger) on MDN.
+
+## Examples
+
+```rescript
+let add = (a, b) => {
+  debugger()
+  a + b
+}
+```
+*/
+external debugger: unit => unit = "%debugger"
+
 /* Unified operations */
 
 external \"~+": 'a => 'a = "%plus"

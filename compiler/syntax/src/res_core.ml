@@ -7446,11 +7446,17 @@ and parse_extension ?(module_language = false) p =
   else Parser.expect Percent p;
   let attr_id = parse_attribute_id ~start_pos p in
   let payload = parse_payload p in
-  if attr_id.txt = "re" then
+  (match attr_id.txt with
+  | "re" ->
     Parser.err ~start_pos:attr_id.loc.loc_start ~end_pos:attr_id.loc.loc_end p
       (Diagnostics.message
          "The %re extension has been removed. Use a regexp literal such as \
-          /abc/i.");
+          /abc/i.")
+  | "debugger" ->
+    Parser.err ~start_pos:attr_id.loc.loc_start ~end_pos:attr_id.loc.loc_end p
+      (Diagnostics.message
+         "The %debugger extension has been removed. Use debugger() instead.")
+  | _ -> ());
   (attr_id, payload)
 
 (* module signature on the file level *)

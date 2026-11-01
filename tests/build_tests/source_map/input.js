@@ -157,7 +157,7 @@ const helperSourcePath = path.join(import.meta.dirname, "src", "Helper.res");
 const helperSource = await fs.readFile(helperSourcePath, "utf8");
 const configPath = path.join(import.meta.dirname, "rescript.json");
 const originalConfig = await fs.readFile(configPath, "utf8");
-const originalDebuggerPositions = findTokenPositions(demoSource, "%debugger");
+const originalDebuggerPositions = findTokenPositions(demoSource, "debugger()");
 assert.equal(originalDebuggerPositions.length, 2);
 const originalRaiseErrorPositions = findTokenPositions(
   demoSource,

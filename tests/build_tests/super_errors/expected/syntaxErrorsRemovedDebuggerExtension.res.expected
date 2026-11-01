@@ -1,0 +1,10 @@
+
+  [1;31mSyntax error![0m
+  [36m/.../fixtures/syntaxErrorsRemovedDebuggerExtension.res[0m:[2m2:3-11[0m
+
+  1 [2m│[0m let f = x => {
+  [1;31m2[0m [2m│[0m   [1;31m%debugger[0m
+  3 [2m│[0m   // Use the function instead.
+  4 [2m│[0m   debugger()
+
+  The %debugger extension has been removed. Use debugger() instead.
