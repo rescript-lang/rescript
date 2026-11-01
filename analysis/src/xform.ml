@@ -42,7 +42,7 @@ let with_type_of_expr ~state expr ~debug ~source ~kind_file ~full ~pos f =
          ~pos_cursor:(Pos.of_lexing expr.Parsetree.pexp_loc.loc_start)
   with
   | Some (completable, scope) ->
-    Completion_back_end.with_completion_scope ~full ~pos ~scope (fun () ->
+    Type_utils.with_completion_scope ~file:full.file ~pos ~scope (fun () ->
         f (extract_type completable scope))
   | None -> f None
 
@@ -412,13 +412,6 @@ module Expand_catch_all_for_variants = struct
     in
     {Ast_iterator.default_iterator with expr}
 
-  (* Other files can extend an open type, so its expansion keeps a
-     catch-all alternative after the constructors known here. *)
-  let open_type_catch_all (decl : Types.type_declaration) =
-    match decl.type_kind with
-    | Type_open -> ["_"]
-    | Type_abstract | Type_record _ | Type_variant _ -> []
-
   let xform ~state ~source ~kind_file ~path ~pos ~full ~structure ~code_actions
       ~debug =
     let result = ref None in
@@ -472,7 +465,7 @@ module Expand_catch_all_for_variants = struct
                 match c.args with
                 | Args [] -> ""
                 | Args _ | InlineRecord _ -> "(_)"))
-            @ open_type_catch_all variant_decl
+            @ Type_utils.open_type_catch_all variant_decl
             |> String.concat " | "
           in
           let range = Loc.range_of_loc catch_all_case.pc_lhs.ppat_loc in
@@ -567,7 +560,8 @@ module Expand_catch_all_for_variants = struct
                       name ^ if has_args then "(_)" else ""))
                  @
                  match variant with
-                 | Tvariant {variant_decl} -> open_type_catch_all variant_decl
+                 | Tvariant {variant_decl} ->
+                   Type_utils.open_type_catch_all variant_decl
                  | _ -> [])
                 |> String.concat " | ")
               ^ ")"
