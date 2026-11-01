@@ -193,6 +193,17 @@ let map_raw_source_payload sub = function
          ])
   | _ -> None
 
+(* A template without interpolations is a single v0 constant at the template's
+   location, backquotes included. Its one segment is the text between them. *)
+let single_template_segment_loc (loc : Location.t) =
+  if loc.loc_ghost || loc.loc_end.pos_cnum - loc.loc_start.pos_cnum < 2 then loc
+  else
+    {
+      loc_start = {loc.loc_start with pos_cnum = loc.loc_start.pos_cnum + 1};
+      loc_end = {loc.loc_end with pos_cnum = loc.loc_end.pos_cnum - 1};
+      loc_ghost = false;
+    }
+
 (* The source of a plain v0 [%raw], [%ffi] or [%%raw] payload: a string, or a
    template marked as such. Other payloads stay extensions. *)
 let raw_source_from0 sub = function
@@ -909,7 +920,9 @@ module E = struct
       when has_template_attr attrs ->
       let attrs = remove_template_attr attrs in
       let source = template_source_from0 (text, delimiter) in
-      template ~loc ~attrs [{txt = source; loc}] []
+      template ~loc ~attrs
+        [{txt = source; loc = single_template_segment_loc loc}]
+        []
     | Pexp_constant x ->
       let template = has_template_attr attrs in
       let attrs = if template then remove_template_attr attrs else attrs in
