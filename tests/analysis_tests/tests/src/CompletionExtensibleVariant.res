@@ -86,3 +86,7 @@ module Nested = {
 
   type attr += AfterAction
 }
+
+// Signature help names a qualified extension constructor
+let _toggled: attr = Sub.Toggle(true)
+//                              ^she
