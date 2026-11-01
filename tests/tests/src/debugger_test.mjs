@@ -17,6 +17,18 @@ function g() {
   return 3;
 }
 
+function with_effect() {
+  console.log("before pause");
+  debugger;
+  return 3;
+}
+
+function with_effect_value() {
+  f(1, 2);
+  debugger;
+  
+}
+
 function exterme_g() {
   f(1, 2);
   debugger;
@@ -30,6 +42,8 @@ function exterme_g() {
 export {
   f,
   g,
+  with_effect,
+  with_effect_value,
   exterme_g,
 }
 /* No side effect */

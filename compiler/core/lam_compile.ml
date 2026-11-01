@@ -1686,14 +1686,22 @@ let compile output_prefix =
       | {value = None} -> assert false)
     | {primitive = Psequand; args = [l; r]; _} -> compile_sequand l r lambda_cxt
     | {primitive = Psequor; args = [l; r]} -> compile_sequor l r lambda_cxt
-    | {primitive = Pdebugger; loc; _} ->
-      (* [%debugger] guarantees that the expression does not matter
-         TODO: make it even safer *)
+    | {primitive = Pdebugger; args; loc} ->
+      (* [debugger(arg)]: the argument is unit, but may have effects, such as
+         [debugger(Console.log("x"))], so it runs before the statement. A
+         literal [()] compiles to nothing. *)
+      let args_block =
+        Ext_list.flat_map args (fun arg ->
+            Js_output.output_as_block
+              (compile_lambda
+                 {lambda_cxt with continuation = EffectCall Not_tail}
+                 arg))
+      in
       let stmt =
         with_statement_source_loc (source_map_loc loc) (S.debugger_stmt ())
       in
-      Js_output.output_of_block_and_expression lambda_cxt.continuation [stmt]
-        E.unit
+      Js_output.output_of_block_and_expression lambda_cxt.continuation
+        (args_block @ [stmt]) E.unit
       (* TODO:
          check the arity of fn before wrapping it
          we need mark something that such eta-conversion can not be simplified in some cases
