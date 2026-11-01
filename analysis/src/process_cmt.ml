@@ -249,31 +249,6 @@ let rec record_renamed_stamps table (original : Types.module_type)
     record_renamed_stamps table result renamed_result
   | _ -> ()
 
-(* The type of an applied functor with the identifiers of the body's
-   declarations. The functor's result signature has them; an application's
-   has them only when the argument is not a path, else the compiler already
-   renamed them, so the results of curried applications are taken from the
-   functor applied first. *)
-let rec body_type (mod_expr : Typedtree.module_expr) =
-  match mod_expr.mod_desc with
-  | Tmod_apply (functor_, _arg, _coercion) -> (
-    match body_type functor_ with
-    | Types.Mty_functor (_, _, result) -> result
-    | mty -> mty)
-  | Tmod_ident _ | Tmod_structure _ | Tmod_functor _ | Tmod_constraint _
-  | Tmod_unpack _ ->
-    mod_expr.mod_type
-
-(* The path of the functor applied first, with the type the compiler gave
-   it there. *)
-let rec applied_path (mod_expr : Typedtree.module_expr) =
-  match mod_expr.mod_desc with
-  | Tmod_apply (functor_, _arg, _coercion) -> applied_path functor_
-  | Tmod_ident (path, _) | Tmod_constraint (_, _, _, Tcoerce_alias (path, _)) ->
-    Some (path, mod_expr.mod_type)
-  | Tmod_structure _ | Tmod_functor _ | Tmod_constraint _ | Tmod_unpack _ ->
-    None
-
 (* The compiler's type of a module of this file, by its path, with
    aliases followed. *)
 let rec module_type_of_path ~(env : Env.t) (path : Path.t) =
@@ -296,20 +271,13 @@ let rec module_type_of_path ~(env : Env.t) (path : Path.t) =
   | Some (Types.Mty_alias (_, path)) -> module_type_of_path ~env path
   | Some (Mty_signature _ | Mty_functor _ | Mty_ident _) | None -> mty
 
-(* A module bound to a partial application and applied later, directly or
-   through aliases, has the identifiers the compiler gave the first
-   application's result, or copies of them when reached through another
-   module. Once the whole file is read, as its modules are read from last
-   to first, these are recorded as renamed from those of the module's own
-   type, and each renamed stamp is mapped to the end of its chain, the
-   declaration in the functor body. *)
+(* Each application records its renaming steps, and a module bound to a
+   partial application and applied later continues a chain started by the
+   first application. Once the whole file is read, as its modules are read
+   from last to first, each renamed stamp is mapped to the end of its
+   chain, the declaration in the functor body. *)
 let resolve_renamed_stamps ~(env : Env.t) =
   let table = env.renamed_stamps in
-  !(env.applied_paths)
-  |> List.iter (fun (path, mty) ->
-      match module_type_of_path ~env path with
-      | Some original -> record_renamed_stamps table original mty
-      | None -> ());
   let rec original stamp =
     match Hashtbl.find_opt table stamp with
     | Some stamp -> original stamp
@@ -688,7 +656,6 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
            (String.length name.txt >= 6
            && (String.sub name.txt 0 6 = "local_") [@doesNotRaise])
          (* %%private generates a dummy module called local_... *) ->
-    Hashtbl.replace env.module_types (Ident.binding_time mb_id) mb_expr.mod_type;
     let item = for_module ~env mb_expr name.txt in
     let declared =
       add_declared ~item ~name ~extent:mb_loc ~stamp:(Ident.binding_time mb_id)
@@ -807,7 +774,10 @@ and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
     (* The functor's body has the parameter's types; the application's
        signature has the argument's. Its items keep the identifiers of the
        body, whose stamps are already taken, so they are renamed first,
-       with stamps above any that a compilation hands out. Their locations
+       with stamps above any that a compilation hands out. When the argument
+       or the functor is a path, the compiler has renamed them already, so
+       each step is recorded: this renaming, the compiler's for this
+       application, and the copy a path to the functor made. Their locations
        are in the functor's body, so they are marked as coming from the
        functor, like included items, for definitions to find its file.
        An inline functor's parameters and declarations are registered
@@ -823,15 +793,19 @@ and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
     if Ident.current_time () < renamed_stamp_floor then
       Ident.set_current_time renamed_stamp_floor;
     let renamed = Subst.modtype Subst.identity mod_expr.mod_type in
-    let body_type = body_type mod_expr in
-    (* The compiler's own renaming is recorded too: a module bound to a
-       partial application, applied again later, has the identifiers it
-       gave the application's result. *)
-    record_renamed_stamps env.renamed_stamps body_type mod_expr.mod_type;
-    record_renamed_stamps env.renamed_stamps body_type renamed;
-    (match applied_path mod_expr with
-    | Some applied -> env.applied_paths := applied :: !(env.applied_paths)
-    | None -> ());
+    let table = env.renamed_stamps in
+    record_renamed_stamps table mod_expr.mod_type renamed;
+    (match functor_.mod_type with
+    | Mty_functor (_, _, result) ->
+      record_renamed_stamps table result mod_expr.mod_type
+    | _ -> ());
+    (match functor_.mod_desc with
+    | Tmod_ident (path, _) | Tmod_constraint (_, _, _, Tcoerce_alias (path, _))
+      -> (
+      match module_type_of_path ~env path with
+      | Some original -> record_renamed_stamps table original functor_.mod_type
+      | None -> ())
+    | _ -> ());
     for_type_module ~name:module_name ~env renamed
   | Tmod_unpack (_expr, module_type) ->
     let env = env |> Env.add_module ~name:module_name in
@@ -869,6 +843,15 @@ and scan_let_modules ~env (e : Typedtree.expression) =
   iterator.expr iterator e
 
 and for_structure ~name ~env str_items =
+  (* The types of the modules, for paths to them in applications read
+     before their declarations. *)
+  str_items
+  |> List.iter (fun (item : Typedtree.structure_item) ->
+      match item.str_desc with
+      | Tstr_module {mb_id; mb_expr} ->
+        Hashtbl.replace env.module_types (Ident.binding_time mb_id)
+          mb_expr.mod_type
+      | _ -> ());
   let exported = Exported.init () in
   let items =
     List.fold_right
@@ -894,7 +877,6 @@ let file_for_cmt_infos ~module_name ~uri
       module_path = File (uri, module_name);
       renamed_stamps = Hashtbl.create 1;
       module_types = Hashtbl.create 1;
-      applied_paths = ref [];
     }
   in
   match cmt_annots with
