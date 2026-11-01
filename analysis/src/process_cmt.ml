@@ -214,7 +214,8 @@ let renamed_stamp_floor = 1 lsl 40
 (* [Subst] renames the items of a signature in place, so the original and
    the renamed signature list the same items in the same order. Records
    each renamed stamp's original, nested signatures included, for
-   references to find the declarations in the functor body. *)
+   references to find the declarations in the functor body. A stamp that
+   is not renamed is not recorded, so that chains of renamings end. *)
 let rec record_renamed_stamps table (original : Types.module_type)
     (renamed : Types.module_type) =
   match (original, renamed) with
@@ -240,9 +241,9 @@ let rec record_renamed_stamps table (original : Types.module_type)
           | _ -> None
         in
         match ids with
-        | Some (id, id') ->
+        | Some (id, id') when Ident.binding_time id' <> Ident.binding_time id ->
           Hashtbl.replace table (Ident.binding_time id') (Ident.binding_time id)
-        | None -> ())
+        | Some _ | None -> ())
       items renamed_items
   | Mty_functor (_, _, result), Mty_functor (_, _, renamed_result) ->
     record_renamed_stamps table result renamed_result
@@ -262,6 +263,60 @@ let rec body_type (mod_expr : Typedtree.module_expr) =
   | Tmod_ident _ | Tmod_structure _ | Tmod_functor _ | Tmod_constraint _
   | Tmod_unpack _ ->
     mod_expr.mod_type
+
+(* The path of the functor applied first, with the type the compiler gave
+   it there. *)
+let rec applied_path (mod_expr : Typedtree.module_expr) =
+  match mod_expr.mod_desc with
+  | Tmod_apply (functor_, _arg, _coercion) -> applied_path functor_
+  | Tmod_ident (path, _) | Tmod_constraint (_, _, _, Tcoerce_alias (path, _)) ->
+    Some (path, mod_expr.mod_type)
+  | Tmod_structure _ | Tmod_functor _ | Tmod_constraint _ | Tmod_unpack _ ->
+    None
+
+(* The compiler's type of a module of this file, by its path, with
+   aliases followed. *)
+let rec module_type_of_path ~(env : Env.t) (path : Path.t) =
+  let mty =
+    match path with
+    | Pident id -> Hashtbl.find_opt env.module_types (Ident.binding_time id)
+    | Pdot (parent, name, _) -> (
+      match module_type_of_path ~env parent with
+      | Some (Types.Mty_signature items) ->
+        items
+        |> List.find_map (fun (item : Types.signature_item) ->
+            match item with
+            | Sig_module (id, md, _) when Ident.name id = name ->
+              Some md.md_type
+            | _ -> None)
+      | _ -> None)
+    | Papply _ -> None
+  in
+  match mty with
+  | Some (Types.Mty_alias (_, path)) -> module_type_of_path ~env path
+  | Some (Mty_signature _ | Mty_functor _ | Mty_ident _) | None -> mty
+
+(* A module bound to a partial application and applied later, directly or
+   through aliases, has the identifiers the compiler gave the first
+   application's result, or copies of them when reached through another
+   module. Once the whole file is read, as its modules are read from last
+   to first, these are recorded as renamed from those of the module's own
+   type, and each renamed stamp is mapped to the end of its chain, the
+   declaration in the functor body. *)
+let resolve_renamed_stamps ~(env : Env.t) =
+  let table = env.renamed_stamps in
+  !(env.applied_paths)
+  |> List.iter (fun (path, mty) ->
+      match module_type_of_path ~env path with
+      | Some original -> record_renamed_stamps table original mty
+      | None -> ());
+  let rec original stamp =
+    match Hashtbl.find_opt table stamp with
+    | Some stamp -> original stamp
+    | None -> stamp
+  in
+  Hashtbl.filter_map_inplace (fun _ stamp -> Some (original stamp)) table;
+  table
 
 let get_module_type_path mod_desc =
   match mod_desc with
@@ -633,6 +688,7 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
            (String.length name.txt >= 6
            && (String.sub name.txt 0 6 = "local_") [@doesNotRaise])
          (* %%private generates a dummy module called local_... *) ->
+    Hashtbl.replace env.module_types (Ident.binding_time mb_id) mb_expr.mod_type;
     let item = for_module ~env mb_expr name.txt in
     let declared =
       add_declared ~item ~name ~extent:mb_loc ~stamp:(Ident.binding_time mb_id)
@@ -767,7 +823,15 @@ and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
     if Ident.current_time () < renamed_stamp_floor then
       Ident.set_current_time renamed_stamp_floor;
     let renamed = Subst.modtype Subst.identity mod_expr.mod_type in
-    record_renamed_stamps env.renamed_stamps (body_type mod_expr) renamed;
+    let body_type = body_type mod_expr in
+    (* The compiler's own renaming is recorded too: a module bound to a
+       partial application, applied again later, has the identifiers it
+       gave the application's result. *)
+    record_renamed_stamps env.renamed_stamps body_type mod_expr.mod_type;
+    record_renamed_stamps env.renamed_stamps body_type renamed;
+    (match applied_path mod_expr with
+    | Some applied -> env.applied_paths := applied :: !(env.applied_paths)
+    | None -> ());
     for_type_module ~name:module_name ~env renamed
   | Tmod_unpack (_expr, module_type) ->
     let env = env |> Env.add_module ~name:module_name in
@@ -791,6 +855,7 @@ and scan_let_modules ~env (e : Typedtree.expression) =
     (match expression.exp_desc with
     | Texp_letmodule (id, name, mexpr, _body) ->
       let stamp = Ident.binding_time id in
+      Hashtbl.replace env.module_types stamp mexpr.mod_type;
       let item = for_module ~env mexpr name.txt in
       let declared =
         Process_attributes.new_declared ~item ~extent:name.loc ~name ~stamp
@@ -828,6 +893,8 @@ let file_for_cmt_infos ~module_name ~uri
       Env.stamps = Stamps.init ();
       module_path = File (uri, module_name);
       renamed_stamps = Hashtbl.create 1;
+      module_types = Hashtbl.create 1;
+      applied_paths = ref [];
     }
   in
   match cmt_annots with
@@ -847,7 +914,7 @@ let file_for_cmt_infos ~module_name ~uri
       module_name = cmt_modname;
       stamps = env.stamps;
       structure;
-      renamed_stamps = env.renamed_stamps;
+      renamed_stamps = resolve_renamed_stamps ~env;
     }
   | Partial_interface parts ->
     let items =
@@ -865,7 +932,7 @@ let file_for_cmt_infos ~module_name ~uri
       module_name = cmt_modname;
       stamps = env.stamps;
       structure;
-      renamed_stamps = env.renamed_stamps;
+      renamed_stamps = resolve_renamed_stamps ~env;
     }
   | Implementation structure ->
     let structure = for_structure ~name:module_name ~env structure.str_items in
@@ -874,7 +941,7 @@ let file_for_cmt_infos ~module_name ~uri
       module_name = cmt_modname;
       stamps = env.stamps;
       structure;
-      renamed_stamps = env.renamed_stamps;
+      renamed_stamps = resolve_renamed_stamps ~env;
     }
   | Interface signature ->
     let structure = for_signature ~name:module_name ~env signature.sig_items in
@@ -883,7 +950,7 @@ let file_for_cmt_infos ~module_name ~uri
       module_name = cmt_modname;
       stamps = env.stamps;
       structure;
-      renamed_stamps = env.renamed_stamps;
+      renamed_stamps = resolve_renamed_stamps ~env;
     }
 
 let file_for_cmt ~state ~module_name ~cmt ~uri =

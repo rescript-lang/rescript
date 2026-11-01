@@ -412,6 +412,10 @@ module Env = struct
     renamed_stamps: (int, int) Hashtbl.t;
         (** the stamps of an applied functor's renamed members, mapped to
             those of the functor body's declarations they come from *)
+    module_types: (int, Types.module_type) Hashtbl.t;
+        (** the compiler's types of the file's modules, by stamp *)
+    applied_paths: (Path.t * Types.module_type) list ref;
+        (** the paths applied as functors, with the types they have there *)
   }
   let add_exported_module ~name ~is_type env =
     {

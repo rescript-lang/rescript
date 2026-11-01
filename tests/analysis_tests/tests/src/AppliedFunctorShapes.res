@@ -62,3 +62,57 @@ module Nest = MakeTwo(ToIdent(IntOrd), IntOrd)
 
 let np = Nest.pair
 //            ^def
+
+module MakeTwoRef = (A: Ord, B: Ord) => {
+  let second = (A.compare, B.compare)
+  //  ^ref
+}
+
+module First = MakeTwoRef(IntOrd)
+
+module Final = First(IntOrd)
+
+let fs = Final.second
+//             ^ref
+
+let fs2 = Final.second
+//              ^ren renamedSecond
+
+module MakeTwoRen = (A: Ord, B: Ord) => {
+  let third = (A.compare, B.compare)
+  //  ^ren renamedThird
+}
+
+module FirstRen = MakeTwoRen(IntOrd)
+
+module FinalRen = FirstRen(IntOrd)
+
+let ft = FinalRen.third
+
+module MakeTwoAlias = (A: Ord, B: Ord) => {
+  let fourth = (A.compare, B.compare)
+  //  ^ref
+}
+
+module Outer = {
+  module FirstNested = MakeTwoAlias(IntOrd)
+}
+
+module FirstAlias = Outer.FirstNested
+
+module FinalAlias = FirstAlias(IntOrd)
+
+let fa = FinalAlias.fourth
+//                  ^ref
+
+module FinalNested = Outer.FirstNested(IntOrd)
+
+let fn = FinalNested.fourth
+//                   ^ref
+
+module FirstLocal = FirstRen
+
+module FinalLocal = FirstLocal(IntOrd)
+
+let fl = FinalLocal.third
+//                  ^ref
