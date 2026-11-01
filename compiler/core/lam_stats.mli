@@ -40,6 +40,9 @@ type t = {
       (** Locals bound to an awaited compilation unit,
           [let d = await import(Unit)]: reads of nested [make] values through
           them use the flat exports too. *)
+  assignable: Set_ident.t;
+      (** The variables some [Lassign] assigns. [Lam_compile] never delays
+          reading one of them past other code. *)
 }
 
 val print : Format.formatter -> t -> unit

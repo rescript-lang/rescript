@@ -47,6 +47,9 @@ type t = {
       for sure it's not a function, there is no need to count them
   *)
   awaited_units: Set_ident.t;
+  assignable: Set_ident.t;
+      (** The variables some [Lassign] assigns. [Lam_compile] never delays
+          reading one of them past other code. *)
 }
 
 let pp = Format.fprintf
@@ -68,4 +71,5 @@ let make ~export_idents ~export_ident_sets : t =
     exports = export_idents;
     export_idents = export_ident_sets;
     awaited_units = Set_ident.empty;
+    assignable = Set_ident.empty;
   }

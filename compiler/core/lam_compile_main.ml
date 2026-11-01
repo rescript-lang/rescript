@@ -215,6 +215,14 @@ let is_awaited_unit (lam : Lambda.t) =
     true
   | _ -> false
 
+(* See [Lam_stats.assignable]. *)
+let assigned_variables (group : Lam_group.t) =
+  match group with
+  | Single (_, _, lam) | Nop lam -> Lambda_traverse.assigned_variables lam
+  | Recursive bindings ->
+    Ext_list.fold_left bindings Set_ident.empty (fun acc (_, lam) ->
+        Set_ident.union acc (Lambda_traverse.assigned_variables lam))
+
 (* See [Lam_stats.awaited_units]. *)
 let awaited_units (groups : Lam_group.t list) =
   let units = ref Set_ident.empty in
@@ -360,6 +368,9 @@ let compile ?on_optimized_lambda (output_prefix : string)
     {
       meta with
       awaited_units = awaited_units groups;
+      assignable =
+        Ext_list.fold_left groups Set_ident.empty (fun acc group ->
+            Set_ident.union acc (assigned_variables group));
       exports = meta.exports @ flat_exports;
       export_idents =
         Ext_list.fold_left flat_exports meta.export_idents (fun acc id ->

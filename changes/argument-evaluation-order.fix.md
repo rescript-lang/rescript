@@ -1,0 +1,1 @@
+- Evaluate arguments and literal elements left to right when a later one is a block that compiles to statements, which could produce wrong values.

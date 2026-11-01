@@ -28,6 +28,9 @@ val iter : (Lambda.t -> unit) -> Lambda.t -> unit
 
 val free_variables : Lambda.t -> Set_ident.t
 
+val assigned_variables : Lambda.t -> Set_ident.t
+(** The variables some [Lassign] in the term assigns. *)
+
 val subst_lambda : Lambda.t Ident.tbl -> Lambda.t -> Lambda.t
 (** Substitute for the free variables in the domain of the substitution.
     Assumes the substitution's image is out of reach of the term's bound
