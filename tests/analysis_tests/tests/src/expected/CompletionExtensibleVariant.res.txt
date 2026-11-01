@@ -313,3 +313,118 @@ newText:
    | _ => %todo
    }
 
+Xform src/CompletionExtensibleVariant.res 79:4
+pos_cursor:[77:18] pos_no_white:[77:16] Found expr:[77:11->81:3]
+Completable: Cpath Value[value]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 5, "line": 79 },
+  "start": { "character": 4, "line": 79 }
+}
+newText:
+    <--here
+    Num(_) | Sub.Flag | Sub.Toggle(_) | Later | Inner | _
+Hit: Extract local module "Nested" to file "Nested.res"
+
+CreateFile: Nested.res
+
+TextDocumentEdit: Nested.res
+{
+  "end": { "character": 1, "line": 87 },
+  "start": { "character": 0, "line": 74 }
+}
+newText:
+<--here
+type attr += Inner
+
+let _z = switch value {
+| Str(_) => "str"
+| _ => "other"
+//^xfm
+}
+
+// value
+// ^xfm^
+
+type attr += AfterAction
+
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 1, "line": 87 },
+  "start": { "character": 0, "line": 74 }
+}
+newText:
+<--here
+
+
+Xform src/CompletionExtensibleVariant.res start: 83:5, end: 83:10
+found selection: [83:5->83:10] -> [83:5->83:10]
+XXX Not found!
+Completable: Cpath Value[value]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[value]
+Path value
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Exhaustive switch
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 10, "line": 83 },
+  "start": { "character": 5, "line": 83 }
+}
+newText:
+     <--here
+     switch value {
+     | Str(_) => %todo
+     | Num(_) => %todo
+     | Sub.Flag => %todo
+     | Sub.Toggle(_) => %todo
+     | Later => %todo
+     | Inner => %todo
+     | _ => %todo
+     }
+Hit: Extract local module "Nested" to file "Nested.res"
+
+CreateFile: Nested.res
+
+TextDocumentEdit: Nested.res
+{
+  "end": { "character": 1, "line": 87 },
+  "start": { "character": 0, "line": 74 }
+}
+newText:
+<--here
+type attr += Inner
+
+let _z = switch value {
+| Str(_) => "str"
+| _ => "other"
+//^xfm
+}
+
+value
+// ^xfm^
+
+type attr += AfterAction
+
+
+TextDocumentEdit: CompletionExtensibleVariant.res
+{
+  "end": { "character": 1, "line": 87 },
+  "start": { "character": 0, "line": 74 }
+}
+newText:
+<--here
+
+
