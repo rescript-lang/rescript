@@ -121,9 +121,9 @@ let declared_for_tip ~(stamps : Stamps.t) stamp (tip : Tip.t) =
     Stamps.find_module stamps stamp
     |> Option.map (fun x -> {x with Declared.item = ()})
 
-(* The type a renamed type of an applied functor comes from, whose fields
-   and constructors have source locations. *)
-let original_type_stamp (file : File.t) stamp =
+(* The declaration a renamed member of an applied functor comes from, such
+   as a type whose fields and constructors have source locations. *)
+let original_stamp (file : File.t) stamp =
   match Hashtbl.find_opt file.renamed_stamps stamp with
   | Some original -> original
   | None -> stamp
@@ -141,12 +141,12 @@ let constructor_of_type ({item = {kind}} : Type.t Declared.t) name =
   | _ -> None
 
 let get_field (file : File.t) stamp name =
-  match Stamps.find_type file.stamps (original_type_stamp file stamp) with
+  match Stamps.find_type file.stamps (original_stamp file stamp) with
   | None -> None
   | Some declared -> field_of_type declared name
 
 let get_constructor (file : File.t) stamp name =
-  match Stamps.find_type file.stamps (original_type_stamp file stamp) with
+  match Stamps.find_type file.stamps (original_stamp file stamp) with
   | None -> None
   | Some declared -> constructor_of_type declared name
 
@@ -163,7 +163,7 @@ let declared_uri ~state ~package (file : File.t) (declared : _ Declared.t) =
    its location, among the types declared there rather than read from a
    signature. *)
 let source_type ~state ~package (file : File.t) stamp =
-  match Stamps.find_type file.stamps (original_type_stamp file stamp) with
+  match Stamps.find_type file.stamps (original_stamp file stamp) with
   | Some declared -> Some (file, declared)
   | None -> (
     match Stamps.find_type file.stamps stamp with
@@ -482,11 +482,7 @@ type references = {
 
 let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
   let env = Query_env.from_file file in
-  let stamp =
-    match Hashtbl.find_opt file.renamed_stamps stamp with
-    | Some original -> original
-    | None -> stamp
-  in
+  let stamp = original_stamp file stamp in
   match
     match tip with
     | Constructor name ->
