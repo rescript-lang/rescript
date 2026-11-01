@@ -428,3 +428,21 @@ newText:
 <--here
 
 
+Signature help src/CompletionExtensibleVariant.res 90:32
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "Sub.Toggle(bool)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 11, 15 ]
+        }
+      ]
+    }
+  ]
+}
+
