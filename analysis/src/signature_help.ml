@@ -237,8 +237,10 @@ let find_constructor_args ~full ~env ~state ~constructor_name loc =
       | _ -> None)
     | Some (Tvariant {constructors}, _) ->
       constructors
+      (* An extension constructor is named by its module path. *)
       |> List.find_opt (fun (c : Constructor.t) ->
-          c.cname.txt = constructor_name)
+          List.rev (String.split_on_char '.' c.cname.txt)
+          |> List.hd = constructor_name)
       |> Option.map (fun (c : Constructor.t) ->
           {docstring = c.docstring; name = c.cname.txt; args = c.args})
     | _ -> None)
