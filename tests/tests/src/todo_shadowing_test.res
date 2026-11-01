@@ -1,6 +1,3 @@
-// Every %todo reports warning 110, which this test exercises on purpose.
-@@warning("-110")
-
 open Mocha
 open Test_utils
 

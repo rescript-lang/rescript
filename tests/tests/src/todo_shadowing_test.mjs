@@ -13,12 +13,12 @@ let JsError = {
 };
 
 function notImplemented(param) {
-  return Stdlib_JsError.throwWithMessage("todo_shadowing_test.res:12:38-43 - Todo: later");
+  return Stdlib_JsError.throwWithMessage("todo_shadowing_test.res:9:38-43 - Todo: later");
 }
 
 Mocha.describe("Todo_shadowing_test", () => {
-  Mocha.test("%todo throws even with a local JsError module", () => Test_utils.throws("File \"todo_shadowing_test.res\", line 16, characters 11-18", () => {
-    Stdlib_JsError.throwWithMessage("todo_shadowing_test.res:12:38-43 - Todo: later");
+  Mocha.test("%todo throws even with a local JsError module", () => Test_utils.throws("File \"todo_shadowing_test.res\", line 13, characters 11-18", () => {
+    Stdlib_JsError.throwWithMessage("todo_shadowing_test.res:9:38-43 - Todo: later");
   }));
 });
 
