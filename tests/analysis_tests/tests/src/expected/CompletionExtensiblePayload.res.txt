@@ -1581,3 +1581,63 @@ Path v
   { "detail": "bool", "kind": 4, "label": "false", "tags": [] }
 ]
 
+Signature help src/CompletionExtensiblePayload.res 173:23
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "A.Value(bool)",
+      "parameters": [
+        {
+          "documentation": { "kind": "markdown", "value": "" },
+          "label": [ 8, 12 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/CompletionExtensiblePayload.res 175:23
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "B.Value(option<color>)",
+      "parameters": [
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "```rescript\ntype color = Red | Blue\n```\nGo to: [Type definition](CompletionExtensiblePayload.res#L2,1)"
+          },
+          "label": [ 8, 21 ]
+        }
+      ]
+    }
+  ]
+}
+
+Signature help src/CompletionExtensiblePayload.res 177:31
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "B.Value(option<color>)",
+      "parameters": [
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "```rescript\ntype color = Red | Blue\n```\nGo to: [Type definition](CompletionExtensiblePayload.res#L2,1)"
+          },
+          "label": [ 8, 21 ]
+        }
+      ]
+    }
+  ]
+}
+

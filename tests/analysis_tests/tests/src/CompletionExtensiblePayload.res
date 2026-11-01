@@ -169,3 +169,11 @@ open Outer
 
 // switch v { | Inner.Deep() }
 //                         ^com
+
+// Signature help shows the constructor the path names
+let _a: attr = A.Value(true)
+//                     ^she
+let _b: attr = B.Value(None)
+//                     ^she
+let _unqualified: attr = Value(None)
+//                             ^she
