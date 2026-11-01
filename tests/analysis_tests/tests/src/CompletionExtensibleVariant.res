@@ -69,3 +69,20 @@ let _y = switch optValue {
 // An exhaustive switch of an open type
 // value
 // ^xfm^
+
+// Code actions inside a nested module name its extensions unqualified and
+// leave out those declared after the action
+module Nested = {
+  type attr += Inner
+
+  let _z = switch value {
+  | Str(_) => "str"
+  | _ => "other"
+  //^xfm
+  }
+
+  // value
+  // ^xfm^
+
+  type attr += AfterAction
+}

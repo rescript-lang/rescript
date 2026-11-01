@@ -2671,9 +2671,14 @@ let module_path_at ~(full : full) ~pos =
   in
   in_items full.file.structure.items
 
+(* Runs [f] with extension constructors named as written at [pos]. *)
+let with_completion_scope ~full ~pos ~scope f =
+  Type_utils.with_completion_scope ~file:full.file
+    ~module_path:(module_path_at ~full ~pos)
+    ~pos ~scope f
+
 let process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     completable =
-  Type_utils.with_completion_scope ~file:full.file
-    ~module_path:(module_path_at ~full ~pos) ~pos ~scope (fun () ->
+  with_completion_scope ~full ~pos ~scope (fun () ->
       process_completable_in_scope ~state ~debug ~full ~scope ~env ~pos
         ~for_hover completable)
