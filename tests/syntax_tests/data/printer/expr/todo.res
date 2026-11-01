@@ -1,0 +1,22 @@
+let a = %todo
+let b = %todo("message")
+let c = %todo(`template`)
+let d = @attr %todo("attributed")
+
+let e = /* before */ %todo("x") /* after */
+let f = %todo(/* inside */ "y")
+let g = %todo(
+  // line comment
+  "z"
+)
+
+let h = (%todo: int => int)(1)
+let i = %todo->String.length
+let j = (%todo("p")).field
+let k = (%todo)["key"]
+let l = -%todo
+let m = %todo + %todo("n")
+let n = x => %todo
+let o = switch x {
+| _ => %todo
+}

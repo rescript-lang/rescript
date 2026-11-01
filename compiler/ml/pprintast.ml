@@ -801,6 +801,8 @@ and expression ctxt f x =
         (Ast_raw.to_extension
            ~name:(Ast_raw.extension_name kind)
            ~name_loc source)
+    | Pexp_todo {name_loc; message} ->
+      extension ctxt f (Ast_todo.to_extension ~name_loc message)
     | Pexp_await e -> pp f "@[<hov2>await@ %a@]" (simple_expr ctxt) e
     | Pexp_regexp {pattern; flags} -> pp f "/%s/%s" pattern flags
     | Pexp_template {source_segments; values} ->

@@ -22,6 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+val todo :
+  loc:Location.t -> expr_loc:Location.t -> string option -> Parsetree.expression
+(** The expansion of [%todo] with the given message. *)
+
 val handle_extension :
   Parsetree.expression ->
   Ast_mapper.mapper ->

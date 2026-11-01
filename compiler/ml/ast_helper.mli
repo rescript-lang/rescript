@@ -253,6 +253,8 @@ module Exp : sig
     raw_kind ->
     raw_source ->
     expression
+  val todo :
+    ?loc:loc -> ?attrs:attrs -> name_loc:loc -> expression option -> expression
   val tagged_template :
     ?loc:loc ->
     ?attrs:attrs ->

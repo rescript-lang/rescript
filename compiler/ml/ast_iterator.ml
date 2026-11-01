@@ -429,6 +429,9 @@ module E = struct
     | Pexp_raw {name_loc; source} ->
       sub.location sub name_loc;
       sub.location sub (Ast_raw.source_loc source)
+    | Pexp_todo {name_loc; message} ->
+      sub.location sub name_loc;
+      Option.iter (sub.expr sub) message
     | Pexp_regexp _ -> ()
     | Pexp_template {values} -> List.iter (sub.expr sub) values
     | Pexp_tagged_template {tag; values} ->

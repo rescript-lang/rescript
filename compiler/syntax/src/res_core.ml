@@ -2108,7 +2108,12 @@ and parse_atomic_expr p =
       let loc = mk_loc start_pos (Parser.position p) in
       match (Ast_raw.kind_of_name name, Ast_raw.of_payload payload) with
       | Some kind, Some source -> Ast_helper.Exp.raw ~loc ~name_loc kind source
-      | _ -> Ast_helper.Exp.extension ~loc extension)
+      | _ -> (
+        match
+          if name = Ast_todo.name then Ast_todo.of_payload payload else None
+        with
+        | Some message -> Ast_helper.Exp.todo ~loc ~name_loc message
+        | None -> Ast_helper.Exp.extension ~loc extension))
     | Underscore as token ->
       (* This case is for error recovery. Not sure if it's the correct place *)
       Parser.err p (Diagnostics.lident token);

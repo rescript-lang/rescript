@@ -142,6 +142,9 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
     Ast_exp_extension.handle_extension e self extension
   | Pexp_raw {kind; name_loc; source} ->
     Ast_exp_handle_external.handle_raw_node ~loc:name_loc kind source
+  | Pexp_todo {name_loc; message} ->
+    Ast_exp_extension.todo ~loc:name_loc ~expr_loc:e.pexp_loc
+      (Option.bind message Ast_payload.semantic_string_of_expression)
   | Pexp_constant (Pconst_integer (s, Some 'l')) ->
     {e with pexp_desc = Pexp_constant (Pconst_integer (s, None))}
   (* End rewriting *)

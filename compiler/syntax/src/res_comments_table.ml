@@ -1154,6 +1154,8 @@ and walk_expression expr t comments =
          ~name:(Ast_raw.extension_name kind)
          ~name_loc source)
       t comments
+  | Pexp_todo {name_loc; message} ->
+    walk_extension (Ast_todo.to_extension ~name_loc message) t comments
   | Pexp_letexception (extension_constructor, expr2) ->
     let leading, comments = partition_leading_trailing comments expr.pexp_loc in
     attach t.leading

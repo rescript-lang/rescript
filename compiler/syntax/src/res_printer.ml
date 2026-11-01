@@ -3636,6 +3636,10 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
            ~name:(Ast_raw.extension_name kind)
            ~name_loc source)
         cmt_tbl
+    | Pexp_todo {name_loc; message} ->
+      print_extension ~state ~at_module_lvl:false
+        (Ast_todo.to_extension ~name_loc message)
+        cmt_tbl
     | Pexp_regexp {pattern; flags} -> Doc.text ("/" ^ pattern ^ "/" ^ flags)
     | Pexp_template {source_segments; values} ->
       print_template_literal ~state ~source_segments ~values cmt_tbl
