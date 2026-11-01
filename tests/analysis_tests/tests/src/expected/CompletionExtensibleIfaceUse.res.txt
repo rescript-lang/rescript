@@ -15,10 +15,44 @@ Path importe
   {
     "detail": "insert exhaustive switch for value",
     "filterText": "imported",
-    "insertText": "imported {\n   | CompletionExtensibleIface.Top => ${1:%todo}\n   | CompletionExtensibleIface.Sub.Flag => ${2:%todo}\n   | CompletionExtensibleIface.Outer.Inner.Deep => ${3:%todo}\n   | _ => ${4:%todo}\n   }",
+    "insertText": "imported {\n   | CompletionExtensibleIface.Top => ${1:%todo}\n   | CompletionExtensibleIface.Sub.Flag => ${2:%todo}\n   | CompletionExtensibleIface.Sub.Toned(_) => ${3:%todo}\n   | CompletionExtensibleIface.Outer.Inner.Deep => ${4:%todo}\n   | _ => ${5:%todo}\n   }",
     "insertTextFormat": 2,
     "kind": 15,
     "label": "imported (exhaustive switch)",
+    "tags": []
+  }
+]
+
+Complete src/CompletionExtensibleIfaceUse.res 5:79
+XXX Not found!
+Completable: Cexpression Type[CompletionExtensibleIface, attr]->variantPayload::Toned($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[CompletionExtensibleIface, attr]
+Path CompletionExtensibleIface.attr
+[
+  {
+    "detail": "Light",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nLight\n```\n\n```rescript\ntype tone = Light | Dark\n```"
+    },
+    "insertText": "Light",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Light",
+    "tags": []
+  },
+  {
+    "detail": "Dark",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nDark\n```\n\n```rescript\ntype tone = Light | Dark\n```"
+    },
+    "insertText": "Dark",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Dark",
     "tags": []
   }
 ]
