@@ -423,8 +423,9 @@ and expression_desc =
      produces [{source_segments = [{txt = "plain"; loc}]; values = []}], while
      [`hello ${name}!`] produces
      [{source_segments = [{txt = "hello "; loc}; {txt = "!"; loc}]; values =
-     [name]}]. Each segment retains its source location, and there is always one
-     more source segment than value. *)
+     [name]}]. Each segment's location covers its text only, without the
+     backquotes, [${] or [}] around it, and there is always one more source
+     segment than value. *)
   | Pexp_tagged_template of {
       tag: expression;
       raw_sources: string loc list;

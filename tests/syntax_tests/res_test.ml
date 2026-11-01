@@ -272,6 +272,64 @@ let () =
     ];
   print_endline "✅ statement boundary formatting preserves attribute scope"
 
+(* A template segment's location covers its text, without the delimiters, and
+   the template's location covers the whole literal. *)
+let () =
+  let check source =
+    let result =
+      Res_driver.parse_implementation_from_source
+        ~display_filename:"templates.res" ~source
+    in
+    assert (not result.invalid);
+    let slice (loc : Location.t) =
+      String.sub source loc.loc_start.pos_cnum
+        (loc.loc_end.pos_cnum - loc.loc_start.pos_cnum)
+    in
+    let check_segments segments =
+      List.iter
+        (fun ({txt; loc} : string Location.loc) ->
+          if slice loc <> txt then (
+            Printf.printf "segment %S has location text %S in %S\n" txt
+              (slice loc) source;
+            assert false))
+        segments
+    in
+    let found = ref 0 in
+    let iterator =
+      {
+        Ast_iterator.default_iterator with
+        expr =
+          (fun iterator e ->
+            (match e.pexp_desc with
+            | Pexp_template {source_segments} ->
+              incr found;
+              check_segments source_segments;
+              let literal = slice e.pexp_loc in
+              assert (literal.[0] = '`');
+              assert (literal.[String.length literal - 1] = '`')
+            | Pexp_tagged_template {raw_sources} ->
+              incr found;
+              check_segments raw_sources
+            | _ -> ());
+            Ast_iterator.default_iterator.expr iterator e);
+      }
+    in
+    iterator.structure iterator result.parsetree;
+    assert (!found > 0)
+  in
+  List.iter check
+    [
+      "let a = `template`";
+      "let a = ``";
+      "let a = `a${b}c`";
+      "let a = `${b}${c}`";
+      "let a = `a\\`b\\${c}`";
+      "let a = `first\nsecond ${b}\nthird`";
+      "let a = `outer ${`inner ${b}`} end`";
+      "let a = sql`select ${x} from t`";
+    ];
+  print_endline "✅ template segment locations cover their text"
+
 (* PPX-generated ## accesses print their receiver before the operator. *)
 let () =
   let source = "let t = 0\n(/a/[\"member\"])" in

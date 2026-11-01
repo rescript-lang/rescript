@@ -2000,6 +2000,29 @@ let b = %ffi(@foo `(a) => "\`"`)|} in
   OUnit.assert_equal ~printer:(Printf.sprintf "%S") (print parsed.parsetree)
     (print round_tripped)
 
+let test_template_locations_roundtrip_through_ast0 _ =
+  (* Locations included: templates come back as they were parsed. *)
+  let source =
+    {|let a = `template`
+let b = %foo(`payload`)
+let c = `multi
+line`
+let d = `a${b}c${d}`
+let e = sql`select ${x}`
+let f = `a\`b`
+let g = %raw(@foo `"x"`)
+let h = ``|}
+  in
+  let parsed =
+    Res_driver.parse_implementation_from_source
+      ~display_filename:"Templates.res" ~source
+  in
+  OUnit.assert_bool "expected valid ReScript source" (not parsed.invalid);
+  OUnit.assert_equal parsed.parsetree
+    (Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+       (Ast_mapper_to0.default_mapper.structure Ast_mapper_to0.default_mapper
+          parsed.parsetree))
+
 let assert_raw_extension_payload ~name ~expected expression =
   match expression.Parsetree.pexp_desc with
   | Pexp_raw {kind; source = Raw_string {txt = actual}} ->
@@ -2867,6 +2890,8 @@ let suites =
          >:: test_raw_nodes_roundtrip_through_ast0;
          "raw_structure_item_roundtrips_through_ast0"
          >:: test_raw_structure_item_roundtrips_through_ast0;
+         "template_locations_roundtrip_through_ast0"
+         >:: test_template_locations_roundtrip_through_ast0;
          "raw_source_prints_with_fitting_quotes"
          >:: test_raw_source_prints_with_fitting_quotes;
          "raw_source_template_fallback_reparses"

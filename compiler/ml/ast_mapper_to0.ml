@@ -808,6 +808,11 @@ module E = struct
       in
       let expression =
         match parts with
+        | [only] ->
+          (* The constant stands for the whole template, so it takes the
+             template's location, which includes the closing backquote.
+             [Ast_mapper_from0] derives the segment's location from it. *)
+          {only with pexp_loc = loc}
         | first :: rest -> List.fold_left concat first rest
         | [] -> assert false
       in

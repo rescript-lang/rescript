@@ -1,0 +1,1 @@
+- Give template literal segments the location of their text, without the surrounding backquotes, `${` or `}`.
