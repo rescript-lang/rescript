@@ -129,3 +129,26 @@ open A
 
 // switch v { | Value() }
 //                    ^com
+
+// A module alias names the constructor of the module it aliases
+module AliasB = B
+
+// let x: attr = AliasB.Value()
+//                            ^com
+
+// switch v { | AliasB.Value() }
+//                           ^com
+
+open AliasB
+
+// let x: attr = Value()
+//                     ^com
+
+// switch v { | Value() }
+//                    ^com
+
+// An alias of another file's module
+module Base = CompletionExtensiblePayloadBase
+
+// let x: attr = Base.Shaped()
+//                           ^com
