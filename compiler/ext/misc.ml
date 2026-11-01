@@ -82,8 +82,8 @@ let find_map_in_path_uncap path name f =
 
 let find_in_path_uncap_opt path name =
   find_map_in_path_uncap path name (fun fullname ->
-      if Sys.file_exists (Compiler_request_state.resolve_path fullname) then
-        Some fullname
+      if Build_file_store.exists (Compiler_request_state.resolve_path fullname)
+      then Some fullname
       else None)
 
 let find_in_path_uncap path name =

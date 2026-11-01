@@ -29,15 +29,22 @@ type 'a kind = 'a Ml_binary.kind =
   | Mli : Parsetree.signature kind
 
 let read_ast_exn (type t) ~fname (_ : t kind) : t =
-  let ic = open_in_bin (Compiler_request_state.resolve_path fname) in
-  Fun.protect
-    ~finally:(fun () -> close_in_noerr ic)
-    (fun () ->
-      let dep_size = input_binary_int ic in
-      seek_in ic (pos_in ic + dep_size);
-      let sourcefile = input_line ic in
-      Location.set_input_name sourcefile;
-      input_value ic)
+  let path = Compiler_request_state.resolve_path fname in
+  let contents =
+    match Build_file_store.read path with
+    | Some contents -> contents
+    | None -> raise (Sys_error (path ^ ": No such file or directory"))
+  in
+  if String.length contents < 4 then raise End_of_file;
+  let source_start = 4 + Int32.to_int (String.get_int32_be contents 0) in
+  let source_end =
+    match String.index_from_opt contents source_start '\n' with
+    | Some index -> index
+    | None -> raise End_of_file
+  in
+  Location.set_input_name
+    (String.sub contents source_start (source_end - source_start));
+  Marshal.from_string contents (source_end + 1)
 
 let magic_sep_char = '\n'
 
@@ -57,13 +64,15 @@ let write_ast (type t) ~(sourcefile : string) ~output (kind : t kind) (pt : t) :
         (* filter *predef* *)
         Ext_buffer.add_string_char buf s magic_sep_char)
     output_set;
-  let oc = open_out_bin (Compiler_request_state.resolve_path output) in
-  Fun.protect
-    ~finally:(fun () -> close_out_noerr oc)
-    (fun () ->
-      output_binary_int oc (Ext_buffer.length buf);
-      Ext_buffer.output_buffer oc buf;
-      output_string oc sourcefile;
-      output_char oc '\n';
-      output_value oc pt;
-      close_out oc)
+  let length = Bytes.create 4 in
+  Bytes.set_int32_be length 0 (Int32.of_int (Ext_buffer.length buf));
+  Build_file_store.write
+    (Compiler_request_state.resolve_path output)
+    (String.concat ""
+       [
+         Bytes.unsafe_to_string length;
+         Ext_buffer.contents buf;
+         sourcefile;
+         "\n";
+         Marshal.to_string pt [];
+       ])

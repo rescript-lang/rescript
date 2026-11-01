@@ -465,8 +465,9 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   Build_lock.with_build ~poll build_lock_root
     (fun ~release:release_build_lock ->
       Build_attempt.protect attempt (fun () ->
-          try execute ~release_build_lock
-          with Parse_failure output -> report_parse_failure output));
+          Build_file_store.with_build (fun () ->
+              try execute ~release_build_lock
+              with Parse_failure output -> report_parse_failure output)));
   {root_config; build_lock_root; session = attempt.session}
 
 let run ~poll ~verbosity ~folder ~prod ~features ~warn_error ~after_build
