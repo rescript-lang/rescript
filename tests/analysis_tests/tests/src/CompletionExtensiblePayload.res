@@ -152,3 +152,20 @@ module Base = CompletionExtensiblePayloadBase
 
 // let x: attr = Base.Shaped()
 //                           ^com
+
+// An open after a local module shadows it for qualified constructors too
+module Outer = {
+  module Inner = {
+    type CompletionExtensiblePayloadBase.attr += Deep(bool)
+  }
+}
+module Inner = {
+  type CompletionExtensiblePayloadBase.attr += Deep(option<color>)
+}
+open Outer
+
+// let x: attr = Inner.Deep()
+//                          ^com
+
+// switch v { | Inner.Deep() }
+//                         ^com
