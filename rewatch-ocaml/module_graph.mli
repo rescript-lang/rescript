@@ -47,12 +47,15 @@ val resolved_dependencies :
   string list
 
 val raw_dependencies :
+  ?published_dependencies:(string -> string list option) ->
   build_dir:string ->
   parse_failed:(string -> bool) ->
   Source.module_ ->
   string list
 (** The sorted module names that a module's ASTs reference, skipping the
-    source paths whose parse failed. *)
+    source paths whose parse failed. [published_dependencies path] gives the
+    dependencies of [path]'s published AST, when known; they are used unless
+    the AST was parsed in this build. *)
 
 type initialized = {
   nodes: module_node list;

@@ -35,19 +35,25 @@ let read_directory directory =
         List.mem (Filename.extension name) cleanup_extensions)
     |> List.map (Filename.concat directory)
   in
-  let state_entries =
-    names
-    |> List.filter_map (fun name ->
-        if not (state_extension (Filename.extension name)) then None
-        else
-          let path = Filename.concat directory name in
-          try
-            let metadata = Unix.stat path in
-            if metadata.Unix.st_kind = Unix.S_DIR then None
-            else Some ({path; modified = metadata.Unix.st_mtime}, name)
-          with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None)
+  let state_names =
+    List.filter (fun name -> state_extension (Filename.extension name)) names
   in
-  (files, state_entries)
+  (files, state_names)
+
+(* Runs on any domain: one [stat] per artifact, and a header read per AST. *)
+let read_state_entry directory name =
+  let path = Filename.concat directory name in
+  try
+    let metadata = Unix.stat path in
+    if metadata.Unix.st_kind = Unix.S_DIR then None
+    else
+      let header =
+        match Filename.extension name with
+        | ".ast" | ".iast" -> ast_header path
+        | _ -> None
+      in
+      Some (({path; modified = metadata.Unix.st_mtime}, name), header)
+  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
 
 let module_key name =
   name |> Filename.remove_extension |> String.capitalize_ascii
@@ -71,23 +77,47 @@ let create directories =
       cmt_by_module = Hashtbl.create 64;
     }
   in
+  let directories =
+    directories
+    |> List.sort_uniq String.compare
+    |> List.map (fun directory -> (directory, read_directory directory))
+  in
+  (* A large project has thousands of artifacts, and reading them one after
+     another was most of a small rebuild. *)
+  let state_entries =
+    directories
+    |> List.concat_map (fun (directory, (_, state_names)) ->
+        List.map (fun name -> (directory, name)) state_names)
+    |> Parallel.map (fun (directory, name) ->
+        (directory, read_state_entry directory name))
+  in
+  let state_entries_by_directory = Hashtbl.create (List.length directories) in
+  List.iter
+    (fun (directory, entry) ->
+      Option.iter
+        (fun entry ->
+          Hashtbl.replace state_entries_by_directory directory
+            (entry
+            :: (Hashtbl.find_opt state_entries_by_directory directory
+               |> Option.value ~default:[])))
+        entry)
+    state_entries;
   directories
-  |> List.sort_uniq String.compare
-  |> List.iter (fun directory ->
-      let files, state_entries = read_directory directory in
+  |> List.iter (fun (directory, (files, _)) ->
+      let state_entries =
+        Hashtbl.find_opt state_entries_by_directory directory
+        |> Option.value ~default:[] |> List.rev
+      in
       Hashtbl.replace state.files_by_directory directory files;
       let ast_sources =
         state_entries
-        |> List.filter_map (fun (entry, name) ->
-            match Filename.extension name with
-            | ".ast" | ".iast" -> (
-              match ast_header entry.path with
-              | Some header ->
-                Option.map
-                  (fun source -> (entry, source, header.dependencies))
-                  header.Ast_header.source
-              | None -> None)
-            | _ -> None)
+        |> List.filter_map (fun ((entry, _), header) ->
+            match header with
+            | Some header ->
+              Option.map
+                (fun source -> (entry, source, header.Ast_header.dependencies))
+                header.Ast_header.source
+            | None -> None)
       in
       Hashtbl.replace state.ast_sources_by_directory directory
         (List.map
@@ -99,7 +129,9 @@ let create directories =
           Hashtbl.replace state.ast_dependencies entry.path dependencies;
           Hashtbl.replace state.ast_by_source (source_key source) entry)
         ast_sources;
-      List.iter (add_module_artifact state) state_entries);
+      List.iter
+        (fun (entry, _) -> add_module_artifact state entry)
+        state_entries);
   state
 
 let files state directory =

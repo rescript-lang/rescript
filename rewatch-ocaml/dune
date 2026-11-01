@@ -58,6 +58,7 @@
   compiler_log
   ast_header
   compiler_execution_mode
+  parallel
   compiler_process
   compiler_scheduler
   after_build

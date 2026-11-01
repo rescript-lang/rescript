@@ -154,10 +154,18 @@ let resolved_dependencies ~find_module ~find_namespace_maps (node : module_node)
   |> List.filter (fun dependency -> dependency <> node.key)
   |> List.sort_uniq String.compare
 
-let raw_dependencies ~build_dir ~parse_failed (module_ : Source.module_) =
+let raw_dependencies ?(published_dependencies = fun _ -> None) ~build_dir
+    ~parse_failed (module_ : Source.module_) =
   let dependencies path =
     if parse_failed path then []
-    else Compiler_process.ast_dependencies ~build_dir (Source.ast_path path)
+    else
+      let ast = Filename.concat build_dir (Source.ast_path path) in
+      (* An AST parsed in this build is in memory. Otherwise its published
+         copy, whose header the build has already read, has the same
+         dependencies. *)
+      match (Build_file_store.cached ast, published_dependencies path) with
+      | None, Some dependencies -> dependencies
+      | Some _, _ | None, None -> (Ast_header.read ast).dependencies
   in
   List.sort_uniq String.compare
     (dependencies module_.implementation
@@ -177,46 +185,58 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
     ~failed_parse_paths =
   let nodes = ref [] in
   let use_existing_ast_paths = ref [] in
-  List.iter
-    (fun (package : Package_plan.t) ->
-      let visible_packages =
-        Hashtbl.create (List.length package.dependencies + 1)
+  let modules =
+    package_plans
+    |> List.concat_map (fun (package : Package_plan.t) ->
+        let visible_packages =
+          Hashtbl.create (List.length package.dependencies + 1)
+        in
+        Hashtbl.replace visible_packages package.name ();
+        List.iter
+          (fun (dependency : Package_plan.dependency) ->
+            Hashtbl.replace visible_packages dependency.declaration.name ())
+          package.dependencies;
+        List.map
+          (fun module_ -> (package, visible_packages, module_))
+          package.modules)
+  in
+  (* Reading every module's AST header one after another was a large part of
+     a small rebuild of a large project. *)
+  let raw_dependencies =
+    modules
+    |> Parallel.map (fun ((package : Package_plan.t), _, module_) ->
+        raw_dependencies ~build_dir:package.build_dir
+          ~published_dependencies:(fun path ->
+            Compile_assets.ast compile_assets
+              (Filename.concat package.root path)
+            |> Option.map (fun (published : Compile_assets.entry) ->
+                Compile_assets.ast_dependencies compile_assets published.path))
+          ~parse_failed:(fun path ->
+            Hashtbl.mem failed_parse_paths (Filename.concat package.root path))
+          module_)
+  in
+  List.iter2
+    (fun ((package : Package_plan.t), visible_packages, module_)
+         raw_dependencies ->
+      let compiler_base =
+        Source.compiler_basename package.compile_config module_.Source.name
       in
-      Hashtbl.replace visible_packages package.name ();
-      List.iter
-        (fun (dependency : Package_plan.dependency) ->
-          Hashtbl.replace visible_packages dependency.declaration.name ())
-        package.dependencies;
-      List.iter
-        (fun module_ ->
-          let raw_dependencies =
-            raw_dependencies ~build_dir:package.build_dir
-              ~parse_failed:(fun path ->
-                Hashtbl.mem failed_parse_paths
-                  (Filename.concat package.root path))
-              module_
-          in
-          let compiler_base =
-            Source.compiler_basename package.compile_config module_.Source.name
-          in
-          if Option.is_none (Compile_assets.cmt compile_assets compiler_base)
-          then
-            use_existing_ast_paths :=
-              Filename.concat package.root module_.Source.implementation
-              :: !use_existing_ast_paths;
-          nodes :=
-            {
-              key = compiler_base;
-              package_name = package.name;
-              package_root = package.root;
-              source_path = module_.Source.implementation;
-              namespace = package.compile_config.namespace;
-              visible_packages;
-              raw_dependencies;
-            }
-            :: !nodes)
-        package.modules)
-    package_plans;
+      if Option.is_none (Compile_assets.cmt compile_assets compiler_base) then
+        use_existing_ast_paths :=
+          Filename.concat package.root module_.Source.implementation
+          :: !use_existing_ast_paths;
+      nodes :=
+        {
+          key = compiler_base;
+          package_name = package.name;
+          package_root = package.root;
+          source_path = module_.Source.implementation;
+          namespace = package.compile_config.namespace;
+          visible_packages;
+          raw_dependencies;
+        }
+        :: !nodes)
+    modules raw_dependencies;
   let nodes =
     List.sort
       (fun (first : module_node) second -> String.compare first.key second.key)
