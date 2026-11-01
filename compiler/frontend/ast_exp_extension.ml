@@ -33,17 +33,20 @@ let handle_extension e (_self : Ast_mapper.mapper)
       | None -> None
     in
     Location.prerr_warning e.Parsetree.pexp_loc (Bs_todo todo_message);
+    (* Like [__LOC__]: the file's base name, so the generated code does not
+       depend on where it was built, and columns rather than offsets. *)
+    let file, line, start_col = Location.get_pos_info loc.loc_start in
+    let end_col = loc.loc_end.pos_cnum - loc.loc_start.pos_cnum + start_col in
     let pretext =
-      loc.loc_start.pos_fname ^ ":"
-      ^ string_of_int loc.loc_start.pos_lnum
-      ^ ":"
-      ^ string_of_int loc.loc_start.pos_cnum
-      ^ "-"
-      ^ string_of_int loc.loc_end.pos_cnum
+      Printf.sprintf "%s:%d:%d-%d" (Filename.basename file) line start_col
+        end_col
     in
 
     Exp.apply ~loc
-      (Exp.ident ~loc {txt = Longident.parse "JsError.throwWithMessage"; loc})
+      (* The compilation unit, not [JsError]: a user module of that name
+         would shadow the [Stdlib] alias. *)
+      (Exp.ident ~loc
+         {txt = Ldot (Lident "Stdlib_JsError", "throwWithMessage"); loc})
       [
         ( Nolabel,
           Exp.constant ~loc
