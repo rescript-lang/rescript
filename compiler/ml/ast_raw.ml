@@ -14,12 +14,13 @@ let js_source = function
 let payload_loc = function
   | Raw_string {loc} -> loc
   | Raw_template {loc} ->
-    (* The template source ends before the closing backquote. *)
+    (* The template source is the text between the backquotes. *)
     if loc.loc_ghost then loc
     else
       {
-        loc with
+        loc_start = {loc.loc_start with pos_cnum = loc.loc_start.pos_cnum - 1};
         loc_end = {loc.loc_end with pos_cnum = loc.loc_end.pos_cnum + 1};
+        loc_ghost = false;
       }
 
 let kind_of_name = function

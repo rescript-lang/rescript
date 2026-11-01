@@ -2414,10 +2414,13 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
   loop a
 
 and parse_template_expr ?prefix p =
+  let template_start = Parser.start_pos p in
   let parse_parts p =
     let rec aux acc =
-      let start_pos = Parser.start_pos p in
       Parser.next_template_literal_token p;
+      (* A segment is its text: it starts after the backquote or [}] before
+         it and ends before the [${] or backquote after it. *)
+      let start_pos = Parser.start_pos p in
       match Parser.peek p with
       | TemplateTail (txt, last_pos) ->
         Parser.next p;
@@ -2437,11 +2440,7 @@ and parse_template_expr ?prefix p =
   let parts = parse_parts p in
   let sources = List.map (fun (txt, loc, _) -> {Location.txt; loc}) parts in
   let values = Ext_list.filter_map parts (fun (_, _, value) -> value) in
-  let template_loc =
-    let _, first_loc, _ = List.hd parts in
-    let _, last_loc, _ = Ext_list.last parts in
-    mk_loc first_loc.loc_start last_loc.loc_end
-  in
+  let template_loc = mk_loc template_start (Parser.position p) in
   let gen_tagged_template (lident_loc : Longident.t Location.loc) =
     let ident = Ast_helper.Exp.ident ~attrs:[] ~loc:lident_loc.loc lident_loc in
     let loc = mk_loc lident_loc.loc.loc_start (Parser.position p) in
