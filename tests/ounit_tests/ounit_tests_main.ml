@@ -3,6 +3,7 @@ let suites =
     [
       Ounit_json_tests.suites;
       Ounit_scc_tests.suites;
+      Ounit_lambda_scc_tests.suites;
       Ounit_list_test.suites;
       Ounit_hash_stubs_test.suites;
       Ounit_string_tests.suites;
