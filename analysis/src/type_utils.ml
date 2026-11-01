@@ -511,10 +511,11 @@ let type_stamp (file : File.t) (typ : Type.t) =
    the environment of their file, where their payloads are typed. *)
 let extension_constructors ~state ~package ~(current_file : File.t)
     ~(type_file : File.t) ~type_stamp ~type_name ~decl =
-  let current_file, scope_path, cursor =
+  let current_file, scope_path, cursor, scope =
     match !completion_scope with
-    | Some (file, module_path, pos, _) -> (file, module_path, Some pos)
-    | None -> (current_file, [], None)
+    | Some (file, module_path, pos, scope) ->
+      (file, module_path, Some pos, scope)
+    | None -> (current_file, [], None, [])
   in
   (* An extension in a module type declares no constructor. *)
   let rec in_module_type (path : Module_path.t) =
@@ -530,6 +531,44 @@ let extension_constructors ~state ~package ~(current_file : File.t)
     | Some pos when file.uri = current_file.uri ->
       Loc.start declared.extent_loc <= pos
     | _ -> true
+  in
+  (* An extension in an expression-local module, whose module path starts
+     out of sight, is in scope in the module's block: where the scope's
+     most recent module of that name is the local module declared before
+     the extension. *)
+  let rec local_module (path : Module_path.t) =
+    match path with
+    | ExportedModule {name; module_path = NotVisible} -> Some name
+    | ExportedModule {module_path} | IncludedModule (_, module_path) ->
+      local_module module_path
+    | File _ | NotVisible -> None
+  in
+  let local_module_in_scope (file : File.t) (declared : _ Declared.t) =
+    match local_module declared.module_path with
+    | None -> true
+    | Some name -> (
+      let is_local_module loc =
+        let found = ref false in
+        file.stamps
+        |> Stamps.iter_modules (fun _ (m : Module.t Declared.t) ->
+            if
+              m.module_path = NotVisible && m.name.txt = name
+              && Loc.start m.extent_loc = Loc.start loc
+            then found := true);
+        !found
+      in
+      file.uri = current_file.uri
+      &&
+      match
+        scope
+        |> List.find_map (fun (item : Scope_types.item) ->
+            match item with
+            | Module (n, loc) when n = name -> Some loc
+            | _ -> None)
+      with
+      | Some loc ->
+        is_local_module loc && Loc.start loc <= Loc.start declared.extent_loc
+      | None -> false)
   in
   let extends (file : File.t) (ext_decl : Types.type_declaration) =
     match (type_stamp, ext_decl.type_manifest) with
@@ -561,6 +600,7 @@ let extension_constructors ~state ~package ~(current_file : File.t)
                name = type_name
                && ext_decl.type_kind = Type_open
                && declared_before_cursor file declared
+               && local_module_in_scope file declared
                && (not (in_module_type declared.module_path))
                && extends file ext_decl
              then Hashtbl.replace found (file.uri, stamp) (file, declared)));

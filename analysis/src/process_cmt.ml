@@ -755,7 +755,12 @@ and scan_let_modules ~env (e : Typedtree.expression) =
     (match expression.exp_desc with
     | Texp_letmodule (id, name, mexpr, _body) ->
       let stamp = Ident.binding_time id in
-      let item = for_module ~env mexpr.mod_desc name.txt in
+      (* Its contents are out of sight outside the expression. *)
+      let item =
+        for_module
+          ~env:{env with module_path = NotVisible}
+          mexpr.mod_desc name.txt
+      in
       let declared =
         Process_attributes.new_declared ~item ~extent:name.loc ~name ~stamp
           ~module_path:NotVisible false []
