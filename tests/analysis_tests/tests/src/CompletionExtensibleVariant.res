@@ -90,3 +90,27 @@ module Nested = {
 // Signature help names a qualified extension constructor
 let _toggled: attr = Sub.Toggle(true)
 //                              ^she
+
+// An extension in an expression-local module is in scope only in its block
+let make = () => {
+  module Local = {
+    type attr += InLocal
+  }
+  // let inBlock: attr = InL
+  //                        ^com
+  let _ = switch value {
+  | Str(_) => 1
+  | _ => 2
+  //^xfm
+  }
+  Local.InLocal
+}
+
+// let afterMake: attr = InL
+//                          ^com
+
+let _w = switch value {
+| Str(_) => 1
+| _ => 2
+//^xfm
+}
