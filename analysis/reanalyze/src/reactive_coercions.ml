@@ -12,11 +12,7 @@
 
 (** {1 Types} *)
 
-type t = {
-  labels_by_type_path: (Dce_path.t, (Name.t * Location.t) list) Reactive.t;
-  resolved_refs: (Lexing.position, Pos_set.t) Reactive.t;
-  resolved_refs_from: (Lexing.position, Pos_set.t) Reactive.t;
-}
+type t = {resolved_refs_from: (Lexing.position, Pos_set.t) Reactive.t}
 (** Reactive coercion ref collections *)
 
 (** {1 Creation} *)
@@ -89,4 +85,4 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         |> List.map (fun pos_from -> (pos_from, Pos_set.singleton pos_to)))
       ~merge:Pos_set.union ()
   in
-  {labels_by_type_path; resolved_refs; resolved_refs_from}
+  {resolved_refs_from}

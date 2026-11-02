@@ -39,39 +39,6 @@ type stats = {
 }
 (** Per-node statistics for diagnostics *)
 
-(** {1 Node Registry} *)
-
-module Registry : sig
-  type node_info
-  (** Information about a registered node *)
-
-  val clear : unit -> unit
-  (** Clear all registered nodes *)
-
-  val to_mermaid : unit -> string
-  (** Generate a Mermaid diagram of the pipeline *)
-
-  val print_stats : unit -> unit
-  (** Print timing statistics for all nodes *)
-end
-
-(** {1 Scheduler} *)
-
-module Scheduler : sig
-  val propagate : unit -> unit
-  (** Process all dirty nodes in topological order.
-      Called automatically when a source emits. *)
-
-  val is_propagating : unit -> bool
-  (** Returns true if currently in a propagation wave *)
-
-  val wave_count : unit -> int
-  (** Number of propagation waves executed *)
-
-  val reset_wave_count : unit -> unit
-  (** Reset the wave counter *)
-end
-
 (** {1 Collection Interface} *)
 
 type ('k, 'v) t = {

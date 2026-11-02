@@ -1623,12 +1623,11 @@ let print_constructor_args ~mode ~as_snippet args_len =
   if List.length !args > 0 then "(" ^ (!args |> String.concat ", ") ^ ")"
   else ""
 
-let rec complete_typed_value ?(type_arg_context : type_arg_context option)
-    ~raw_opens ~full ~state ~prefix ~completion_context ~mode
-    (t : Shared_types.completion_type) =
+let rec complete_typed_value ~raw_opens ~full ~state ~prefix ~completion_context
+    ~mode (t : Shared_types.completion_type) =
   let empty_case = empty_case ~mode in
   let print_constructor_args = print_constructor_args ~mode in
-  let create = Completion.create ?type_arg_context in
+  let create = Completion.create in
   let get_record_completions ~env ~fields ~extracted_type =
     (* As we're completing for a record, we'll need a hint (completion_context)
        here to figure out whether we should complete for a record field, or
@@ -2203,10 +2202,10 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     in
     match typ |> Type_utils.resolve_nested ~env ~full ~nested ~state with
     | None -> []
-    | Some (typ, _env, completion_context, type_arg_context) ->
+    | Some (typ, _env, completion_context, _) ->
       typ
-      |> complete_typed_value ?type_arg_context ~raw_opens ~mode:Expression
-           ~full ~prefix ~completion_context ~state)
+      |> complete_typed_value ~raw_opens ~mode:Expression ~full ~prefix
+           ~completion_context ~state)
   | CdecoratorPayload (ModuleWithImportAttributes {prefix; nested}) -> (
     let mk_field ~name ~primitive =
       {
@@ -2246,10 +2245,10 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     in
     match typ |> Type_utils.resolve_nested ~env ~full ~nested ~state with
     | None -> []
-    | Some (typ, _env, completion_context, type_arg_context) ->
+    | Some (typ, _env, completion_context, _) ->
       typ
-      |> complete_typed_value ?type_arg_context ~raw_opens ~mode:Expression
-           ~full ~prefix ~completion_context ~state)
+      |> complete_typed_value ~raw_opens ~mode:Expression ~full ~prefix
+           ~completion_context ~state)
   | CdecoratorPayload (Module prefix) ->
     let package_json_path =
       Utils.find_package_json (full.package.root_path |> Uri.from_path)
@@ -2418,12 +2417,11 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
                  ~state)
       with
       | None -> fallback_or_empty ()
-      | Some (typ, _env, completion_context, type_arg_context) ->
+      | Some (typ, _env, completion_context, _) ->
         let items =
           typ
-          |> complete_typed_value ?type_arg_context ~raw_opens
-               ~mode:(Pattern pattern_mode) ~full ~prefix ~completion_context
-               ~state
+          |> complete_typed_value ~raw_opens ~mode:(Pattern pattern_mode) ~full
+               ~prefix ~completion_context ~state
         in
         fallback_or_empty ~items ())
     | None -> fallback_or_empty ())
@@ -2484,7 +2482,7 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
           in
           items_for_raw_jsx_prop_value @ regular_completions)
         else regular_completions
-      | Some (typ, _env, completion_context, type_arg_context) -> (
+      | Some (typ, _env, completion_context, _) -> (
         if Debug.verbose () then
           print_endline
             "[process_completable]--> found type in nested expression \
@@ -2500,8 +2498,8 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
         in
         let items =
           typ
-          |> complete_typed_value ?type_arg_context ~raw_opens ~mode:Expression
-               ~full ~prefix ~completion_context ~state
+          |> complete_typed_value ~raw_opens ~mode:Expression ~full ~prefix
+               ~completion_context ~state
           |> List.map (fun (c : Completion.t) ->
               if wrap_insert_text_in_braces then
                 {

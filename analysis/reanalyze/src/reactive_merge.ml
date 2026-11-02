@@ -13,8 +13,6 @@ type t = {
   type_refs_from: (Lexing.position, Pos_set.t) Reactive.t;
       (** Type refs: source -> targets *)
   cross_file_items: (string, Cross_file_items.t) Reactive.t;
-  file_deps_map: (string, String_set.t) Reactive.t;
-  files: (string, unit) Reactive.t;
   (* Reactive type/exception dependencies *)
   type_deps: Reactive_type_deps.t;
   exception_refs: Reactive_exception_refs.t;
@@ -100,33 +98,6 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
       ()
   in
 
-  (* File deps map: (from_file, String_set of to_files) with String_set.union
-     merge *)
-  let file_deps_map =
-    Reactive.flat_map ~name:"file_deps_map" source
-      ~f:(fun _path file_data_opt ->
-        match file_data_opt with
-        | None -> []
-        | Some file_data ->
-          File_deps.builder_deps_to_list file_data.Dce_file_processing.file_deps)
-      ~merge:String_set.union ()
-  in
-
-  (* Files set: (source_path, ()) - just track which source files exist *)
-  let files =
-    Reactive.flat_map ~name:"files" source
-      ~f:(fun _cmt_path file_data_opt ->
-        match file_data_opt with
-        | None -> []
-        | Some file_data ->
-          (* Include all source files from file_deps (NOT the CMT path) *)
-          let file_set =
-            File_deps.builder_files file_data.Dce_file_processing.file_deps
-          in
-          String_set.fold (fun f acc -> (f, ()) :: acc) file_set [])
-      ()
-  in
-
   (* Extract exception_refs from cross_file_items for Reactive_exception_refs *)
   let exception_refs_collection =
     Reactive.flat_map ~name:"exception_refs_collection" cross_file_items
@@ -171,8 +142,6 @@ let create (source : (string, Dce_file_processing.file_data option) Reactive.t)
     value_refs_from;
     type_refs_from;
     cross_file_items;
-    file_deps_map;
-    files;
     type_deps;
     exception_refs;
     coercion_refs;
