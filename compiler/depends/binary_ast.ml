@@ -28,6 +28,34 @@ type 'a kind = 'a Ml_binary.kind =
   | Ml : Parsetree.structure kind
   | Mli : Parsetree.signature kind
 
+let magic_sep_char = '\n'
+
+type header = {source_start: int; source_end: int}
+
+let read_header ?length contents =
+  let length = Option.value length ~default:(String.length contents) in
+  if length < 4 then None
+  else
+    let source_start = 4 + Int32.to_int (String.get_int32_be contents 0) in
+    if source_start < 4 || source_start > length then None
+    else
+      let rec source_end index =
+        if index >= length then None
+        else if contents.[index] = magic_sep_char then
+          Some {source_start; source_end = index}
+        else source_end (index + 1)
+      in
+      source_end source_start
+
+let header_dependencies contents header =
+  String.sub contents 4 (header.source_start - 4)
+  |> String.split_on_char magic_sep_char
+  |> List.filter (fun name -> name <> "")
+
+let header_source contents header =
+  String.sub contents header.source_start
+    (header.source_end - header.source_start)
+
 let read_ast_exn (type t) ~fname (_ : t kind) : t =
   let path = Compiler_request_state.resolve_path fname in
   let contents =
@@ -35,18 +63,11 @@ let read_ast_exn (type t) ~fname (_ : t kind) : t =
     | Some contents -> contents
     | None -> raise (Sys_error (path ^ ": No such file or directory"))
   in
-  if String.length contents < 4 then raise End_of_file;
-  let source_start = 4 + Int32.to_int (String.get_int32_be contents 0) in
-  let source_end =
-    match String.index_from_opt contents source_start '\n' with
-    | Some index -> index
-    | None -> raise End_of_file
-  in
-  Location.set_input_name
-    (String.sub contents source_start (source_end - source_start));
-  Marshal.from_string contents (source_end + 1)
-
-let magic_sep_char = '\n'
+  match read_header contents with
+  | Some header ->
+    Location.set_input_name (header_source contents header);
+    Marshal.from_string contents (header.source_end + 1)
+  | None -> raise End_of_file
 
 (*
    Reasons that we don't [output_value] the set:
