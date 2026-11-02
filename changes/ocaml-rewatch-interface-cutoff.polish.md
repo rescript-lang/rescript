@@ -1,0 +1,1 @@
+- OCaml rewatch: compile a module again only when an interface it read changed, instead of every module below a changed `.cmi`. Adding a value to a module used across a project no longer recompiles the whole project below it.

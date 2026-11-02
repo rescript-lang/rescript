@@ -59,22 +59,39 @@ let read_cmi_channel filename ic =
     input_cmi ic
   with End_of_file | Failure _ -> raise (Error (Corrupted_interface filename))
 
-(* The same as [read_cmi_channel] on a channel holding [contents]. *)
-let read_cmi_contents filename contents =
+(* Checks the magic number of the interface in [contents], and returns the
+   offset of the values that follow it. *)
+let contents_values_offset filename contents =
   let magic_length = String.length Config.cmi_magic_number in
   if String.length contents < magic_length then
     raise (Error (Corrupted_interface filename));
   check_magic_number filename (String.sub contents 0 magic_length);
+  magic_length
+
+let value_end contents offset =
+  offset + Marshal.total_size (Bytes.unsafe_of_string contents) offset
+
+(* The same as [read_cmi_channel] on a channel holding [contents]. *)
+let read_cmi_contents filename contents =
+  let offset = contents_values_offset filename contents in
   try
     let input offset =
-      let value = Marshal.from_string contents offset in
-      ( value,
-        offset + Marshal.total_size (Bytes.unsafe_of_string contents) offset )
+      (Marshal.from_string contents offset, value_end contents offset)
     in
-    let (name, sign), offset = input magic_length in
+    let (name, sign), offset = input offset in
     let crcs, offset = input offset in
     let flags, _ = input offset in
     {cmi_name = name; cmi_sign = sign; cmi_crcs = crcs; cmi_flags = flags}
+  with Failure _ | Invalid_argument _ ->
+    raise (Error (Corrupted_interface filename))
+
+let read_crcs_and_flags filename contents =
+  let offset = contents_values_offset filename contents in
+  try
+    let offset = value_end contents offset in
+    let crcs = Marshal.from_string contents offset in
+    let flags = Marshal.from_string contents (value_end contents offset) in
+    (crcs, flags)
   with Failure _ | Invalid_argument _ ->
     raise (Error (Corrupted_interface filename))
 

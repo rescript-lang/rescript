@@ -15,6 +15,7 @@ type post_build_task = {output: string; task: Process.task}
 
 type phase =
   | Start
+  | Checking_imports
   | Interface of string
   | Implementation of string
   | Post_build of {output: string; remaining: post_build_task list}
@@ -43,6 +44,7 @@ type scheduled_module = {
   state: Build_state.module_;
   cmi_path: string;
   publication: publication option Atomic.t;
+  imports_changed: bool Atomic.t;
   prepare: unit -> unit;
   compile: source_kind:Source.source_kind -> string -> Process.task;
   publish:
@@ -75,6 +77,7 @@ let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile
     state;
     cmi_path;
     publication = Atomic.make None;
+    imports_changed = Atomic.make false;
     prepare;
     compile;
     publish;
@@ -100,10 +103,74 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     Build_state.record_published_cmi ~dirty_propagation build_state
       ~compile_assets scheduled.state ~path:scheduled.cmi_path cmi_change
   in
+  let cmt_path (scheduled : scheduled_module) =
+    Filename.remove_extension scheduled.cmi_path ^ ".cmt"
+  in
   let finish_successful_compile (scheduled : scheduled_module) =
-    let cmt_path = Filename.remove_extension scheduled.cmi_path ^ ".cmt" in
     Build_state.record_successful_compile ~compile_assets scheduled.state
-      ~cmt_path
+      ~cmt_path:(cmt_path scheduled)
+  in
+  (* A module may have read any interface below it in the dependency graph:
+     those of its dependencies, and those their own interfaces refer to. When
+     one of them was published after the module last compiled, the module
+     checks the CRCs it recorded ({!Published_interface.imports_changed}). An
+     interface published with an unchanged CRC keeps its time. [memo] holds
+     the latest time below each module, which stays valid while nothing below
+     it publishes again: the memo of the run's start is used before anything
+     publishes, the other one only for modules whose dependencies finished. *)
+  let latest_interface_below memo =
+    let later first second =
+      match (first, second) with
+      | Some first, Some second -> Some (Float.max first second)
+      | Some _, None -> first
+      | None, _ -> second
+    in
+    let rec below key =
+      match Hashtbl.find_opt memo key with
+      | Some latest -> latest
+      | None ->
+        let latest =
+          (Build_state.find_exn build_state key).dependencies
+          |> List.fold_left
+               (fun latest dependency ->
+                 let state = Build_state.find_exn build_state dependency in
+                 later latest (later state.last_compiled_cmi (below dependency)))
+               None
+        in
+        Hashtbl.add memo key latest;
+        latest
+    in
+    fun (state : Build_state.module_) ->
+      match (below state.key, state.last_compiled_cmt) with
+      | Some interface_time, Some module_time -> interface_time > module_time
+      | None, _ | _, None -> false
+  in
+  let module String_map = Map.Make (String) in
+  let published_interfaces =
+    lazy
+      (Compile_assets.fold_cmi
+         (fun unit entry interfaces ->
+           String_map.add unit entry.Compile_assets.path interfaces)
+         compile_assets String_map.empty)
+  in
+  (* Runs on a worker. A module that read only unchanged interfaces is current
+     again, and its .cmt's new time tells later builds so. *)
+  let import_check_task (scheduled : scheduled_module) =
+    let interfaces = Lazy.force published_interfaces in
+    let has_interface = Option.is_some scheduled.source.Source.interface in
+    Process.concurrent_task ~cancel:ignore (fun () ->
+        let changed =
+          Published_interface.imports_changed
+            ~published:(fun unit -> String_map.find_opt unit interfaces)
+            ~cmi_path:scheduled.cmi_path ~has_interface
+          ||
+            try
+              Unix.utimes (cmt_path scheduled) 0. 0.;
+              false
+            with Unix.Unix_error _ -> true
+        in
+        Atomic.set scheduled.imports_changed changed;
+        {Process.status = Unix.WEXITED 0; stdout = ""; stderr = ""})
   in
   let warning_paths =
     candidates |> List.concat_map (fun candidate -> candidate.warning_paths)
@@ -132,9 +199,16 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       if Hashtbl.mem candidate_by_key key then Hashtbl.add universe key ();
       Queue.add key pending)
   in
+  (* A build stopped after an interface changed may not have checked every
+     module that read it; such a module still finds that interface newer. *)
+  let interface_newer_at_start = latest_interface_below (Hashtbl.create 64) in
   candidates
   |> List.iter (fun candidate ->
-      if candidate.state.compile_dirty then add_to_closure candidate.key);
+      if
+        candidate.state.compile_dirty
+        || interface_newer_at_start candidate.state
+      then add_to_closure candidate.key);
+  let interface_newer = latest_interface_below (Hashtbl.create 64) in
   while not (Queue.is_empty pending) do
     let key = Queue.take pending in
     let state = Build_state.find_exn build_state key in
@@ -301,19 +375,41 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       scheduled.phase <- Post_build {output; remaining};
       Some task
   in
+  let start_compile (scheduled : scheduled_module) =
+    mark_compiled ();
+    scheduled.prepare ();
+    match scheduled.source.Source.interface with
+    | Some path ->
+      Output.Progress.debug progress ~verbosity
+        ("Compiling interface file: " ^ scheduled.key);
+      scheduled.phase <- Interface path;
+      Some (compilation_task scheduled ~source_kind:Source.Interface path)
+    | None ->
+      let path = scheduled.source.Source.implementation in
+      Output.Progress.debug progress ~verbosity
+        ("Compiling file: " ^ scheduled.key);
+      scheduled.phase <- Implementation path;
+      Some (compilation_task scheduled ~source_kind:Source.Implementation path)
+  in
+  let skip (scheduled : scheduled_module) =
+    scheduled.phase <- Done;
+    incr completed_modules;
+    Output.Progress.advance progress;
+    None
+  in
   let reconcile_unconsumed_publications () =
     List.iter
       (fun (scheduled : scheduled_module) ->
         let attempt_is_incomplete =
           match scheduled.phase with
           | Interface _ | Implementation _ | Post_build _ -> true
-          | Start | Done -> false
+          | Start | Checking_imports | Done -> false
         in
         let source =
           match scheduled.phase with
           | Interface path -> Some (Source.Interface, path)
           | Implementation path -> Some (Source.Implementation, path)
-          | Start | Post_build _ | Done -> None
+          | Start | Checking_imports | Post_build _ | Done -> None
         in
         Option.iter
           (fun (source_kind, path) ->
@@ -341,30 +437,19 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
           | Module scheduled -> (
             match (result, scheduled.phase) with
             | None, Start ->
-              if scheduled.state.compile_dirty then (
-                mark_compiled ();
-                scheduled.prepare ();
-                match scheduled.source.Source.interface with
-                | Some path ->
-                  Output.Progress.debug progress ~verbosity
-                    ("Compiling interface file: " ^ scheduled.key);
-                  scheduled.phase <- Interface path;
-                  Some
-                    (compilation_task scheduled ~source_kind:Source.Interface
-                       path)
-                | None ->
-                  let path = scheduled.source.Source.implementation in
-                  Output.Progress.debug progress ~verbosity
-                    ("Compiling file: " ^ scheduled.key);
-                  scheduled.phase <- Implementation path;
-                  Some
-                    (compilation_task scheduled
-                       ~source_kind:Source.Implementation path))
+              if scheduled.state.compile_dirty then start_compile scheduled
+              else if interface_newer scheduled.state then (
+                scheduled.phase <- Checking_imports;
+                Some (import_check_task scheduled))
+              else skip scheduled
+            | Some _, Checking_imports ->
+              if Atomic.get scheduled.imports_changed then (
+                scheduled.state.compile_dirty <- true;
+                start_compile scheduled)
               else (
-                scheduled.phase <- Done;
-                incr completed_modules;
-                Output.Progress.advance progress;
-                None)
+                Build_state.record_current_cmt ~compile_assets scheduled.state
+                  ~cmt_path:(cmt_path scheduled);
+                skip scheduled)
             | Some result, Interface path ->
               ignore
                 (record_result scheduled ~source_kind:Source.Interface path
@@ -390,7 +475,9 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
               else (
                 complete_module scheduled;
                 None)
-            | None, (Interface _ | Implementation _ | Post_build _ | Done)
+            | ( None,
+                ( Checking_imports | Interface _ | Implementation _
+                | Post_build _ | Done ) )
             | Some _, (Start | Done) ->
               raise (Project_context.Error "invalid compiler scheduler state")))
     with exn -> (

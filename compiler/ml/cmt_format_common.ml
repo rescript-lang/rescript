@@ -127,6 +127,16 @@ let read_cmt filename =
   | _, None -> raise (Error (Not_a_typedtree filename))
   | _, Some cmt -> cmt
 
+let read_cmt_contents filename contents =
+  let magic_length = String.length Config.cmt_magic_number in
+  if
+    String.length contents < magic_length
+    || String.sub contents 0 magic_length <> Config.cmt_magic_number
+  then raise (Error (Not_a_typedtree filename));
+  try (Marshal.from_string contents magic_length : cmt_infos)
+  with Failure _ | Invalid_argument _ ->
+    raise (Error (Not_a_typedtree filename))
+
 let read_cmi filename =
   match read filename with
   | None, _ -> raise (Cmi_format.Error (Cmi_format.Not_an_interface filename))

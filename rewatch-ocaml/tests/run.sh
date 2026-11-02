@@ -2295,6 +2295,47 @@ grep 'Cleaned previous build due to compiler update' \
   "$source_map/changed.log" >/dev/null
 grep 'Compiled 1 modules' "$source_map/changed.log" >/dev/null
 
+# An interface whose CRC changed rebuilds the modules that read it, including
+# User, which only reaches Shape through the type of Middle.shape. Far reads
+# Middle, whose interface keeps its CRC, so it is not rebuilt.
+interface_cutoff="$work/interface-cutoff"
+mkdir -p "$interface_cutoff/src"
+printf '{"name":"interface-cutoff","sources":"src"}\n' \
+  >"$interface_cutoff/rescript.json"
+printf 'type t = A | C | B({x: int})\nlet make = () => A\n' \
+  >"$interface_cutoff/src/Shape.res"
+printf 'let shape = Shape.make()\nlet count = 1\n' \
+  >"$interface_cutoff/src/Middle.res"
+printf 'let value = switch Middle.shape {\n| A => 1\n| C => 2\n| B({x}) => x\n}\n' \
+  >"$interface_cutoff/src/User.res"
+printf 'let value: int\n' >"$interface_cutoff/src/User.resi"
+printf 'let value = Middle.count + 1\n' >"$interface_cutoff/src/Far.res"
+"$port" build "$interface_cutoff" >/dev/null
+grep '"A"' "$interface_cutoff/src/User.js" >/dev/null
+# User's outputs as a build stopped before reaching User leaves them.
+interface_cutoff_user="$work/interface-cutoff-user"
+(cd "$interface_cutoff" &&
+  for file in lib/bs/src/User.* lib/ocaml/User.* src/User.js; do
+    mkdir -p "$interface_cutoff_user/$(dirname "$file")"
+    cp -p "$file" "$interface_cutoff_user/$file"
+  done)
+printf 'type t = | @as("a") A | C | B({x: int})\nlet make = () => A\n' \
+  >"$interface_cutoff/src/Shape.res"
+"$port" build "$interface_cutoff" >"$interface_cutoff/changed.log"
+grep 'Compiled 3 modules' "$interface_cutoff/changed.log" >/dev/null
+grep '"a"' "$interface_cutoff/src/User.js" >/dev/null
+# Middle was published again with its time kept, so only the newer Shape
+# tells the next build that User may be out of date.
+(cd "$interface_cutoff_user" &&
+  for file in lib/bs/src/User.* lib/ocaml/User.* src/User.js; do
+    cp -p "$file" "$interface_cutoff/$file"
+  done)
+"$port" build "$interface_cutoff" >"$interface_cutoff/resumed.log"
+grep 'Compiled 1 modules' "$interface_cutoff/resumed.log" >/dev/null
+grep '"a"' "$interface_cutoff/src/User.js" >/dev/null
+"$port" build "$interface_cutoff" >"$interface_cutoff/unchanged.log"
+grep 'Compiled 0 modules' "$interface_cutoff/unchanged.log" >/dev/null
+
 sed 's/"sources":"src"/"sources":"src","dependencies":["consumer"]/' \
   "$monorepo/packages/dep/rescript.json" > "$monorepo/packages/dep/rescript.next"
 mv "$monorepo/packages/dep/rescript.next" "$monorepo/packages/dep/rescript.json"

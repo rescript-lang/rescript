@@ -142,6 +142,8 @@ let ast_dependencies state path =
 let ast state source = Hashtbl.find_opt state.ast_by_source (source_key source)
 
 let cmi state key = Hashtbl.find_opt state.cmi_by_module key
+let fold_cmi action state initial =
+  Hashtbl.fold action state.cmi_by_module initial
 let cmt state key = Hashtbl.find_opt state.cmt_by_module key
 
 let replace_from_path table key path =

@@ -59,6 +59,7 @@
   ast_header
   compiler_execution_mode
   parallel
+  published_interface
   compiler_process
   compiler_scheduler
   after_build

@@ -13,6 +13,10 @@ val ast_sources : t -> string -> ast_source list
 val ast_dependencies : t -> string -> string list
 val ast : t -> string -> entry option
 val cmi : t -> string -> entry option
+
+val fold_cmi : (string -> entry -> 'a -> 'a) -> t -> 'a -> 'a
+(** Folds over the indexed interfaces, by unit name. *)
+
 val cmt : t -> string -> entry option
 val refresh_cmi : t -> key:string -> path:string -> unit
 val refresh_cmt : t -> key:string -> path:string -> unit
