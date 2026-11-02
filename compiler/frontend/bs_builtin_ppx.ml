@@ -526,7 +526,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
       | None -> None
       | Some attr -> (
         match Ast_external_mk.inline_const_of_expression pvb_expr with
-        | None | Some (Const_bigint _) -> None
+        | None -> None
         | Some c -> Some (attr, c))
     in
     match inline_const with
@@ -538,7 +538,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
         | Const_int _ -> Ast_literal.type_int ()
         | Const_float _ -> Ast_literal.type_float
         | Const_bool _ -> Ast_literal.type_bool ()
-        | Const_bigint _ -> assert false
+        | Const_bigint _ -> Ast_literal.type_bigint
       in
       {
         str with

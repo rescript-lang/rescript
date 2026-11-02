@@ -103,3 +103,7 @@ let type_int ?loc () =
 let type_float =
   Ast_helper.Typ.mk
     (Ptyp_constr ({txt = Lident "float"; loc = Location.none}, []))
+
+let type_bigint =
+  Ast_helper.Typ.mk
+    (Ptyp_constr ({txt = Lident "bigint"; loc = Location.none}, []))
