@@ -124,6 +124,80 @@ let interface_cache_tests _ =
                 (second != first
                 && second.cmi_flags = [Cmi_format.Deprecated "replaced"]))))
 
+let corrupted_interface =
+  Cmi_format.Error (Cmi_format.Corrupted_interface "Short.cmi")
+
+(* An interface cut short reads as corrupted from memory, as it does from
+   disk. *)
+let corrupted_interface_tests _ =
+  with_temp_dir (fun root ->
+      let path = Filename.concat root "Short.cmi" in
+      Build_file_store.with_build (fun () ->
+          Build_file_store.write path
+            (Config.cmi_magic_number ^ "not a marshalled signature");
+          assert_raises corrupted_interface (fun () ->
+              Cmi_format.read_cmi_contents "Short.cmi"
+                (Option.get (Build_file_store.read path)));
+          Build_file_store.write path "short";
+          assert_raises corrupted_interface (fun () ->
+              Cmi_format.read_cmi_contents "Short.cmi"
+                (Option.get (Build_file_store.read path)))))
+
+(* A write that fails keeps nothing for its path, so a later read sees what
+   the disk has. *)
+let failed_write_tests _ =
+  with_temp_dir (fun root ->
+      let path = Filename.concat root "missing/A.cmi" in
+      Build_file_store.with_build (fun () ->
+          assert_equal ~printer None (Build_file_store.read path);
+          (match Build_file_store.write path "interface" with
+          | () -> assert_failure "a write into a missing directory succeeded"
+          | exception Sys_error _ -> ());
+          assert_equal ~printer None (Build_file_store.cached path);
+          assert_bool "a failed write leaves no file"
+            (not (Build_file_store.exists path))))
+
+(* A request that fails may stop with types of cached interfaces still marked,
+   so the domain reads its interfaces again; one that succeeds keeps them. *)
+let failed_request_tests _ =
+  with_temp_dir (fun root ->
+      let run input =
+        Rescript_compiler_driver.run_request ~run_external:None ~cwd:root
+          ~argv:
+            [
+              "-nostdlib";
+              "-nopervasives";
+              "-bs-project-root";
+              root;
+              "-bs-package-name";
+              "store-test";
+              "-bs-package-output";
+              "commonjs:.:.js";
+            ]
+          ~input
+      in
+      write_on_disk (Filename.concat root "Good.res") "let value = 1\n";
+      write_on_disk (Filename.concat root "Bad.res") "let value: string = 1\n";
+      Build_file_store.with_build (fun () ->
+          Compiler_request_state.with_fresh ~cwd:root (fun () ->
+              Config.set_load_path [root];
+              let load () =
+                (Option.get (Bs_cmi_load.load_cmi ~unit_name:"Abc")).cmi
+              in
+              ignore
+                (Cmi_format.create_cmi
+                   (Filename.concat root "Abc.cmi")
+                   (interface ~name:"Abc"));
+              let first = load () in
+              assert_equal ~printer:string_of_int 0
+                (run "Good.res").Rescript_compiler_driver.exit_code;
+              assert_bool "a successful request keeps the interfaces"
+                (first == load ());
+              assert_bool "the failing request fails"
+                ((run "Bad.res").Rescript_compiler_driver.exit_code <> 0);
+              assert_bool "a failed request drops the interfaces"
+                (first != load ()))))
+
 let suites =
   __FILE__
   >::: [
@@ -132,4 +206,7 @@ let suites =
          "spellings_share_an_entry" >:: spellings_share_an_entry_tests;
          "kept_and_evicted" >:: kept_and_evicted_tests;
          "interface_cache" >:: interface_cache_tests;
+         "corrupted_interface" >:: corrupted_interface_tests;
+         "failed_write" >:: failed_write_tests;
+         "failed_request" >:: failed_request_tests;
        ]
