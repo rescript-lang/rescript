@@ -24,22 +24,23 @@ let write_on_disk path contents =
   Out_channel.with_open_bin path (fun channel ->
       Out_channel.output_string channel contents)
 
-let compile root input =
+let compile ?(flags = []) root input =
   let result =
     Rescript_compiler_driver.run_request ~run_external:None ~cwd:root
       ~argv:
-        [
-          "-nostdlib";
-          "-nopervasives";
-          "-I";
-          root;
-          "-bs-project-root";
-          root;
-          "-bs-package-name";
-          "saved-interface-test";
-          "-bs-package-output";
-          "commonjs:.:.js";
-        ]
+        (flags
+        @ [
+            "-nostdlib";
+            "-nopervasives";
+            "-I";
+            root;
+            "-bs-project-root";
+            root;
+            "-bs-package-name";
+            "saved-interface-test";
+            "-bs-package-output";
+            "commonjs:.:.js";
+          ])
       ~input
   in
   assert_equal
@@ -84,4 +85,35 @@ let growing_import_tests _ =
         (imported_crc before "Shape" <> imported_crc after "Shape");
       assert_equal ~printer:Digest.to_hex (own_crc before) (own_crc after))
 
-let suites = __FILE__ >::: ["growing_import" >:: growing_import_tests]
+(* By default a module records the interfaces it read and those they
+   recorded; with -bs-record-read-imports, only those it read. *)
+let read_imports_tests _ =
+  with_temp_dir (fun root ->
+      let write name contents =
+        write_on_disk (Filename.concat root (name ^ ".res")) contents
+      in
+      write "Base" "type t = {value: int}\nlet make = value => {value: value}\n";
+      write "Middle" "let base = Base.make(1)\nlet count = 2\n";
+      write "Top" "let count = Middle.count\n";
+      let recorded flags =
+        List.iter
+          (fun name -> compile ~flags root (name ^ ".res"))
+          ["Base"; "Middle"; "Top"];
+        let crcs name =
+          (Cmi_format.read_cmi (Filename.concat root (name ^ ".cmi"))).cmi_crcs
+          |> List.map fst
+        in
+        assert_bool "Middle records Base, which it read"
+          (List.mem "Base" (crcs "Middle"));
+        crcs "Top"
+      in
+      assert_bool "Top records Base by default" (List.mem "Base" (recorded []));
+      assert_equal ~printer:(String.concat ", ") ["Top"; "Middle"]
+        (recorded ["-bs-record-read-imports"]))
+
+let suites =
+  __FILE__
+  >::: [
+         "growing_import" >:: growing_import_tests;
+         "read_imports" >:: read_imports_tests;
+       ]

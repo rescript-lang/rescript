@@ -408,6 +408,10 @@ let command_line_flags () : (string * Bsc_args.spec * string) array =
     ( "-e",
       string_call (fun s -> eval s ~suffix:Literals.suffix_res),
       "(experimental) set the string to be evaluated in ReScript syntax" );
+    ( "-bs-record-read-imports",
+      set (Clflags.current ()).record_read_imports_only,
+      "*internal* Record the CRCs of the interfaces read, not those they \
+       recorded" );
     ( "-bs-cmi-only",
       set (Js_config.current ()).cmi_only,
       "*internal* Stop after generating cmi file" );

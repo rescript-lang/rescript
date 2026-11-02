@@ -24,6 +24,7 @@ type t = {
   color: Misc.Color.setting option ref;
   assume_no_mli: mli_status ref;
   dont_record_crc_unit: string option ref;
+  record_read_imports_only: bool ref;
   bs_gentype: bool ref;
   jsx_preserve: bool ref;
       (** Keep JSX in the output ([-bs-jsx-preserve]); read by translcore, and
