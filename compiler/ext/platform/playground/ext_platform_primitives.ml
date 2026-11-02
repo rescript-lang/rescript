@@ -1,6 +1,5 @@
 (* Portable compiler primitives used by the playground. *)
 let hash_string : string -> int = Hashtbl.hash
-let hash_string_int string int = Hashtbl.hash (string, int)
 let hash_stamp_and_name int string = Hashtbl.hash (int, string)
 let hash_int : int -> int = Hashtbl.hash
 

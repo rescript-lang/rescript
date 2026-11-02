@@ -1,7 +1,5 @@
 let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
-let ( =~ ) = OUnit.assert_equal
-
 module String_hash = Hashtbl.Make (struct
   type t = string
 

@@ -26,20 +26,12 @@ type attrs = attribute list
 let default_loc = ref Location.none
 
 module Const = struct
-  let integer ?suffix i = Pconst_integer (i, suffix)
-  let int ?suffix i = integer ?suffix (string_of_int i)
-  let int32 ?(suffix = 'l') i = integer ~suffix (Int32.to_string i)
-  let int64 ?(suffix = 'L') i = integer ~suffix (Int64.to_string i)
-  let nativeint ?(suffix = 'n') i = integer ~suffix (Nativeint.to_string i)
-  let float ?suffix f = Pconst_float (f, suffix)
-  let char c = Pconst_char (Char.code c)
   let string ?quotation_delimiter s = Pconst_string (s, quotation_delimiter)
 end
 
 module Typ = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
     {ptyp_desc = d; ptyp_loc = loc; ptyp_attributes = attrs}
-  let attr d a = {d with ptyp_attributes = d.ptyp_attributes @ [a]}
 
   let any ?loc ?attrs () = mk ?loc ?attrs Ptyp_any
   let var ?loc ?attrs a = mk ?loc ?attrs (Ptyp_var a)
@@ -52,11 +44,6 @@ module Typ = struct
   let poly ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_poly (a, b))
   let package ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_package (a, b))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Ptyp_extension a)
-
-  let force_poly t =
-    match t.ptyp_desc with
-    | Ptyp_poly _ -> t
-    | _ -> poly ~loc:t.ptyp_loc [] t (* -> ghost? *)
 
   let varify_constructors var_names t =
     let check_variable vl loc v =
@@ -110,7 +97,6 @@ end
 module Pat = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
     {ppat_desc = d; ppat_loc = loc; ppat_attributes = attrs}
-  let attr d a = {d with ppat_attributes = d.ppat_attributes @ [a]}
 
   let any ?loc ?attrs () = mk ?loc ?attrs Ppat_any
   let var ?loc ?attrs a = mk ?loc ?attrs (Ppat_var a)
@@ -125,7 +111,6 @@ module Pat = struct
   let or_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_or (a, b))
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_constraint (a, b))
   let type_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_type a)
-  let lazy_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_lazy a)
   let unpack ?loc ?attrs a = mk ?loc ?attrs (Ppat_unpack a)
   let open_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_open (a, b))
   let exception_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_exception a)
@@ -135,7 +120,6 @@ end
 module Exp = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
     {pexp_desc = d; pexp_loc = loc; pexp_attributes = attrs}
-  let attr d a = {d with pexp_attributes = d.pexp_attributes @ [a]}
 
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pexp_ident a)
   let constant ?loc ?attrs a = mk ?loc ?attrs (Pexp_constant a)
@@ -159,26 +143,18 @@ module Exp = struct
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_constraint (a, b))
   let coerce ?loc ?attrs a c = mk ?loc ?attrs (Pexp_coerce (a, (), c))
   let send ?loc ?attrs a b = mk ?loc ?attrs (Pexp_send (a, b))
-  let new_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_new a)
-  let setinstvar ?loc ?attrs a b = mk ?loc ?attrs (Pexp_setinstvar (a, b))
-  let override ?loc ?attrs a = mk ?loc ?attrs (Pexp_override a)
   let letmodule ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_letmodule (a, b, c))
   let letexception ?loc ?attrs a b = mk ?loc ?attrs (Pexp_letexception (a, b))
   let assert_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_assert a)
-  let lazy_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_lazy a)
-  let poly ?loc ?attrs a b = mk ?loc ?attrs (Pexp_poly (a, b))
   let newtype ?loc ?attrs a b = mk ?loc ?attrs (Pexp_newtype (a, b))
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
-
-  let case lhs ?guard rhs = {pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
 end
 
 module Mty = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
     {pmty_desc = d; pmty_loc = loc; pmty_attributes = attrs}
-  let attr d a = {d with pmty_attributes = d.pmty_attributes @ [a]}
 
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pmty_ident a)
   let alias ?loc ?attrs a = mk ?loc ?attrs (Pmty_alias a)
@@ -192,7 +168,6 @@ end
 module Mod = struct
   let mk ?(loc = !default_loc) ?(attrs = []) d =
     {pmod_desc = d; pmod_loc = loc; pmod_attributes = attrs}
-  let attr d a = {d with pmod_attributes = d.pmod_attributes @ [a]}
 
   let ident ?loc ?attrs x = mk ?loc ?attrs (Pmod_ident x)
   let structure ?loc ?attrs x = mk ?loc ?attrs (Pmod_structure x)
@@ -334,23 +309,6 @@ module Te = struct
     {
       pext_name = name;
       pext_kind = kind;
-      pext_loc = loc;
-      pext_attributes = attrs;
-    }
-
-  let decl ?(loc = !default_loc) ?(attrs = []) ?(args = Pcstr_tuple []) ?res
-      name =
-    {
-      pext_name = name;
-      pext_kind = Pext_decl (args, res);
-      pext_loc = loc;
-      pext_attributes = attrs;
-    }
-
-  let rebind ?(loc = !default_loc) ?(attrs = []) name lid =
-    {
-      pext_name = name;
-      pext_kind = Pext_rebind lid;
       pext_loc = loc;
       pext_attributes = attrs;
     }

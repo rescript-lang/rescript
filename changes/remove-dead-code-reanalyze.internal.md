@@ -1,0 +1,1 @@
+- Remove dead code found by running reanalyze's dead code analysis on the OCaml sources of the compiler, build system and editor analysis, including the write-only file dependency tracking of reanalyze.

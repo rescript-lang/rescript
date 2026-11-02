@@ -1777,7 +1777,6 @@ let of_block ?comment ?e block : t =
     []
 
 let is_null ?comment (x : t) = triple_equal ?comment x nil
-let is_undef ?comment x = triple_equal ?comment x undefined
 
 let is_null_undefined_constant (x : t) =
   match x.expression_desc with

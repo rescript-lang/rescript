@@ -2,8 +2,6 @@ let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
 let ( =~ ) = OUnit.assert_equal ~printer:Ext_obj.dump
 
-let printer_string x = x
-
 let string_eq = OUnit.assert_equal ~printer:(fun id -> id)
 
 let suites =

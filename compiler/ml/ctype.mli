@@ -211,11 +211,6 @@ val instance_label :
     [fixed] argument passed to [instance_poly] when the argument is a
     polymorphic scheme. *)
 
-val apply : Env.t -> type_expr list -> type_expr -> type_expr list -> type_expr
-(* [apply [p1...pN] t [a1...aN]] match the arguments [ai] to
-   the parameters [pi] and returns the corresponding instance of
-   [t]. Exception [Cannot_apply] is raised in case of failure. *)
-
 val expand_head_once : Env.t -> type_expr -> type_expr
 val expand_head : Env.t -> type_expr -> type_expr
 val try_expand_once_opt : Env.t -> type_expr -> type_expr

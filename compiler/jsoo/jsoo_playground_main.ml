@@ -533,7 +533,6 @@ module Compile = struct
           Gentype_config.default with
           module_;
           project_root;
-          bsb_project_root = project_root;
           suffix = Literals.suffix_js;
         }
       in
