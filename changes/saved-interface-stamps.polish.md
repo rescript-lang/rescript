@@ -1,0 +1,1 @@
+- An interface's CRC no longer changes when an interface it imports grows, so build systems can tell when its signature really changed.
