@@ -125,7 +125,6 @@ let missing_throw_info_to_message
 
 let description_to_message (description : Issue.description) =
   match description with
-  | Circular {message} -> message
   | DeadModule {message} -> message
   | DeadOptional {message} -> message
   | DeadWarning {path; message} ->
@@ -137,7 +136,6 @@ let description_to_message (description : Issue.description) =
 
 let description_to_name (description : Issue.description) =
   match description with
-  | Circular _ -> Issues.warning_dead_analysis_cycle
   | DeadModule _ -> Issues.warning_dead_module
   | DeadOptional {dead_optional = WarningUnusedArgument} ->
     Issues.warning_unused_argument
