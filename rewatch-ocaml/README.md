@@ -67,8 +67,8 @@ cause missed rebuilds.
 Independent parse and compile requests run on a bounded pool of OCaml domains.
 The pool has `min(8, max(1, CPUs - 1))` workers; set `REWATCH_COMPILER_DOMAINS`
 to choose another count: a positive integer, lowered to the machine's limit of
-`max(12, min(32, CPUs))`. The main domain schedules dependencies
-and publishes every artifact; workers only run compiler requests.
+`max(12, min(32, CPUs))`. The main domain schedules dependencies;
+workers run compiler requests and publish what they produce.
 
 The driver gives each request fresh compiler state (flags, warnings, caches,
 predefined types, identifier counters) and restores it on every exit, so
