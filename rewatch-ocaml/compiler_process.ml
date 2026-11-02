@@ -124,7 +124,11 @@ let parse_request ~build_dir ~(config : Config.t) path =
 let ast_dependencies ~build_dir ast =
   (Ast_header.read (Filename.concat build_dir ast)).dependencies
 
-type compiler_artifact = Cmi | Required of string | Optional of string
+type compiler_artifact = Cmi | Cmj | Required of string | Optional of string
+
+(* The returned change tells whether dependents must recompile. Besides the
+   .cmi, this includes the .cmj: exported inline bodies can change without
+   changing the module's type. *)
 
 let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
   let cmi_change = ref Compiler_scheduler.Cmi_change_unknown in
@@ -134,6 +138,7 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
         let extension =
           match artifact with
           | Cmi -> "cmi"
+          | Cmj -> "cmj"
           | Required name | Optional name -> name
         in
         let source =
@@ -148,6 +153,14 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
             if File_util.copy_file_if_different source destination then
               Compiler_scheduler.Cmi_changed
             else Compiler_scheduler.Cmi_unchanged
+        | Cmj -> (
+          match
+            (File_util.copy_file_if_different source destination, !cmi_change)
+          with
+          | true, _ -> cmi_change := Compiler_scheduler.Cmi_changed
+          | false, Compiler_scheduler.Cmi_change_unknown ->
+            cmi_change := Compiler_scheduler.Cmi_unchanged
+          | false, (Compiler_scheduler.Cmi_changed | Cmi_unchanged) -> ())
         | Required _ -> File_util.copy_existing_file source destination
         | Optional _ -> File_util.copy_optional_existing_file source destination)
       artifacts;
@@ -278,13 +291,11 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~has_interface
        | Source.Implementation when has_interface ->
          (* The implementation is compiled with -bs-read-cmi, so its .cmi is
            the one already published after compiling the interface. *)
-         ignore
-           (publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
-              [Required "cmj"; Optional "cmt"]);
-         Compiler_scheduler.Cmi_unchanged
+         publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
+           [Cmj; Optional "cmt"]
        | Source.Implementation ->
          publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
-           [Cmi; Required "cmj"; Optional "cmt"]);
+           [Cmi; Cmj; Optional "cmt"]);
     let source = Filename.concat config.root path in
     let build_source = Filename.concat build_dir path in
     File_util.ensure_dir (Filename.dirname build_source);

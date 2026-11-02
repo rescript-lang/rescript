@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
+import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 import * as Flat_make_export_use from "./flat_make_export_use.mjs";
 
 Mocha.describe("Flat_make_export_test", () => {
@@ -22,7 +22,7 @@ Mocha.describe("Flat_make_export_test", () => {
     Test_utils.eq("File \"flat_make_export_test.res\", line 23, characters 7-14", Flat_make_export_use.nested, "nested");
     Test_utils.eq("File \"flat_make_export_test.res\", line 24, characters 7-14", Flat_make_export_use.recursive, "recursive");
     Test_utils.eq("File \"flat_make_export_test.res\", line 25, characters 7-14", Flat_make_export_use.coerced, "coerced");
-    Test_utils.eq("File \"flat_make_export_test.res\", line 26, characters 7-14", Stdlib_Option.map(Flat_make_export_use.rebound, f => f()), "rebound");
+    Test_utils.eq("File \"flat_make_export_test.res\", line 26, characters 7-14", Flat_make_export_use.rebound !== undefined ? Primitive_option.some(Primitive_option.valFromOption(Flat_make_export_use.rebound)()) : undefined, "rebound");
     Test_utils.eq("File \"flat_make_export_test.res\", line 27, characters 7-14", Flat_make_export_use.applied, "applied");
     Test_utils.eq("File \"flat_make_export_test.res\", line 28, characters 7-14", Flat_make_export_use.included, "one");
     Test_utils.eq("File \"flat_make_export_test.res\", line 29, characters 7-14", Flat_make_export_use.aliased, "one");

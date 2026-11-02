@@ -291,8 +291,7 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
   List.iter
     (fun ((node : module_node), _) ->
       Build_state.add build_state ~key:node.key ~kind:Build_state.Source_module
-        ~last_compiled_cmi:
-          (Compile_assets.cmi compile_assets node.key |> modified)
+        ~last_compiled_cmi:(Compile_assets.published compile_assets node.key)
         ~last_compiled_cmt:
           (Compile_assets.cmt compile_assets node.key |> modified))
     source_graph_nodes;
@@ -301,8 +300,7 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
       Build_state.add build_state ~key:namespace_map.key
         ~kind:Build_state.Namespace_map
         ~last_compiled_cmi:
-          (Compile_assets.cmi compile_assets namespace_map.compiler_name
-          |> modified)
+          (Compile_assets.published compile_assets namespace_map.compiler_name)
         ~last_compiled_cmt:
           (Compile_assets.cmt compile_assets namespace_map.compiler_name
           |> modified))
