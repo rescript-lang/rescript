@@ -168,9 +168,9 @@ let get_compiled_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
           | Some package_root_path ->
             (*
               Some example with sources
-              package_root_path: /home/pedro/Desktop/projects/rescript-lang.org/apps/guide
-              path:              /home/pedro/Desktop/projects/rescript-lang.org/apps/guide/app/GuideHome.res
-              compiled js:       /home/pedro/Desktop/projects/rescript-lang.org/apps/guide/lib/es6/app/GuideHome.jsx
+              package_root_path: /workspace/rescript-lang.org/apps/guide
+              path:              /workspace/rescript-lang.org/apps/guide/app/GuideHome.res
+              compiled js:       /workspace/rescript-lang.org/apps/guide/lib/es6/app/GuideHome.jsx
             *)
             (* app/GuideHome.res *)
             let relative_path = relative_to ~root:package_root_path path in

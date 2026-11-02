@@ -511,7 +511,9 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | TextDocumentFormatting {textDocument = {uri}} -> (
     match Formatter.run ~uri ~state with
     | Ok text_edit -> (ok (Some text_edit), state)
-    | Error message -> (error message, state))
+    | Error message ->
+      Server.show_message_notification ~kind:MessageType.Error message server;
+      (error message, state))
   | ExecuteCommand {command; arguments} -> (
     let open Execute_commands in
     match
