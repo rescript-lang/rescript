@@ -14,6 +14,8 @@ type entry =
   | Exists  (** On disk, contents not read yet. *)
   | Absent
 
+(* [enabled] and [generation] are read without the lock: only [with_build]
+   changes them, before a build's requests start and after they finish. *)
 type state = {
   mutex: Mutex.t;
   mutable entries: (string, entry) Hashtbl.t;

@@ -88,26 +88,20 @@ let create directories =
     directories
     |> List.concat_map (fun (directory, (_, state_names)) ->
         List.map (fun name -> (directory, name)) state_names)
-    |> Parallel.map (fun (directory, name) ->
-        (directory, read_state_entry directory name))
+    |> Parallel.map (fun (directory, name) -> read_state_entry directory name)
+    |> Array.of_list
   in
-  let state_entries_by_directory = Hashtbl.create (List.length directories) in
-  List.iter
-    (fun (directory, entry) ->
-      Option.iter
-        (fun entry ->
-          Hashtbl.replace state_entries_by_directory directory
-            (entry
-            :: (Hashtbl.find_opt state_entries_by_directory directory
-               |> Option.value ~default:[])))
-        entry)
-    state_entries;
+  (* The entries keep the order of the names, so each directory's follow the
+     previous directory's. *)
+  let next_entry = ref 0 in
   directories
-  |> List.iter (fun (directory, (files, _)) ->
+  |> List.iter (fun (directory, (files, state_names)) ->
+      let count = List.length state_names in
       let state_entries =
-        Hashtbl.find_opt state_entries_by_directory directory
-        |> Option.value ~default:[] |> List.rev
+        Array.sub state_entries !next_entry count
+        |> Array.to_list |> List.filter_map Fun.id
       in
+      next_entry := !next_entry + count;
       Hashtbl.replace state.files_by_directory directory files;
       let ast_sources =
         state_entries

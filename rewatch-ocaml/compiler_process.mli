@@ -11,11 +11,8 @@ val run : ?poll:(unit -> unit) -> request -> Process.result
 val run_requests :
   ?poll:(unit -> unit) ->
   ?on_complete:(int -> unit) ->
-  ?on_success:(int -> unit) ->
   request list ->
   Process.result list
-(** [on_success index] runs on the worker domain after the request at [index]
-    succeeds. *)
 
 val publish_parse :
   build_dir:string -> ocaml_dir:string -> config:Config.t -> string -> unit
@@ -29,7 +26,7 @@ val run_parses :
 (** Parses each [(build_dir, ocaml_dir, config, path)], publishing every
     successful parse with {!publish_parse} on the worker that parsed it. *)
 
-val task : ?on_success:(unit -> unit) -> request -> Process.task
+val task : request -> Process.task
 
 val namespace_task :
   runtime:string ->

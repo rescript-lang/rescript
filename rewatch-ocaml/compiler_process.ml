@@ -95,27 +95,23 @@ let run ?poll request =
   Option.iter (fun poll -> poll ()) poll;
   result
 
-let task ?(on_success = fun () -> ()) request =
+let task request =
   let cancelled = Atomic.make false in
   Process.concurrent_task
     ~cancel:(fun () -> Atomic.set cancelled true)
     (fun () ->
-      let result =
-        run_in_process
-          ~poll:(fun () ->
-            if Atomic.get cancelled then raise (Process.Interrupted 15))
-          request
-      in
-      if Process.succeeded result then on_success ();
-      result)
+      run_in_process
+        ~poll:(fun () ->
+          if Atomic.get cancelled then raise (Process.Interrupted 15))
+        request)
 
-let run_requests ?poll ?on_complete ?(on_success = fun _ -> ()) requests =
-  requests
-  |> List.mapi (fun index request ->
-      task ~on_success:(fun () -> on_success index) request)
-  |> Process.run_tasks
-       ~max_jobs:(Compiler_execution_mode.configured_count ())
-       ?poll ?on_complete
+let run_tasks ?poll ?on_complete tasks =
+  Process.run_tasks
+    ~max_jobs:(Compiler_execution_mode.configured_count ())
+    ?poll ?on_complete tasks
+
+let run_requests ?poll ?on_complete requests =
+  requests |> List.map task |> run_tasks ?poll ?on_complete
 
 let parse_request ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
@@ -139,13 +135,15 @@ let publish_parse ~build_dir ~ocaml_dir ~(config : Config.t) path =
     (Filename.concat ocaml_dir (Filename.basename path))
 
 let run_parses ?poll ?on_complete parses =
-  let parses = Array.of_list parses in
-  Array.to_list parses
-  |> List.map (fun (build_dir, _, config, path) ->
-      parse_request ~build_dir ~config path)
-  |> run_requests ?poll ?on_complete ~on_success:(fun index ->
-      let build_dir, ocaml_dir, config, path = parses.(index) in
-      publish_parse ~build_dir ~ocaml_dir ~config path)
+  parses
+  |> List.map (fun (build_dir, ocaml_dir, config, path) ->
+      Process.map_result
+        (task (parse_request ~build_dir ~config path))
+        (fun result ->
+          if Process.succeeded result then
+            publish_parse ~build_dir ~ocaml_dir ~config path;
+          result))
+  |> run_tasks ?poll ?on_complete
 
 type compiler_artifact = Cmi | Required of string | Optional of string
 
