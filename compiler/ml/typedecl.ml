@@ -1989,7 +1989,6 @@ let transl_value_decl env loc valdecl =
       val_name = valdecl.pval_name;
       val_desc = cty;
       val_val = v;
-      val_prim = valdecl.pval_prim;
       val_loc = valdecl.pval_loc;
       val_attributes = attributes;
     }

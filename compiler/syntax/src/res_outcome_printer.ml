@@ -589,14 +589,15 @@ let rec print_out_sig_item_doc ?(print_name_as_is = false)
     let ffi_attrs, keyword, prim_name =
       match value_decl.oval_prim with
       | None -> (Doc.nil, "let ", None)
-      | Some (Oprim_intrinsic s) -> (Doc.nil, "external ", Some s)
-      | Some (Oprim_inline_const c) ->
+      | Some {prim_kind = Kind_intrinsic; prim_name} ->
+        (Doc.nil, "external ", Some prim_name)
+      | Some {prim_kind = Kind_inline_const c} ->
         (* surface syntax: [@inline("hello") let f: string] *)
         ( Doc.concat
             [Doc.text "@inline("; print_inline_const_doc c; Doc.text ") "],
           "let ",
           None )
-      | Some (Oprim_external {name; spec}) -> (
+      | Some {prim_kind = Kind_external spec; prim_name = name} -> (
         match spec with
         | Ffi_obj_create _ -> (Doc.text "@obj ", "external ", Some name)
         | Ffi_bs (_params, return_wrapper, decl) ->

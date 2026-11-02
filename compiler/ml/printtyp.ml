@@ -1071,15 +1071,12 @@ let extension_constructor id ppf ext =
 let tree_of_value_description id decl =
   let id = Ident.name id in
   let ty = tree_of_type_scheme decl.val_type in
-  let vd =
-    {oval_name = id; oval_type = ty; oval_prim = None; oval_attributes = []}
-  in
-  let vd =
+  let oval_prim =
     match decl.val_kind with
-    | Val_prim p -> Primitive.print p vd
-    | _ -> vd
+    | Val_prim p -> Some p
+    | Val_reg -> None
   in
-  Osig_value vd
+  Osig_value {oval_name = id; oval_type = ty; oval_prim; oval_attributes = []}
 
 let value_description id ppf decl =
   !Oprint.out_sig_item ppf (tree_of_value_description id decl)

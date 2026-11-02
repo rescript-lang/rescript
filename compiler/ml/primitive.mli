@@ -60,8 +60,6 @@ val resolve_external :
     whose primitive string is [prim] during type checking. FFI resolution lives in the frontend, above this library, which
     registers it before any source is type checked. *)
 
-val print : description -> Outcometree.out_val_decl -> Outcometree.out_val_decl
-
 val coercible : description -> description -> bool
 (** Can an implementation's primitive satisfy an interface's during signature
     inclusion? *)

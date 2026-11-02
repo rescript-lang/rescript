@@ -423,9 +423,11 @@ and value_description i ppf x =
     x.val_loc;
   attributes i ppf x.val_attributes;
   core_type (i + 1) ppf x.val_desc;
-  match x.val_prim with
-  | None -> ()
-  | Some {txt} -> string (i + 1) ppf txt
+  match x.val_val.val_kind with
+  | Val_reg -> ()
+  | Val_prim {prim_kind = Kind_inline_const _} ->
+    line (i + 1) ppf "<inline const>\n"
+  | Val_prim {prim_name} -> string (i + 1) ppf prim_name
 
 and type_parameter i ppf (x, _variance) = core_type i ppf x
 

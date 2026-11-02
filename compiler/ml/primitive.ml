@@ -69,14 +69,3 @@ let make ~name ~kind ~arity ~from_constructor =
     prim_kind = kind;
     prim_from_constructor = from_constructor;
   }
-
-open Outcometree
-
-let print p osig_val_decl =
-  let prim =
-    match p.prim_kind with
-    | Kind_intrinsic -> Oprim_intrinsic p.prim_name
-    | Kind_external spec -> Oprim_external {name = p.prim_name; spec}
-    | Kind_inline_const c -> Oprim_inline_const c
-  in
-  {osig_val_decl with oval_prim = Some prim; oval_attributes = []}
