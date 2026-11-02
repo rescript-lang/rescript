@@ -97,21 +97,6 @@ module String_map : Map.S with type key = string
 
 (* Color handling *)
 module Color : sig
-  type color = Black | Red | Green | Yellow | Blue | Magenta | Cyan | White
-
-  type style =
-    | FG of color (* foreground *)
-    | BG of color (* background *)
-    | Bold
-    | Reset
-    | Dim
-
-  val ansi_of_style_l : style list -> string
-  (* ANSI escape sequence for the given style *)
-
-  type styles = {error: style list; warning: style list; loc: style list}
-
-  val default_styles : styles
   type setting = Auto | Always | Never
 
   val setup : setting option -> unit

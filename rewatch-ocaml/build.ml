@@ -1,6 +1,4 @@
 exception Error = Project_context.Error
-exception Package_error = Project_context.Package_error
-exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure of string
 exception Reported_failure of string
 exception Full_rebuild_required
@@ -388,7 +386,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     poll ();
     let namespace_count =
       try run_namespace_jobs attempt
-      with Build_failure output ->
+      with Compiler_scheduler.Build_failure output ->
         raise (Parse_failure (parse_output ^ output))
     in
     Output.Progress.finish progress;
@@ -405,7 +403,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
       try
         run_scheduled_modules attempt prepared ~compile_step ~namespace_count;
         None
-      with Build_failure output -> Some output
+      with Compiler_scheduler.Build_failure output -> Some output
     in
     Output.Progress.finish progress;
     let compile_seconds =
@@ -518,7 +516,7 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
       Watcher.Succeeded
     with
     | Reported_failure _ -> Watcher.Failed
-    | Package_error message
+    | Project_context.Package_error message
     | Error message
     | Config.Error message
     | Source.Error message

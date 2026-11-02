@@ -52,7 +52,7 @@ let rec no_side_effects (lam : Lambda.t) : bool =
       | [_; Lconst (Const_bigint (true, _))] -> true
       | _ -> false)
     | Pcreate_extension _ | Ptypeof | Pis_null | Pis_not_none | Psome
-    | Psome_not_nest | Pis_undefined | Pis_null_undefined | Pnull_to_opt
+    | Psome_not_nest | Pis_null_undefined | Pnull_to_opt
     | Pnull_undefined_to_opt | Pjs_object_create _ | Pimport _
     (* TODO: check *)
     | Pmakeblock _

@@ -24,13 +24,11 @@
 
 type string_action =
   | String_call of (string -> unit)
-  | String_set of string ref
   | String_optional_set of string option ref
   | String_list_add of string list ref
 
 type unit_action =
   | Unit_call of (unit -> unit)
-  | Unit_lazy of unit lazy_t
   | Unit_set of bool ref
   | Unit_clear of bool ref
 

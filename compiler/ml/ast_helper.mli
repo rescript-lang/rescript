@@ -298,8 +298,6 @@ module Jsx_component : sig
   val of_attribute : attribute -> jsx_component option
   (** The component an attribute such as [@react.component] denotes, if its
       payload is one the JSX transform understands. *)
-
-  val to_attribute : jsx_component -> attribute
 end
 
 (** Value declarations *)
@@ -418,8 +416,6 @@ end
 
 (** Module expressions *)
 module Mod : sig
-  val mk : ?loc:loc -> ?attrs:attrs -> module_expr_desc -> module_expr
-
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> module_expr
   val structure : ?loc:loc -> ?attrs:attrs -> structure -> module_expr
   val functor_ :

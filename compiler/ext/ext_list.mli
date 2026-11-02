@@ -193,8 +193,6 @@ val exists_fst : ('a * 'b) list -> ('a -> bool) -> bool
 
 val exists_snd : ('a * 'b) list -> ('b -> bool) -> bool
 
-val concat_append : 'a list list -> 'a list -> 'a list
-
 val fold_left2 : 'a list -> 'b list -> 'c -> ('a -> 'b -> 'c -> 'c) -> 'c
 
 val fold_left : 'a list -> 'b -> ('b -> 'a -> 'b) -> 'b

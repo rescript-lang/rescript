@@ -270,7 +270,6 @@ type primitive =
   | Pnull_undefined_to_opt
   (* Produced by Lam_pass_remove_alias, not by translation *)
   | Pis_null
-  | Pis_undefined
   | Pis_not_none
   | Pval_from_option
   | Pval_from_option_not_nest
@@ -501,10 +500,10 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   (* etc *)
   | Pval_from_option | Pval_from_option_not_nest | Pnull_to_opt
   | Pnull_undefined_to_opt | Pis_null | Pis_not_none | Psome | Psome_not_nest
-  | Pis_undefined | Pis_null_undefined | Ptypeof | Pis_poly_var_block
-  | Pdebugger | Pinit_mod | Pupdate_mod | Pduprecord | Pmakearray | Parraylength
-  | Parrayrefu | Parraysetu | Parrayrefs | Pjs_fn_method | Phash
-  | Phash_mixstring | Phash_mixint | Phash_finalmix | Precord_rest _ ->
+  | Pis_null_undefined | Ptypeof | Pis_poly_var_block | Pdebugger | Pinit_mod
+  | Pupdate_mod | Pduprecord | Pmakearray | Parraylength | Parrayrefu
+  | Parraysetu | Parrayrefs | Pjs_fn_method | Phash | Phash_mixstring
+  | Phash_mixint | Phash_finalmix | Precord_rest _ ->
     rhs = lhs
   (* Reachable only via the optimizer's term-equality comparison, which the
      test suite doesn't exercise for template primitives. *)

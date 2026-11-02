@@ -211,7 +211,6 @@ let primitive ppf = function
   | Plist_spread -> fprintf ppf "list.spread"
   | Pdict_has -> fprintf ppf "dict.has"
   | Pis_null -> fprintf ppf "is_null"
-  | Pis_undefined -> fprintf ppf "is_undefined"
   | Pis_null_undefined -> fprintf ppf "isnullable"
   | Pcreate_extension s -> fprintf ppf "extension[%s]" s
   | Pawait -> fprintf ppf "await"
