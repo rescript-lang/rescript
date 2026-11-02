@@ -69,16 +69,10 @@ let prim_to_be_encoded (name : string) = not (first_char_special name)
    They are not considered externals, they are part of the language
 *)
 
-let is_ffi_external (attrs : t) (pval_prim : string Asttypes.loc option) =
-  match (attrs, pval_prim) with
-  | _, None -> false (* [None] is a [val] *)
-  | [], Some {txt = name} ->
-    (* Not any attribute found *)
-    prim_to_be_encoded name
-  | _, Some {txt = name} ->
-    Ext_list.exists_fst attrs (fun ({txt} : string Asttypes.loc) ->
-        external_attrs |> Array.exists (fun (x : string) -> txt = x))
-    || prim_to_be_encoded name
+let is_ffi_external (attrs : t) (prim_name : string) =
+  Ext_list.exists_fst attrs (fun ({txt} : string Asttypes.loc) ->
+      external_attrs |> Array.exists (fun (x : string) -> txt = x))
+  || prim_to_be_encoded prim_name
 
 let is_inline : attr -> bool = fun ({txt}, _) -> txt = "inline"
 

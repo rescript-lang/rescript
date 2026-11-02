@@ -139,7 +139,8 @@ let emit_external_warnings : iterator =
     value_description =
       (fun self v ->
         match v with
-        | _ when Ast_attributes.is_ffi_external v.pval_attributes v.pval_prim ->
+        | {pval_prim = Some {txt = prim_name}}
+          when Ast_attributes.is_ffi_external v.pval_attributes prim_name ->
           (* Checked in its resolved form by [Ast_external.validate], with
              [emit_external_warnings_on_value_description]. *)
           ()

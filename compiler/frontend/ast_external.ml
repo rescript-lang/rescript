@@ -44,9 +44,7 @@ let resolve (value_desc : Parsetree.value_description) (prim_name : string) :
     | None ->
       Location.raise_errorf ~loc:value_desc.pval_loc
         "\"%s\" is reserved for %@inline constants" prim_name
-  else if
-    Ast_attributes.is_ffi_external value_desc.pval_attributes
-      value_desc.pval_prim
+  else if Ast_attributes.is_ffi_external value_desc.pval_attributes prim_name
   then
     let {Ast_external_process.pval_type; spec; pval_attributes} =
       resolve_validated value_desc prim_name
@@ -79,34 +77,32 @@ let resolved_val (value_desc : Parsetree.value_description)
    checker, which resolves it again through [resolve]. Returns the external as
    written, and its resolved form as a [val] when a relative [@module] makes it
    unfit for cross-module inlining. *)
-let validate (self : Ast_mapper.mapper) (prim : Parsetree.value_description) =
+let validate (self : Ast_mapper.mapper) (prim : Parsetree.value_description)
+    ~prim_name =
   let loc = prim.pval_loc in
   let pval_type = self.typ self prim.pval_type in
   let pval_attributes = self.attributes self prim.pval_attributes in
-  match prim.pval_prim with
-  | None -> Location.raise_errorf ~loc "empty primitive string"
-  | Some {txt = prim_name} ->
-    let resolution =
-      Ast_external_process.resolve loc pval_type pval_attributes prim_name
-    in
-    let resolved = resolved_val prim resolution in
-    Bs_ast_invariant.emit_external_warnings_on_value_description resolved;
-    ( {prim with pval_type; pval_attributes},
-      if resolution.no_inline_cross_module then Some resolved else None )
+  let resolution =
+    Ast_external_process.resolve loc pval_type pval_attributes prim_name
+  in
+  let resolved = resolved_val prim resolution in
+  Bs_ast_invariant.emit_external_warnings_on_value_description resolved;
+  ( {prim with pval_type; pval_attributes},
+    if resolution.no_inline_cross_module then Some resolved else None )
 
 let handle_external_in_sig (self : Ast_mapper.mapper)
-    (prim : Parsetree.value_description) (sigi : Parsetree.signature_item) :
-    Parsetree.signature_item =
-  let external_, not_inlined = validate self prim in
+    (prim : Parsetree.value_description) ~prim_name
+    (sigi : Parsetree.signature_item) : Parsetree.signature_item =
+  let external_, not_inlined = validate self prim ~prim_name in
   {
     sigi with
     psig_desc = Psig_value (Option.value not_inlined ~default:external_);
   }
 
 let handle_external_in_stru (self : Ast_mapper.mapper)
-    (prim : Parsetree.value_description) (str : Parsetree.structure_item) :
-    Parsetree.structure_item =
-  let external_, not_inlined = validate self prim in
+    (prim : Parsetree.value_description) ~prim_name
+    (str : Parsetree.structure_item) : Parsetree.structure_item =
+  let external_, not_inlined = validate self prim ~prim_name in
   let external_result = {str with pstr_desc = Pstr_primitive external_} in
   match not_inlined with
   | None -> external_result

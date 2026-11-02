@@ -457,9 +457,11 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
   | Psig_type (rf, tdcls) -> Ast_tdcls.handle_tdcls_in_sigi self sigi rf tdcls
   | Psig_value ({pval_attributes; pval_prim} as value_desc) -> (
     let pval_attributes = self.attributes self pval_attributes in
-    if Ast_attributes.is_ffi_external pval_attributes pval_prim then
-      Ast_external.handle_external_in_sig self value_desc sigi
-    else
+    match pval_prim with
+    | Some {txt = prim_name}
+      when Ast_attributes.is_ffi_external pval_attributes prim_name ->
+      Ast_external.handle_external_in_sig self value_desc ~prim_name sigi
+    | _ -> (
       match Ast_attributes.has_inline_payload pval_attributes with
       | Some
           (({loc = attr_loc}, PStr [{pstr_desc = Pstr_eval (expression, _)}]) as
@@ -475,7 +477,7 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
                    expression);
           }
         | None -> default_mapper.signature_item self sigi)
-      | Some _ | None -> default_mapper.signature_item self sigi)
+      | Some _ | None -> default_mapper.signature_item self sigi))
   | _ -> default_mapper.signature_item self sigi
 
 let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
@@ -501,9 +503,9 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
         (LetUnwrap_not_supported_in_position `Toplevel)
   | Pstr_type (rf, tdcls) (* [ {ptype_attributes} as tdcl ] *) ->
     Ast_tdcls.handle_tdcls_in_stru self str rf tdcls
-  | Pstr_primitive prim
-    when Ast_attributes.is_ffi_external prim.pval_attributes prim.pval_prim ->
-    Ast_external.handle_external_in_stru self prim str
+  | Pstr_primitive ({pval_prim = Some {txt = prim_name}} as prim)
+    when Ast_attributes.is_ffi_external prim.pval_attributes prim_name ->
+    Ast_external.handle_external_in_stru self prim ~prim_name str
   | Pstr_value
       ( Nonrecursive,
         [

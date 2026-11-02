@@ -30,11 +30,13 @@ val resolve :
 val handle_external_in_sig :
   Ast_mapper.mapper ->
   Parsetree.value_description ->
+  prim_name:string ->
   Parsetree.signature_item ->
   Parsetree.signature_item
 
 val handle_external_in_stru :
   Ast_mapper.mapper ->
   Parsetree.value_description ->
+  prim_name:string ->
   Parsetree.structure_item ->
   Parsetree.structure_item
