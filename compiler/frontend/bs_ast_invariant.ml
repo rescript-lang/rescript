@@ -64,7 +64,12 @@ let warn_unused_attribute
   if
     is_checked_attribute txt && (not loc.loc_ghost)
     && not (Used_attributes.is_used_attribute sloc)
-  then Location.prerr_warning loc (Bs_unused_attribute txt)
+  then (
+    Location.prerr_warning loc (Bs_unused_attribute txt);
+    (* Report each attribute once, also when a copy of its declaration is
+       checked too, such as the resolved [val] of an external that is not
+       inlined across modules. *)
+    Used_attributes.mark_used_attribute attr)
 
 let warn_discarded_unused_attributes (attrs : Parsetree.attributes) =
   if attrs <> [] then Ext_list.iter attrs warn_unused_attribute
@@ -87,7 +92,7 @@ let check_constant loc (const : Parsetree.constant) =
 
 (* Note we only used Bs_ast_iterator here, we can reuse compiler-libs instead of
    rolling our own*)
-let emit_external_warnings ~resolved_ffi_external : iterator =
+let emit_external_warnings : iterator =
   {
     super with
     type_declaration =
@@ -135,7 +140,9 @@ let emit_external_warnings ~resolved_ffi_external : iterator =
       (fun self v ->
         match v with
         | _ when Ast_attributes.is_ffi_external v.pval_attributes v.pval_prim ->
-          super.value_description self (resolved_ffi_external v)
+          (* Checked in its resolved form by [Ast_external.validate], with
+             [emit_external_warnings_on_value_description]. *)
+          ()
         | {
          pval_loc;
          pval_prim =
@@ -176,15 +183,15 @@ let rec iter_warnings_on_sigi (stru : Parsetree.signature) =
       iter_warnings_on_sigi rest
     | _ -> ())
 
-let emit_external_warnings_on_structure ~resolved_ffi_external
-    (stru : Parsetree.structure) =
-  let it = emit_external_warnings ~resolved_ffi_external in
-  it.structure it stru
+let emit_external_warnings_on_structure (stru : Parsetree.structure) =
+  emit_external_warnings.structure emit_external_warnings stru
 
-let emit_external_warnings_on_signature ~resolved_ffi_external
-    (sigi : Parsetree.signature) =
-  let it = emit_external_warnings ~resolved_ffi_external in
-  it.signature it sigi
+let emit_external_warnings_on_signature (sigi : Parsetree.signature) =
+  emit_external_warnings.signature emit_external_warnings sigi
+
+let emit_external_warnings_on_value_description
+    (value_desc : Parsetree.value_description) =
+  super.value_description emit_external_warnings value_desc
 
 (* The PPX bridge renames the [ocaml.]-prefixed builtins a PPX emits to their
    bare names, so source written with them is checked before it reaches the

@@ -74,16 +74,11 @@ let resolved_val (value_desc : Parsetree.value_description)
     Parsetree.value_description =
   {value_desc with pval_type; pval_prim = None; pval_attributes}
 
-let resolved_ffi_external (value_desc : Parsetree.value_description) =
-  match value_desc.pval_prim with
-  | None -> value_desc
-  | Some {txt = prim_name} ->
-    resolved_val value_desc (resolve_validated value_desc prim_name)
-
-(* Resolve an FFI external now to report its errors and warnings, and keep it
-   as written for the type checker, which resolves it again through
-   [resolve]. Returns the external as written, and its resolved form as a
-   [val] when a relative [@module] makes it unfit for cross-module inlining. *)
+(* Resolve an FFI external now to report its errors and warnings, including
+   unused attributes on its resolved form, and keep it as written for the type
+   checker, which resolves it again through [resolve]. Returns the external as
+   written, and its resolved form as a [val] when a relative [@module] makes it
+   unfit for cross-module inlining. *)
 let validate (self : Ast_mapper.mapper) (prim : Parsetree.value_description) =
   let loc = prim.pval_loc in
   let pval_type = self.typ self prim.pval_type in
@@ -94,10 +89,10 @@ let validate (self : Ast_mapper.mapper) (prim : Parsetree.value_description) =
     let resolution =
       Ast_external_process.resolve loc pval_type pval_attributes prim_name
     in
+    let resolved = resolved_val prim resolution in
+    Bs_ast_invariant.emit_external_warnings_on_value_description resolved;
     ( {prim with pval_type; pval_attributes},
-      if resolution.no_inline_cross_module then
-        Some (resolved_val prim resolution)
-      else None )
+      if resolution.no_inline_cross_module then Some resolved else None )
 
 let handle_external_in_sig (self : Ast_mapper.mapper)
     (prim : Parsetree.value_description) (sigi : Parsetree.signature_item) :

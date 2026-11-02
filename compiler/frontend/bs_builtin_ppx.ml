@@ -636,12 +636,16 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
   | [] -> []
   | item :: rest -> (
     match item.pstr_desc with
+    (* Each case maps the item before the rest, so that diagnostics come in
+       source order: the right operand of [::] is evaluated first. *)
     | Pstr_extension (({txt = "raw"; loc}, payload), _attrs) ->
-      Ast_exp_handle_external.handle_raw_structure loc payload
-      :: structure_mapper ~await_context self rest
+      let item = Ast_exp_handle_external.handle_raw_structure loc payload in
+      item :: structure_mapper ~await_context self rest
     | Pstr_raw {name_loc; source} ->
-      Ast_exp_handle_external.handle_raw_structure_node ~loc:name_loc source
-      :: structure_mapper ~await_context self rest
+      let item =
+        Ast_exp_handle_external.handle_raw_structure_node ~loc:name_loc source
+      in
+      item :: structure_mapper ~await_context self rest
     (* | Pstr_extension (({txt = "i"}, _),_)
        ->
        structure_mapper self rest *)
@@ -710,8 +714,8 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
         }
         :: structure_mapper ~await_context self rest
       | Some (_, _, Some _) | None ->
-        self.structure_item self item
-        :: structure_mapper ~await_context self rest)
+        let item = self.structure_item self item in
+        item :: structure_mapper ~await_context self rest)
     | Pstr_value (_, vbs) ->
       let item = self.structure_item self item in
       (* [ module __List__ = module type of List ] *)
@@ -754,8 +758,8 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
 
       module_type_decls @ (item :: structure_mapper ~await_context self rest)
     | _ ->
-      self.structure_item self item :: structure_mapper ~await_context self rest
-    )
+      let item = self.structure_item self item in
+      item :: structure_mapper ~await_context self rest)
 
 let structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t) =
   let await_saved = !await_context in

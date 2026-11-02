@@ -1,0 +1,1 @@
+- Report an unused attribute on a relative `@module` external once instead of twice.
