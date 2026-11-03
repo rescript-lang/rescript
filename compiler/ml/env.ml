@@ -541,9 +541,113 @@ let current_unit () = Domain.DLS.get current_unit_key
 
 (* Persistent structure descriptions *)
 
+(* The signature of a persistent structure is a copy of the one in its .cmi
+   file whose bound identifiers are renamed ([Subst.signature Subst.identity]).
+   The copy is often only asked for to learn that a compilation unit is not a
+   module alias ([normalize_path]), so it is not made then: the stamps and type
+   ids it would have taken are reserved, so every later stamp and id is the
+   same as if it had been made, and the copy is made with exactly those stamps
+   and ids when the signature is first read.
+
+   The number of stamps and ids a copy takes is learnt from the first copy of
+   the same .cmi contents (keyed by its CRC) and kept for the whole process.
+   It only depends on the signature graph, which the type checker does not
+   change before copying it: only copies of it are given to the rest of the
+   type checker. If a reserved copy ever takes a different number of stamps or
+   ids, it is thrown away and made again with fresh ones. *)
+
+type pers_sig_state =
+  | Sig_pending
+  | Sig_reserved of {stamp_base: int; type_base: int; stamps: int; types: int}
+  | Sig_copied of signature
+
+type pers_sig = {
+  pers_sig_raw: signature;
+  pers_sig_key: Digest.t option;
+  mutable pers_sig_state: pers_sig_state;
+}
+
+let copy_counts : (Digest.t, int * int) Hashtbl.t = Hashtbl.create 64
+let copy_counts_lock = Mutex.create ()
+
+let find_copy_counts key =
+  Mutex.protect copy_counts_lock (fun () -> Hashtbl.find_opt copy_counts key)
+
+let record_copy_counts key counts =
+  Mutex.protect copy_counts_lock (fun () ->
+      if Hashtbl.length copy_counts >= 65536 then Hashtbl.reset copy_counts;
+      Hashtbl.replace copy_counts key counts)
+
+let reserved_copies = Atomic.make 0
+let reserved_copy_fallbacks = Atomic.make 0
+
+let pers_sig ?key raw =
+  {pers_sig_raw = raw; pers_sig_key = key; pers_sig_state = Sig_pending}
+
+let copy_pers_sig raw = Subst.signature Subst.identity raw
+
+let force_pers_sig ps =
+  match ps.pers_sig_state with
+  | Sig_copied sg -> sg
+  | Sig_pending ->
+    let state = Compiler_request_state.current () in
+    let stamp0 = Ident.current_time () and type0 = state.type_node_id in
+    let sg = copy_pers_sig ps.pers_sig_raw in
+    (match ps.pers_sig_key with
+    | Some key ->
+      record_copy_counts key
+        (Ident.current_time () - stamp0, state.type_node_id - type0)
+    | None -> ());
+    ps.pers_sig_state <- Sig_copied sg;
+    sg
+  | Sig_reserved {stamp_base; type_base; stamps; types} ->
+    let state = Compiler_request_state.current () in
+    let saved_type_id = state.type_node_id in
+    state.type_node_id <- type_base;
+    let (sg, stamp_end), type_end =
+      match
+        Ident.with_current_time stamp_base (fun () ->
+            copy_pers_sig ps.pers_sig_raw)
+      with
+      | result ->
+        let type_end = state.type_node_id in
+        state.type_node_id <- saved_type_id;
+        (result, type_end)
+      | exception exn ->
+        state.type_node_id <- saved_type_id;
+        raise exn
+    in
+    let sg =
+      if stamp_end = stamp_base + stamps && type_end = type_base + types then sg
+      else (
+        (* Some of the stamps or ids may also belong to later identifiers and
+           type nodes: copy again with fresh ones. *)
+        Atomic.incr reserved_copy_fallbacks;
+        copy_pers_sig ps.pers_sig_raw)
+    in
+    ps.pers_sig_state <- Sig_copied sg;
+    sg
+
+(* Take the stamps and type ids [force_pers_sig] would take now, without
+   copying yet. *)
+let reserve_pers_sig ps =
+  match ps.pers_sig_state with
+  | Sig_copied _ | Sig_reserved _ -> ()
+  | Sig_pending -> (
+    match Option.bind ps.pers_sig_key find_copy_counts with
+    | None -> ignore (force_pers_sig ps)
+    | Some (stamps, types) ->
+      let state = Compiler_request_state.current () in
+      let stamp_base = Ident.current_time () in
+      let type_base = state.type_node_id in
+      Atomic.incr reserved_copies;
+      Ident.set_current_time (stamp_base + stamps);
+      state.type_node_id <- type_base + types;
+      ps.pers_sig_state <- Sig_reserved {stamp_base; type_base; stamps; types})
+
 type pers_struct = {
   ps_name: string;
-  ps_sig: signature Lazy.t;
+  ps_sig: pers_sig;
   ps_comps: module_components;
   ps_crcs: (string * Digest.t option) list;
   ps_filename: string;
@@ -607,6 +711,13 @@ module Persistent_signature = struct
         | exception Not_found -> None)
 end
 
+(* The CRC create_cmi wrote for the contents of the .cmi (its name and
+   signature). *)
+let own_crc (cmi : Cmi_format.cmi_infos) =
+  match cmi.cmi_crcs with
+  | (name, Some crc) :: _ when name = cmi.cmi_name -> Some crc
+  | _ -> None
+
 let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
   let name = cmi.cmi_name in
   let sign = cmi.cmi_sign in
@@ -626,7 +737,7 @@ let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
   let ps =
     {
       ps_name = name;
-      ps_sig = lazy (Subst.signature Subst.identity sign);
+      ps_sig = pers_sig ?key:(own_crc cmi) sign;
       ps_comps = comps;
       ps_crcs = crcs;
       ps_filename = filename;
@@ -822,7 +933,7 @@ let find_module ~alias path env =
     with Not_found ->
       if Ident.persistent id && not (Ident.name id = !(current_unit ())) then
         let ps = find_pers_struct (Ident.name id) in
-        md (Mty_signature (Lazy.force ps.ps_sig))
+        md (Mty_signature (force_pers_sig ps.ps_sig))
       else raise Not_found)
   | Pdot (p, s, _pos) -> (
     match get_components (find_module_descr p env) with
@@ -851,6 +962,26 @@ let find_module ~alias path env =
               mty))
     | Structure_comps _ -> raise Not_found)
 
+(* The path a module is an alias of, as [find_module ~alias:true] gives it. A
+   compilation unit is never an alias, so its signature is not copied. *)
+let module_alias_target path env =
+  let alias_target = function
+    | {md_type = Mty_alias (_, path1)} -> Some path1
+    | _ -> None
+  in
+  match path with
+  | Pident id -> (
+    try
+      let data = Id_tbl.find_same id env.modules in
+      alias_target (Env_lazy.force subst_modtype_maker data)
+    with Not_found ->
+      if Ident.persistent id && not (Ident.name id = !(current_unit ())) then (
+        let ps = find_pers_struct (Ident.name id) in
+        reserve_pers_sig ps.ps_sig;
+        None)
+      else raise Not_found)
+  | Pdot _ | Papply _ -> alias_target (find_module ~alias:true path env)
+
 let rec normalize_path lax env path =
   let path =
     match path with
@@ -860,9 +991,9 @@ let rec normalize_path lax env path =
     | _ -> path
   in
   try
-    match find_module ~alias:true path env with
-    | {md_type = Mty_alias (_, path1)} -> normalize_path lax env path1
-    | _ -> path
+    match module_alias_target path env with
+    | Some path1 -> normalize_path lax env path1
+    | None -> path
   with
   | Not_found
   when lax
@@ -1912,9 +2043,12 @@ let open_signature ?(used_slot = ref false) ?(loc = Location.none) ovf root env
 
 (* Read a signature from a file *)
 
+let deferred_signature_copy_stats () =
+  (Atomic.get reserved_copies, Atomic.get reserved_copy_fallbacks)
+
 let read_signature modname filename =
   let ps = read_pers_struct modname filename in
-  Lazy.force ps.ps_sig
+  force_pers_sig ps.ps_sig
 
 (* Return the CRC of the interface of the given compilation unit *)
 
@@ -1960,7 +2094,7 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
     let ps =
       {
         ps_name = modname;
-        ps_sig = lazy (Subst.signature Subst.identity sg);
+        ps_sig = pers_sig sg;
         ps_comps = comps;
         ps_crcs = (cmi.cmi_name, Some crc) :: imports;
         ps_filename = filename;
@@ -2029,7 +2163,7 @@ let fold_modules f lid env acc =
         | Some ps ->
           f name
             (Pident (Ident.create_persistent name))
-            (md (Mty_signature (Lazy.force ps.ps_sig)))
+            (md (Mty_signature (force_pers_sig ps.ps_sig)))
             acc)
       (persistent_structures ()) acc
   | Some l -> (
