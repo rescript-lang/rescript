@@ -58,17 +58,30 @@ let build_reads_once_tests _ =
 
 let spellings_share_an_entry_tests _ =
   with_temp_dir (fun root ->
-      Unix.mkdir (Filename.concat root "bs") 0o755;
-      Unix.mkdir (Filename.concat root "ocaml") 0o755;
-      let request_spelling = Filename.concat root "bs/../ocaml/./A.cmi" in
+      List.iter
+        (fun directory -> Unix.mkdir (Filename.concat root directory) 0o755)
+        ["bs"; "bs/src"; "ocaml"];
       let published = Filename.concat root "ocaml/A.cmi" in
+      let spellings =
+        [
+          Filename.concat root "bs/../ocaml/./A.cmi";
+          Filename.concat root "bs/src/../../ocaml/A.cmi";
+          Filename.concat root "./ocaml//A.cmi";
+        ]
+        @ if Sys.win32 then [root ^ "\\bs\\src\\..\\..\\ocaml\\A.cmi"] else []
+      in
+      let read_all expected =
+        List.iter
+          (fun spelling ->
+            assert_equal ~msg:spelling ~printer (Some expected)
+              (Build_file_store.read spelling))
+          spellings
+      in
       write_on_disk published "old";
       Build_file_store.with_build (fun () ->
-          assert_equal ~printer (Some "old")
-            (Build_file_store.read request_spelling);
+          read_all "old";
           Build_file_store.write published "new";
-          assert_equal ~printer (Some "new")
-            (Build_file_store.read request_spelling)))
+          read_all "new"))
 
 let kept_and_evicted_tests _ =
   with_temp_dir (fun root ->
@@ -94,6 +107,67 @@ let kept_and_evicted_tests _ =
           assert_equal ~printer None (Build_file_store.cached kept);
           assert_bool "an evicted file exists" (Build_file_store.exists kept));
       assert_equal ~printer (Some "interface") (Build_file_store.read kept))
+
+(* A file that the compiler removes, such as a stale source map, is missing
+   for the rest of the build. *)
+let removed_file_tests _ =
+  with_temp_dir (fun root ->
+      let path = Filename.concat root "A.js.map" in
+      Build_file_store.with_build (fun () ->
+          Build_file_store.write path "source map";
+          Misc.remove_file path;
+          assert_equal ~printer None (Build_file_store.read path)))
+
+(* A file that exists but can't be read raises, every time it is read, and
+   is not taken for a missing one. *)
+let unreadable_file_tests _ =
+  with_temp_dir (fun root ->
+      let path = Filename.concat root "A.cmi" in
+      let error = Sys_error (path ^ ": Permission denied") in
+      let attempts = ref 0 in
+      write_on_disk path "interface";
+      Build_file_store.set_disk_reader (fun _ ->
+          incr attempts;
+          raise error);
+      Fun.protect
+        ~finally:(fun () ->
+          Build_file_store.set_disk_reader Bs_cmi_load.read_file)
+        (fun () ->
+          Build_file_store.with_build (fun () ->
+              assert_raises error (fun () -> Build_file_store.read path);
+              assert_raises error (fun () -> Build_file_store.read path);
+              assert_equal ~printer:string_of_int 2 !attempts;
+              assert_bool "an unreadable file exists"
+                (Build_file_store.exists path))))
+
+(* Compiler workers read, write and evict entries at the same time. *)
+let concurrent_domains_tests _ =
+  with_temp_dir (fun root ->
+      let shared = Filename.concat root "Shared.cmi" in
+      write_on_disk shared "shared";
+      Build_file_store.with_build (fun () ->
+          let work index () =
+            let own = Filename.concat root (Printf.sprintf "A%d.cmj" index) in
+            for round = 1 to 200 do
+              let contents = Printf.sprintf "%d:%d" index round in
+              Build_file_store.write own contents;
+              if Build_file_store.read own <> Some contents then
+                failwith (own ^ " lost a write");
+              if Build_file_store.read shared <> Some "shared" then
+                failwith "the shared file changed";
+              Build_file_store.evict own;
+              Build_file_store.evict shared
+            done
+          in
+          List.init 4 (fun index -> Domain.spawn (work index))
+          |> List.iter Domain.join;
+          List.iter
+            (fun index ->
+              assert_equal ~printer
+                (Some (Printf.sprintf "%d:200" index))
+                (Build_file_store.read
+                   (Filename.concat root (Printf.sprintf "A%d.cmj" index))))
+            [0; 1; 2; 3]))
 
 let interface ~name =
   {Cmi_format.cmi_name = name; cmi_sign = []; cmi_crcs = []; cmi_flags = []}
@@ -238,6 +312,9 @@ let suites =
          "build_reads_once" >:: build_reads_once_tests;
          "spellings_share_an_entry" >:: spellings_share_an_entry_tests;
          "kept_and_evicted" >:: kept_and_evicted_tests;
+         "removed_file" >:: removed_file_tests;
+         "unreadable_file" >:: unreadable_file_tests;
+         "concurrent_domains" >:: concurrent_domains_tests;
          "interface_cache" >:: interface_cache_tests;
          "interface_cache_budget" >:: interface_cache_budget_tests;
          "corrupted_interface" >:: corrupted_interface_tests;

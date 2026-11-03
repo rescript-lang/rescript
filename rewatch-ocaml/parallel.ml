@@ -26,7 +26,17 @@ let map f items =
         done;
         work ())
     in
-    let domains = List.init (domain_count - 1) (fun _ -> Domain.spawn work) in
+    let rec spawn count =
+      if count = 0 then []
+      else
+        match Domain.spawn work with
+        | domain -> domain :: spawn (count - 1)
+        | exception Failure _ ->
+          (* Too many domains run already. The started ones and this one
+             share the items. *)
+          []
+    in
+    let domains = spawn (domain_count - 1) in
     work ();
     List.iter Domain.join domains;
     Array.to_list results

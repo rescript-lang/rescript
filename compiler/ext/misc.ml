@@ -93,6 +93,7 @@ let find_in_path_uncap path name =
 
 let remove_file filename =
   let filename = Compiler_request_state.resolve_path filename in
+  Build_file_store.forget filename;
   try if Sys.file_exists filename then Sys.remove filename
   with Sys_error _msg -> ()
 

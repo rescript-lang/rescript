@@ -47,6 +47,30 @@ let ast_header_tests _context =
         (List.length long.dependencies = 600 && long.source = Some "/long.res")
         "a header longer than the first read is read whole")
 
+(* The first read takes 4096 bytes. A header that ends within them is read
+   from them, and a longer one from the whole file. *)
+let ast_header_boundary_tests _context =
+  with_temp_dir (fun root ->
+      List.iter
+        (fun header_length ->
+          let dependency_block = "\nBelt\n" in
+          let source =
+            "/"
+            ^ String.make
+                (header_length - 4 - String.length dependency_block - 2)
+                's'
+          in
+          let path =
+            Filename.concat root (Printf.sprintf "A%d.ast" header_length)
+          in
+          Test_support.write_file path
+            (ast_contents ~dependencies:["Belt"] ~source);
+          let header = Ast_header.read path in
+          check
+            (header.source = Some source && header.dependencies = ["Belt"])
+            (Printf.sprintf "a header of %d bytes is read" header_length))
+        [4095; 4096; 4097])
+
 (* The published headers are read before this build parses, so a module
    parsed in this build takes its dependencies from its new AST, whether or
    not the build store still holds it. *)
@@ -158,6 +182,7 @@ let tests =
   "build_file_tests"
   >::: [
          "ast_header" >:: ast_header_tests;
+         "ast_header_boundary" >:: ast_header_boundary_tests;
          "parsed_dependencies" >:: parsed_dependencies_tests;
          "copy" >:: copy_tests;
          "parallel_map" >:: parallel_map_tests;

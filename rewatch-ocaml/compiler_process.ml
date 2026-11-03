@@ -303,10 +303,13 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~has_interface
            [Cmi; Optional "cmti"]
        | Source.Implementation when has_interface ->
          (* The implementation is compiled with -bs-read-cmi, so its .cmi is
-           the one already published after compiling the interface. *)
+           the one already published after compiling the interface, which
+           this compile read again. *)
          ignore
            (publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
               [Required "cmj"; Optional "cmt"]);
+         Build_file_store.evict
+           (Filename.concat artifact_dir (basename ^ ".cmi"));
          Compiler_scheduler.Cmi_unchanged
        | Source.Implementation ->
          publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename

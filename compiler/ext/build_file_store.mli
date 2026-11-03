@@ -31,8 +31,7 @@ val exists : string -> bool
 val write : ?keep:bool -> string -> string -> unit
 (** [write path contents] writes [contents] to [path] and, unless [keep] is
     [false], keeps them for later reads. [keep:false] suits outputs nothing in
-    the build reads again, such as [.cmt] files. Raises [Sys_error] like
-    [open_out_bin]. *)
+    the build reads again. Raises [Sys_error] like [open_out_bin]. *)
 
 val evict : string -> unit
 (** [evict path] drops the kept contents of [path], to bound memory once
