@@ -165,9 +165,11 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
   let results =
     sources
     |> List.map (fun source ->
-        Compiler_process.parse_request ~build_dir:source.package.build_dir
-          ~config:source.package.compile_config source.source.relative_path)
-    |> Compiler_process.run_requests ?poll:attempt.process_poll
+        ( source.package.build_dir,
+          source.package.ocaml_dir,
+          source.package.compile_config,
+          source.source.relative_path ))
+    |> Compiler_process.run_parses ?poll:attempt.process_poll
          ~on_complete:parse_completed
   in
   let affected_modules = Hashtbl.create (List.length sources) in
@@ -465,8 +467,9 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   Build_lock.with_build ~poll build_lock_root
     (fun ~release:release_build_lock ->
       Build_attempt.protect attempt (fun () ->
-          try execute ~release_build_lock
-          with Parse_failure output -> report_parse_failure output));
+          Build_file_store.with_build (fun () ->
+              try execute ~release_build_lock
+              with Parse_failure output -> report_parse_failure output)));
   {root_config; build_lock_root; session = attempt.session}
 
 let run ~poll ~verbosity ~folder ~prod ~features ~warn_error ~after_build

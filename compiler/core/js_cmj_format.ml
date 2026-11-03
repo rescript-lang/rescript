@@ -69,26 +69,15 @@ let make ~(values : cmj_value Map_string.t) ~effect_ ~package_spec ~case : t =
   }
 
 (* Serialization .. *)
-(* Channels are closed also when decoding fails: the compiler can run inside a
-   long-lived build process, which would otherwise keep the file open. *)
 let from_file name : t =
-  let ic = open_in_bin (Compiler_request_state.resolve_path name) in
-  Fun.protect
-    ~finally:(fun () -> close_in_noerr ic)
-    (fun () ->
-      let _digest = Digest.input ic in
-      (input_value ic : t))
+  Ext_io.unmarshal (Ext_io.load_file name) Ext_digest.length
 
 let for_sure_not_changed (name : string) (header : string) =
-  if Sys.file_exists (Compiler_request_state.resolve_path name) then
-    let ic = open_in_bin (Compiler_request_state.resolve_path name) in
-    Fun.protect
-      ~finally:(fun () -> close_in_noerr ic)
-      (fun () ->
-        match really_input_string ic Ext_digest.length with
-        | holder -> holder = header
-        | exception End_of_file -> false)
-  else false
+  match Build_file_store.read (Compiler_request_state.resolve_path name) with
+  | Some contents ->
+    String.length contents >= Ext_digest.length
+    && String.sub contents 0 Ext_digest.length = header
+  | None -> false
 
 (* This may cause some build system always rebuild
    maybe should not be turned on by default
@@ -98,13 +87,9 @@ let to_file name ~check_exists (v : t) =
   let cur_digest = Digest.string s in
   let header = cur_digest in
   if not (check_exists && for_sure_not_changed name header) then
-    let oc = open_out_bin (Compiler_request_state.resolve_path name) in
-    Fun.protect
-      ~finally:(fun () -> close_out_noerr oc)
-      (fun () ->
-        output_string oc header;
-        output_string oc s;
-        close_out oc)
+    Build_file_store.write
+      (Compiler_request_state.resolve_path name)
+      (header ^ s)
 
 let key_comp a b = Ext_string.compare a b.name
 

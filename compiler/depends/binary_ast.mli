@@ -25,6 +25,8 @@
 type _ kind = Ml : Parsetree.structure kind | Mli : Parsetree.signature kind
 
 val read_ast_exn : fname:string -> 'a kind -> 'a
+(** Raises [End_of_file] when the file ends before its header or its AST does,
+    as when a killed build cut it short. *)
 
 val write_ast : sourcefile:string -> output:string -> 'a kind -> 'a -> unit
 (** [write_ast ~sourcefile ~output kind ast] writes to [output]:
@@ -33,5 +35,22 @@ val write_ast : sourcefile:string -> output:string -> 'a kind -> 'a -> unit
       (predefined names excluded), each followed by a newline;
     - [sourcefile] and a newline;
     - the marshalled [ast].
-    [read_ast_exn] skips the dependency block; rewatch reads it in
-    [get_dep_modules] (rewatch/src/build/deps.rs). *)
+    [read_ast_exn] skips the dependency block; OCaml rewatch reads it with
+    {!read_header}, and Rust rewatch in [get_dep_modules]
+    (rewatch/src/build/deps.rs). *)
+
+type header = {source_start: int; source_end: int}
+(** Where the parts of an AST's header end: the dependency block takes the
+    bytes from 4 to [source_start], the source path those up to
+    [source_end], a newline, and the marshalled AST follows. *)
+
+val read_header : ?length:int -> string -> header option
+(** [read_header ?length contents] reads the header of an AST whose first
+    [length] bytes, all of them by default, are those of [contents]. It is
+    [None] when they end before the header does, or give an impossible length
+    for the dependency block. *)
+
+val header_dependencies : string -> header -> string list
+(** The module names in the dependency block. *)
+
+val header_source : string -> header -> string

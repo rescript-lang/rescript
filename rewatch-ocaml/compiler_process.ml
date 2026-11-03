@@ -105,11 +105,13 @@ let task request =
           if Atomic.get cancelled then raise (Process.Interrupted 15))
         request)
 
+let run_tasks ?poll ?on_complete tasks =
+  Process.run_tasks
+    ~max_jobs:(Compiler_execution_mode.configured_count ())
+    ?poll ?on_complete tasks
+
 let run_requests ?poll ?on_complete requests =
-  requests |> List.map task
-  |> Process.run_tasks
-       ~max_jobs:(Compiler_execution_mode.configured_count ())
-       ?poll ?on_complete
+  requests |> List.map task |> run_tasks ?poll ?on_complete
 
 let parse_request ~build_dir ~(config : Config.t) path =
   let ast = Source.ast_path path in
@@ -121,8 +123,31 @@ let parse_request ~build_dir ~(config : Config.t) path =
   let args = Compiler_args.parser_arguments ~config ~contents ~path in
   {args; cwd = build_dir}
 
-let ast_dependencies ~build_dir ast =
-  (Ast_header.read (Filename.concat build_dir ast)).dependencies
+(* Runs on the worker that parsed [path], right after the parse, so that
+   publishing the outputs of a large project's parses does not run on one
+   domain afterwards. The source is kept: compiling reads it again. *)
+let publish_parse ~build_dir ~ocaml_dir ~(config : Config.t) path =
+  File_util.copy_build_file ~keep:false
+    (Filename.concat build_dir (Source.ast_path path))
+    (Build_artifacts.published_ast_path ~ocaml_dir path);
+  File_util.copy_build_file
+    (Filename.concat config.root path)
+    (Filename.concat ocaml_dir (Filename.basename path))
+
+(* A parse that printed warnings is published later, on the main domain, once
+   the build has registered the cleanup that makes the next build parse it
+   again and repeat them. Published now, it would outlive a build interrupted
+   before that, and the next build would not report the warnings. *)
+let run_parses ?poll ?on_complete parses =
+  parses
+  |> List.map (fun (build_dir, ocaml_dir, config, path) ->
+      Process.map_result
+        (task (parse_request ~build_dir ~config path))
+        (fun result ->
+          if Process.succeeded result && result.stderr = "" then
+            publish_parse ~build_dir ~ocaml_dir ~config path;
+          result))
+  |> run_tasks ?poll ?on_complete
 
 type compiler_artifact = Cmi | Required of string | Optional of string
 
@@ -142,14 +167,19 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
         let destination =
           Filename.concat ocaml_dir (basename ^ "." ^ extension)
         in
-        match artifact with
+        (* Dependents read the published .cmi and .cmj, so the store keeps
+           them; nothing in the build reads the other copies again. *)
+        (match artifact with
         | Cmi ->
           cmi_change :=
-            if File_util.copy_file_if_different source destination then
+            if File_util.copy_build_file_if_different source destination then
               Compiler_scheduler.Cmi_changed
             else Compiler_scheduler.Cmi_unchanged
-        | Required _ -> File_util.copy_existing_file source destination
-        | Optional _ -> File_util.copy_optional_existing_file source destination)
+        | Required "cmj" -> File_util.copy_build_file source destination
+        | Required _ -> File_util.copy_build_file ~keep:false source destination
+        | Optional _ ->
+          File_util.copy_optional_build_file ~keep:false source destination);
+        Build_file_store.evict source)
       artifacts;
     !cmi_change
   with error ->
@@ -277,10 +307,13 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~has_interface
            [Cmi; Optional "cmti"]
        | Source.Implementation when has_interface ->
          (* The implementation is compiled with -bs-read-cmi, so its .cmi is
-           the one already published after compiling the interface. *)
+           the one already published after compiling the interface, which
+           this compile read again. *)
          ignore
            (publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
               [Required "cmj"; Optional "cmt"]);
+         Build_file_store.evict
+           (Filename.concat artifact_dir (basename ^ ".cmi"));
          Compiler_scheduler.Cmi_unchanged
        | Source.Implementation ->
          publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
@@ -288,9 +321,18 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~has_interface
     let source = Filename.concat config.root path in
     let build_source = Filename.concat build_dir path in
     File_util.ensure_dir (Filename.dirname build_source);
-    File_util.copy_existing_file source build_source;
-    File_util.copy_existing_file source
-      (Filename.concat ocaml_dir (Filename.basename path));
+    File_util.copy_build_file ~keep:false source build_source;
+    let published_source = Filename.concat ocaml_dir (Filename.basename path) in
+    (* Usually published unchanged when the source was parsed. *)
+    ignore
+      (File_util.copy_build_file_if_different ~keep:false source
+         published_source);
+    List.iter Build_file_store.evict
+      [
+        source;
+        published_source;
+        Filename.concat build_dir (Source.ast_path path);
+      ];
     (match source_kind with
     | Source.Interface -> ()
     | Source.Implementation ->
@@ -303,12 +345,17 @@ let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~has_interface
                 spec
             in
             File_util.ensure_dir (Filename.dirname build_output);
-            if File_util.exists output then
-              File_util.copy_existing_file output build_output;
-            if File_util.exists (output ^ ".map") then
-              File_util.copy_existing_file (output ^ ".map")
-                (build_output ^ ".map")
-            else File_util.remove_file (build_output ^ ".map")))
+            Option.iter
+              (File_util.write_build_file ~keep:false build_output)
+              (Build_file_store.read output);
+            File_util.copy_optional_build_file ~keep:false (output ^ ".map")
+              (build_output ^ ".map")))
+        config.package_specs;
+      List.iter
+        (fun spec ->
+          let output = Build_artifacts.generated_js_path config path spec in
+          Build_file_store.evict output;
+          Build_file_store.evict (output ^ ".map"))
         config.package_specs);
     Compiler_scheduler.{stderr; cmi_change = !cmi_change}
   with

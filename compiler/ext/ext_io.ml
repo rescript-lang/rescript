@@ -22,16 +22,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** on 32 bit , there are 16M limitation *)
 let load_file f =
-  Ext_pervasives.finally
-    (open_in_bin (Compiler_request_state.resolve_path f))
-    ~clean:close_in
-    (fun ic ->
-      let n = in_channel_length ic in
-      let s = Bytes.create n in
-      really_input ic s 0 n;
-      Bytes.unsafe_to_string s)
+  let path = Compiler_request_state.resolve_path f in
+  match Build_file_store.read path with
+  | Some contents -> contents
+  | None -> raise (Sys_error (path ^ ": No such file or directory"))
+
+let unmarshal contents offset =
+  let available = String.length contents - offset in
+  if
+    available < Marshal.header_size
+    || available < Marshal.total_size (Bytes.unsafe_of_string contents) offset
+  then raise End_of_file
+  else Marshal.from_string contents offset
 
 let rev_lines_of_chann chan =
   let rec loop acc chan =
@@ -44,6 +47,4 @@ let rev_lines_of_chann chan =
   loop [] chan
 
 let write_file f content =
-  Ext_pervasives.finally ~clean:close_out
-    (open_out_bin (Compiler_request_state.resolve_path f))
-    (fun oc -> output_string oc content)
+  Build_file_store.write (Compiler_request_state.resolve_path f) content

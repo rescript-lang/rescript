@@ -47,12 +47,15 @@ val resolved_dependencies :
   string list
 
 val raw_dependencies :
+  ?published_dependencies:(string -> string list option) ->
   build_dir:string ->
   parse_failed:(string -> bool) ->
   Source.module_ ->
   string list
 (** The sorted module names that a module's ASTs reference, skipping the
-    source paths whose parse failed. *)
+    source paths whose parse failed. [published_dependencies path] gives the
+    dependencies of [path]'s published AST, when it is known and current;
+    otherwise they are read from [path]'s AST in [build_dir]. *)
 
 type initialized = {
   nodes: module_node list;
@@ -65,8 +68,12 @@ val initialize :
   root_config:Config.t ->
   package_plans:Package_plan.t list ->
   compile_assets:Compile_assets.t ->
+  parsed_paths:(string, unit) Hashtbl.t ->
   failed_parse_paths:(string, unit) Hashtbl.t ->
   initialized
+(** [parsed_paths] holds the absolute source paths parsed successfully in
+    this build, and [failed_parse_paths] those whose parse failed.
+    [compile_assets] was read before they were parsed. *)
 
 val find_cycle :
   module_node list -> namespace_map list -> Build_state.t -> cycle_info option

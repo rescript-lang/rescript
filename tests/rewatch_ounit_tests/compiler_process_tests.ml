@@ -63,6 +63,127 @@ let publication_tests _context =
               ~ocaml_dir ~entry:None ~package_dirty:false ~force:true "Ns" []))
         "retained namespace publication dirtiness forces a retry")
 
+(* Publishing a module keeps the interface and .cmj that its dependents read
+   in the build file store, and releases the files that nothing reads again,
+   including the copies it makes. *)
+let publication_releases_files_tests _context =
+  Test_support.with_temp_dir "rewatch-publication-store-" (fun root ->
+      Test_support.write_file
+        (Filename.concat root "rescript.json")
+        {|{"name":"publish","sources":"src","package-specs":{"module":"commonjs","in-source":true},"suffix":".js"}|};
+      let config = Config.load_root root in
+      let build_dir = Filename.concat root "lib/bs" in
+      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let path = "src/A.res" in
+      let source = Filename.concat root path in
+      let built extension = Filename.concat build_dir ("src/A." ^ extension) in
+      let published extension = Filename.concat ocaml_dir ("A." ^ extension) in
+      let output =
+        Build_artifacts.generated_js_path config path
+          (List.hd config.package_specs)
+      in
+      File_util.ensure_dir (Filename.concat build_dir "src");
+      File_util.ensure_dir ocaml_dir;
+      Test_support.write_file source "let value = 1\n";
+      Build_file_store.with_build (fun () ->
+          List.iter
+            (fun extension ->
+              Build_file_store.write (built extension) ("built " ^ extension))
+            ["cmi"; "cmj"; "cmt"; "ast"];
+          Build_file_store.write output "js";
+          ignore (Build_file_store.read source);
+          ignore
+            (Compiler_process.publish ~build_dir ~ocaml_dir ~is_local:true
+               ~config ~has_interface:false ~source_kind:Source.Implementation
+               path
+               Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""});
+          List.iter
+            (fun (path, kept) ->
+              check
+                (Option.is_some (Build_file_store.cached path) = kept)
+                (path ^ if kept then " is kept" else " is released"))
+            [
+              (published "cmi", true);
+              (published "cmj", true);
+              (published "cmt", false);
+              (published "res", false);
+              (built "cmi", false);
+              (built "cmj", false);
+              (built "cmt", false);
+              (built "ast", false);
+              (Filename.concat build_dir path, false);
+              (source, false);
+              (output, false);
+            ]);
+      (* An implementation with an interface is compiled with -bs-read-cmi,
+         which reads its interface's .cmi in lib/bs again. *)
+      let interface_path = "src/B.res" in
+      let built_cmi = Filename.concat build_dir "src/B.cmi" in
+      Test_support.write_file
+        (Filename.concat root interface_path)
+        "let b = 1\n";
+      Build_file_store.with_build (fun () ->
+          List.iter
+            (fun extension ->
+              Build_file_store.write
+                (Filename.concat build_dir ("src/B." ^ extension))
+                ("built " ^ extension))
+            ["cmi"; "cmj"; "cmt"];
+          ignore
+            (Compiler_process.publish ~build_dir ~ocaml_dir ~is_local:true
+               ~config ~has_interface:true ~source_kind:Source.Implementation
+               interface_path
+               Process.{status = Unix.WEXITED 0; stdout = ""; stderr = ""});
+          check
+            (Option.is_none (Build_file_store.cached built_cmi))
+            "the interface read again is released");
+      check
+        (File_util.read_file (Filename.concat ocaml_dir "A.cmt") = "built cmt")
+        "the typed tree is published")
+
+(* A parse that printed warnings is left for the build to publish after it
+   registers the cleanup that repeats them, so that a build interrupted before
+   then does not leave behind an AST whose warnings the next build skips. *)
+let parse_publication_tests _context =
+  Test_support.with_temp_dir "rewatch-parse-publication-" (fun root ->
+      Test_support.write_file
+        (Filename.concat root "rescript.json")
+        {|{"name":"parse","sources":"src","package-specs":{"module":"commonjs","in-source":true},"suffix":".js"}|};
+      let config = Config.load_root root in
+      let build_dir = Filename.concat root "lib/bs" in
+      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      File_util.ensure_dir ocaml_dir;
+      Test_support.write_file
+        (Filename.concat root "src/Clean.res")
+        "let value = 1\n";
+      Test_support.write_file
+        (Filename.concat root "src/Warns.res")
+        "let f = (. x) => x\n";
+      let paths = ["src/Clean.res"; "src/Warns.res"] in
+      let results =
+        paths
+        |> List.map (fun path -> (build_dir, ocaml_dir, config, path))
+        |> Compiler_process.run_parses
+      in
+      List.iter2
+        (fun path (result : Process.result) ->
+          check (Process.succeeded result) (path ^ " parses");
+          let warns = path = "src/Warns.res" in
+          check
+            (result.stderr <> "" = warns)
+            (path ^ if warns then " prints a warning" else " prints nothing");
+          List.iter
+            (fun published ->
+              check
+                (Sys.file_exists published = not warns)
+                (published
+                ^ if warns then " is not published" else " is published"))
+            [
+              Build_artifacts.published_ast_path ~ocaml_dir path;
+              Filename.concat ocaml_dir (Filename.basename path);
+            ])
+        paths results)
+
 let restore_environment name previous =
   match previous with
   | Some value -> Unix.putenv name value
@@ -253,6 +374,8 @@ let tests =
   "compiler_process_tests"
   >::: [
          "publication" >:: publication_tests;
+         "publication_releases_files" >:: publication_releases_files_tests;
+         "parse_publication" >:: parse_publication_tests;
          "domain_ppx_cancellation" >:: domain_ppx_cancellation_test;
          "escaped_exception" >:: escaped_exception_test;
          "domain_execution" >:: domain_execution_test;

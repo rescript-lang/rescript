@@ -24,6 +24,7 @@
 
 let setup_env () =
   Env.Persistent_signature.load := Bs_cmi_load.load_cmi;
+  Build_file_store.set_disk_reader Bs_cmi_load.read_file;
   Matching.make_test_sequence_variant_constant :=
     Polyvar_pattern_match.make_test_sequence_variant_constant;
   Matching.call_switcher_variant_constant :=

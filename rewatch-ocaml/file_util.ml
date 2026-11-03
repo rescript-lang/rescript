@@ -77,6 +77,7 @@ let with_output_channel channel write =
     raise exn
 
 let write_file path contents =
+  Build_file_store.forget path;
   let channel = open_out_bin path in
   with_output_channel channel (fun channel -> output_string channel contents)
 
@@ -113,6 +114,7 @@ let write_file_atomic ?(ensure_parent = true) path contents =
     (fun () ->
       Unix.chmod candidate 0o644;
       write_file candidate contents;
+      Build_file_store.forget path;
       Sys.rename candidate path;
       published := true)
 
@@ -134,6 +136,7 @@ let copy_existing_file source destination =
          (Docker on macOS) for the compiler's lowercase .cmi lookups. A failed
          copy removes its partial destination, so the next build publishes it
          again instead of reading a truncated .cmi or .cmj. *)
+      Build_file_store.forget destination;
       let output_channel = open_out_bin destination in
       try
         with_output_channel output_channel (fun output_channel ->
@@ -216,10 +219,45 @@ let copy_file_if_different source destination =
   if changed then copy_existing_file source destination;
   changed
 
+(* Build outputs are read through [Build_file_store], which keeps what the
+   compiler wrote during the build, so publishing them reads nothing back from
+   disk. Like [copy_existing_file], a failed write removes its partial
+   destination. *)
+let read_build_file path =
+  match Build_file_store.read path with
+  | Some contents -> contents
+  | None -> raise (Unix.Unix_error (Unix.ENOENT, "open", path))
+
+let write_build_file ?keep path contents =
+  try Build_file_store.write ?keep path contents
+  with error ->
+    let backtrace = Printexc.get_raw_backtrace () in
+    (try Unix.unlink path with Unix.Unix_error _ -> ());
+    Build_file_store.forget path;
+    Printexc.raise_with_backtrace error backtrace
+
+let copy_build_file ?keep source destination =
+  write_build_file ?keep destination (read_build_file source)
+
+let copy_optional_build_file ?keep source destination =
+  match Build_file_store.read source with
+  | Some contents -> write_build_file ?keep destination contents
+  | None -> (
+    Build_file_store.forget destination;
+    try Unix.unlink destination
+    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ())
+
+let copy_build_file_if_different ?keep source destination =
+  let contents = read_build_file source in
+  let changed = Build_file_store.read destination <> Some contents in
+  if changed then write_build_file ?keep destination contents;
+  changed
+
 let modification_time path =
   stat_opt path |> Option.map (fun metadata -> metadata.Unix.st_mtime)
 
 let remove_file path =
+  Build_file_store.forget path;
   try Unix.unlink path
   with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ()
 
@@ -229,7 +267,9 @@ let rec remove_tree path =
     directory_entries path
     |> List.iter (fun name -> remove_tree (Filename.concat path name));
     Unix.rmdir path
-  | _ -> Unix.unlink path
+  | _ ->
+    Build_file_store.forget path;
+    Unix.unlink path
   | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ()
 
 let remove_file_best_effort path =
