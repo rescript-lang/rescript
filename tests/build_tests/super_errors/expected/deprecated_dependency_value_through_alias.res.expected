@@ -1,0 +1,11 @@
+
+  [1;33mWarning number 3[0m
+  [36m/.../fixtures/deprecated_dependency_value_through_alias.res[0m:[2m4:12-18[0m
+
+  2 [2m│[0m module P = O
+  3 [2m│[0m 
+  [1;33m4[0m [2m│[0m let kept = [1;33mP.keepU[0m(Some(1), x => x > 0)
+  5 [2m│[0m 
+
+  deprecated: P.keepU
+  Use `keep` instead

@@ -166,6 +166,12 @@ val get_unit_name : unit -> string
 (* Read, save a signature to/from a file *)
 
 val read_signature : string -> string -> signature
+
+val deferred_signature_copy_stats : unit -> int * int
+(* For tests: how many copies of compilation units' signatures were deferred,
+   and how many of those did not take the stamps and type ids reserved for
+   them and were made again with fresh ones (expected: none), in the process
+   so far. *)
 (* Arguments: module name, file name. Results: signature. *)
 
 val save_signature :
