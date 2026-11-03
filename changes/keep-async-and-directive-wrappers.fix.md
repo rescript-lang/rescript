@@ -1,0 +1,1 @@
+- Keep an `async` function, or one with a `@directive`, that only passes its parameters on to a call. It was replaced by the callee, or by that call where it was applied immediately, which dropped the promise or the directive and could leave `await` outside an async function.

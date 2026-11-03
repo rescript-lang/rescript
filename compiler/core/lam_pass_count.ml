@@ -137,7 +137,7 @@ let collect_occurs lam : occ_tbl =
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when Ext_list.same_length params args
-           && Lam_analysis.lfunction_can_be_inlined lfunction ->
+           && Lambda.lfunction_can_be_inlined lfunction ->
       count bv (Lam_beta_reduce.no_names_beta_reduce params body args)
     | Lapply {ap_func = l1; ap_args = ll; _} ->
       count bv l1;

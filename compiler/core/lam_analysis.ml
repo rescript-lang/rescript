@@ -271,10 +271,6 @@ let destruct_pattern (body : Lambda.t) params args =
     | Some _ | None -> false)
   | _ -> false
 
-(* Async functions cannot be beta reduced *)
-let lfunction_can_be_inlined (lfunction : Lambda.lfunction) =
-  (not lfunction.attr.async) && lfunction.attr.directive = None
-
 (** Hints to inlining *)
 let ok_to_inline_fun_when_app (m : Lambda.lfunction) (args : Lambda.t list) =
   match m.attr.inline with

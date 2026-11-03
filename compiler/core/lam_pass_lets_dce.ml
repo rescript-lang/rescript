@@ -111,7 +111,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lambda.t
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when Ext_list.same_length params args
-           && Lam_analysis.lfunction_can_be_inlined lfunction ->
+           && Lambda.lfunction_can_be_inlined lfunction ->
       simplif (Lam_beta_reduce.no_names_beta_reduce params body args)
     | Lprim {primitive = Pstringadd; args = [l; r]; loc} -> (
       let l' = simplif l in
