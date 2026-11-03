@@ -546,3 +546,8 @@ val record_fields_are_array : (string * bool) array -> bool
 (** Whether a nonempty record has consecutive field names starting at ["0"],
     so it is represented as a JavaScript array. Optionality does not affect
     the layout. *)
+
+val runtime_names_are_array : ('a -> string) -> 'a array -> bool
+(** [record_fields_are_array] over fields of any shape, given their runtime
+    name, so that a caller holding the labels of a large record (JSX props)
+    need not build a copy of them. *)

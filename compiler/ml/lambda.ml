@@ -801,15 +801,15 @@ and eq_option l1 l2 =
 
 and eq_approx_list ls ls1 = Ext_list.for_all2_no_exn ls ls1 eq_approx
 
-let record_fields_are_array fields =
+let runtime_names_are_array runtime_name fields =
   let len = Array.length fields in
   let rec loop i =
     if i = len then true
-    else
-      let name, _optional = fields.(i) in
-      string_of_int i = name && loop (i + 1)
+    else string_of_int i = runtime_name fields.(i) && loop (i + 1)
   in
   len <> 0 && loop 0
+
+let record_fields_are_array fields = runtime_names_are_array fst fields
 
 (* The JavaScript value a constant is emitted as by [Lam_compile_const] and
    [Js_dump], not its source constructor. A constant of another

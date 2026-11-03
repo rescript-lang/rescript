@@ -1072,11 +1072,9 @@ let jsx_props_of ~multi (props : expression) =
       Some (Jsx_props_record {fields; init; copy_fields; children})
     in
     let is_array =
-      Lambda.record_fields_are_array
-        (Array.map
-           (fun (lbl : label_description) ->
-             (lbl.lbl_runtime_name, lbl.lbl_optional))
-           (all_labels fields))
+      Lambda.runtime_names_are_array
+        (fun (lbl : label_description) -> lbl.lbl_runtime_name)
+        (all_labels fields)
     in
     match children with
     (* a record with the runtime names "0", "1", ... is an array *)
