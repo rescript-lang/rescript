@@ -12,27 +12,6 @@ let make_paths_for_module ~project_files_and_paths ~dependencies_files_and_paths
       Hashtbl.replace paths_for_module mod_name paths);
   paths_for_module
 
-let override_rescript_version = ref None
-
-let get_rescript_version () =
-  match !override_rescript_version with
-  | Some override_rescript_version -> override_rescript_version
-  | None -> (
-    (* TODO: Include patch stuff when needed *)
-    let default_version = (11, 0) in
-    try
-      let value = Sys.getenv "RESCRIPT_VERSION" in
-      let version =
-        match value |> String.split_on_char '.' with
-        | major :: minor :: _rest -> (
-          match (int_of_string_opt major, int_of_string_opt minor) with
-          | Some major, Some minor -> (major, minor)
-          | _ -> default_version)
-        | _ -> default_version
-      in
-      version
-    with Not_found -> default_version)
-
 let new_bs_package ~root_path =
   let rescript_json = Filename.concat root_path "rescript.json" in
 
@@ -45,7 +24,6 @@ let new_bs_package ~root_path =
     match Yojson_helpers.from_string_opt raw with
     | Some config -> (
       let namespace = Find_files.get_namespace config in
-      let rescript_version = get_rescript_version () in
       let suffix =
         match config |> Yojson_helpers.get "suffix" with
         | Some (`String suffix) -> suffix
@@ -177,7 +155,6 @@ let new_bs_package ~root_path =
            {
              generic_jsx_module;
              suffix;
-             rescript_version;
              root_path;
              project_files;
              dependencies_files;

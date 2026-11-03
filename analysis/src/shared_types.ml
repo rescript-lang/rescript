@@ -502,7 +502,6 @@ and package = {
   paths_for_module: (file, paths) Hashtbl.t;
   namespace: string option;
   opens: path list;
-  rescript_version: int * int;
   autocomplete: file list Misc.String_map.t;
 }
 
