@@ -1,0 +1,1 @@
+- Editor "create interface" keeps the doc comments, `@deprecated` and genType and reanalyze annotations written on `let` bindings.
