@@ -1,1 +1,0 @@
-- OCaml rewatch: read the headers of existing ASTs in parallel, and once instead of twice, which makes no-op builds and builds after a small edit of a large project about a third faster.

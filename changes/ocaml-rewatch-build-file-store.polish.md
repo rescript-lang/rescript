@@ -1,1 +1,1 @@
-- OCaml rewatch: read each interface, `.cmj`, AST and source at most once per build, and publish outputs from memory instead of reading them back, which cuts the time of a clean build by about a third.
+- OCaml rewatch: read each interface, `.cmj`, AST and source at most once per build, read the headers of existing ASTs once and in parallel, and publish outputs from memory instead of reading them back. On a large project, this cuts the time of a clean build by about a third, and of a no-op build or one that recompiles a single module by about 40%.
