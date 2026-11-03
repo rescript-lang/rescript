@@ -147,6 +147,31 @@ end
 
 module Path_map = Map.Make (Path)
 
+(* A value of a module that is built when it is first read. See
+   [components_of_module_maker]. *)
+module Comp_cell : sig
+  type 'a t
+
+  val ready : 'a -> 'a t
+  val pending : (unit -> 'a) -> 'a t
+  val force : 'a t -> 'a
+end = struct
+  type 'a t = {mutable state: 'a state}
+  and 'a state = Ready of 'a | Pending of (unit -> 'a)
+
+  let ready x = {state = Ready x}
+  let pending f = {state = Pending f}
+
+  (* If [f] raises, the cell stays pending and the exception is passed on. *)
+  let force c =
+    match c.state with
+    | Ready x -> x
+    | Pending f ->
+      let x = f () in
+      c.state <- Ready x;
+      x
+end
+
 module Tycomp_tbl = struct
   (** This module is used to store components of types (i.e. labels
         and constructors).  We keep a representation of each nested
@@ -236,37 +261,65 @@ module Id_tbl = struct
         (** Symbolic representation of the last (innermost) open, if any. *)
   }
 
-  and 'a opened = {
-    root: Path.t;
-        (** The path of the opened module, to be prefixed in front of
-          its local names to produce a valid path in the current
-          environment. *)
-    components: (string, 'a * int) Tbl.t;
-        (** Components from the opened module. *)
-    using: (string -> ('a * 'a) option -> unit) option;
-        (** A callback to be applied when a component is used from this
-          "open".  This is used to detect unused "opens".  The
-          arguments are used to detect shadowing. *)
-    next: 'a t;  (** The table before opening the module. *)
-  }
+  and 'a opened =
+    | Opened : {
+        root: Path.t;
+            (** The path of the opened module, to be prefixed in front of
+              its local names to produce a valid path in the current
+              environment. *)
+        components: (string, 'b * int) Tbl.t;
+            (** Components from the opened module. *)
+        force: 'b -> 'a;  (** Gives the binding a component stands for. *)
+        overrides: (string, 'a * int) Tbl.t;
+            (** Components replaced by [update], which take precedence over
+              [components]. *)
+        using: (string -> ('a * 'a) option -> unit) option;
+            (** A callback to be applied when a component is used from this
+              "open".  This is used to detect unused "opens".  The
+              arguments are used to detect shadowing. *)
+        next: 'a t;  (** The table before opening the module. *)
+      }
+        -> 'a opened
 
   let empty = {current = Ident.empty; opened = None}
 
   let add id x tbl = {tbl with current = Ident.add id x tbl.current}
 
-  let add_open slot wrap root components next =
+  let add_open slot wrap root ~force components next =
     let using =
       match slot with
       | None -> None
       | Some f -> Some (fun s x -> f s (wrap x))
     in
-    {current = Ident.empty; opened = Some {using; root; components; next}}
+    {
+      current = Ident.empty;
+      opened =
+        Some
+          (Opened {using; root; components; force; overrides = Tbl.empty; next});
+    }
+
+  (* The binding named [name] in an open, with its position. *)
+  let find_opened (type a) name (Opened o : a opened) : a * int =
+    match Tbl.find_str name o.overrides with
+    | found -> found
+    | exception Not_found ->
+      let desc, pos = Tbl.find_str name o.components in
+      (o.force desc, pos)
+
+  (* Every binding of an open, as [find_opened] gives it. *)
+  let fold_opened (type a) f (Opened o : a opened) acc =
+    Tbl.fold
+      (fun name (desc, pos) acc ->
+        match Tbl.find_str name o.overrides with
+        | found -> f name found acc
+        | exception Not_found -> f name (o.force desc, pos) acc)
+      o.components acc
 
   let rec find_same id tbl =
     try Ident.find_same id tbl.current
     with Not_found as exn -> (
       match tbl.opened with
-      | Some {next; _} -> find_same id next
+      | Some (Opened {next}) -> find_same id next
       | None -> raise exn)
 
   let rec find_name mark name tbl =
@@ -275,9 +328,9 @@ module Id_tbl = struct
       (Pident id, desc)
     with Not_found as exn -> (
       match tbl.opened with
-      | Some {using; root; next; components} -> (
+      | Some (Opened {using; root; next} as opened) -> (
         try
-          let descr, pos = Tbl.find_str name components in
+          let descr, pos = find_opened name opened in
           let res = (Pdot (root, name, pos), descr) in
           (if mark then
              match using with
@@ -298,15 +351,14 @@ module Id_tbl = struct
       {tbl with current = Ident.add id new_desc tbl.current}
     with Not_found -> (
       match tbl.opened with
-      | Some {root; using; next; components} -> (
-        try
-          let desc, pos = Tbl.find_str name components in
-          let new_desc = f desc in
-          let components = Tbl.add name (new_desc, pos) components in
-          {tbl with opened = Some {root; using; next; components}}
-        with Not_found ->
-          let next = update name f next in
-          {tbl with opened = Some {root; using; next; components}})
+      | Some (Opened o as opened) -> (
+        match find_opened name opened with
+        | desc, pos ->
+          let overrides = Tbl.add name (f desc, pos) o.overrides in
+          {tbl with opened = Some (Opened {o with overrides})}
+        | exception Not_found ->
+          let next = update name f o.next in
+          {tbl with opened = Some (Opened {o with next})})
       | None -> tbl)
 
   let rec find_all name tbl =
@@ -316,11 +368,10 @@ module Id_tbl = struct
     @
     match tbl.opened with
     | None -> []
-    | Some {root; using = _; next; components} -> (
-      try
-        let desc, pos = Tbl.find_str name components in
-        (Pdot (root, name, pos), desc) :: find_all name next
-      with Not_found -> find_all name next)
+    | Some (Opened {root; next} as opened) -> (
+      match find_opened name opened with
+      | desc, pos -> (Pdot (root, name, pos), desc) :: find_all name next
+      | exception Not_found -> find_all name next)
 
   let rec fold_name f tbl acc =
     let acc =
@@ -329,22 +380,23 @@ module Id_tbl = struct
         tbl.current acc
     in
     match tbl.opened with
-    | Some {root; using = _; next; components} ->
+    | Some (Opened {root; next} as opened) ->
       acc
-      |> Tbl.fold
-           (fun name (desc, pos) -> f name (Pdot (root, name, pos), desc))
-           components
+      |> fold_opened
+           (fun name (desc, pos) acc ->
+             f name (Pdot (root, name, pos), desc) acc)
+           opened
       |> fold_name f next
     | None -> acc
 
   let rec iter f tbl =
     Ident.iter (fun id desc -> f id (Pident id, desc)) tbl.current;
     match tbl.opened with
-    | Some {root; using = _; next; components} ->
-      Tbl.iter
-        (fun s (x, pos) ->
+    | Some (Opened {root; next} as opened) ->
+      fold_opened
+        (fun s (x, pos) () ->
           f (Ident.hide (Ident.create s) (* ??? *)) (Pdot (root, s, pos), x))
-        components;
+        opened ();
       iter f next
     | None -> ()
 end
@@ -372,10 +424,17 @@ type t = {
 and module_components = {
   deprecated: string option;
   loc: Location.t;
-  comps:
-    ( t * Subst.t * Path.t * Types.module_type,
-      module_components_repr option )
-    Env_lazy.t;
+  comps: (components_maker_arg, module_components_repr option) Env_lazy.t;
+}
+
+and components_maker_arg = {
+  maker_env: t;
+  maker_sub: Subst.t;
+  maker_path: Path.t;
+  maker_mty: Types.module_type;
+  maker_origin: Digest.t option;
+      (** The CRC of the .cmi whose signature [maker_mty] is part of, as read
+          from the file. [None] for any other module type. *)
 }
 
 and module_components_repr =
@@ -385,7 +444,7 @@ and module_components_repr =
 and 'a comp_tbl = (string, 'a * int) Tbl.t
 
 and structure_components = {
-  mutable comp_values: value_description comp_tbl;
+  mutable comp_values: value_description Comp_cell.t comp_tbl;
   mutable comp_constrs: (string, constructor_description list) Tbl.t;
   mutable comp_labels: (string, label_description list) Tbl.t;
   mutable comp_types: (type_declaration * type_descriptions) comp_tbl;
@@ -481,8 +540,9 @@ let without_cmis f x =
 
 let components_of_module' =
   ref
-    (fun ~deprecated:_ ~loc:_ _env _sub _path _mty -> assert false
-      : deprecated:string option ->
+    (fun ?origin:_ ~deprecated:_ ~loc:_ _env _sub _path _mty -> assert false
+      : ?origin:Digest.t ->
+        deprecated:string option ->
         loc:Location.t ->
         t ->
         Subst.t ->
@@ -491,8 +551,8 @@ let components_of_module' =
         module_components)
 let components_of_module_maker' =
   ref
-    (fun (_env, _sub, _path, _mty) -> assert false
-      : t * Subst.t * Path.t * module_type -> module_components_repr option)
+    (fun _ -> assert false
+      : components_maker_arg -> module_components_repr option)
 let components_of_functor_appl' =
   ref
     (fun _f _env _p1 _p2 -> assert false
@@ -736,7 +796,8 @@ let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
       None flags
   in
   let comps =
-    !components_of_module' ~deprecated ~loc:Location.none empty Subst.identity
+    !components_of_module' ?origin:(own_crc cmi) ~deprecated ~loc:Location.none
+      empty Subst.identity
       (Pident (Ident.create_persistent name))
       (Mty_signature sign)
   in
@@ -865,22 +926,25 @@ let rec find_module_descr path env =
     | Functor_comps f -> !components_of_functor_appl' f env p1 p2
     | Structure_comps _ -> raise Not_found)
 
-let find proj1 proj2 path env =
+let find proj1 proj2 force path env =
   match path with
   | Pident id -> Id_tbl.find_same id (proj1 env)
   | Pdot (p, s, _pos) -> (
     match get_components (find_module_descr p env) with
     | Structure_comps c ->
       let data, _pos = Tbl.find_str s (proj2 c) in
-      data
+      force data
     | Functor_comps _ -> raise Not_found)
   | Papply _ -> raise Not_found
 
-let find_value = find (fun env -> env.values) (fun sc -> sc.comp_values)
+let find_value =
+  find (fun env -> env.values) (fun sc -> sc.comp_values) Comp_cell.force
 
-and find_type_full = find (fun env -> env.types) (fun sc -> sc.comp_types)
+and find_type_full =
+  find (fun env -> env.types) (fun sc -> sc.comp_types) Fun.id
 
-and find_modtype = find (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes)
+and find_modtype =
+  find (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) Fun.id
 
 let type_of_cstr path = function
   | {cstr_inlined = Some d; _} ->
@@ -1151,7 +1215,7 @@ and lookup_module ~load ?loc lid env : Path.t =
       p
     | Functor_comps _ -> raise Not_found)
 
-let lookup proj1 proj2 ?loc lid env =
+let lookup proj1 proj2 force ?loc lid env =
   match lid with
   | Lident s -> Id_tbl.find_name s (proj1 env)
   | Ldot (l, s) -> (
@@ -1159,7 +1223,7 @@ let lookup proj1 proj2 ?loc lid env =
     match get_components desc with
     | Structure_comps c ->
       let data, pos = Tbl.find_str s (proj2 c) in
-      (Pdot (p, s, pos), data)
+      (Pdot (p, s, pos), force data)
     | Functor_comps _ -> raise Not_found)
 
 let lookup_all_simple proj1 proj2 shadow ?loc lid env =
@@ -1190,7 +1254,8 @@ let cstr_shadow cstr1 cstr2 =
 
 let lbl_shadow _lbl1 _lbl2 = false
 
-let lookup_value = lookup (fun env -> env.values) (fun sc -> sc.comp_values)
+let lookup_value =
+  lookup (fun env -> env.values) (fun sc -> sc.comp_values) Comp_cell.force
 let lookup_all_constructors =
   lookup_all_simple
     (fun env -> env.constrs)
@@ -1201,9 +1266,9 @@ let lookup_all_labels =
     (fun env -> env.labels)
     (fun sc -> sc.comp_labels)
     lbl_shadow
-let lookup_type = lookup (fun env -> env.types) (fun sc -> sc.comp_types)
+let lookup_type = lookup (fun env -> env.types) (fun sc -> sc.comp_types) Fun.id
 let lookup_modtype =
-  lookup (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes)
+  lookup (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) Fun.id
 
 let copy_types l env =
   let f desc =
@@ -1348,21 +1413,23 @@ let rec scrape_alias_for_visit env mty =
     with Not_found -> false)
   | _ -> true
 
-let iter_env proj1 proj2 f env () =
+let iter_env proj1 proj2 force f env () =
   Id_tbl.iter (fun id x -> f (Pident id) x) (proj1 env);
   let rec iter_components path path' mcomps =
     let cont () =
       let visit =
         match Env_lazy.get_arg mcomps.comps with
         | None -> true
-        | Some (env, _sub, _path, mty) -> scrape_alias_for_visit env mty
+        | Some {maker_env; maker_mty} ->
+          scrape_alias_for_visit maker_env maker_mty
       in
       if not visit then ()
       else
         match get_components mcomps with
         | Structure_comps comps ->
           Tbl.iter
-            (fun s (d, n) -> f (Pdot (path, s, n)) (Pdot (path', s, n), d))
+            (fun s (d, n) ->
+              f (Pdot (path, s, n)) (Pdot (path', s, n), force d))
             (proj2 comps);
           Tbl.iter
             (fun s (c, n) ->
@@ -1391,7 +1458,8 @@ let run_iter_cont l =
   iter_env_cont () := [];
   cont
 
-let iter_types f = iter_env (fun env -> env.types) (fun sc -> sc.comp_types) f
+let iter_types f =
+  iter_env (fun env -> env.types) (fun sc -> sc.comp_types) Fun.id f
 
 let same_types env1 env2 =
   env1.types == env2.types && env1.components == env2.components
@@ -1403,14 +1471,13 @@ let used_persistent () =
     (persistent_structures ());
   !r
 
-let find_all_comps proj s (p, mcomps) =
+let find_all_comps proj force s (p, mcomps) =
   match get_components mcomps with
   | Functor_comps _ -> []
   | Structure_comps comps -> (
-    try
-      let c, n = Tbl.find_str s (proj comps) in
-      [(Pdot (p, s, n), c)]
-    with Not_found -> [])
+    match Tbl.find_str s (proj comps) with
+    | c, n -> [(Pdot (p, s, n), force c)]
+    | exception Not_found -> [])
 
 let rec find_shadowed_comps path env =
   match path with
@@ -1418,17 +1485,17 @@ let rec find_shadowed_comps path env =
   | Pdot (p, s, _) ->
     let l = find_shadowed_comps p env in
     let l' =
-      List.map (find_all_comps (fun comps -> comps.comp_components) s) l
+      List.map (find_all_comps (fun comps -> comps.comp_components) Fun.id s) l
     in
     List.flatten l'
   | Papply _ -> []
 
-let find_shadowed proj1 proj2 path env =
+let find_shadowed proj1 proj2 force path env =
   match path with
   | Pident id -> Id_tbl.find_all (Ident.name id) (proj1 env)
   | Pdot (p, s, _) ->
     let l = find_shadowed_comps p env in
-    let l' = List.map (find_all_comps proj2 s) l in
+    let l' = List.map (find_all_comps proj2 force s) l in
     List.flatten l'
   | Papply _ -> []
 
@@ -1437,7 +1504,7 @@ let find_shadowed_types path env =
     (find_shadowed
        (fun env -> env.types)
        (fun comps -> comps.comp_types)
-       path env)
+       Fun.id path env)
 
 (* GADT instance tracking *)
 
@@ -1634,10 +1701,102 @@ let add_to_tbl id decl tbl =
   let decls = try Tbl.find_str id tbl with Not_found -> [] in
   Tbl.add id (decl :: decls) tbl
 
-let rec components_of_module ~deprecated ~loc env sub path mty =
-  {deprecated; loc; comps = Env_lazy.create (env, sub, path, mty)}
+(* Deferred components of persistent structures.
 
-and components_of_module_maker (env, sub, path, mty) =
+   Building the components of a module copies every value of its signature
+   with the module's path substitution, although a dependent usually reads
+   only a few of them. In the signature of a .cmi file as it was read (whose
+   CRC is [maker_origin]), the values are therefore copied when they are first
+   read instead, once the process has built the same
+   components eagerly once and knows how many type ids each item takes (the
+   copies take no stamps). The type ids an item would have taken when the
+   components are built are reserved for it, so every later type id is the
+   same as if it had been copied at once, and the copy is made with exactly
+   those ids when it is read. If a deferred copy ever takes a different number
+   of ids, it is thrown away and made again with fresh ones.
+
+   The items of a .cmi signature are not changed before they are copied: the
+   type checker only sees copies of them. The other items (types with their
+   constructors and labels, extension constructors, module types, submodules)
+   are still built at once. *)
+
+let component_counts : (Digest.t * string, int array) Hashtbl.t =
+  Hashtbl.create 64
+let component_counts_lock = Mutex.create ()
+
+let with_component_counts_lock f =
+  Mutex.lock component_counts_lock;
+  Fun.protect ~finally:(fun () -> Mutex.unlock component_counts_lock) f
+
+let find_component_counts key =
+  with_component_counts_lock (fun () -> Hashtbl.find_opt component_counts key)
+
+let record_component_counts key counts =
+  with_component_counts_lock (fun () ->
+      if Hashtbl.length component_counts >= 65536 then
+        Hashtbl.reset component_counts;
+      Hashtbl.replace component_counts key counts)
+
+(* How many items were deferred, and how many deferred copies were made again
+   with fresh ids, on this domain. Domain-local so that the counts cost no
+   shared writes; only tests read them. *)
+type deferred_component_stats = {mutable deferred: int; mutable fallbacks: int}
+
+let deferred_component_stats_key =
+  Domain.DLS.new_key (fun () -> {deferred = 0; fallbacks = 0})
+
+let deferred_component_stats () =
+  let stats = Domain.DLS.get deferred_component_stats_key in
+  (stats.deferred, stats.fallbacks)
+
+let forget_component_counts () =
+  with_component_counts_lock (fun () -> Hashtbl.reset component_counts)
+
+(* Run [compute] with the [count] type ids from [base], which were reserved
+   for it. *)
+let with_reserved_type_ids ~base ~count compute =
+  let state = Compiler_request_state.current () in
+  let saved = state.type_node_id in
+  let stamp0 = Ident.current_time () in
+  state.type_node_id <- base;
+  match compute () with
+  | result ->
+    let type_end = state.type_node_id in
+    state.type_node_id <- saved;
+    if type_end = base + count && Ident.current_time () = stamp0 then result
+    else
+      (* Some of the ids may also belong to later type nodes: copy again with
+         fresh ones. *)
+      let stats = Domain.DLS.get deferred_component_stats_key in
+      stats.fallbacks <- stats.fallbacks + 1;
+      compute ()
+  | exception exn ->
+    state.type_node_id <- saved;
+    raise exn
+
+let rec components_of_module ?origin ~deprecated ~loc env sub path mty =
+  {
+    deprecated;
+    loc;
+    comps =
+      Env_lazy.create
+        {
+          maker_env = env;
+          maker_sub = sub;
+          maker_path = path;
+          maker_mty = mty;
+          maker_origin = origin;
+        };
+  }
+
+and components_of_module_maker
+    {
+      maker_env = env;
+      maker_sub = sub;
+      maker_path = path;
+      maker_mty = mty;
+      maker_origin;
+    } =
   match scrape_alias env mty with
   | Mty_signature (_ :: _ as sg) when is_alias_map sg ->
     Some (alias_map_components env sub path sg)
@@ -1653,14 +1812,67 @@ and components_of_module_maker (env, sub, path, mty) =
         comp_components = Tbl.empty;
       }
     in
+    (* [origin] is set when [sg] is part of a .cmi signature as it was read. *)
+    let origin =
+      match mty with
+      | Mty_signature _ -> maker_origin
+      | Mty_ident _ | Mty_alias _ | Mty_functor _ -> None
+    in
+    let key = Option.map (fun crc -> (crc, Path.name path)) origin in
+    let state = Compiler_request_state.current () in
+    let item_count = List.length sg in
+    let counts =
+      match Option.bind key find_component_counts with
+      | Some counts
+        when Array.length counts = item_count
+             && List.for_all2
+                  (fun item count ->
+                    match item with
+                    | Sig_value _ -> count >= 0
+                    | Sig_type _ | Sig_typext _ | Sig_module _ | Sig_modtype _
+                      ->
+                      true)
+                  sg (Array.to_list counts) ->
+        (* The counts fit this signature: one for every value. *)
+        Some counts
+      | Some _ | None -> None
+    in
+    (* The type ids each value takes, when the counts of these
+       components are not known yet. *)
+    let recorded =
+      match (key, counts) with
+      | Some _, None -> Some (Array.make item_count (-1))
+      | _ -> None
+    in
+    let stamps_taken = ref false in
+    let deferred = ref 0 in
+    let make_cell index compute =
+      match (counts, recorded) with
+      | Some counts, _ ->
+        let base = state.type_node_id and count = counts.(index) in
+        state.type_node_id <- base + count;
+        incr deferred;
+        Comp_cell.pending (fun () ->
+            with_reserved_type_ids ~base ~count compute)
+      | None, Some recorded ->
+        let type0 = state.type_node_id and stamp0 = Ident.current_time () in
+        let result = compute () in
+        recorded.(index) <- state.type_node_id - type0;
+        if Ident.current_time () <> stamp0 then stamps_taken := true;
+        Comp_cell.ready result
+      | None, None -> Comp_cell.ready (compute ())
+    in
     let pl, sub = prefix_idents path sub sg in
     let env = ref env in
     let pos = ref 0 in
+    let index = ref 0 in
     List.iter2
       (fun item path ->
-        match item with
+        (match item with
         | Sig_value (id, decl) -> (
-          let decl' = Subst.value_description sub decl in
+          let decl' =
+            make_cell !index (fun () -> Subst.value_description sub decl)
+          in
           c.comp_values <- Tbl.add (Ident.name id) (decl', !pos) c.comp_values;
           match decl.val_kind with
           | Val_prim _ -> ()
@@ -1697,8 +1909,8 @@ and components_of_module_maker (env, sub, path, mty) =
             Builtin_attributes.deprecated_of_attrs md.md_attributes
           in
           let comps =
-            components_of_module ~deprecated ~loc:md.md_loc !env sub path
-              md.md_type
+            components_of_module ?origin ~deprecated ~loc:md.md_loc !env sub
+              path md.md_type
           in
           c.comp_components <-
             Tbl.add (Ident.name id) (comps, !pos) c.comp_components;
@@ -1708,8 +1920,16 @@ and components_of_module_maker (env, sub, path, mty) =
           let decl' = Subst.modtype_declaration sub decl in
           c.comp_modtypes <-
             Tbl.add (Ident.name id) (decl', nopos) c.comp_modtypes;
-          env := store_modtype id decl !env)
+          env := store_modtype id decl !env);
+        incr index)
       sg pl;
+    (if !deferred > 0 then
+       let stats = Domain.DLS.get deferred_component_stats_key in
+       stats.deferred <- stats.deferred + !deferred);
+    (match (key, recorded) with
+    | Some key, Some recorded when not !stamps_taken ->
+      record_component_counts key recorded
+    | _ -> ());
     Some (Structure_comps c)
   | Mty_functor (param, _ty_arg, ty_res) ->
     Some
@@ -1988,23 +2208,27 @@ let rec add_signature sg env =
 let add_components slot root env0 comps =
   let add_l w comps env0 = Tycomp_tbl.add_open slot w comps env0 in
 
-  let add w comps env0 = Id_tbl.add_open slot w root comps env0 in
+  let add w force comps env0 = Id_tbl.add_open slot w root ~force comps env0 in
 
   let constrs =
     add_l (fun x -> `Constructor x) comps.comp_constrs env0.constrs
   in
   let labels = add_l (fun x -> `Label x) comps.comp_labels env0.labels in
 
-  let values = add (fun x -> `Value x) comps.comp_values env0.values in
-  let types = add (fun x -> `Type x) comps.comp_types env0.types in
+  let values =
+    add (fun x -> `Value x) Comp_cell.force comps.comp_values env0.values
+  in
+  let types = add (fun x -> `Type x) Fun.id comps.comp_types env0.types in
   let modtypes =
-    add (fun x -> `Module_type x) comps.comp_modtypes env0.modtypes
+    add (fun x -> `Module_type x) Fun.id comps.comp_modtypes env0.modtypes
   in
   let components =
-    add (fun x -> `Component x) comps.comp_components env0.components
+    add (fun x -> `Component x) Fun.id comps.comp_components env0.components
   in
 
-  let modules = add (fun x -> `Module x) comps.comp_modules env0.modules in
+  let modules =
+    add (fun x -> `Module x) Fun.id comps.comp_modules env0.modules
+  in
 
   {env0 with constrs; labels; values; types; modtypes; components; modules}
 
@@ -2122,7 +2346,7 @@ let save_signature ?check_exists ~deprecated sg modname filename =
 
 (* Folding on environments *)
 
-let find_all proj1 proj2 f lid env acc =
+let find_all proj1 proj2 force f lid env acc =
   match lid with
   | None ->
     Id_tbl.fold_name
@@ -2133,7 +2357,7 @@ let find_all proj1 proj2 f lid env acc =
     match get_components desc with
     | Structure_comps c ->
       Tbl.fold
-        (fun s (data, pos) acc -> f s (Pdot (p, s, pos)) data acc)
+        (fun s (data, pos) acc -> f s (Pdot (p, s, pos)) (force data) acc)
         (proj2 c) acc
     | Functor_comps _ -> acc)
 
@@ -2183,7 +2407,7 @@ let fold_modules f lid env acc =
     | Functor_comps _ -> acc)
 
 let fold_values f =
-  find_all (fun env -> env.values) (fun sc -> sc.comp_values) f
+  find_all (fun env -> env.values) (fun sc -> sc.comp_values) Comp_cell.force f
 
 and fold_constructors f =
   find_all_simple_list (fun env -> env.constrs) (fun sc -> sc.comp_constrs) f
@@ -2191,10 +2415,11 @@ and fold_constructors f =
 and fold_labels f =
   find_all_simple_list (fun env -> env.labels) (fun sc -> sc.comp_labels) f
 
-and fold_types f = find_all (fun env -> env.types) (fun sc -> sc.comp_types) f
+and fold_types f =
+  find_all (fun env -> env.types) (fun sc -> sc.comp_types) Fun.id f
 
 and fold_modtypes f =
-  find_all (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) f
+  find_all (fun env -> env.modtypes) (fun sc -> sc.comp_modtypes) Fun.id f
 
 (* Make the initial environment *)
 (* The initial environment contains mutable type graphs. Each compiler domain
