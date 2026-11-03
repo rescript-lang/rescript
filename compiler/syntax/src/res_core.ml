@@ -4945,7 +4945,7 @@ and parse_string_field_declaration p =
  *  | [mutable] field-name : poly-typexpr
  *  | attributes field-decl *)
 and parse_field_declaration ?current_type_name_path ?inline_types_context
-    ?(extra_attrs = []) p =
+    ~extra_attrs p =
   let start_pos = Parser.start_pos p in
   (* [extra_attrs] are the attributes of the first field, already consumed by
      the caller before it knew a record was coming. They go through the same

@@ -188,13 +188,11 @@ type error = {
   if_highlight: string; (* alternative message if locations are highlighted *)
 }
 
-let pp_ksprintf ?before k fmt =
+let pp_ksprintf ~before k fmt =
   let buf = Buffer.create 64 in
   let ppf = Format.formatter_of_buffer buf in
   Misc.Color.set_color_tag_handling ppf;
-  (match before with
-  | None -> ()
-  | Some f -> f ppf);
+  before ppf;
   kfprintf
     (fun _ ->
       pp_print_flush ppf ();
@@ -210,7 +208,7 @@ let print_phanton_error_prefix ppf =
      (see default_error_reporter below) *)
   Format.pp_print_as ppf 2 ""
 
-let errorf ?(loc = none) fmt =
+let errorf ~loc fmt =
   pp_ksprintf ~before:print_phanton_error_prefix
     (fun msg -> {loc; msg; sub = []; if_highlight = ""})
     fmt
