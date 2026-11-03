@@ -634,15 +634,14 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
       match Peek.token env with
       | T_RCURLY ->
         Eat.rescan_as_template_from env prev_lex_env;
-        let (loc, part, is_tail) =
+        let (loc, is_tail) =
           match Peek.token env with
-          | T_TEMPLATE_PART (loc, cooked, raw, _, tail) ->
-            let open Ast.Type.TemplateLiteral in
+          | T_TEMPLATE_PART (loc, _, _, _, tail) ->
             Eat.token env;
-            (loc, { Element.value = { Element.cooked; raw }; tail }, tail)
+            (loc, tail)
           | _ -> assert false
         in
-        let quasis = (loc, part) :: quasis in
+        let quasis = loc :: quasis in
         if is_tail then
           (loc, List.rev quasis, List.rev types)
         else
@@ -650,34 +649,16 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
       | _ ->
         (* Malformed template *)
         error_unexpected ~expected:"a template literal part" env;
-        let imaginary_quasi =
-          ( fst t,
-            {
-              Ast.Type.TemplateLiteral.Element.value =
-                { Ast.Type.TemplateLiteral.Element.raw = ""; cooked = "" };
-              tail = true;
-            }
-          )
-        in
-        (fst t, List.rev (imaginary_quasi :: quasis), List.rev types)
+        (fst t, List.rev (fst t :: quasis), List.rev types)
     in
-    fun env ((start_loc, cooked, raw, _, is_tail) as part) ->
+    fun env ((start_loc, _, _, _, is_tail) as part) ->
       let leading = Peek.comments env in
       Expect.token env (T_TEMPLATE_PART part);
       let (end_loc, quasis, types) =
-        let head =
-          ( start_loc,
-            {
-              Ast.Type.TemplateLiteral.Element.value =
-                { Ast.Type.TemplateLiteral.Element.cooked; raw };
-              tail = is_tail;
-            }
-          )
-        in
         if is_tail then
-          (start_loc, [head], [])
+          (start_loc, [start_loc], [])
         else
-          template_parts env [head] []
+          template_parts env [start_loc] []
       in
       let trailing = Eat.trailing_comments env in
       let loc = Loc.btwn start_loc end_loc in
@@ -2181,7 +2162,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
         let leading = leading @ Peek.comments env in
         Eat.token env;
         let ts_accessibility =
-          Some (acc_loc, { Ast.Class.TSAccessibility.kind; comments = None })
+          Some (acc_loc, kind)
         in
         property
           env

@@ -408,7 +408,7 @@ module Match_pattern (Parse : PARSER) : Parser_common.MATCH_PATTERN = struct
         { RestPattern.argument; comments })
       env
 
-  and add_comments ?(leading = []) ?(trailing = []) (loc, pattern) =
+  and add_comments ~leading ~trailing (loc, pattern) =
     let merge_comments inner =
       Flow_ast_utils.merge_comments
         ~inner

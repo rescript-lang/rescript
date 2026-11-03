@@ -17,13 +17,6 @@ module Lex_mode = struct
     | JSX_CHILD
     | REGEXP
 
-  let debug_string_of_lex_mode (mode : t) =
-    match mode with
-    | NORMAL -> "NORMAL"
-    | TYPE -> "TYPE"
-    | JSX_TAG -> "JSX_TAG"
-    | JSX_CHILD -> "JSX_CHILD"
-    | REGEXP -> "REGEXP"
 end
 
 (* READ THIS BEFORE YOU MODIFY:
@@ -50,8 +43,6 @@ module Lookahead : sig
   val lex_env_0 : t -> Lex_env.t
 
   val junk : t -> unit
-
-  val rescan_template_part : t -> Lex_env.t -> unit
 
   val rescan_template_part_from : t -> Lex_env.t -> Lex_env.t -> unit
 end = struct
@@ -117,18 +108,6 @@ end = struct
       t.la_results_0 <- t.la_results_1;
       t.la_results_1 <- None
 
-  (* Rescan the current position using the template tail lexer.
-     This replaces push_lex_mode(TEMPLATE) by directly lexing a template
-     continuation without modifying the lex mode stack. *)
-  let rescan_template_part t lex_env =
-    t.la_lex_env <- Lex_env.clone lex_env;
-    t.la_results_0 <- None;
-    t.la_results_1 <- None;
-    let (lex_env, lex_result) = Flow_lexer.template_tail t.la_lex_env in
-    let cloned_env = Lex_env.clone lex_env in
-    t.la_lex_env <- lex_env;
-    t.la_results_0 <- Some (cloned_env, lex_result)
-
   let rescan_template_part_from t lex_env prev_lex_env =
     let existing_comments =
       match t.la_results_0 with
@@ -147,11 +126,6 @@ end = struct
     t.la_results_0 <- Some (cloned_env, lex_result)
 end
 
-type token_sink_result = {
-  token_loc: Loc.t;
-  token: Token.t;
-  token_context: Lex_mode.t;
-}
 
 type parse_options = {
   components: bool; (* enable parsing of Flow component syntax *)
@@ -176,20 +150,6 @@ let default_parse_options =
     pattern_matching = false;
     records = false;
     esproposal_decorators = false;
-    types = true;
-    use_strict = false;
-    module_ref_prefix = None;
-    allow_return_outside_function = false;
-  }
-
-let permissive_parse_options =
-  {
-    components = true;
-    enums = true;
-    assert_operator = false;
-    pattern_matching = true;
-    records = true;
-    esproposal_decorators = true;
     types = true;
     use_strict = false;
     module_ref_prefix = None;
@@ -234,7 +194,6 @@ type env = {
   lex_env: Lex_env.t ref;
   (* This needs to be cleared whenever we advance. *)
   lookahead: Lookahead.t ref;
-  token_sink: (token_sink_result -> unit) option ref;
   parse_options: parse_options;
   source: File_key.t option;
   (* It is a syntax error to reference private fields not in scope. In order to enforce this,
@@ -245,7 +204,7 @@ type env = {
 }
 
 (* constructor *)
-let init_env ?(token_sink = None) ?(parse_options = None) source content =
+let init_env source content =
   (* let lb = Sedlexing.Utf16.from_string
      content (Some Sedlexing.Utf16.Little_endian) in *)
   let (lb, errors) =
@@ -253,11 +212,7 @@ let init_env ?(token_sink = None) ?(parse_options = None) source content =
     | Sedlexing.MalFormed ->
       (Sedlexing.Utf8.from_string "", [({ Loc.none with Loc.source }, Parse_error.MalformedUnicode)])
   in
-  let parse_options =
-    match parse_options with
-    | Some opts -> opts
-    | None -> default_parse_options
-  in
+  let parse_options = default_parse_options in
   let enable_types_in_comments = parse_options.types in
   let lex_env = Lex_env.new_lex_env source lb ~enable_types_in_comments in
   {
@@ -291,7 +246,6 @@ let init_env ?(token_sink = None) ?(parse_options = None) source content =
     lex_mode_stack = ref [Lex_mode.NORMAL];
     lex_env = ref lex_env;
     lookahead = ref (Lookahead.create lex_env Lex_mode.NORMAL);
-    token_sink = ref token_sink;
     parse_options;
     source;
     privates = ref [];
@@ -1189,38 +1143,6 @@ let function_as_statement_error_at env loc =
 module Eat = struct
   (* Consume a single token *)
   let token env =
-    (* If there's a token_sink, emit the lexed token before moving forward.
-       Skip T_EOF — upstream Hermes' token stream does not include a sentinel
-       end-of-input token, so neither should ours. The Rust port mirrors this
-       in `parser_env.rs::token::token`. *)
-    (match !(env.token_sink) with
-    | None -> ()
-    | Some _ when Peek.token env = Token.T_EOF -> ()
-    | Some token_sink ->
-      let token_loc = Peek.loc env in
-      let token = Peek.token env in
-      let token_loc =
-        match token with
-        | Token.T_INTERPRETER (loc, _) -> loc
-        | _ -> token_loc
-      in
-      token_sink
-        {
-          token_loc;
-          token;
-          (*
-           * The lex mode is useful because it gives context to some
-           * context-sensitive tokens.
-           *
-           * Some examples of such tokens include:
-           *
-           * `=>` - Part of an arrow function? or part of a type annotation?
-           * `<`  - A less-than? Or an opening to a JSX element?
-           * ...etc...
-           *)
-          token_context = lex_mode env;
-        });
-
     env.lex_env := Peek.lex_env env;
 
     error_list env (Peek.errors env);
@@ -1256,11 +1178,6 @@ module Eat = struct
     in
     env.lex_mode_stack := new_stack;
     env.lookahead := Lookahead.create !(env.lex_env) (lex_mode env)
-
-  (* Rescan the current position as a template continuation (template middle/tail).
-     This replaces the pattern of push_lex_mode(TEMPLATE) + pop_lex_mode()
-     by directly lexing a template tail without modifying the lex mode stack. *)
-  let rescan_as_template env = Lookahead.rescan_template_part !(env.lookahead) !(env.lex_env)
 
   let rescan_as_template_from env prev_lex_env =
     Lookahead.rescan_template_part_from !(env.lookahead) !(env.lex_env) prev_lex_env
@@ -1391,18 +1308,9 @@ module Try = struct
     saved_lex_mode_stack: Lex_mode.t list;
     saved_lex_env: Lex_env.t;
     saved_consumed_comments_pos: Loc.position;
-    token_buffer: ((token_sink_result -> unit) * token_sink_result Queue.t) option;
   }
 
   let save_state env =
-    let token_buffer =
-      match !(env.token_sink) with
-      | None -> None
-      | Some orig_token_sink ->
-        let buffer = Queue.create () in
-        env.token_sink := Some (fun token_data -> Queue.add token_data buffer);
-        Some (orig_token_sink, buffer)
-    in
     {
       saved_errors = !(env.errors);
       saved_comments = !(env.comments);
@@ -1410,18 +1318,9 @@ module Try = struct
       saved_lex_mode_stack = !(env.lex_mode_stack);
       saved_lex_env = !(env.lex_env);
       saved_consumed_comments_pos = !(env.consumed_comments_pos);
-      token_buffer;
     }
 
-  let reset_token_sink ~flush env token_buffer_info =
-    match token_buffer_info with
-    | None -> ()
-    | Some (orig_token_sink, token_buffer) ->
-      env.token_sink := Some orig_token_sink;
-      if flush then Queue.iter orig_token_sink token_buffer
-
   let rollback_state env saved_state =
-    reset_token_sink ~flush:false env saved_state.token_buffer;
     env.errors := saved_state.saved_errors;
     env.comments := saved_state.saved_comments;
     env.last_lex_result := saved_state.saved_last_lex_result;
@@ -1432,13 +1331,9 @@ module Try = struct
 
     FailedToParse
 
-  let success env saved_state result =
-    reset_token_sink ~flush:true env saved_state.token_buffer;
-    ParsedSuccessfully result
-
   let to_parse env parse =
     let saved_state = save_state env in
-    try success env saved_state (parse env) with
+    try ParsedSuccessfully (parse env) with
     | Rollback -> rollback_state env saved_state
 
   let or_else env ~fallback parse =

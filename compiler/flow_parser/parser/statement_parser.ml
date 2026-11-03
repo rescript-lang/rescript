@@ -584,14 +584,7 @@ module Statement
     let case env =
       let leading = Peek.comments env in
       let case_match_root_loc = Peek.loc env |> Loc.start_loc in
-      let invalid_prefix_case =
-        if Peek.token env = T_CASE then (
-          let loc = Peek.loc env in
-          Eat.token env;
-          Some loc
-        ) else
-          None
-      in
+      if Peek.token env = T_CASE then Eat.token env;
       let pattern = Parse.match_pattern env in
       let guard =
         if Eat.maybe env T_IF then (
@@ -602,28 +595,15 @@ module Statement
         ) else
           None
       in
-      let invalid_infix_colon =
-        if Peek.token env = T_COLON then (
-          let loc = Peek.loc env in
-          Eat.token env;
-          Some loc
-        ) else (
-          Expect.token env T_ARROW;
-          None
-        )
-      in
+      if Peek.token env = T_COLON then
+        Eat.token env
+      else
+        Expect.token env T_ARROW;
       let body = Parse.statement ~allow_sequence:false (env |> with_in_match_statement true) in
       ignore @@ Eat.maybe env T_COMMA;
       let trailing = Eat.trailing_comments env in
       let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
-      let invalid_syntax =
-        {
-          Case.InvalidSyntax.invalid_prefix_case;
-          invalid_infix_colon;
-          invalid_suffix_semicolon = None;
-        }
-      in
-      { Case.pattern; body; guard; comments; invalid_syntax; case_match_root_loc }
+      { Case.pattern; body; guard; comments; case_match_root_loc }
     in
     let rec case_list env acc =
       match Peek.token env with
@@ -1643,7 +1623,7 @@ module Statement
     let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
     Statement.DeclareModuleExports { Statement.DeclareModuleExports.annot; comments }
 
-  and declare ?(in_module_or_namespace = false) env =
+  and declare env =
     if not (should_parse_types env) then error env Parse_error.UnexpectedTypeDeclaration;
 
     (* eventually, just emit a wrapper AST node *)
@@ -1653,10 +1633,7 @@ module Statement
     | T_CONST -> declare_const_or_enum env
     | T_ENUM when (parse_options env).enums -> declare_enum ~const_:false env
     | T_INTERFACE -> declare_interface env
-    | T_TYPE ->
-      (match Peek.token env with
-      | T_IMPORT when in_module_or_namespace -> import_declaration env
-      | _ -> declare_type_alias env)
+    | T_TYPE -> declare_type_alias env
     | T_OPAQUE -> declare_opaque_type env
     | T_TYPEOF when Peek.token env = T_IMPORT -> import_declaration env
     | T_FUNCTION -> declare_function_statement env
@@ -1665,7 +1642,6 @@ module Statement
       declare_function_statement env
     | T_VAR -> declare_var_statement ~kind:Ast.Variable.Var env
     | T_LET -> declare_var_statement ~kind:Ast.Variable.Let env
-    | T_EXPORT when in_module_or_namespace -> declare_export_declaration env
     | T_IDENTIFIER { raw = "module"; _ } -> declare_module env
     | T_IDENTIFIER { raw = "global"; _ } ->
       declare_namespace ~global:true ~implicit_declare:false env
@@ -1673,13 +1649,6 @@ module Statement
       declare_namespace ~global:false ~implicit_declare:false env
     | T_IDENTIFIER { raw = "component"; _ } when (parse_options env).components ->
       declare_component_statement env
-    | _ when in_module_or_namespace ->
-      (match Peek.token env with
-      | T_IMPORT -> import_declaration env
-      | _ ->
-        (* Oh boy, found some bad stuff in a declare module. Let's just
-         * pretend it's a declare var (arbitrary choice) *)
-        declare_var_statement ~kind:Ast.Variable.Var env)
     | _ -> Parse.statement env
 
   and export_source env =
