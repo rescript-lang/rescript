@@ -10,4 +10,4 @@
   Type x is not a subtype of y 
 
   The record [1;33mx[0m cannot be coerced to the record [1;33my[0m because:
-  - The field [1;33mz[0m is missing in record [1;33my[0m, but present in record [1;33mx[0m
+  - The field [1;33mz[0m is missing in record [1;33mx[0m, but present in record [1;33my[0m

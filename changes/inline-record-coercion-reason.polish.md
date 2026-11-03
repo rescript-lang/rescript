@@ -1,0 +1,1 @@
+- A variant coercion that fails on a missing, optional or `@as`-renamed inline record field now says which field is wrong, and record coercion errors no longer swap the two record names for a missing field or a different `@as` name.
