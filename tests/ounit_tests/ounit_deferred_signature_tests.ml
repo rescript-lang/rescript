@@ -14,7 +14,9 @@ let interface_dirs () =
   let runtime = Runtime_package.get_path () in
   let belt = Filename.concat (Filename.dirname runtime) "belt" in
   List.filter Sys.file_exists
-    [Filename.concat runtime "lib/ocaml"; Filename.concat belt "lib/ocaml"]
+    [
+      Filename.concat runtime "lib/rescript"; Filename.concat belt "lib/rescript";
+    ]
 
 let unit_names dirs =
   List.concat_map
@@ -84,7 +86,7 @@ let deferred_copy_tests _ =
 (* A copy that is never read still takes its stamps and ids. *)
 let unread_copy_tests _ =
   let dirs = interface_dirs () in
-  let names = ["Belt_Array"; "Stdlib_Array"; "Belt_Id"; "Stdlib"] in
+  let names = ["Stdlib_Array"; "Stdlib_List"; "Stdlib_Option"; "Stdlib"] in
   let ask_only ~eager =
     Compiler_request_state.with_fresh (fun () ->
         Request_local.with_fresh (fun () ->

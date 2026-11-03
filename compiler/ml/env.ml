@@ -571,11 +571,16 @@ type pers_sig = {
 let copy_counts : (Digest.t, int * int) Hashtbl.t = Hashtbl.create 64
 let copy_counts_lock = Mutex.create ()
 
+(* [Mutex.protect] needs OCaml 5.1. *)
+let with_copy_counts_lock action =
+  Mutex.lock copy_counts_lock;
+  Fun.protect ~finally:(fun () -> Mutex.unlock copy_counts_lock) action
+
 let find_copy_counts key =
-  Mutex.protect copy_counts_lock (fun () -> Hashtbl.find_opt copy_counts key)
+  with_copy_counts_lock (fun () -> Hashtbl.find_opt copy_counts key)
 
 let record_copy_counts key counts =
-  Mutex.protect copy_counts_lock (fun () ->
+  with_copy_counts_lock (fun () ->
       if Hashtbl.length copy_counts >= 65536 then Hashtbl.reset copy_counts;
       Hashtbl.replace copy_counts key counts)
 
