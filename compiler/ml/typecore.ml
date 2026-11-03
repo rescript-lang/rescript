@@ -1357,7 +1357,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
   let sp = maybe_expand_variant_spread_in_pattern sp env expected_ty in
   let mode' = if mode = Splitting_or then Normal else mode in
   let type_pat ?(constrs = constrs) ?(labels = labels) ?(mode = mode')
-      ?(explode = explode) ?(env = env) =
+      ?(explode = explode) =
     type_pat ~constrs ~labels ~no_existentials ~mode ~explode ~env
   in
   let loc = sp.ppat_loc in

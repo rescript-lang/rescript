@@ -29,8 +29,8 @@ type attrs = attribute list
 
 module Const : sig
   val string : string -> constant
-  val integer : ?suffix:char -> string -> constant
-  val int : ?suffix:char -> int -> constant
+  val integer : string -> constant
+  val int : int -> constant
 end
 
 (** {1 Core language} *)
@@ -131,8 +131,7 @@ module Exp : sig
     expression ->
     expression
 
-  val fun_param :
-    ?attrs:attrs -> ?default:expression -> arg_label -> pattern -> fun_param
+  val fun_param : ?attrs:attrs -> arg_label -> pattern -> fun_param
   val apply :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -339,11 +338,9 @@ module Type : sig
     ?attrs:attrs ->
     ?args:constructor_arguments ->
     ?res:core_type ->
-    ?runtime_tag:constructor_tag ->
     str ->
     constructor_declaration
-  (** A valid first [@as] in [attrs] is taken out and becomes the runtime tag,
-      unless one is given explicitly. *)
+  (** A valid first [@as] in [attrs] is taken out and becomes the runtime tag. *)
 
   val constructor_attributes : constructor_declaration -> attrs
   (** The attributes as written, with the constructor [@as] put back. *)
@@ -353,12 +350,10 @@ module Type : sig
     ?attrs:attrs ->
     ?mut:mutable_flag ->
     ?optional:bool ->
-    ?runtime_name:string ->
     str ->
     core_type ->
     label_declaration
-  (** [@as("x")] in [attrs] is taken out and becomes the runtime name, unless
-      one is given explicitly. *)
+  (** [@as("x")] in [attrs] is taken out and becomes the runtime name. *)
 
   val field_attributes : label_declaration -> attrs
   (** The attributes as written, with the [@as] taken out by [field] put back.

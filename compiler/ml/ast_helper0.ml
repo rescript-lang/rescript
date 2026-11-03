@@ -26,7 +26,7 @@ type attrs = attribute list
 let default_loc = ref Location.none
 
 module Const = struct
-  let string ?quotation_delimiter s = Pconst_string (s, quotation_delimiter)
+  let string s = Pconst_string (s, None)
 end
 
 module Typ = struct
@@ -112,7 +112,7 @@ module Pat = struct
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_constraint (a, b))
   let type_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_type a)
   let unpack ?loc ?attrs a = mk ?loc ?attrs (Ppat_unpack a)
-  let open_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_open (a, b))
+  let open_ ?loc a b = mk ?loc (Ppat_open (a, b))
   let exception_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_exception a)
   let extension ?loc ?attrs a = mk ?loc ?attrs (Ppat_extension a)
 end
@@ -125,7 +125,7 @@ module Exp = struct
   let constant ?loc ?attrs a = mk ?loc ?attrs (Pexp_constant a)
   let let_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_let (a, b, c))
   let fun_ ?loc ?attrs a b c d = mk ?loc ?attrs (Pexp_fun (a, b, c, d))
-  let function_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_function a)
+  let function_ ?loc a = mk ?loc (Pexp_function a)
   let apply ?loc ?attrs a b = mk ?loc ?attrs (Pexp_apply (a, b))
   let match_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_match (a, b))
   let try_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_try (a, b))
