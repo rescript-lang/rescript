@@ -52,9 +52,11 @@ let run ~eager dirs names =
                   names
               in
               let read =
-                List.rev_map
+                (* [List.map] applies its function from the head: read the
+                   last unit's signature first. *)
+                List.map
                   (fun name -> (Env.find_module (unit_path name) env).md_type)
-                  names
+                  (List.rev names)
               in
               Marshal.to_string (asked, read, probe ()) [])))
 
