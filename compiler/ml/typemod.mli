@@ -41,6 +41,9 @@ val type_open_ :
   Location.t ->
   Longident.t Asttypes.loc ->
   Path.t * Env.t
+[@@live]
+(* Live: called through {!Typecore.type_open} with optional arguments that
+   reanalyze cannot trace. *)
 
 val save_signature : string -> Typedtree.signature -> string -> string -> unit
 

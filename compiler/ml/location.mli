@@ -107,7 +107,9 @@ val default_error_reporter :
   formatter ->
   error ->
   unit
-(** Original error reporter for use in hooks. *)
+[@@live]
+(** Original error reporter for use in hooks. Live: called through
+    {!error_reporter} with optional arguments that reanalyze cannot trace. *)
 
 val report_exception : formatter -> exn -> unit
 (** Reraise the exception if it is unknown. *)

@@ -86,7 +86,9 @@ let extract_sig_open env loc mty =
 
 (* Compute the environment after opening a module *)
 
-let type_open_ ?used_slot ovf env loc lid =
+(* Live: called through a forward reference ({!Typecore.type_open}) with optional
+   arguments that reanalyze cannot trace. *)
+let[@live] type_open_ ?used_slot ovf env loc lid =
   let path = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
   match Env.open_signature ~loc ?used_slot ovf path env with
   | Some env -> (path, env)
