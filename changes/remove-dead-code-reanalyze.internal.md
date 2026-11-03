@@ -1,1 +1,1 @@
-- Remove dead code found by running reanalyze's dead code analysis on the OCaml sources of the compiler, build system and editor analysis, including unused fields of the `.cmi`/`.cmt` formats and the write-only file dependency tracking of reanalyze.
+- Remove dead code found by running reanalyze's dead code analysis on the OCaml sources of the compiler, build system and editor analysis, including optional arguments that no caller passes, unused fields of the `.cmi`/`.cmt` formats and the write-only file dependency tracking of reanalyze.

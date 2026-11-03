@@ -5595,8 +5595,7 @@ and parse_type_equation_or_constr_decl p =
     (* TODO: is this a good idea? *)
     (None, Asttypes.Public, Parsetree.Ptype_abstract, [])
 
-and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
-    ~start_pos ~spread_typ ~grammar p =
+and parse_spread_tail_classified ~start_pos ~spread_typ ~grammar p =
   match Parser.peek p with
   | Rbrace ->
     (* `{...t}` no extra fields: treat as record without tail fields *)
@@ -5607,9 +5606,7 @@ and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
     let found_object_field = ref false in
     let (fields : Parsetree.label_declaration list) =
       parse_comma_delimited_region ~grammar ~closing:Rbrace
-        ~f:
-          (parse_field_declaration_region ?current_type_name_path
-             ?inline_types_context ~found_object_field)
+        ~f:(parse_field_declaration_region ~found_object_field)
         p
     in
     Parser.expect Rbrace p;

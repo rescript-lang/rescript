@@ -210,9 +210,9 @@ let print_phanton_error_prefix ppf =
      (see default_error_reporter below) *)
   Format.pp_print_as ppf 2 ""
 
-let errorf ?(loc = none) ?(sub = []) ?(if_highlight = "") fmt =
+let errorf ?(loc = none) fmt =
   pp_ksprintf ~before:print_phanton_error_prefix
-    (fun msg -> {loc; msg; sub; if_highlight})
+    (fun msg -> {loc; msg; sub = []; if_highlight = ""})
     fmt
 
 let error ?(loc = none) ?(sub = []) ?(if_highlight = "") msg =
@@ -294,9 +294,9 @@ let () =
     | Error e -> Some e
     | _ -> None)
 
-let raise_errorf ?(loc = none) ?(sub = []) ?(if_highlight = "") =
+let raise_errorf ?(loc = none) =
   pp_ksprintf ~before:print_phanton_error_prefix (fun msg ->
-      raise (Error {loc; msg; sub; if_highlight}))
+      raise (Error {loc; msg; sub = []; if_highlight = ""}))
 
 let deprecated ?(can_be_automigrated = false) ?(def = none) ?(use = none) loc
     msg =

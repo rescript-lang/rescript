@@ -404,44 +404,32 @@ exception Non_closed of type_expr * bool
 
 let free_variables_ref_key = Request_local.new_key (fun () -> ref [])
 let free_variables_ref () = Domain.DLS.get free_variables_ref_key
-let really_closed_key = Request_local.new_key (fun () -> ref None)
-let really_closed () = Domain.DLS.get really_closed_key
 
 let rec free_vars_rec real ty =
   let ty = repr ty in
   if ty.level >= lowest_level then (
     ty.level <- pivot_level - ty.level;
-    match (ty.desc, !(really_closed ())) with
-    | Tvar _, _ ->
-      free_variables_ref () := (ty, real) :: !(free_variables_ref ())
-    | Tconstr (path, tl, _), Some env ->
-      (try
-         let _, body, _ = Env.find_type_expansion path env in
-         if (repr body).level <> generic_level then
-           free_variables_ref () := (ty, real) :: !(free_variables_ref ())
-       with Not_found -> ());
-      List.iter (free_vars_rec true) tl
-    | Tobject ty, _ -> free_vars_rec false ty
-    | Tfield {typ = ty1; rest = ty2}, _ ->
+    match ty.desc with
+    | Tvar _ -> free_variables_ref () := (ty, real) :: !(free_variables_ref ())
+    | Tobject ty -> free_vars_rec false ty
+    | Tfield {typ = ty1; rest = ty2} ->
       free_vars_rec true ty1;
       free_vars_rec false ty2
-    | Tvariant row, _ ->
+    | Tvariant row ->
       let row = row_repr row in
       iter_row (free_vars_rec true) row;
       if not (static_row row) then free_vars_rec false row.row_more
     | _ -> iter_type_expr (free_vars_rec true) ty)
 
-let free_vars ?env ty =
+let free_vars ty =
   free_variables_ref () := [];
-  really_closed () := env;
   free_vars_rec true ty;
   let res = !(free_variables_ref ()) in
   free_variables_ref () := [];
-  really_closed () := None;
   res
 
-let free_variables ?env ty =
-  let tl = List.map fst (free_vars ?env ty) in
+let free_variables ty =
+  let tl = List.map fst (free_vars ty) in
   unmark_type ty;
   tl
 
@@ -3327,15 +3315,15 @@ let memq_warn t visited =
     true)
   else false
 
-let rec lid_of_path ?(hash = "") = function
-  | Path.Pident id -> Longident.Lident (hash ^ Ident.name id)
-  | Path.Pdot (p1, s, _) -> Longident.Ldot (lid_of_path p1, hash ^ s)
+let rec lid_of_path = function
+  | Path.Pident id -> Longident.Lident (Ident.name id)
+  | Path.Pdot (p1, s, _) -> Longident.Ldot (lid_of_path p1, s)
   (* Applicative-functor application paths (Path.Papply) are produced
      internally (applicative functors are on by default) even though ReScript's
      surface syntax cannot reference such a path directly. Render the
      application by name (e.g. "F(Arg)") rather than aborting, so any diagnostic
      that reaches here degrades gracefully instead of crashing the compiler. *)
-  | Path.Papply _ as p -> Longident.Lident (hash ^ Path.name p)
+  | Path.Papply _ as p -> Longident.Lident (Path.name p)
 
 let has_constr_row' env t = has_constr_row (expand_abbrev env t)
 
@@ -3526,8 +3514,8 @@ let enlarge_type env ty =
 let subtypes_key = Request_local.new_key (fun () -> Type_pairs.create 17)
 let subtypes () = Domain.DLS.get subtypes_key
 
-let subtype_error ?ctx env trace =
-  raise (Subtype (expand_trace env (List.rev trace), [], ctx))
+let subtype_error env trace =
+  raise (Subtype (expand_trace env (List.rev trace), [], None))
 
 let extract_concrete_typedecl_opt env t =
   match extract_concrete_typedecl env t with

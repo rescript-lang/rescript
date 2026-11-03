@@ -1258,7 +1258,7 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
             else None)
       | None -> [])
     | None -> [])
-  | CPPipe {context_path = cp; id = prefix; lhs_loc; in_jsx; synthetic} -> (
+  | CPPipe {context_path = cp; id = prefix; lhs_loc; in_jsx} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPPipe";
     (* The environment at the cursor is the environment we're completing from. *)
     let env_at_cursor = env in
@@ -1331,7 +1331,7 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
             completions_for_pipe_from_completion_path ~state
               ~env_completion_is_made_from ~opens ~pos ~scope ~debug ~prefix
               ~env ~raw_opens ~full completion_path
-            |> Type_utils.filter_pipeable_functions ~env ~state ~full ~synthetic
+            |> Type_utils.filter_pipeable_functions ~state ~full
                  ~target_type_id:main_type_id
             |> List.filter (fun (c : Completion.t) ->
                 (* If we're completing from the current module then we need to care about scope.
@@ -1366,8 +1366,8 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
                 ~env_completion_is_made_from ~opens ~pos ~scope ~debug ~prefix
                 ~env ~raw_opens ~full completion_path)
           |> List.flatten
-          |> Type_utils.filter_pipeable_functions ~synthetic:true ~state ~env
-               ~full ~target_type_id:main_type_id
+          |> Type_utils.filter_pipeable_functions ~state ~full
+               ~target_type_id:main_type_id
         in
 
         (* Extra completions can be drawn from the @editor.completeFrom attribute. Here we
@@ -1380,8 +1380,8 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
                 ~env_completion_is_made_from ~opens ~pos ~scope ~debug ~prefix
                 ~env ~raw_opens ~full completion_path)
           |> List.flatten
-          |> Type_utils.filter_pipeable_functions ~synthetic:true ~state ~env
-               ~full ~target_type_id:main_type_id
+          |> Type_utils.filter_pipeable_functions ~state ~full
+               ~target_type_id:main_type_id
         in
         (* Add JSX completion items if we're in a JSX context. *)
         let jsx_completions =
@@ -1394,8 +1394,8 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
         let current_module_completions =
           get_completions_for_path ~state ~debug ~completion_context:Value
             ~exact:false ~opens:[] ~full ~pos ~env:env_at_cursor ~scope [prefix]
-          |> Type_utils.filter_pipeable_functions ~synthetic:true ~state ~env
-               ~full ~target_type_id:main_type_id
+          |> Type_utils.filter_pipeable_functions ~state ~full
+               ~target_type_id:main_type_id
         in
         jsx_completions @ pipe_completions @ extra_completions
         @ current_module_completions @ globally_configured_completions))

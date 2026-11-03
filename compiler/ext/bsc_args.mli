@@ -45,7 +45,6 @@ val parse_exn :
   usage:string ->
   argv:string array ->
   ?start:int ->
-  ?finish:int ->
   t ->
   (rev_args:string list -> unit) ->
   unit

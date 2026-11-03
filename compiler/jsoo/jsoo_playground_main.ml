@@ -172,8 +172,7 @@ module Error_ret = struct
     let attrs = Array.append loc_attrs warn_attrs in
     Js.Unsafe.obj attrs
 
-  let from_loc_errors ?(warnings : Loc_warn_info.t array option)
-      ~(type_ : string) (errors : loc_err_info array) =
+  let from_loc_errors ~(type_ : string) (errors : loc_err_info array) =
     let js_errors =
       Array.map
         (fun (e : loc_err_info) ->
@@ -190,14 +189,7 @@ module Error_ret = struct
           ("type", inject @@ Js.string type_);
         |]
     in
-    let warning_attr =
-      match warnings with
-      | Some warnings ->
-        Js.Unsafe.
-          [|("warnings", inject @@ Js.array (Array.map make_warning warnings))|]
-      | None -> [||]
-    in
-    let attrs = Array.append loc_err_attrs warning_attr in
+    let attrs = loc_err_attrs in
     Js.Unsafe.(obj attrs)
 
   let from_syntax_errors (errors : loc_err_info array) =

@@ -997,15 +997,14 @@ let pat_of_constrs ex_pat cstrs =
   if cstrs = [] then raise Empty
   else orify_many (List.map (pat_of_constr ex_pat) cstrs)
 
-let pats_of_type ?(always = false) env ty =
+let pats_of_type env ty =
   let ty' = Ctype.expand_head env ty in
   match ty'.desc with
   | Tconstr (path, _, _) -> (
     try
       match (Env.find_type path env).type_kind with
       | Type_variant (cl, _)
-        when always
-             || List.length cl = 1
+        when List.length cl = 1
              || List.for_all (fun cd -> cd.Types.cd_res <> None) cl ->
         let cstrs = fst (Env.find_type_descrs path env) in
         List.map (pat_of_constr (make_pat Tpat_any ty env)) cstrs

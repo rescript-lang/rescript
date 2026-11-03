@@ -41,17 +41,16 @@ type t = J.expression
 
 val remove_pure_sub_exp : t -> t option
 
-val var : ?comment:string -> J.ident -> t
+val var : J.ident -> t
 
-val js_global : ?comment:string -> string -> t
+val js_global : string -> t
 
-val ml_var_dot : ?comment:string -> Ident.t -> string -> t
+val ml_var_dot : Ident.t -> string -> t
 (** [ml_var_dot ocaml_module name]
 *)
 
 val external_var_field :
   ?import_attributes:External_ffi_types.import_attributes ->
-  ?comment:string ->
   external_name:string ->
   Ident.t ->
   field:string ->
@@ -63,12 +62,11 @@ val external_var_field :
 
 val external_var :
   ?import_attributes:External_ffi_types.import_attributes ->
-  ?comment:string ->
   external_name:string ->
   Ident.t ->
   t
 
-val ml_module_as_var : ?comment:string -> Ident.t -> t
+val ml_module_as_var : Ident.t -> t
 
 val runtime_call :
   string ->
@@ -79,16 +77,15 @@ val runtime_call :
   (* args *)
   t
 
-val str : ?comment:string -> string -> t
+val str : string -> t
 
-val template_literal : ?comment:string -> Asttypes.template_segment -> t
+val template_literal : Asttypes.template_segment -> t
 
-val json_literal : ?comment:string -> string -> t
+val json_literal : string -> t
 
-val record_rest : ?comment:string -> J.record_rest_field list -> t -> t
+val record_rest : J.record_rest_field list -> t -> t
 
 val ocaml_fun :
-  ?comment:string ->
   ?immutable_mask:bool array ->
   ?directive:string ->
   return_unit:bool ->
@@ -98,14 +95,7 @@ val ocaml_fun :
   J.block ->
   t
 
-val method_ :
-  ?comment:string ->
-  ?immutable_mask:bool array ->
-  async:bool ->
-  return_unit:bool ->
-  J.ident list ->
-  J.block ->
-  t
+val method_ : async:bool -> return_unit:bool -> J.ident list -> J.block -> t
 
 val econd : ?comment:string -> t -> t -> t -> t
 
@@ -113,9 +103,9 @@ val int : ?comment:string -> ?c:int -> int32 -> t
 
 val small_int : int -> t
 
-val bigint : ?comment:string -> bool -> string -> t
+val bigint : bool -> string -> t
 
-val float : ?comment:string -> string -> t
+val float : string -> t
 
 (* TODO: we can do hash consing for small integers *)
 val zero_int_literal : t
@@ -123,13 +113,13 @@ val zero_float_lit : t
 
 val zero_bigint_literal : t
 
-val dot : ?comment:string -> t -> string -> t
+val dot : t -> string -> t
 
 val module_access : t -> string -> int32 -> t
 
-val array_length : ?comment:string -> t -> t
+val array_length : t -> t
 
-val string_length : ?comment:string -> t -> t
+val string_length : t -> t
 
 val string_append : ?comment:string -> t -> t -> t
 (**
@@ -137,9 +127,9 @@ val string_append : ?comment:string -> t -> t -> t
    we can not tag [js] object, since it can be frozen 
 *)
 
-val array_index : ?comment:string -> t -> t -> t
+val array_index : t -> t -> t
 
-val array_index_by_int : ?comment:string -> t -> Int32.t -> t
+val array_index_by_int : t -> Int32.t -> t
 
 val record_access : t -> string -> Int32.t -> t
 
@@ -159,7 +149,7 @@ val poly_var_value_access : t -> t
 
 val extension_assign : t -> int32 -> string -> t -> t
 
-val assign : ?comment:string -> t -> t -> t
+val assign : t -> t -> t
 
 val literal_tag : Variant_runtime.literal_tag -> t
 val tag_type : Variant_runtime.tag_type -> t
@@ -170,84 +160,84 @@ val is_instance_of : Variant_runtime.Instance.t -> t -> t
 val triple_equal : ?comment:string -> t -> t -> t
 (* TODO: reduce [triple_equal] use *)
 
-val int_equal : ?comment:string -> t -> t -> t
+val int_equal : t -> t -> t
 
-val int_bnot : ?comment:string -> t -> t
+val int_bnot : t -> t
 
-val string_equal : ?comment:string -> t -> t -> t
+val string_equal : t -> t -> t
 
-val eq_null_undefined_boolean : ?comment:string -> t -> t -> t
+val eq_null_undefined_boolean : t -> t -> t
 
-val neq_null_undefined_boolean : ?comment:string -> t -> t -> t
+val neq_null_undefined_boolean : t -> t -> t
 
 val is_int_tag : literal_tags:Variant_runtime.literal_tag list -> t -> t
 
 val is_type_object : t -> t
 
-val typeof : ?comment:string -> t -> t
+val typeof : t -> t
 val is_array : t -> t
 
-val to_int32 : ?comment:string -> t -> t
+val to_int32 : t -> t
 
-val int32_add : ?comment:string -> t -> t -> t
+val int32_add : t -> t -> t
 
-val int32_minus : ?comment:string -> t -> t -> t
+val int32_minus : t -> t -> t
 
-val int32_mul : ?comment:string -> t -> t -> t
+val int32_mul : t -> t -> t
 
-val int32_div : checked:bool -> ?comment:string -> t -> t -> t
+val int32_div : checked:bool -> t -> t -> t
 
-val int32_mod : checked:bool -> ?comment:string -> t -> t -> t
+val int32_mod : checked:bool -> t -> t -> t
 
-val int32_pow : ?comment:string -> t -> t -> t
+val int32_pow : t -> t -> t
 
-val int32_lsl : ?comment:string -> t -> t -> t
+val int32_lsl : t -> t -> t
 
 val int32_lsr : ?comment:string -> t -> t -> t
 
-val int32_asr : ?comment:string -> t -> t -> t
+val int32_asr : t -> t -> t
 
-val int32_bxor : ?comment:string -> t -> t -> t
+val int32_bxor : t -> t -> t
 
-val int32_band : ?comment:string -> t -> t -> t
+val int32_band : t -> t -> t
 
-val int32_bor : ?comment:string -> t -> t -> t
+val int32_bor : t -> t -> t
 
-val float_add : ?comment:string -> t -> t -> t
+val float_add : t -> t -> t
 
-val float_minus : ?comment:string -> t -> t -> t
+val float_minus : t -> t -> t
 
-val float_mul : ?comment:string -> t -> t -> t
+val float_mul : t -> t -> t
 
-val float_div : ?comment:string -> t -> t -> t
+val float_div : t -> t -> t
 
-val float_mod : ?comment:string -> t -> t -> t
+val float_mod : t -> t -> t
 
-val float_pow : ?comment:string -> t -> t -> t
+val float_pow : t -> t -> t
 
-val int_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
+val int_comp : Lambda.comparison -> t -> t -> t
 
-val bool_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
+val bool_comp : Lambda.comparison -> t -> t -> t
 
-val string_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
+val string_comp : Lambda.comparison -> t -> t -> t
 
-val bigint_op : ?comment:string -> Js_op.binop -> t -> t -> t
+val bigint_op : Js_op.binop -> t -> t -> t
 
-val bigint_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
+val bigint_comp : Lambda.comparison -> t -> t -> t
 
-val bigint_div : checked:bool -> ?comment:string -> t -> t -> t
+val bigint_div : checked:bool -> t -> t -> t
 
-val bigint_mod : checked:bool -> ?comment:string -> t -> t -> t
+val bigint_mod : checked:bool -> t -> t -> t
 
-val float_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
+val float_comp : Lambda.comparison -> t -> t -> t
 
-val js_comp : Lambda.comparison -> ?comment:string -> t -> t -> t
+val js_comp : Lambda.comparison -> t -> t -> t
 
 val not : t -> t
 
 val call : ?comment:string -> info:Js_call_info.t -> t -> t list -> t
 
-val tagged_template : ?comment:string -> t -> string list -> t list -> t
+val tagged_template : t -> string list -> t list -> t
 
 val jsx :
   callee:t ->
@@ -260,19 +250,17 @@ val jsx :
   fragment:bool ->
   t
 
-val interpolated_template :
-  ?comment:string -> Asttypes.template_segment list -> t list -> t
+val interpolated_template : Asttypes.template_segment list -> t list -> t
 
-val new_ : ?comment:string -> J.expression -> J.expression list -> t
+val new_ : J.expression -> J.expression list -> t
 
-val array : ?comment:string -> J.expression list -> t
+val array : J.expression list -> t
 
 val optional_block : J.expression -> J.expression
 
 val optional_not_nest_block : J.expression -> J.expression
 
 val make_block :
-  ?comment:string ->
   J.tag_info ->
   (* tag_info *)
   J.expression list ->
@@ -285,9 +273,9 @@ val fuse_to_seq : t -> t list -> t
 
 val object_entries : ?dup:J.expression -> J.property_map -> J.object_entry list
 
-val obj : ?comment:string -> ?dup:J.expression -> J.property_map -> t
+val obj : ?dup:J.expression -> J.property_map -> t
 
-val obj_entries : ?comment:string -> J.object_entry list -> t
+val obj_entries : J.object_entry list -> t
 
 val true_ : t
 
@@ -300,37 +288,37 @@ val unit : t
 
 val undefined : t
 
-val tag : ?comment:string -> ?name:string -> J.expression -> t
+val tag : ?name:string -> J.expression -> t
 
 (** Note that this is coupled with how we encode block, if we use the 
     `Object.defineProperty(..)` since the array already hold the length,
     this should be a nop 
 *)
 
-val obj_length : ?comment:string -> J.expression -> t
+val obj_length : J.expression -> t
 
-val and_ : ?comment:string -> t -> t -> t
+val and_ : t -> t -> t
 
-val or_ : ?comment:string -> t -> t -> t
+val or_ : t -> t -> t
 
 val in_ : t -> t -> t
 
 (** we don't expose a general interface, since a general interface is generally not safe *)
 
-val dummy_obj : ?comment:string -> Lambda.tag_info -> t
+val dummy_obj : Lambda.tag_info -> t
 
-val of_block : ?comment:string -> ?e:J.expression -> J.statement list -> t
+val of_block : ?e:J.expression -> J.statement list -> t
 (** convert a block to expresion by using IIFE *)
 
-val raw_js_code : ?comment:string -> Js_raw_info.code_info -> string -> t
+val raw_js_code : Js_raw_info.code_info -> string -> t
 
 val nil : t
 
-val is_null : ?comment:string -> t -> t
+val is_null : t -> t
 
 val is_null_undefined_constant : J.expression -> bool
 
-val is_null_undefined : ?comment:string -> t -> t
+val is_null_undefined : t -> t
 
 val make_exception : string -> t
 

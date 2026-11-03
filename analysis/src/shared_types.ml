@@ -841,7 +841,7 @@ module Completion = struct
 
   let create ?(synthetic = false) ?additional_text_edits
       ?(includes_snippets = false) ?insert_text ~kind ~env ?sort_text
-      ?deprecated ?filter_text ?detail ?(docstring = []) name =
+      ?deprecated ?detail ?(docstring = []) name =
     {
       name;
       env;
@@ -853,7 +853,7 @@ module Completion = struct
       insert_text_format =
         (if includes_snippets then Some Lsp.Types.InsertTextFormat.Snippet
          else None);
-      filter_text;
+      filter_text = None;
       detail;
       additional_text_edits;
       synthetic;

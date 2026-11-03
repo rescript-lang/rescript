@@ -573,18 +573,6 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   | Praw_js_code _ -> false
 (* TOO lazy, here comparison is only approximation*)
 
-(* The source-level name a field access carries, when it has one. *)
-let str_of_field_info (x : field_dbg_info) : string option =
-  match x with
-  | Fld_extension | Fld_variant | Fld_cons | Fld_poly_var_tag
-  | Fld_poly_var_content | Fld_tuple ->
-    None
-  | Fld_record {name}
-  | Fld_module {name}
-  | Fld_record_inline {name}
-  | Fld_record_extension {name} ->
-    Some name
-
 let is_immutable_block (info : tag_info) =
   mutable_flag_of_tag_info info = Immutable
 

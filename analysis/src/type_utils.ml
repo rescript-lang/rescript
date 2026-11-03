@@ -1338,8 +1338,7 @@ let rec find_root_type_id ~full ~env ~state (t : Types.type_expr) =
   | _ -> None
 
 (** Filters out completions that are not pipeable from a list of completions. *)
-let filter_pipeable_functions ~env ~state ~full ?synthetic ?target_type_id
-    ?pos_of_dot completions =
+let filter_pipeable_functions ~state ~full ?target_type_id completions =
   match target_type_id with
   | None -> completions
   | Some target_type_id ->
@@ -1358,12 +1357,8 @@ let filter_pipeable_functions ~env ~state ~full ?synthetic ?target_type_id
           | _ -> None
         in
         match this_completion_item_type_id with
-        | Some main_type_id when main_type_id = target_type_id -> (
-          match pos_of_dot with
-          | None -> Some completion
-          | Some pos_of_dot ->
-            transform_completion_to_pipe_completion ?synthetic ~env ~pos_of_dot
-              completion)
+        | Some main_type_id when main_type_id = target_type_id ->
+          Some completion
         | _ -> None)
 
 let remove_current_module_if_needed ~env_completion_is_made_from completion_path

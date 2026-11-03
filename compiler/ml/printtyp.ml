@@ -988,8 +988,7 @@ and tree_of_constraints ?printing_context params =
       else list)
     params []
 
-let typexp ?printing_context sch ppf ty =
-  !Oprint.out_type ppf (tree_of_typexp ?printing_context sch ty)
+let typexp sch ppf ty = !Oprint.out_type ppf (tree_of_typexp sch ty)
 
 let type_expr ppf ty = typexp false ppf ty
 
@@ -1510,8 +1509,8 @@ let unification_error env unif tr txt1 ppf txt2 =
         warn_on_missing_def env ppf t2)
     with exn -> raise exn)
 
-let report_unification_error ppf env ?(unif = true) tr txt1 txt2 =
-  wrap_printing_env env (fun () -> unification_error env unif tr txt1 ppf txt2)
+let report_unification_error ppf env tr txt1 txt2 =
+  wrap_printing_env env (fun () -> unification_error env true tr txt1 ppf txt2)
 
 let super_type_expansion ~tag t ppf t' =
   let tag = Format.String_tag tag in
@@ -1570,10 +1569,9 @@ let super_unification_error ?print_extra_info unif tr txt1 ppf txt2 =
           | Some f -> f ppf t1 t2)
     with exn -> raise exn)
 
-let super_report_unification_error ?print_extra_info ppf env ?(unif = true) tr
-    txt1 txt2 =
+let super_report_unification_error ?print_extra_info ppf env tr txt1 txt2 =
   wrap_printing_env env (fun () ->
-      super_unification_error ?print_extra_info unif tr txt1 ppf txt2)
+      super_unification_error ?print_extra_info true tr txt1 ppf txt2)
 
 let trace fst keep_last txt ppf tr =
   trace_same_names tr;

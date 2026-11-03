@@ -1290,7 +1290,7 @@ let compute_variance_gadt env check ((required, loc) as rloc) decl
     | {desc = Tconstr (_, tyl, _)} ->
       (* let tyl = List.map (Ctype.expand_head env) tyl in *)
       let tyl = List.map Ctype.repr tyl in
-      let fvl = List.map (Ctype.free_variables ?env:None) tyl in
+      let fvl = List.map Ctype.free_variables tyl in
       let _ =
         List.fold_left2
           (fun (fv1, fv2) ty (c, n, _) ->

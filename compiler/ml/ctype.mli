@@ -133,7 +133,7 @@ val object_row_is_structurally_open : type_expr -> bool
     row can be strengthened. Row-strengthening operations that add a field or
     promote field mutability require a [Tvar] terminator. *)
 
-val lid_of_path : ?hash:string -> Path.t -> Longident.t
+val lid_of_path : Path.t -> Longident.t
 
 val merge_row_fields :
   (label * row_field) list ->
@@ -318,8 +318,7 @@ val closed_schema : Env.t -> type_expr -> bool
 (* Check whether the given type scheme contains no non-generic
    type variables *)
 
-val free_variables : ?env:Env.t -> type_expr -> type_expr list
-(* If env present, then check for incomplete definitions too *)
+val free_variables : type_expr -> type_expr list
 
 val closed_type_decl : type_declaration -> type_expr option
 val closed_extension_constructor : extension_constructor -> type_expr option
