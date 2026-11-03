@@ -563,10 +563,108 @@ type pers_struct = {
   ps_filename: string;
 }
 
+(* Request-local memo of type path lookups ([find_type_full] on regular
+   paths) and of [normalize_path] calls that leave a type path unchanged.
+
+   The typechecker resolves the same type paths over and over (expanding
+   [option], [Js.Null.t], ... in [expand_head], [update_level], [occur_univar],
+   ...), each time walking the [open] layers of [env.types] or the components
+   of a persistent module. Both lookups only read immutable environment tables
+   ([env.types] for [Pident] type paths, [env.components] for [Pdot] ones,
+   [env.modules] and [env.components] for normalization) plus request-wide
+   state that only grows: persistent structures (replacing one starts a new
+   memo epoch, see [add_persistent_structure]) and module components, which
+   are forced at most once. An entry is therefore
+   reused only when the tables it read are physically the same, and only
+   successful results are stored. A repeated call has no side effect the memo
+   would skip: the first, uncached call already loaded the [.cmi]s and forced
+   the lazy components it needed. Paths that contain a functor application are
+   never cached ([find_module_descr] applies the functor against [env]), and
+   the memo is bypassed while [.cmi] loading is disabled ([without_cmis] may
+   backtrack components). *)
+module Type_path_memo = struct
+  let size = 4096 (* a power of two *)
+
+  let string_hash s =
+    let n = String.length s in
+    if n = 0 then 0
+    else
+      (n * 31)
+      + (Char.code (String.unsafe_get s 0) * 7)
+      + Char.code (String.unsafe_get s (n - 1))
+
+  exception Not_cacheable
+
+  (* Consistent with [equal]: it ignores [pos] and ident flags, which no lookup
+     reads. *)
+  let rec hash (path : Path.t) =
+    match path with
+    | Pident id -> (id.Ident.stamp * 65599) + string_hash id.name
+    | Pdot (p, s, _pos) -> (hash p * 31) + string_hash s
+    | Papply _ -> raise_notrace Not_cacheable
+
+  let slot path = hash path land (size - 1)
+
+  (* Paths that every lookup in this file resolves identically: identifiers are
+     looked up by name and stamp, and components by name. *)
+  let rec equal (p1 : Path.t) (p2 : Path.t) =
+    p1 == p2
+    ||
+    match (p1, p2) with
+    | Pident id1, Pident id2 ->
+      id1.Ident.stamp = id2.Ident.stamp && String.equal id1.name id2.name
+    | Pdot (p1, s1, _), Pdot (p2, s2, _) -> String.equal s1 s2 && equal p1 p2
+    | _ -> false
+
+  type ('types, 'modules, 'components, 'result) entry = {
+    epoch: unit ref;
+    path: Path.t;
+    types: 'types;
+    modules: 'modules;
+    components: 'components;
+    result: 'result;
+  }
+
+  type ('types, 'modules, 'components, 'result) t =
+    ('types, 'modules, 'components, 'result) entry option array
+
+  let create () : _ t = Array.make size None
+  let clear (t : _ t) = Array.fill t 0 size None
+end
+
+(* The tables are allocated once per domain rather than per request: they are
+   large, and requests are small. An entry is valid only in the epoch that
+   stored it. Each request starts a fresh epoch (and a nested request restores
+   the outer one when it returns), so entries never cross requests; clearing
+   starts a new epoch too. *)
+let type_path_memo_key =
+  Domain.DLS.new_key (fun () ->
+      (Type_path_memo.create (), Type_path_memo.create ()))
+
+let type_path_memo_epoch_key = Request_local.new_key (fun () -> ref (ref ()))
+let type_path_memo_epoch () = !(Domain.DLS.get type_path_memo_epoch_key)
+
+let clear_type_path_memo_tables () =
+  let found, unchanged = Domain.DLS.get type_path_memo_key in
+  Type_path_memo.clear found;
+  Type_path_memo.clear unchanged
+
+let clear_type_path_memo () =
+  Domain.DLS.get type_path_memo_epoch_key := ref ();
+  clear_type_path_memo_tables ()
+
 let persistent_structures_key =
   Request_local.new_key (fun () ->
       (Hashtbl.create 17 : (string, pers_struct option) Hashtbl.t))
 let persistent_structures () = Domain.DLS.get persistent_structures_key
+
+(* [Hashtbl.add] shadows an earlier binding for [name], which the type path
+   memo may have read (directly, or as a missing module), so replacing one
+   starts a new memo epoch. *)
+let add_persistent_structure name ps =
+  let tbl = persistent_structures () in
+  if Hashtbl.mem tbl name then clear_type_path_memo ();
+  Hashtbl.add tbl name ps
 
 (* Consistency between persistent structures *)
 
@@ -604,7 +702,7 @@ let check_consistency ps =
 
 let save_pers_struct crc ps =
   let modname = ps.ps_name in
-  Hashtbl.add (persistent_structures ()) modname (Some ps);
+  add_persistent_structure modname (Some ps);
   Consistbl.set (crc_units ()) modname crc ps.ps_filename;
   add_import modname
 
@@ -649,7 +747,7 @@ let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
   if ps.ps_name <> modname then
     error (Illegal_renaming (modname, ps.ps_name, filename));
   if check then check_consistency ps;
-  Hashtbl.add (persistent_structures ()) modname (Some ps);
+  add_persistent_structure modname (Some ps);
   ps
 
 let read_pers_struct check modname filename =
@@ -670,7 +768,7 @@ let find_pers_struct check name =
         match !Persistent_signature.load ~unit_name:name with
         | Some ps -> ps
         | None ->
-          Hashtbl.add (persistent_structures ()) name None;
+          add_persistent_structure name None;
           raise Not_found
       in
       add_import name;
@@ -715,6 +813,7 @@ let check_pers_struct name =
 
 let reset_cache () =
   current_unit () := "";
+  clear_type_path_memo ();
   Hashtbl.clear (persistent_structures ());
   clear_imports ();
   Hashtbl.clear (value_declarations ());
@@ -731,13 +830,16 @@ let reset_cache_toplevel () =
       (persistent_structures ()) []
   in
   List.iter (Hashtbl.remove (persistent_structures ())) l;
+  clear_type_path_memo ();
   Hashtbl.clear (value_declarations ());
   Hashtbl.clear (type_declarations ());
   Hashtbl.clear (module_declarations ());
   Hashtbl.clear (used_constructors ());
   Hashtbl.clear (prefixed_sg ())
 
-let set_unit_name name = current_unit () := name
+let set_unit_name name =
+  clear_type_path_memo ();
+  current_unit () := name
 
 let get_unit_name () = !(current_unit ())
 
@@ -784,11 +886,44 @@ let type_of_cstr path = function
     (d, ([], List.map snd (Datarepr.labels_of_type path d)))
   | _ -> assert false
 
+(* [find_type_full p env] for a regular type path, memoized as described at
+   [Type_path_memo]. *)
+let find_regular_type_full p env =
+  match !(can_load_cmis ()) with
+  | Cannot_load_cmis _ -> find_type_full p env
+  | Can_load_cmis -> (
+    match Type_path_memo.slot p with
+    | exception Type_path_memo.Not_cacheable -> find_type_full p env
+    | i -> (
+      let memo, _ = Domain.DLS.get type_path_memo_key in
+      let epoch = type_path_memo_epoch () in
+      match Array.unsafe_get memo i with
+      | Some e
+        when e.epoch == epoch
+             && (match p with
+               | Pident _ -> e.types == env.types
+               | Pdot _ | Papply _ -> e.components == env.components)
+             && Type_path_memo.equal e.path p ->
+        e.result
+      | _ ->
+        let result = find_type_full p env in
+        Array.unsafe_set memo i
+          (Some
+             {
+               epoch;
+               path = p;
+               types = env.types;
+               modules = ();
+               components = env.components;
+               result;
+             });
+        result))
+
 let find_type_full path env =
   match Path.constructor_typath path with
   | Regular p -> (
     try (Path_map.find p env.local_constraints, ([], []))
-    with Not_found -> find_type_full p env)
+    with Not_found -> find_regular_type_full p env)
   | Cstr (ty_path, s) ->
     let _, (cstrs, _) =
       try find_type_full ty_path env with Not_found -> assert false
@@ -894,6 +1029,46 @@ let normalize_path oloc env path =
     | None -> assert false
     | Some loc ->
       raise (Error (Missing_module (loc, path, normalize_path true env path))))
+
+(* [Some (normalize_path None env path)] when normalization changes [path]
+   ([Path.same] is false), [None] when it leaves it unchanged. The unchanged
+   outcome is memoized as described at [Type_path_memo]; a changed path is
+   always computed afresh, so callers get a new path value as before. *)
+let normalize_type_path env path =
+  let normalize () =
+    let path' = normalize_path None env path in
+    if Path.same path path' then None else Some path'
+  in
+  match !(can_load_cmis ()) with
+  | Cannot_load_cmis _ -> normalize ()
+  | Can_load_cmis -> (
+    match Type_path_memo.slot path with
+    | exception Type_path_memo.Not_cacheable -> normalize ()
+    | i -> (
+      let _, memo = Domain.DLS.get type_path_memo_key in
+      let epoch = type_path_memo_epoch () in
+      match Array.unsafe_get memo i with
+      | Some e
+        when e.epoch == epoch && e.modules == env.modules
+             && e.components == env.components
+             && Type_path_memo.equal e.path path ->
+        None
+      | _ ->
+        let result = normalize () in
+        (match result with
+        | None ->
+          Array.unsafe_set memo i
+            (Some
+               {
+                 epoch;
+                 path;
+                 types = ();
+                 modules = env.modules;
+                 components = env.components;
+                 result = ();
+               })
+        | Some _ -> ());
+        result))
 
 let normalize_path_prefix oloc env path =
   match path with
@@ -1992,7 +2167,25 @@ let reset_initial_for_request () =
 let with_fresh_initial action =
   let previous = initial_safe_string () in
   Fun.protect action ~finally:(fun () ->
-      Domain.DLS.set initial_safe_string_key previous)
+      Domain.DLS.set initial_safe_string_key previous;
+      (* The per-domain memo tables would otherwise keep the finished
+         request's environments alive until their slots are overwritten. Their
+         entries are already invalid outside the request's epoch. *)
+      clear_type_path_memo_tables ())
+
+module For_test = struct
+  let type_path_memo_entries () =
+    let found, unchanged = Domain.DLS.get type_path_memo_key in
+    let count t =
+      Array.fold_left
+        (fun n e ->
+          match e with
+          | None -> n
+          | Some _ -> n + 1)
+        0 t
+    in
+    count found + count unchanged
+end
 
 let last_env_key = Request_local.new_key (fun () -> ref empty)
 let last_env () = Domain.DLS.get last_env_key
