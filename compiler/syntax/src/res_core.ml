@@ -5267,12 +5267,26 @@ and parse_constr_decl_args p =
   in
   (constr_args, res)
 
-(* Helper to check if current token is a bar or doc comment followed by a bar *)
+(* Helper to check if current token is a bar or a run of doc comments followed
+   by a bar *)
 and is_bar_or_doc_comment_then_bar p =
   match Parser.peek p with
   | Bar -> true
-  | DocComment _ -> Parser.peek2 p = Bar
+  | DocComment _ ->
+    Parser.lookahead p (fun state ->
+        skip_doc_comments state;
+        Parser.peek state = Bar)
   | _ -> false
+
+(* The doc comments before the `|` of a constructor or tag. The printer puts
+   every doc comment of a constructor on its own line before the `|`. *)
+and parse_doc_comments p =
+  match Parser.peek p with
+  | DocComment (loc, s) ->
+    Parser.next p;
+    let doc_comment = doc_comment_to_attribute loc s in
+    doc_comment :: parse_doc_comments p
+  | _ -> []
 
 (* constr-decl ::=
  *  | constr-name
@@ -5281,13 +5295,7 @@ and is_bar_or_doc_comment_then_bar p =
  *  | attrs constr-name const-args *)
 and parse_type_constructor_declaration_with_bar p =
   if is_bar_or_doc_comment_then_bar p then (
-    let doc_comment_attrs =
-      match Parser.peek p with
-      | DocComment (loc, s) ->
-        Parser.next p;
-        [doc_comment_to_attribute loc s]
-      | _ -> []
-    in
+    let doc_comment_attrs = parse_doc_comments p in
     let start_pos = Parser.start_pos p in
     Parser.next p;
     let constr = parse_type_constructor_declaration ~start_pos p in
@@ -5326,13 +5334,7 @@ and parse_type_constructor_declarations ?first p =
   let first_constr_decl =
     match first with
     | None ->
-      let doc_comment_attrs =
-        match Parser.peek p with
-        | DocComment (loc, s) ->
-          Parser.next p;
-          [doc_comment_to_attribute loc s]
-        | _ -> []
-      in
+      let doc_comment_attrs = parse_doc_comments p in
       let start_pos = Parser.start_pos p in
       ignore (Parser.optional p Token.Bar);
       let constr = parse_type_constructor_declaration ~start_pos p in
@@ -5911,13 +5913,7 @@ and parse_tag_spec_full p =
 and parse_tag_specs p =
   match Parser.peek p with
   | (Bar | DocComment _) when is_bar_or_doc_comment_then_bar p ->
-    let doc_comment_attrs =
-      match Parser.peek p with
-      | DocComment (loc, s) ->
-        Parser.next p;
-        [doc_comment_to_attribute loc s]
-      | _ -> []
-    in
+    let doc_comment_attrs = parse_doc_comments p in
     Parser.expect Bar p;
     let tag = parse_tag_spec p in
     let tag_with_doc =
@@ -5950,13 +5946,7 @@ and parse_tag_spec p =
 and parse_tag_spec_first p =
   match Parser.peek p with
   | (Bar | DocComment _) when is_bar_or_doc_comment_then_bar p ->
-    let doc_comment_attrs =
-      match Parser.peek p with
-      | DocComment (loc, s) ->
-        Parser.next p;
-        [doc_comment_to_attribute loc s]
-      | _ -> []
-    in
+    let doc_comment_attrs = parse_doc_comments p in
     Parser.expect Bar p;
     let tag = parse_tag_spec p in
     (match tag with

@@ -149,3 +149,16 @@ type nonrec t = ((int)[@res.doc {js|doc|js}]) -> int (a:1)
 type nonrec t = ((M.t)[@res.doc {js|doc|js}]) = {
   x: int }
 type nonrec t = private (('a Dict.t)[@res.doc {js|doc|js}])
+type nonrec t =
+  | A [@res.doc {js|doc|js}][@res.doc {js|doc2|js}]
+  | ... of base [@res.doc {js|doc3|js}][@res.doc {js|doc4|js}]
+type nonrec t =
+  | C 
+  | A [@res.doc {js|doc|js}][@res.doc {js|doc2|js}]
+  | ... of base [@res.doc {js|doc3|js}][@res.doc {js|doc4|js}]
+type nonrec t = private
+  | A [@res.doc {js|doc|js}][@res.doc {js|doc2|js}]
+  | B [@res.doc {js|doc3|js}][@res.doc {js|doc4|js}]
+type nonrec t =
+  [ `A [@res.doc {js|doc|js}][@res.doc {js|doc2|js}]
+  | `B [@res.doc {js|doc3|js}][@res.doc {js|doc4|js}]]
