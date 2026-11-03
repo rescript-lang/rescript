@@ -46,11 +46,13 @@ let peek: t<'a> => option<'a>
 /**
 `peekExn(q)` throws an exception if `q` is empty.
 */
+@throws(Not_found)
 let peekExn: t<'a> => 'a
 
 /**
 `peekOrThrow(q)` throws an exception if `q` is empty.
 */
+@throws(Not_found)
 let peekOrThrow: t<'a> => 'a
 
 /**
@@ -61,11 +63,13 @@ let pop: t<'a> => option<'a>
 /**
 `popExn(q)` throw an exception if q is empty.
 */
+@throws(Not_found)
 let popExn: t<'a> => 'a
 
 /**
 `popOrThrow(q)` throw an exception if q is empty.
 */
+@throws(Not_found)
 let popOrThrow: t<'a> => 'a
 
 /**

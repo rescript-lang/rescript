@@ -88,7 +88,7 @@ Temporal.ZonedDateTime.fromStringOrThrow(
 )->Temporal.ZonedDateTime.timeZoneId == "Asia/Seoul"
 ```
 */
-@val
+@val @throws(JsExn)
 external fromStringOrThrow: (string, ~options: fromOptions=?) => t = "Temporal.ZonedDateTime.from"
 
 /**

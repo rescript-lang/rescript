@@ -30,7 +30,7 @@ Temporal.Instant.fromStringOrThrow("2024-01-01T00:00:00Z")->Temporal.Instant.epo
   1704067200000.
 ```
 */
-@val
+@val @throws(JsExn)
 external fromStringOrThrow: string => t = "Temporal.Instant.from"
 
 /**

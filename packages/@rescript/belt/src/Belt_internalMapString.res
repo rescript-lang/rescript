@@ -44,6 +44,7 @@ let rec get = (n, x: key) =>
     }
   }
 
+@throws(Not_found)
 let rec getOrThrow = (n, x: key) =>
   switch n {
   | None => throw(Not_found)

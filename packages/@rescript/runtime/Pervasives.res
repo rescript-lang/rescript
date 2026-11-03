@@ -56,10 +56,16 @@ external \"~-": 'a => 'a = "%neg"
 external \"+": ('a, 'a) => 'a = "%add"
 external \"-": ('a, 'a) => 'a = "%sub"
 external \"*": ('a, 'a) => 'a = "%mul"
+
+@throws(Division_by_zero)
 external \"/": ('a, 'a) => 'a = "%div"
+
 external \"%": ('a, 'a) => 'a = "%mod"
 external \"<<": ('a, 'a) => 'a = "%lsl"
+
+@throws(Division_by_zero)
 external mod: ('a, 'a) => 'a = "%mod"
+
 external \"**": ('a, 'a) => 'a = "%pow"
 
 external \"~~~": 'a => 'a = "%bitnot"
