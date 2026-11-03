@@ -1,0 +1,1 @@
+- Speed up type checking by copying a dependency's interface only when it is read, not when the compiler only checks whether it is a module alias.
