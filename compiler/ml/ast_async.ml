@@ -4,8 +4,7 @@ let rec dig_async_payload_from_function (expr : Parsetree.expression) =
   | Pexp_braces {expr} -> dig_async_payload_from_function expr
   | _ -> false
 
-let add_promise_type ?(loc = Location.none) ~async
-    (result : Parsetree.expression) =
+let add_promise_type ~loc ~async (result : Parsetree.expression) =
   if async then
     let unsafe_async =
       Ast_helper.Exp.ident ~loc

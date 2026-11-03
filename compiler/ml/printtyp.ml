@@ -928,7 +928,7 @@ and tree_of_constructor_arguments ?printing_context = function
   | Cstr_tuple l -> tree_of_typlist ?printing_context false l
   | Cstr_record l -> [Otyp_record (List.map tree_of_label l)]
 
-and tree_of_constructor ?printing_context ~layout ~position cd =
+and tree_of_constructor ~printing_context ~layout ~position cd =
   let name = Ident.name cd.cd_id in
   (* The [@as] of a nullary case or of a tagged case with a payload sets its
      runtime tag; an untagged case is its payload *)
@@ -954,13 +954,13 @@ and tree_of_constructor ?printing_context ~layout ~position cd =
       in
       Option.map as_annotation cd.cd_runtime_tag
   in
-  let arg () = tree_of_constructor_arguments ?printing_context cd.cd_args in
+  let arg () = tree_of_constructor_arguments ~printing_context cd.cd_args in
   match cd.cd_res with
   | None -> (name, arg (), None, repr)
   | Some res ->
     let nm = !(names ()) in
     names () := [];
-    let ret = tree_of_typexp ?printing_context false res in
+    let ret = tree_of_typexp ~printing_context false res in
     let args = arg () in
     names () := nm;
     (name, args, Some ret, repr)
@@ -978,13 +978,13 @@ and tree_of_label ?printing_context l =
     opt,
     tree_of_typexp ?printing_context false typ )
 
-and tree_of_constraints ?printing_context params =
+and tree_of_constraints ~printing_context params =
   List.fold_right
     (fun ty list ->
       let ty' = unalias ty in
       if proxy ty != proxy ty' then
-        let tr = tree_of_typexp ?printing_context true ty in
-        (tr, tree_of_typexp ?printing_context true ty') :: list
+        let tr = tree_of_typexp ~printing_context true ty in
+        (tr, tree_of_typexp ~printing_context true ty') :: list
       else list)
     params []
 
@@ -1190,8 +1190,8 @@ and tree_of_modtype_declaration id decl =
   in
   Osig_modtype (Ident.name id, mty)
 
-and tree_of_module id ?ellipsis mty rs =
-  Osig_module (Ident.name id, tree_of_modtype ?ellipsis mty, tree_of_rec rs)
+and tree_of_module id ~ellipsis mty rs =
+  Osig_module (Ident.name id, tree_of_modtype ~ellipsis mty, tree_of_rec rs)
 
 let modtype ppf mty = !Oprint.out_module_type ppf (tree_of_modtype mty)
 let modtype_declaration id ppf decl =

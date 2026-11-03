@@ -47,7 +47,7 @@ module Typ = struct
   let object_ ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_object (a, b))
   let alias ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_alias (a, b))
   let variant ?loc ?attrs a b c = mk ?loc ?attrs (Ptyp_variant (a, b, c))
-  let poly ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_poly (a, b))
+  let poly ~loc ?attrs a b = mk ~loc ?attrs (Ptyp_poly (a, b))
   let package ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_package (a, b))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Ptyp_extension a)
 

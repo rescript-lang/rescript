@@ -72,8 +72,8 @@ let rows_array ~loc (rows : (string Location.loc * expression) list) =
            ])
        rows)
 
-let primitive_dict ~loc ?attrs name =
-  Ast_helper.Exp.ident ~loc ?attrs
+let primitive_dict ~loc ~attrs name =
+  Ast_helper.Exp.ident ~loc ~attrs
     (Location.mkloc
        (Longident.Ldot (Longident.Lident Primitive_modules.dict, name))
        loc)

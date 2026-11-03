@@ -172,7 +172,7 @@ let print_engine ~newline =
 
 exception Already_reported
 
-let parse_implementation ?(ignore_parse_errors = false) sourcefile =
+let parse_implementation ~ignore_parse_errors sourcefile =
   Location.set_input_name sourcefile;
   let parse_result = parsing_engine.parse_implementation ~filename:sourcefile in
   if parse_result.invalid then (
@@ -181,7 +181,7 @@ let parse_implementation ?(ignore_parse_errors = false) sourcefile =
   parse_result.parsetree
 [@@raises Already_reported]
 
-let parse_interface ?(ignore_parse_errors = false) sourcefile =
+let parse_interface ~ignore_parse_errors sourcefile =
   Location.set_input_name sourcefile;
   let parse_result = parsing_engine.parse_interface ~filename:sourcefile in
   if parse_result.invalid then (

@@ -2077,7 +2077,7 @@ let ppat_of_type env ty =
     (Conv.mkpat Parsetree.Ppat_any, Hashtbl.create 0, Hashtbl.create 0)
   | pats -> Conv.conv (orify_many pats)
 
-let do_check_partial ?partial_match_warning_hint ?pred exhaust loc casel pss =
+let do_check_partial ?partial_match_warning_hint ~pred exhaust loc casel pss =
   match pss with
   | [] ->
     (*
@@ -2099,17 +2099,8 @@ let do_check_partial ?partial_match_warning_hint ?pred exhaust loc casel pss =
     | Rnone -> Total
     | Rsome [u] -> (
       let v =
-        match pred with
-        | Some pred ->
-          let pattern, constrs, labels = Conv.conv u in
-          let u' = pred constrs labels pattern in
-          (* pretty_pat u;
-             begin match u' with
-               None -> prerr_endline ": impossible"
-             | Some _ -> prerr_endline ": possible"
-             end; *)
-          u'
-        | None -> Some u
+        let pattern, constrs, labels = Conv.conv u in
+        pred constrs labels pattern
       in
       match v with
       | None -> Total
