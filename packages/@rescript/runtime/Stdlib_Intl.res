@@ -22,6 +22,7 @@ See [`Intl.getCanonicalLocales`](https://developer.mozilla.org/en-US/docs/Web/Ja
 Intl.getCanonicalLocalesExn("EN-US") == ["en-US"]
 ```
 */
+@throws(JsExn)
 external getCanonicalLocalesExn: string => array<string> = "Intl.getCanonicalLocales"
 
 /**
@@ -37,6 +38,7 @@ See [`Intl.getCanonicalLocales`](https://developer.mozilla.org/en-US/docs/Web/Ja
 Intl.getCanonicalLocalesManyExn(["EN-US", "fr"]) == ["en-US", "fr"]
 ```
 */
+@throws(JsExn)
 external getCanonicalLocalesManyExn: array<string> => array<string> = "Intl.getCanonicalLocales"
 
 /**
@@ -52,4 +54,5 @@ See [`Intl.supportedValuesOf`](https://developer.mozilla.org/en-US/docs/Web/Java
 Intl.supportedValuesOfExn("calendar")->Array.includes("gregory") == true
 ```
 */
+@throws(JsExn)
 external supportedValuesOfExn: string => array<string> = "Intl.supportedValuesOf"

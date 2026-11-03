@@ -123,5 +123,57 @@
   Exception Analysis
   ExternalTest.res:7:5-24
   bigIntFromStringExn2 might throw JsExn (ExternalTest.res:7:35) and is not annotated with @throws(JsExn)
+
+  Exception Analysis
+  StdlibTest.res:67:5-34
+  plainDateFromStringUnannotated might throw JsExn (StdlibTest.res:67:42) and is not annotated with @throws(JsExn)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:1:5-16
+  callExternal might throw JsExn (ThrowsDeclCalls.res:1:24) and is not annotated with @throws(JsExn)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:3:5-20
+  callExternalPipe might throw JsExn (ThrowsDeclCalls.res:3:31) and is not annotated with @throws(JsExn)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:5:5-14
+  callNested might throw Not_found (ThrowsDeclCalls.res:5:22) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:7:5-16
+  callIfaceLet might throw Not_found (ThrowsDeclCalls.res:7:24) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:9:5-21
+  callIfaceExternal might throw JsExn (ThrowsDeclCalls.res:9:29) and is not annotated with @throws(JsExn)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:12:5-13
+  callAlias might throw JsExn (ThrowsDeclCalls.res:12:21) and is not annotated with @throws(JsExn)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:14:5-12
+  callOpen might throw JsExn (ThrowsDeclCalls.res:16:2) and is not annotated with @throws(JsExn)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:23:5-15
+  callInclude might throw JsExn (ThrowsDeclCalls.res:23:23) and is not annotated with @throws(JsExn)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:26:5-15
+  callFunctor might throw Not_found (ThrowsDeclCalls.res:26:23) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:28:5-18
+  callFirstClass might throw Not_found (ThrowsDeclCalls.res:30:2) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:36:5-14
+  callViaLet might throw Not_found (ThrowsDeclCalls.res:36:22) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ThrowsDeclCalls.res:37:5-22
+  callViaLetIncluded might throw Not_found (ThrowsDeclCalls.res:37:30) and is not annotated with @throws(Not_found)
   
-  Analysis reported 31 issues (Exception Analysis:31)
+  Analysis reported 44 issues (Exception Analysis:44)

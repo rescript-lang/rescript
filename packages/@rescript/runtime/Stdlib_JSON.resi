@@ -60,7 +60,7 @@ try {
 
 - Throws a SyntaxError (JsExn.t) if the string isn't valid JSON.
 */
-@val
+@val @throws(JsExn)
 external parseOrThrow: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
 
 /** 
@@ -174,7 +174,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 - Throws a TypeError if the value contains circular references.
 - Throws a TypeError if the value contains `BigInt`s.
 */
-@val
+@val @throws(JsExn)
 external stringifyAny: ('a, ~replacer: replacer=?, ~space: int=?) => option<string> =
   "JSON.stringify"
 

@@ -28,7 +28,10 @@ let copy: t<'a> => t<'a>
 
 let push: (t<'a>, 'a) => unit
 let pop: t<'a> => option<'a>
+
+@throws(Not_found)
 let popOrThrow: t<'a> => 'a
+
 let top: t<'a> => option<'a>
 let isEmpty: t<'a> => bool
 let size: t<'a> => int

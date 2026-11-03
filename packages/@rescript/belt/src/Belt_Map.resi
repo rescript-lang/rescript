@@ -345,6 +345,7 @@ See `Belt.Map.get`
 
 throw when `k` not exist
 */
+@throws(Not_found)
 let getExn: (t<'k, 'v, 'id>, 'k) => 'v
 
 /**
@@ -354,6 +355,7 @@ See `Belt.Map.get`
 
 throw when `k` not exist
 */
+@throws(Not_found)
 let getOrThrow: (t<'k, 'v, 'id>, 'k) => 'v
 
 /* ************************************************************************** */

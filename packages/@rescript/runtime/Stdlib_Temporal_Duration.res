@@ -82,7 +82,7 @@ See [`Temporal.Duration.from`](https://developer.mozilla.org/en-US/docs/Web/Java
 Temporal.Duration.fromStringOrThrow("PT1H30M")->Temporal.Duration.minutes == 30.
 ```
 */
-@val
+@val @throws(JsExn)
 external fromStringOrThrow: string => t = "Temporal.Duration.from"
 
 /**

@@ -154,6 +154,7 @@ switch Nullable.getOrThrow(%raw("undefined")) {
 
 - Throws `Invalid_argument` if `value` is `null` or `undefined`
 */
+@throws(Invalid_argument)
 let getOrThrow: t<'a> => 'a
 
 /**

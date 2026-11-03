@@ -91,6 +91,8 @@ let eq: (t<'a, 'b>, t<'a, 'c>, ~kcmp: cmp<'a, _>, ~veq: ('b, 'c) => bool) => boo
 let get: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => option<'b>
 
 let getWithDefault: (t<'a, 'b>, 'a, 'b, ~cmp: cmp<'a, _>) => 'b
+
+@throws(Not_found)
 let getOrThrow: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => 'b
 
 let has: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => bool

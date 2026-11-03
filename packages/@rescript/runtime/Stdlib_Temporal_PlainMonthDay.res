@@ -57,7 +57,7 @@ See [`Temporal.PlainMonthDay.from`](https://developer.mozilla.org/en-US/docs/Web
 Temporal.PlainMonthDay.fromStringOrThrow("12-25")->Temporal.PlainMonthDay.day == 25
 ```
 */
-@val
+@val @throws(JsExn)
 external fromStringOrThrow: string => t = "Temporal.PlainMonthDay.from"
 
 /**
