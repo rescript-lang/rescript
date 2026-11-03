@@ -192,6 +192,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     |> Compiler_process.run_parses ?poll:attempt.process_poll
          ~on_complete:parse_completed
   in
+  let parsed_paths = Hashtbl.create (List.length parse_entries) in
   let failed_parse_paths = Hashtbl.create 8 in
   List.iter2
     (fun ((package : Package_plan.t), path, _) result ->
@@ -201,12 +202,13 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       match outcome with
       | Build_attempt.Parse_failed _ ->
         Hashtbl.replace failed_parse_paths absolute_path ()
-      | Build_attempt.Parsed_successfully _ | Build_attempt.Use_existing_ast ->
-        ())
+      | Build_attempt.Parsed_successfully _ ->
+        Hashtbl.replace parsed_paths absolute_path ()
+      | Build_attempt.Use_existing_ast -> ())
     parse_entries parse_results;
   let graph =
     Module_graph.initialize ~root_config ~package_plans ~compile_assets
-      ~failed_parse_paths
+      ~parsed_paths ~failed_parse_paths
   in
   List.iter
     (fun path ->

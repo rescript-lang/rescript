@@ -159,13 +159,11 @@ let raw_dependencies ?(published_dependencies = fun _ -> None) ~build_dir
   let dependencies path =
     if parse_failed path then []
     else
-      let ast = Filename.concat build_dir (Source.ast_path path) in
-      (* An AST parsed in this build is in memory. Otherwise its published
-         copy, whose header the build has already read, has the same
-         dependencies. *)
-      match (Build_file_store.cached ast, published_dependencies path) with
-      | None, Some dependencies -> dependencies
-      | Some _, _ | None, None -> (Ast_header.read ast).dependencies
+      match published_dependencies path with
+      | Some dependencies -> dependencies
+      | None ->
+        (Ast_header.read (Filename.concat build_dir (Source.ast_path path)))
+          .dependencies
   in
   List.sort_uniq String.compare
     (dependencies module_.implementation
@@ -182,7 +180,7 @@ type initialized = {
 }
 
 let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
-    ~failed_parse_paths =
+    ~parsed_paths ~failed_parse_paths =
   let nodes = ref [] in
   let use_existing_ast_paths = ref [] in
   let modules =
@@ -207,10 +205,13 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
     |> Parallel.map (fun ((package : Package_plan.t), _, module_) ->
         raw_dependencies ~build_dir:package.build_dir
           ~published_dependencies:(fun path ->
-            Compile_assets.ast compile_assets
-              (Filename.concat package.root path)
-            |> Option.map (fun (published : Compile_assets.entry) ->
-                Compile_assets.ast_dependencies compile_assets published.path))
+            let path = Filename.concat package.root path in
+            (* The published headers were read before this build parsed. *)
+            if Hashtbl.mem parsed_paths path then None
+            else
+              Compile_assets.ast compile_assets path
+              |> Option.map (fun (published : Compile_assets.entry) ->
+                  Compile_assets.ast_dependencies compile_assets published.path))
           ~parse_failed:(fun path ->
             Hashtbl.mem failed_parse_paths (Filename.concat package.root path))
           module_)
