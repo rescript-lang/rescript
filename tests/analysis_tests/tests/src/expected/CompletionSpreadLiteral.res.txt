@@ -1,0 +1,513 @@
+Complete src/CompletionSpreadLiteral.res 7:35
+XXX Not found!
+Completable: Cexpression array<Type[kind]>->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "First",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "First",
+    "tags": []
+  },
+  {
+    "detail": "Second",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSecond\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "Second",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Second",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 10:37
+XXX Not found!
+Completable: Cexpression array<Type[kind]>=Fi->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "First",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "First",
+    "sortText": "A First",
+    "tags": []
+  },
+  { "detail": "module File", "kind": 9, "label": "File", "tags": [] },
+  {
+    "data": {
+      "modulePath": "Firebase",
+      "filePath": "src/CompletionSpreadLiteral.res"
+    },
+    "detail": "module Firebase",
+    "kind": 9,
+    "label": "Firebase",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "FirstClassModules",
+      "filePath": "src/CompletionSpreadLiteral.res"
+    },
+    "detail": "module FirstClassModules",
+    "kind": 9,
+    "label": "FirstClassModules",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 13:26
+XXX Not found!
+Completable: Cexpression array<Type[kind]>->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "First",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "First",
+    "tags": []
+  },
+  {
+    "detail": "Second",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSecond\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "Second",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Second",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 16:28
+XXX Not found!
+Completable: Cexpression array<Type[kind]>=Se->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  {
+    "detail": "Second",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSecond\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "Second",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Second",
+    "sortText": "A Second",
+    "tags": []
+  },
+  { "detail": "module Set", "kind": 9, "label": "Set", "tags": [] }
+]
+
+Complete src/CompletionSpreadLiteral.res 19:42
+XXX Not found!
+Completable: Cexpression array<Type[kind]>->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "First",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "First",
+    "tags": []
+  },
+  {
+    "detail": "Second",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSecond\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "Second",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Second",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 22:51
+XXX Not found!
+Completable: Cexpression array<Type[kind]>->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "First",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "First",
+    "tags": []
+  },
+  {
+    "detail": "Second",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSecond\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "Second",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Second",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 25:34
+XXX Not found!
+Completable: Cexpression array<Type[kind]>->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "First",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "First",
+    "tags": []
+  },
+  {
+    "detail": "Second",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSecond\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "Second",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Second",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 28:37
+XXX Not found!
+Completable: Cexpression array<Type[kind]>=Fi->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "First",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "First",
+    "sortText": "A First",
+    "tags": []
+  },
+  { "detail": "module File", "kind": 9, "label": "File", "tags": [] },
+  {
+    "data": {
+      "modulePath": "Firebase",
+      "filePath": "src/CompletionSpreadLiteral.res"
+    },
+    "detail": "module Firebase",
+    "kind": 9,
+    "label": "Firebase",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "FirstClassModules",
+      "filePath": "src/CompletionSpreadLiteral.res"
+    },
+    "detail": "module FirstClassModules",
+    "kind": 9,
+    "label": "FirstClassModules",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 31:41
+XXX Not found!
+Completable: Cexpression array<Type[kind]>=Se->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  {
+    "detail": "Second",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSecond\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "Second",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Second",
+    "sortText": "A Second",
+    "tags": []
+  },
+  { "detail": "module Set", "kind": 9, "label": "Set", "tags": [] }
+]
+
+Complete src/CompletionSpreadLiteral.res 34:38
+XXX Not found!
+Completable: Cexpression array<Type[kind]>=ba
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  { "detail": "list<kind>", "kind": 12, "label": "baseList", "tags": [] },
+  { "detail": "array<kind>", "kind": 12, "label": "base", "tags": [] }
+]
+
+Complete src/CompletionSpreadLiteral.res 37:41
+pos_cursor:[37:41] pos_no_white:[37:39] Found expr:[37:25->37:50]
+pos_cursor:[37:41] pos_no_white:[37:39] Found expr:[37:29->37:42]
+Pexp_apply ...[37:29->37:33] (...[37:34->37:39])
+Completable: Cexpression CArgument Value[pair]($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[pair]($1)
+ContextPath Value[pair]
+Path pair
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "First",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "First",
+    "tags": []
+  },
+  {
+    "detail": "Second",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSecond\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "Second",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Second",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 40:32
+pos_cursor:[40:32] pos_no_white:[40:30] Found expr:[40:11->40:34]
+Pexp_apply ...[40:11->40:21] (...[40:22->40:33])
+Completable: Cexpression CArgument Value[takesArray]($0)->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[takesArray]($0)
+ContextPath Value[takesArray]
+Path takesArray
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "First",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "First",
+    "tags": []
+  },
+  {
+    "detail": "Second",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSecond\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "Second",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Second",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 43:34
+pos_cursor:[43:34] pos_no_white:[43:33] Found expr:[43:11->43:45]
+Pexp_apply ...[43:11->43:21] (...[43:22->43:44])
+Completable: Cexpression CArgument Value[takesArray]($0)=Se->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[takesArray]($0)
+ContextPath Value[takesArray]
+Path takesArray
+[
+  {
+    "detail": "Second",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nSecond\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "Second",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Second",
+    "sortText": "A Second",
+    "tags": []
+  },
+  { "detail": "module Set", "kind": 9, "label": "Set", "tags": [] }
+]
+
+Complete src/CompletionSpreadLiteral.res 46:24
+pos_cursor:[46:24] pos_no_white:[46:23] Found expr:[46:12->46:25]
+pos_cursor:[46:24] pos_no_white:[46:23] Found expr:[46:22->46:24]
+Pexp_construct Fi:[46:22->46:24] None
+Completable: Cpath Value[Fi]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Fi]
+Path Fi
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "kind": 4,
+    "label": "First",
+    "tags": []
+  },
+  { "detail": "module File", "kind": 9, "label": "File", "tags": [] },
+  {
+    "data": {
+      "modulePath": "Firebase",
+      "filePath": "src/CompletionSpreadLiteral.res"
+    },
+    "detail": "module Firebase",
+    "kind": 9,
+    "label": "Firebase",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "FirstClassModules",
+      "filePath": "src/CompletionSpreadLiteral.res"
+    },
+    "detail": "module FirstClassModules",
+    "kind": 9,
+    "label": "FirstClassModules",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 50:44
+pos_cursor:[50:44] pos_no_white:[50:43] Found expr:[50:24->50:58]
+pos_cursor:[50:44] pos_no_white:[50:43] Found expr:[50:42->50:44]
+Pexp_construct Fi:[50:42->50:44] None
+Completable: Cpath Value[Fi]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Fi]
+Path Fi
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "kind": 4,
+    "label": "First",
+    "tags": []
+  },
+  { "detail": "module File", "kind": 9, "label": "File", "tags": [] },
+  {
+    "data": {
+      "modulePath": "Firebase",
+      "filePath": "src/CompletionSpreadLiteral.res"
+    },
+    "detail": "module Firebase",
+    "kind": 9,
+    "label": "Firebase",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "FirstClassModules",
+      "filePath": "src/CompletionSpreadLiteral.res"
+    },
+    "detail": "module FirstClassModules",
+    "kind": 9,
+    "label": "FirstClassModules",
+    "tags": []
+  }
+]
+
