@@ -28,6 +28,14 @@ let load_file f =
   | Some contents -> contents
   | None -> raise (Sys_error (path ^ ": No such file or directory"))
 
+let unmarshal contents offset =
+  let available = String.length contents - offset in
+  if
+    available < Marshal.header_size
+    || available < Marshal.total_size (Bytes.unsafe_of_string contents) offset
+  then raise End_of_file
+  else Marshal.from_string contents offset
+
 let rev_lines_of_chann chan =
   let rec loop acc chan =
     match input_line chan with

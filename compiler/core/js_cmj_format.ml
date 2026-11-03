@@ -69,16 +69,8 @@ let make ~(values : cmj_value Map_string.t) ~effect_ ~package_spec ~case : t =
   }
 
 (* Serialization .. *)
-let read_contents name =
-  let path = Compiler_request_state.resolve_path name in
-  match Build_file_store.read path with
-  | Some contents -> contents
-  | None -> raise (Sys_error (path ^ ": No such file or directory"))
-
 let from_file name : t =
-  let contents = read_contents name in
-  if String.length contents < Ext_digest.length then raise End_of_file;
-  (Marshal.from_string contents Ext_digest.length : t)
+  Ext_io.unmarshal (Ext_io.load_file name) Ext_digest.length
 
 let for_sure_not_changed (name : string) (header : string) =
   match Build_file_store.read (Compiler_request_state.resolve_path name) with

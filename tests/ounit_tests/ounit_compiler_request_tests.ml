@@ -351,7 +351,17 @@ let ast_header_tests _context =
           ("Negative.ast", "\xff\xff\xff\xff\nA\n/a.res\n");
           ("Huge.ast", "\x3f\xff\xff\xffshort");
           ("Unterminated.ast", String.sub header 0 (String.length header - 1));
-        ])
+          ("HeaderOnly.ast", header);
+          ("Truncated.ast", String.sub contents 0 (String.length contents - 1));
+        ];
+      let cmj = Filename.concat root "A.cmj" in
+      let value = Marshal.to_string "a marshalled value" [] in
+      write_file cmj
+        (String.make Ext_digest.length '0'
+        ^ String.sub value 0 (String.length value - 1));
+      assert_raises ~msg:"a truncated .cmj" End_of_file (fun () ->
+          Compiler_request_state.with_fresh ~cwd:root (fun () ->
+              Js_cmj_format.from_file cmj)))
 
 (* Writers of compiler artifacts close their file when writing fails, as on a
    full disk. *)

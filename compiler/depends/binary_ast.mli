@@ -25,8 +25,8 @@
 type _ kind = Ml : Parsetree.structure kind | Mli : Parsetree.signature kind
 
 val read_ast_exn : fname:string -> 'a kind -> 'a
-(** Raises [End_of_file] when the file has no header, as when a killed build
-    cut it short. *)
+(** Raises [End_of_file] when the file ends before its header or its AST does,
+    as when a killed build cut it short. *)
 
 val write_ast : sourcefile:string -> output:string -> 'a kind -> 'a -> unit
 (** [write_ast ~sourcefile ~output kind ast] writes to [output]:
