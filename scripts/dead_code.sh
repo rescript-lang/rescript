@@ -24,10 +24,8 @@ trap 'rm -rf "$root"' EXIT
 ln -s "$PWD/_build/default" "$root/native"
 ln -s "$PWD/_build_playground/default" "$root/playground"
 
-# Not reported:
-# - compiler/flow_parser is vendored.
-# - compiler/ml/parsetree0.ml is the frozen AST of PPXs, which build the
-#   constructors the compiler itself never builds; it must not change.
+# Not reported: compiler/ml/parsetree0.ml is the frozen AST of PPXs, which
+# build the constructors the compiler itself never builds; it must not change.
 "$reanalyze" -dce-cmt "$root" \
-  -suppress compiler/flow_parser,compiler/ml/parsetree0.ml \
+  -suppress compiler/ml/parsetree0.ml \
   -set-exit-code

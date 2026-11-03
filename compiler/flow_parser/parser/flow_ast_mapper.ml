@@ -2758,7 +2758,7 @@ class ['loc] mapper =
       if frag_children == children' && frag_comments == frag_comments' then
         expr
       else
-        { expr with frag_children = children'; frag_comments = frag_comments' }
+        { frag_children = children'; frag_comments = frag_comments' }
 
     method jsx_opening_element (elem : ('loc, 'loc) Ast.JSX.Opening.t) =
       let open Ast.JSX.Opening in
@@ -2854,7 +2854,7 @@ class ['loc] mapper =
         id_loc this#jsx_expression loc expr child (fun expr -> (loc, ExpressionContainer expr))
       | (loc, SpreadChild spread) ->
         id this#jsx_spread_child spread child (fun spread -> (loc, SpreadChild spread))
-      | (_loc, Text _) -> child
+      | (_loc, Text) -> child
 
     method jsx_expression _loc (jsx_expr : ('loc, 'loc) Ast.JSX.ExpressionContainer.t) =
       let open Ast.JSX.ExpressionContainer in
@@ -2986,7 +2986,7 @@ class ['loc] mapper =
           ('loc, 'loc, 'B) Ast.Match.Case.t =
       fun ~on_case_body case ->
         let open Ast.Match.Case in
-        let (loc, { pattern; body; guard; comments; invalid_syntax; case_match_root_loc }) = case in
+        let (loc, { pattern; body; guard; comments; case_match_root_loc }) = case in
         let pattern' = this#match_pattern pattern in
         let body' = on_case_body body in
         let guard' = map_opt this#expression guard in
@@ -3000,7 +3000,6 @@ class ['loc] mapper =
               body = body';
               guard = guard';
               comments = comments';
-              invalid_syntax;
               case_match_root_loc;
             }
           )
@@ -3698,7 +3697,7 @@ class ['loc] mapper =
 
     method record_declaration _loc (record : ('loc, 'loc) Ast.Statement.RecordDeclaration.t) =
       let open Ast.Statement.RecordDeclaration in
-      let { id; tparams; implements; body; comments; invalid_syntax } = record in
+      let { id; tparams; implements; body; comments } = record in
       let id' = this#pattern_identifier ~kind:Ast.Variable.Const id in
       let tparams' = map_opt (this#type_params ~kind:RecordTP) tparams in
       let implements' = map_opt this#class_implements implements in
@@ -3719,7 +3718,6 @@ class ['loc] mapper =
           implements = implements';
           body = body';
           comments = comments';
-          invalid_syntax;
         }
 
     method record_body (record_body : ('loc, 'loc) Ast.Statement.RecordDeclaration.Body.t) =
@@ -3744,7 +3742,7 @@ class ['loc] mapper =
 
     method record_property _loc (prop : ('loc, 'loc) Ast.Statement.RecordDeclaration.Property.t') =
       let open Ast.Statement.RecordDeclaration.Property in
-      let { key; annot; default_value; comments; invalid_syntax } = prop in
+      let { key; annot; default_value; comments } = prop in
       let key' = this#object_key key in
       let annot' = this#type_annotation annot in
       let default_value' = map_opt this#expression default_value in
@@ -3758,13 +3756,12 @@ class ['loc] mapper =
           annot = annot';
           default_value = default_value';
           comments = comments';
-          invalid_syntax;
         }
 
     method record_static_property
         _loc (prop : ('loc, 'loc) Ast.Statement.RecordDeclaration.StaticProperty.t') =
       let open Ast.Statement.RecordDeclaration.StaticProperty in
-      let { key; annot; value; comments; invalid_syntax } = prop in
+      let { key; annot; value; comments } = prop in
       let key' = this#object_key key in
       let annot' = this#type_annotation annot in
       let value' = this#expression value in
@@ -3772,7 +3769,7 @@ class ['loc] mapper =
       if key' == key && annot' == annot && value' == value && comments' == comments then
         prop
       else
-        { key = key'; annot = annot'; value = value'; comments = comments'; invalid_syntax }
+        { key = key'; annot = annot'; value = value'; comments = comments' }
 
     method return _loc (stmt : ('loc, 'loc) Ast.Statement.Return.t) =
       let open Ast.Statement.Return in
@@ -3868,16 +3865,12 @@ class ['loc] mapper =
     method template_literal _loc (expr : ('loc, 'loc) Ast.Expression.TemplateLiteral.t) =
       let open Ast.Expression.TemplateLiteral in
       let { quasis; expressions; comments } = expr in
-      let quasis' = map_list this#template_literal_element quasis in
       let expressions' = map_list this#expression expressions in
       let comments' = this#syntax_opt comments in
-      if quasis == quasis' && expressions == expressions' && comments == comments' then
+      if expressions == expressions' && comments == comments' then
         expr
       else
-        { quasis = quasis'; expressions = expressions'; comments = comments' }
-
-    (* TODO *)
-    method template_literal_element (elem : 'loc Ast.Expression.TemplateLiteral.Element.t) = elem
+        { quasis; expressions = expressions'; comments = comments' }
 
     method this_expression _loc (expr : 'loc Ast.Expression.This.t) =
       let open Ast.Expression.This in
@@ -4029,5 +4022,3 @@ class ['loc] mapper =
         { argument = argument'; delegate; comments = comments'; result_out }
   end
 
-let fold_program (mappers : 'a mapper list) ast =
-  List.fold_left (fun ast (m : 'a mapper) -> m#program ast) ast mappers
