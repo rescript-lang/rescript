@@ -135,14 +135,16 @@ function withU(v) {
 
 function stringOrOther(r) {
   let s = r.u;
-  if (s !== undefined) {
-    if (s === null) {
-      return "null";
-    } else if (typeof s === "string") {
-      return s;
-    } else {
-      return "other";
-    }
+  if (s === undefined) {
+    return "other";
+  }
+  let s$1 = Primitive_option.valFromOption(s);
+  if (s$1 === undefined) {
+    return "other";
+  } else if (s$1 === null) {
+    return "null";
+  } else if (typeof s$1 === "string") {
+    return s$1;
   } else {
     return "other";
   }
