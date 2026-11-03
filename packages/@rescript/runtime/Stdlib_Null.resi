@@ -154,6 +154,7 @@ switch Null.getOrThrow(%raw("null")) {
 
 - Throws `Invalid_argument` if `value` is `null`
 */
+@throws(Invalid_argument)
 let getOrThrow: t<'a> => 'a
 
 /**

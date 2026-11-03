@@ -89,6 +89,7 @@ module EvalError: {
 
   See [`EvalError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/EvalError) on MDN.
   */
+  @throws(JsExn)
   let throwWithMessage: string => 'a
 }
 
@@ -108,6 +109,7 @@ module RangeError: {
 
   See [`RangeError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError) on MDN.
   */
+  @throws(JsExn)
   let throwWithMessage: string => 'a
 }
 
@@ -127,6 +129,7 @@ module ReferenceError: {
 
   See [`ReferenceError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError) on MDN.
   */
+  @throws(JsExn)
   let throwWithMessage: string => 'a
 }
 
@@ -146,6 +149,7 @@ module SyntaxError: {
   
   See [`SyntaxError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError) on MDN.
   */
+  @throws(JsExn)
   let throwWithMessage: string => 'a
 }
 
@@ -165,6 +169,7 @@ module TypeError: {
 
   See [`TypeError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError) on MDN.
   */
+  @throws(JsExn)
   let throwWithMessage: string => 'a
 }
 
@@ -184,6 +189,7 @@ module URIError: {
 
   See [`URIError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/URIError) on MDN.
   */
+  @throws(JsExn)
   let throwWithMessage: string => 'a
 }
 
@@ -202,6 +208,7 @@ if 5 > 10 {
 }
 ```
 */
+@throws(JsExn)
 external throw: t => 'a = "%raise"
 
 /**
@@ -209,6 +216,7 @@ Creates a new `Error` with the provided `message` and throws it.
 
 `JsError.throwWithMessage("message")` is equivalent to `JsError.make("message")->JsError.throw`.
 */
+@throws(JsExn)
 let throwWithMessage: string => 'a
 
 /**
@@ -233,6 +241,7 @@ try {
 }
 ```
 */
+@throws(JsExn)
 let panic: string => 'a
 
 /**

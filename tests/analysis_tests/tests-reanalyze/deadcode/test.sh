@@ -1,5 +1,8 @@
 DEBUG_FLAG="-debug"
 
+# The exception analysis reads @throws from library declarations.
+node ../checkThrowsAnnotations.mjs || exit 1
+
 if [ "$RUNNER_OS" == "Windows" ]; then
   exclude_dirs="src\exception"
   suppress="src\ToSuppress.res"
