@@ -1,0 +1,2 @@
+- Evaluate the arguments of an inlined call left to right, as the call does: they ran in the order the function body uses them, so a read of mutable state such as `r.contents` could move past another argument's side effects or past an `await`, and an argument passed to the right operand of `&&` or `||` could be skipped.
+- Compile a `while` condition that needs statements into the loop, instead of into a function called on each iteration, where an `await`, `break` or `continue` in the condition was a syntax error.

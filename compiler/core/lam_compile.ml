@@ -1320,24 +1320,37 @@ let compile output_prefix =
   and compile_while (predicate : Lambda.t) (body : Lambda.t)
       (lambda_cxt : Lam_compile_context.t) =
     match
+      (* A condition that compiles to statements runs inside the loop (see
+         below), so a break or continue in it for an enclosing loop needs that
+         loop's label, as in a switch *)
       compile_lambda
-        {lambda_cxt with continuation = NeedValue Not_tail}
+        {
+          (Lam_compile_context.enter_switch lambda_cxt) with
+          continuation = NeedValue Not_tail;
+        }
         predicate
     with
     | {value = None} -> assert false
     | {block; value = Some e} ->
-      (* st = NeedValue -- this should be optimized and never happen *)
-      let e =
-        match block with
-        | [] -> e
-        | _ -> E.of_block block ~e
-      in
       let loop_cxt, loop_frame = Lam_compile_context.push_loop lambda_cxt in
       let body_block =
         Js_output.output_as_block
         @@ compile_lambda
              {loop_cxt with continuation = EffectCall Not_tail}
              body
+      in
+      (* A condition with statements becomes
+         [while (true) { block; if (!e) break; body }]. It is still evaluated
+         before each iteration, also after a continue, and its statements stay
+         in the enclosing function, where they may await, rather than in a
+         closure called for every iteration. *)
+      let e, body_block =
+        match block with
+        | [] -> (e, body_block)
+        | _ :: _ ->
+          ( E.true_,
+            Ext_list.append block (S.if_ (E.not e) [S.break_ ()] :: body_block)
+          )
       in
       (* The label stays absent for ordinary loops and is filled in lazily if a
          nested switch emits break/continue for this loop. *)

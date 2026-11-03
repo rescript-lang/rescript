@@ -481,6 +481,11 @@ val global_module : Ident.t -> t
 
 val const : structured_constant -> t
 
+val may_skip_operands : primitive -> bool
+(** Whether the primitive evaluates its operands after the first one only
+    depending on its value, as [&&] and [||] do. Others evaluate all of them,
+    left to right. *)
+
 val apply : t -> t list -> Location.t -> t
 
 val function_ :

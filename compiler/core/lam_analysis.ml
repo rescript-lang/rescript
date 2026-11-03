@@ -138,6 +138,60 @@ let rec no_side_effects (lam : Lambda.t) : bool =
   | Lapply _ -> false
 (* we need purity analysis .. *)
 
+(* The Lambda counterpart of [Lam_compile.delay_safe]: [lam] has no side
+   effects and reads nothing that other code can change, so evaluating it
+   later gives the same value. Fields of records, which may be mutable,
+   arrays, dictionaries and the variables in [assignable] can change. *)
+let rec delay_safe ~assignable (lam : Lambda.t) : bool =
+  match lam with
+  | Lconst _ | Lfunction _ | Lglobal_module _ -> true
+  | Lvar id -> not (Set_ident.mem id assignable)
+  | Lifthenelse (a, b, c) ->
+    delay_safe ~assignable a && delay_safe ~assignable b
+    && delay_safe ~assignable c
+  | Lprim {primitive; args} -> (
+    Ext_list.for_all args (delay_safe ~assignable)
+    &&
+    match primitive with
+    | Pdivint | Pmodint | Pdivbigint | Pmodbigint | Ppowbigint ->
+      (* they raise unless an operand is a suitable constant *)
+      no_side_effects lam
+    | Pfield
+        ( _,
+          ( Fld_module _ | Fld_tuple | Fld_poly_var_tag | Fld_poly_var_content
+          | Fld_extension | Fld_variant | Fld_cons ) )
+    (* values and fresh blocks *)
+    | Ptypeof | Psome | Psome_not_nest | Pmakeblock _ | Pjs_object_create _
+    | Pmakearray | Pmakelist | Pmakedict | Ptemplate _ | Pstringadd
+    | Pstringlength | Pstringcomp _ | Pstringorder | Pstringmin | Pstringmax
+    | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
+    | Pnegint | Paddint | Psubint | Pmulint | Ppowint | Pandint | Porint
+    | Pxorint | Pnotint | Plslint | Plsrint | Pasrint | Pintcomp _ | Pintorder
+    | Pintmin | Pintmax | Pintoffloat | Pfloatofint | Pnegfloat | Pmodfloat
+    | Paddfloat | Psubfloat | Pmulfloat | Pdivfloat | Ppowfloat | Pfloatcomp _
+    | Pfloatorder | Pfloatmin | Pfloatmax | Pnegbigint | Paddbigint | Psubbigint
+    | Pmulbigint | Pandbigint | Porbigint | Pxorbigint | Pnotbigint | Plslbigint
+    | Pasrbigint | Pbigintcomp _ | Pbigintorder | Pbigintmin | Pbigintmax
+    | Phash_mixint | Phash_mixstring | Phash_finalmix | Pis_null_undefined
+    | Pjscomp _ | Pnull_to_opt | Pnull_undefined_to_opt | Pis_null
+    | Pis_undefined | Pis_not_none | Pval_from_option
+    | Pval_from_option_not_nest | Pis_poly_var_block ->
+      true
+    (* reads of the heap, and primitives with side effects *)
+    | Pfield (_, (Fld_record _ | Fld_record_inline _ | Fld_record_extension _))
+    | Pdebugger | Psetfield _ | Pduprecord | Precord_rest _ | Pjs_call _
+    | Pjsx _ | Pjs_object_get _ | Pjs_object_set _ | Praise | Pobjcomp _
+    | Pobjorder | Pobjmin | Pobjmax | Pobjtag | Pobjsize | Pstringrefu
+    | Pstringrefs | Parraylength | Parrayrefu | Parraysetu | Parrayrefs
+    | Pdict_has | Pawait | Pimport _ | Pinit_mod | Pupdate_mod | Phash
+    | Pcreate_extension _ | Praw_js_code _ | Pjs_fn_method | Ptagged_template _
+    | Pdict_spread | Parray_spread | Plist_spread ->
+      false)
+  | Llet _ | Lletrec _ | Lapply _ | Lswitch _ | Lstringswitch _ | Lstaticraise _
+  | Lstaticcatch _ | Ltrywith _ | Ltryfinally _ | Lsequence _ | Lwhile _
+  | Lfor _ | Lfor_of _ | Lfor_await_of _ | Lassign _ | Lbreak | Lcontinue ->
+    false
+
 (* Size of a lambda that is too big to inline, e.g. one containing a loop *)
 let too_big = 1000
 

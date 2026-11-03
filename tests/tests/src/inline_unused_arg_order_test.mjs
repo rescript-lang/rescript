@@ -35,14 +35,15 @@ Mocha.describe("Inline_unused_arg_order_test", () => {
   });
   Mocha.test("unused arguments before an application", () => {
     recorded.splice(0, recorded.length);
+    let a = log(1);
     log(2);
     log(3);
-    let r = Math.abs(log(1));
+    let r = Math.abs(a);
     Test_utils.eq("File \"inline_unused_arg_order_test.res\", line 29, characters 7-14", r, 1);
     Test_utils.eq("File \"inline_unused_arg_order_test.res\", line 30, characters 7-14", recorded, [
+      1,
       2,
-      3,
-      1
+      3
     ]);
   });
 });

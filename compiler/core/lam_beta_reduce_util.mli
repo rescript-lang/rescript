@@ -23,4 +23,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 val simple_beta_reduce :
-  Ident.t list -> Lambda.t -> Lambda.t list -> Lambda.t option
+  assignable:Set_ident.t ->
+  Ident.t list ->
+  Lambda.t ->
+  Lambda.t list ->
+  Lambda.t option
+(** The reduction of a body that is a single primitive or call on parameters
+    and constants, substituting the arguments for the parameters, if it
+    evaluates the arguments to the same effect as the call does. [assignable]
+    are the variables some [Lassign] assigns. *)

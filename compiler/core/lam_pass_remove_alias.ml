@@ -54,6 +54,11 @@ let is_const_some (cst : Lambda.structured_constant) : bool =
 let max_inline_depth = 4
 
 let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
+  (* Inlining keeps the reads of assigned variables in order (see
+     [Lam_beta_reduce]). Only [Lam_pass_sroa], which runs later, makes
+     [Lassign]s now, so this is usually empty; computing it here keeps the
+     inlining sound if that changes. *)
+  let meta = {meta with assignable = Lambda_traverse.assigned_variables lam} in
   let inline_depth = ref 0 in
   let rec simpl (lam : Lambda.t) : Lambda.t =
     match lam with
