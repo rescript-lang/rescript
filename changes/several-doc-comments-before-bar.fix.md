@@ -1,0 +1,1 @@
+- Parse several doc comments before the `|` of a variant constructor, variant spread or polymorphic variant tag, as the formatter prints them.

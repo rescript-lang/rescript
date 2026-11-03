@@ -87,3 +87,7 @@ type t = /**doc*/ 'a
 type t = /**doc*/ int => int
 type t = /**doc*/ M.t = {x: int}
 type t = private /**doc*/ Dict.t<'a>
+type t = /**doc*/ /**doc2*/ | A /**doc3*/ /**doc4*/ | ...base
+type t = C /**doc*/ /**doc2*/ | A /**doc3*/ /**doc4*/ | ...base
+type t = private /**doc*/ /**doc2*/ | A /**doc3*/ /**doc4*/ | B
+type t = [/**doc*/ /**doc2*/ | #A /**doc3*/ /**doc4*/ | #B]
