@@ -286,6 +286,7 @@ module Res_driver = struct
         diagnostics;
         invalid;
         comments = List.rev engine.comments;
+        newline = Res_parser.newline engine;
       }
     in
     let () =

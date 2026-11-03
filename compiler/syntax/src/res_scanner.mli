@@ -14,6 +14,9 @@ type t = {
       (* current number of utf16 code units since line start *)
   mutable line_offset: int; (* current line offset *)
   mutable lnum: int; (* current line number *)
+  mutable line_break: int;
+      (* the offset of the first LF skipped between tokens since it was last
+         set to -1, or -1 *)
 }
 
 (* The UTF-8 byte order mark that [src] starts with, or "". The scanner skips
