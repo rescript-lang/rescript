@@ -39,6 +39,7 @@ let suites =
       Ounit_find_in_path_tests.suites;
       Ounit_build_file_store_tests.suites;
       Ounit_deferred_signature_tests.suites;
+      Ounit_deferred_components_tests.suites;
     ]
 
 let _ = OUnit.run_test_tt_main suites
