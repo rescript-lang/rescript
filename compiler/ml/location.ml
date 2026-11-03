@@ -237,7 +237,9 @@ let error_of_exn exn =
 
 (* taken from https://github.com/rescript-lang/ocaml/blob/d4144647d1bf9bc7dc3aadc24c25a7efa3a67915/parsing/location.ml#L380 *)
 (* This is the error report entry point. We'll replace the default reporter with this one. *)
-let rec default_error_reporter ?(custom_intro = None) ?(src = None) ppf
+(* Live: called through a forward reference ({!error_reporter}) with optional
+   arguments that reanalyze cannot trace. *)
+let[@live] rec default_error_reporter ?(custom_intro = None) ?(src = None) ppf
     {loc; msg; sub} =
   setup_colors ();
   (* open a vertical box. Everything in our message is indented 2 spaces *)

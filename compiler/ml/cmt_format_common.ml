@@ -154,7 +154,9 @@ let add_saved_type b =
 let get_saved_types () = (current_accumulators ()).saved_types
 let set_saved_types l = (current_accumulators ()).saved_types <- l
 
-let record_deprecated_used ?deprecated_context ?migration_template
+(* Live: called through a forward reference ({!Cmt_utils.record_deprecated_used}) with optional
+   arguments that reanalyze cannot trace. *)
+let[@live] record_deprecated_used ?deprecated_context ?migration_template
     ?migration_in_pipe_chain_template source_loc =
   let state = current_accumulators () in
   state.deprecated_used <-
