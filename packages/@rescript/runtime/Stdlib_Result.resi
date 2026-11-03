@@ -46,6 +46,7 @@ type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
   } == true
   ```
 */
+@throws(JsExn)
 let getOrThrow: (result<'a, 'b>, ~message: string=?) => 'a
 
 /**

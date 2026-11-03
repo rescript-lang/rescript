@@ -47,7 +47,7 @@ See [`Temporal.PlainTime.from`](https://developer.mozilla.org/en-US/docs/Web/Jav
 Temporal.PlainTime.fromStringOrThrow("09:30")->Temporal.PlainTime.minute == 30
 ```
 */
-@val
+@val @throws(JsExn)
 external fromStringOrThrow: string => t = "Temporal.PlainTime.from"
 
 /**

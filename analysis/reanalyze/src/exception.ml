@@ -127,17 +127,18 @@ module Event = struct
         if config.Dce_config.cli.debug then Log_.item "%a@." print ev;
         exceptions |> Exceptions.iter (fun exn -> extend_exn_table exn loc);
         loop (Exceptions.union exn_set exceptions) rest
-      | ({kind = Call {callee; module_path}; loc} as ev) :: rest ->
+      | ({kind = Call {callee; module_path}; exceptions = declared; loc} as ev)
+        :: rest ->
         if config.Dce_config.cli.debug then Log_.item "%a@." print ev;
+        (* [declared] comes from the declaration's [@throws], the values table
+           from the [@throws] of the implementation's binding. Both describe
+           what the call can throw, so take both. *)
         let exceptions =
           match
             callee |> Values.find_path values_table ~module_name ~module_path
           with
-          | Some exceptions -> exceptions
-          | _ -> (
-            match Exn_lib.find callee with
-            | Some exceptions -> exceptions
-            | None -> Exceptions.empty)
+          | Some exceptions -> Exceptions.union declared exceptions
+          | None -> declared
         in
         exceptions |> Exceptions.iter (fun exn -> extend_exn_table exn loc);
         loop (Exceptions.union exn_set exceptions) rest
@@ -280,7 +281,7 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
         case.c_rhs |> iter_expr self)
   in
   let is_throw s = s = "Pervasives.raise" || s = "Pervasives.throw" in
-  (* [/] and [mod] are listed in [Exn_lib] as throwing [Division_by_zero].
+  (* [/] and [mod] are declared with [@throws(Division_by_zero)] in Pervasives.
      They cannot throw when the divisor is a non-zero literal, as in [x / 10]. *)
   let is_division s =
     s = "Pervasives./" || s = "Pervasives.mod" || s = "Stdlib./"
@@ -322,6 +323,32 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
       | _ -> false)
     <> None
   in
+  let get_exceptions_from_annotations attributes =
+    let throws_annotation_payload =
+      attributes
+      |> Annotation.get_attribute_payload (fun s ->
+          s = "throws" || s = "throw" || s = "raises" || s = "raise")
+    in
+    let rec get_exceptions payload =
+      match payload with
+      | Annotation.StringPayload s ->
+        [Exn.from_string s] |> Exceptions.from_list
+      | Annotation.ConstructPayload s when s <> "::" ->
+        [Exn.from_string s] |> Exceptions.from_list
+      | Annotation.IdentPayload s ->
+        [Exn.from_string (s |> Longident.flatten |> String.concat ".")]
+        |> Exceptions.from_list
+      | Annotation.TuplePayload tuple ->
+        tuple
+        |> List.map (fun payload ->
+            payload |> get_exceptions |> Exceptions.to_list)
+        |> List.concat |> Exceptions.from_list
+      | _ -> Exceptions.empty
+    in
+    match throws_annotation_payload with
+    | None -> Exceptions.empty
+    | Some payload -> payload |> get_exceptions
+  in
   let expr ~(module_path : Module_path.t) (self : Tast_mapper.mapper)
       (expr : Typedtree.expression) =
     let loc = expr.exp_loc in
@@ -329,7 +356,7 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
     let old_events = !current_events in
     if is_does_no_throw then current_events := [];
     (match expr.exp_desc with
-    | Texp_ident (callee_, _, _) ->
+    | Texp_ident (callee_, _, vd) ->
       let callee =
         callee_ |> Dce_path.from_path_t |> Module_path.resolve_alias module_path
       in
@@ -343,9 +370,12 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
                    "@{<info>%s@} can be analyzed only if called directly"
                    (callee_name |> Name.to_string);
              });
+      (* A [@throws] on the declaration (an external, a [let] in an
+         interface, or a library's) is kept in the .cmi, so it reaches calls
+         from other modules and packages. *)
       current_events :=
         {
-          Event.exceptions = Exceptions.empty;
+          Event.exceptions = get_exceptions_from_annotations vd.val_attributes;
           loc;
           kind = Call {callee; module_path = module_path.path};
         }
@@ -422,32 +452,6 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
          }
          :: old_events);
     expr
-  in
-  let get_exceptions_from_annotations attributes =
-    let throws_annotation_payload =
-      attributes
-      |> Annotation.get_attribute_payload (fun s ->
-          s = "throws" || s = "throw" || s = "raises" || s = "raise")
-    in
-    let rec get_exceptions payload =
-      match payload with
-      | Annotation.StringPayload s ->
-        [Exn.from_string s] |> Exceptions.from_list
-      | Annotation.ConstructPayload s when s <> "::" ->
-        [Exn.from_string s] |> Exceptions.from_list
-      | Annotation.IdentPayload s ->
-        [Exn.from_string (s |> Longident.flatten |> String.concat ".")]
-        |> Exceptions.from_list
-      | Annotation.TuplePayload tuple ->
-        tuple
-        |> List.map (fun payload ->
-            payload |> get_exceptions |> Exceptions.to_list)
-        |> List.concat |> Exceptions.from_list
-      | _ -> Exceptions.empty
-    in
-    match throws_annotation_payload with
-    | None -> Exceptions.empty
-    | Some payload -> payload |> get_exceptions
   in
   let toplevel_eval (self : Tast_mapper.mapper) (expr : Typedtree.expression)
       attributes =

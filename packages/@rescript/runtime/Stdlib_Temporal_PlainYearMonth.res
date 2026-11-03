@@ -77,7 +77,7 @@ See [`Temporal.PlainYearMonth.from`](https://developer.mozilla.org/en-US/docs/We
 Temporal.PlainYearMonth.fromStringOrThrow("2024-02")->Temporal.PlainYearMonth.daysInMonth == 29
 ```
 */
-@val
+@val @throws(JsExn)
 external fromStringOrThrow: string => t = "Temporal.PlainYearMonth.from"
 
 /**

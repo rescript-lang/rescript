@@ -85,6 +85,7 @@ let rec get = (n: t, x: value) =>
     }
   }
 
+@throws(Not_found)
 let rec getOrThrow = (n: t, x: value) =>
   switch n {
   | None => throw(Not_found)
