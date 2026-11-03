@@ -46,28 +46,48 @@ let read_file path =
    place for the duration of the copy. *)
 type cached_cmi = {contents: string; cmi: Cmi_format.cmi_infos}
 
+type cmi_cache = {
+  mutable generation: int;
+  mutable size: int;  (** The length of the cached contents. *)
+  cmis: (string, cached_cmi) Hashtbl.t;
+}
+
+(* A decoded interface takes a few times the size of its contents, and every
+   domain keeps its own, so a domain that would cache more contents than this
+   starts over. The runtime's interfaces take 2 MB. *)
+let cmi_cache_budget = 16 * 1024 * 1024
+
 let cmi_cache_key =
   Domain.DLS.new_key (fun () ->
-      (ref (-1), (Hashtbl.create 64 : (string, cached_cmi) Hashtbl.t)))
+      {generation = -1; size = 0; cmis = Hashtbl.create 64})
+
+let empty_cmi_cache cache ~generation =
+  Hashtbl.reset cache.cmis;
+  cache.size <- 0;
+  cache.generation <- generation
 
 let read_cached_cmi filename path contents =
-  let generation, cache = Domain.DLS.get cmi_cache_key in
-  if !generation <> Build_file_store.generation () then (
-    Hashtbl.reset cache;
-    generation := Build_file_store.generation ());
-  match Hashtbl.find_opt cache path with
+  let cache = Domain.DLS.get cmi_cache_key in
+  if cache.generation <> Build_file_store.generation () then
+    empty_cmi_cache cache ~generation:(Build_file_store.generation ());
+  match Hashtbl.find_opt cache.cmis path with
   | Some cached when cached.contents == contents -> cached.cmi
-  | Some _ | None ->
+  | previous ->
     let cmi = Cmi_format.read_cmi_contents filename contents in
-    Hashtbl.replace cache path {contents; cmi};
+    Option.iter
+      (fun previous ->
+        cache.size <- cache.size - String.length previous.contents)
+      previous;
+    if cache.size + String.length contents > cmi_cache_budget then
+      empty_cmi_cache cache ~generation:cache.generation;
+    Hashtbl.replace cache.cmis path {contents; cmi};
+    cache.size <- cache.size + String.length contents;
     cmi
 
 (* A request that fails can stop with a type of a cached interface still
    marked, so the domain reads its interfaces again. *)
 let discard_cached_cmis () =
-  let generation, cache = Domain.DLS.get cmi_cache_key in
-  Hashtbl.reset cache;
-  generation := -1
+  empty_cmi_cache (Domain.DLS.get cmi_cache_key) ~generation:(-1)
 
 let load_cmi ~unit_name : Env.Persistent_signature.t option =
   Misc.find_map_in_path_uncap (Config.get_load_path ()) (unit_name ^ ".cmi")

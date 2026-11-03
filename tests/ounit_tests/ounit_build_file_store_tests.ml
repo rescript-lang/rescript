@@ -124,6 +124,39 @@ let interface_cache_tests _ =
                 (second != first
                 && second.cmi_flags = [Cmi_format.Deprecated "replaced"]))))
 
+(* A domain caches interfaces up to a budget of their size, and then starts
+   over. *)
+let interface_cache_budget_tests _ =
+  with_temp_dir (fun root ->
+      Build_file_store.with_build (fun () ->
+          Compiler_request_state.with_fresh ~cwd:root (fun () ->
+              Config.set_load_path [root];
+              let load name =
+                (Option.get (Bs_cmi_load.load_cmi ~unit_name:name)).cmi
+              in
+              List.iter
+                (fun name ->
+                  ignore
+                    (Cmi_format.create_cmi
+                       (Filename.concat root (name ^ ".cmi"))
+                       {
+                         (interface ~name) with
+                         cmi_flags =
+                           [
+                             Cmi_format.Deprecated
+                               (String.make
+                                  (Bs_cmi_load.cmi_cache_budget / 2)
+                                  'x');
+                           ];
+                       }))
+                ["Abc"; "Def"];
+              let first = load "Abc" in
+              assert_bool "an interface within the budget is kept"
+                (first == load "Abc");
+              ignore (load "Def");
+              assert_bool "an interface beyond the budget empties the cache"
+                (first != load "Abc"))))
+
 let corrupted_interface =
   Cmi_format.Error (Cmi_format.Corrupted_interface "Short.cmi")
 
@@ -206,6 +239,7 @@ let suites =
          "spellings_share_an_entry" >:: spellings_share_an_entry_tests;
          "kept_and_evicted" >:: kept_and_evicted_tests;
          "interface_cache" >:: interface_cache_tests;
+         "interface_cache_budget" >:: interface_cache_budget_tests;
          "corrupted_interface" >:: corrupted_interface_tests;
          "failed_write" >:: failed_write_tests;
          "failed_request" >:: failed_request_tests;
