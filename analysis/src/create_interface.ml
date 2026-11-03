@@ -5,8 +5,10 @@ module Source_file_extractor = struct
     go 0
 
   (* For each line from [line_start] to [line_end], whether it begins inside
-     a string or template literal that starts on an earlier line. Such lines
-     are part of the literal's value, so reindenting them would change it. *)
+     a string or template literal, or a comment, that starts on an earlier
+     line. Such lines are part of the literal's value, or of the comment's
+     text (a doc comment is the string payload of @res.doc), so reindenting
+     them would change it. *)
   let literal_lines lines ~line_start ~col_start ~line_end =
     let first = lines.(line_start) in
     let col_start = max 0 (min col_start (String.length first)) in
@@ -47,7 +49,7 @@ module Source_file_extractor = struct
     let rec go () =
       match Res_scanner.scan scanner with
       | _, _, Res_token.Eof -> ()
-      | start_pos, end_pos, String _ ->
+      | start_pos, end_pos, (String _ | Comment _) ->
         mark start_pos end_pos;
         go ()
       | start_pos, _, Backtick ->
@@ -60,8 +62,8 @@ module Source_file_extractor = struct
 
   (* The source text from [pos_start] to [pos_end], indented by [indent]:
      the lines after the first keep their indentation relative to the line
-     the text starts on, except lines inside a string or template literal,
-     which are copied verbatim. *)
+     the text starts on, except lines inside a string or template literal or
+     a comment, which are copied verbatim. *)
   let extract lines ~indent ~pos_start ~pos_end =
     let line_start, col_start = pos_start in
     let line_end, col_end = pos_end in
