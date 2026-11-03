@@ -145,33 +145,6 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       | Some interface_time, Some module_time -> interface_time > module_time
       | None, _ | _, None -> false
   in
-  let module String_map = Map.Make (String) in
-  let published_interfaces =
-    lazy
-      (Compile_assets.fold_cmi
-         (fun unit entry interfaces ->
-           String_map.add unit entry.Compile_assets.path interfaces)
-         compile_assets String_map.empty)
-  in
-  (* Runs on a worker. A module that read only unchanged interfaces is current
-     again, and its .cmt's new time tells later builds so. *)
-  let import_check_task (scheduled : scheduled_module) =
-    let interfaces = Lazy.force published_interfaces in
-    let has_interface = Option.is_some scheduled.source.Source.interface in
-    Process.concurrent_task ~cancel:ignore (fun () ->
-        let changed =
-          Published_interface.imports_changed
-            ~published:(fun unit -> String_map.find_opt unit interfaces)
-            ~cmi_path:scheduled.cmi_path ~has_interface
-          ||
-            try
-              Unix.utimes (cmt_path scheduled) 0. 0.;
-              false
-            with Unix.Unix_error _ -> true
-        in
-        Atomic.set scheduled.imports_changed changed;
-        {Process.status = Unix.WEXITED 0; stdout = ""; stderr = ""})
-  in
   let warning_paths =
     candidates |> List.concat_map (fun candidate -> candidate.warning_paths)
   in
@@ -218,6 +191,43 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     candidates
     |> List.filter (fun candidate -> Hashtbl.mem universe candidate.key)
     |> List.map (fun candidate -> candidate.make ())
+  in
+  let module String_map = Map.Make (String) in
+  (* The interfaces of this build's units, by unit name: those published when
+     the first module is checked, and those of the scheduled modules. An
+     interface missing at the start of the build belongs to a scheduled
+     module, and is published again before any module that read it is
+     checked; one that can't be read counts as changed. Imports from outside
+     the build, such as the runtime's, are not checked. *)
+  let published_interfaces =
+    lazy
+      (List.fold_left
+         (fun interfaces (scheduled : scheduled_module) ->
+           String_map.add scheduled.key scheduled.cmi_path interfaces)
+         (Compile_assets.fold_cmi
+            (fun unit entry interfaces ->
+              String_map.add unit entry.Compile_assets.path interfaces)
+            compile_assets String_map.empty)
+         scheduled_modules)
+  in
+  (* Runs on a worker. A module that read only unchanged interfaces is current
+     again, and its .cmt's new time tells later builds so. *)
+  let import_check_task (scheduled : scheduled_module) =
+    let interfaces = Lazy.force published_interfaces in
+    let has_interface = Option.is_some scheduled.source.Source.interface in
+    Process.concurrent_task ~cancel:ignore (fun () ->
+        let changed =
+          Published_interface.imports_changed
+            ~published:(fun unit -> String_map.find_opt unit interfaces)
+            ~cmi_path:scheduled.cmi_path ~has_interface
+          ||
+            try
+              Unix.utimes (cmt_path scheduled) 0. 0.;
+              false
+            with Unix.Unix_error _ -> true
+        in
+        Atomic.set scheduled.imports_changed changed;
+        {Process.status = Unix.WEXITED 0; stdout = ""; stderr = ""})
   in
   Output.Progress.start progress ~step:compile_step
     ~symbol:Platform.build_symbol ~label:"Compiling"

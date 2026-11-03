@@ -2336,6 +2336,34 @@ grep '"a"' "$interface_cutoff/src/User.js" >/dev/null
 "$port" build "$interface_cutoff" >"$interface_cutoff/unchanged.log"
 grep 'Compiled 0 modules' "$interface_cutoff/unchanged.log" >/dev/null
 
+# An interface deleted before a build still belongs to the build. Other needs
+# an import check from the start, because Base's interface is newer than its
+# .cmt but not than Mid's, so that check runs before Shape is published
+# again. User must still compare Shape's new CRC with the one it recorded.
+missing_interface="$work/interface-cutoff-missing"
+mkdir -p "$missing_interface/src"
+printf '{"name":"interface-cutoff-missing","sources":"src"}\n' \
+  >"$missing_interface/rescript.json"
+printf 'type t = A | C | B({x: int})\nlet make = () => A\n' \
+  >"$missing_interface/src/Shape.res"
+printf 'let shape = Shape.make()\nlet count = 1\n' \
+  >"$missing_interface/src/Middle.res"
+printf 'let value = switch Middle.shape {\n| A => 1\n| C => 2\n| B({x}) => x\n}\n' \
+  >"$missing_interface/src/User.res"
+printf 'let value: int\n' >"$missing_interface/src/User.resi"
+printf 'let value = 1\n' >"$missing_interface/src/Base.res"
+printf 'let value = Base.value + 1\n' >"$missing_interface/src/Mid.res"
+printf 'let value = Mid.value + 1\n' >"$missing_interface/src/Other.res"
+"$port" build "$missing_interface" >/dev/null
+rm "$missing_interface/lib/ocaml/Shape.cmi"
+printf 'type t = | @as("a") A | C | B({x: int})\nlet make = () => A\n' \
+  >"$missing_interface/src/Shape.res"
+touch "$missing_interface/lib/ocaml/Base.cmi"
+touch "$missing_interface/lib/ocaml/Mid.cmt"
+"$port" build "$missing_interface" >"$missing_interface/changed.log"
+grep 'Compiled 3 modules' "$missing_interface/changed.log" >/dev/null
+grep '"a"' "$missing_interface/src/User.js" >/dev/null
+
 sed 's/"sources":"src"/"sources":"src","dependencies":["consumer"]/' \
   "$monorepo/packages/dep/rescript.json" > "$monorepo/packages/dep/rescript.next"
 mv "$monorepo/packages/dep/rescript.next" "$monorepo/packages/dep/rescript.json"
