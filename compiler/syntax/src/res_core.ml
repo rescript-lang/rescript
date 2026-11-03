@@ -509,8 +509,8 @@ let make_infix_operator (p : Parser.t) token start_pos end_pos =
   Ast_helper.Exp.ident ~loc operator
 
 let negate_string s =
-  if String.length s > 0 && (s.[0] [@doesNotRaise]) = '-' then
-    (String.sub [@doesNotRaise]) s 1 (String.length s - 1)
+  if String.length s > 0 && (s.[0] [@doesNotThrow]) = '-' then
+    (String.sub [@doesNotThrow]) s 1 (String.length s - 1)
   else "-" ^ s
 
 let make_unary_expr start_pos token_end token operand =

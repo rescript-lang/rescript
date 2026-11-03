@@ -211,7 +211,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
             = (row_fields_variants.payloads |> List.length)
           then
             (List.combine variant.payloads row_fields_variants.payloads
-             [@doesNotRaise])
+             [@doesNotThrow])
             |> List.map (fun (payload, (label, attributes, _)) ->
                 let case = create_polyvariant_case (label, attributes) in
                 {payload with case})

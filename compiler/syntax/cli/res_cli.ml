@@ -66,7 +66,7 @@ module Cli_arg_processor = struct
     let len = String.length filename in
     let process_interface =
       is_interface
-      || (len > 0 && (String.get [@doesNotRaise]) filename (len - 1) = 'i')
+      || (len > 0 && (String.get [@doesNotThrow]) filename (len - 1) = 'i')
     in
     let source = lazy (Ext_io.load_file filename) in
     let load_source () = Lazy.force source in
@@ -150,7 +150,7 @@ module Cli_arg_processor = struct
         in
         (print_engine parse_result.newline).print_implementation ~width
           ~filename ~comments:parse_result.comments parsetree
-  [@@raises exit]
+  [@@throws exit]
 end
 
 let () =
@@ -161,4 +161,4 @@ let () =
       ~target:!Res_clflags.print ~jsx_version:!Res_clflags.jsx_version
       ~jsx_module:!Res_clflags.jsx_module !Res_clflags.file
       ~test_ast_conversion:!Res_clflags.test_ast_conversion)
-[@@raises exit]
+[@@throws exit]

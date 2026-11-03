@@ -341,7 +341,7 @@ let parse_argv (argv : string array) : string option =
   let version_and_exit () =
     print_endline usage;
     exit 0
-      [@@raises exit]
+      [@@throws exit]
   in
   let rec set_all cmt_root =
     Run_config.all ();
@@ -478,7 +478,7 @@ let parse_argv (argv : string array) : string option =
 let cli () =
   let cmt_root = parse_argv Sys.argv in
   run_analysis_and_report ~cmt_root
-[@@raises exit]
+[@@throws exit]
 
 (* Re-export server module for external callers (e.g. tools/bin/main.ml).
    This keeps the wrapped-library layering intact: Reanalyze depends on internal

@@ -3,16 +3,16 @@ open Gentype_common
 let handle_namespace cmt =
   let cut_after_dash s =
     match String.index s '-' with
-    | n -> String.sub s 0 n [@doesNotRaise]
+    | n -> String.sub s 0 n [@doesNotThrow]
     | exception Not_found -> s
   in
   let no_dir = Filename.basename cmt = cmt in
   if no_dir then
-    cmt |> (Filename.chop_extension [@doesNotRaise]) |> cut_after_dash
+    cmt |> (Filename.chop_extension [@doesNotThrow]) |> cut_after_dash
   else
     let dir = cmt |> Filename.dirname in
     let base =
-      cmt |> Filename.basename |> (Filename.chop_extension [@doesNotRaise])
+      cmt |> Filename.basename |> (Filename.chop_extension [@doesNotThrow])
       |> cut_after_dash
     in
     Filename.concat dir base
@@ -21,10 +21,10 @@ let find_name_space cmt =
   let keep_after_dash s =
     match String.index s '-' with
     | n ->
-      Some ((String.sub s (n + 1) [@doesNotRaise]) (String.length s - n - 1))
+      Some ((String.sub s (n + 1) [@doesNotThrow]) (String.length s - n - 1))
     | exception Not_found -> None
   in
-  cmt |> Filename.basename |> (Filename.chop_extension [@doesNotRaise])
+  cmt |> Filename.basename |> (Filename.chop_extension [@doesNotThrow])
   |> keep_after_dash
 
 let remove_path_prefix ~prefix path =
@@ -33,10 +33,10 @@ let remove_path_prefix ~prefix path =
   let path_len = String.length path in
   let is_prefix =
     prefix_len <= path_len
-    && (String.sub path 0 prefix_len [@doesNotRaise]) = normalized_prefix
+    && (String.sub path 0 prefix_len [@doesNotThrow]) = normalized_prefix
   in
   if is_prefix then
-    String.sub path prefix_len (path_len - prefix_len) [@doesNotRaise]
+    String.sub path prefix_len (path_len - prefix_len) [@doesNotThrow]
   else path
 
 let append_suffix ~config source_path =
@@ -70,10 +70,10 @@ let get_cmt_file cmt =
         Filename.concat dir_name (base_name |> String.uncapitalize_ascii)
       in
       let path_cmti =
-        (Filename.chop_extension path_cmt [@doesNotRaise]) ^ ".cmti"
+        (Filename.chop_extension path_cmt [@doesNotThrow]) ^ ".cmti"
       in
       let path_cmti_lower_case =
-        (Filename.chop_extension path_cmt_lower_case [@doesNotRaise]) ^ ".cmti"
+        (Filename.chop_extension path_cmt_lower_case [@doesNotThrow]) ^ ".cmti"
       in
       (* The compiler's spelling first: on a case-insensitive file system
          the lowercase one exists too, and the build file store, which holds
