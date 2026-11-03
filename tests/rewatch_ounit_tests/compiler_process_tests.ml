@@ -141,6 +141,49 @@ let publication_releases_files_tests _context =
         (File_util.read_file (Filename.concat ocaml_dir "A.cmt") = "built cmt")
         "the typed tree is published")
 
+(* A parse that printed warnings is left for the build to publish after it
+   registers the cleanup that repeats them, so that a build interrupted before
+   then does not leave behind an AST whose warnings the next build skips. *)
+let parse_publication_tests _context =
+  Test_support.with_temp_dir "rewatch-parse-publication-" (fun root ->
+      Test_support.write_file
+        (Filename.concat root "rescript.json")
+        {|{"name":"parse","sources":"src","package-specs":{"module":"commonjs","in-source":true},"suffix":".js"}|};
+      let config = Config.load_root root in
+      let build_dir = Filename.concat root "lib/bs" in
+      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      File_util.ensure_dir ocaml_dir;
+      Test_support.write_file
+        (Filename.concat root "src/Clean.res")
+        "let value = 1\n";
+      Test_support.write_file
+        (Filename.concat root "src/Warns.res")
+        "let f = (. x) => x\n";
+      let paths = ["src/Clean.res"; "src/Warns.res"] in
+      let results =
+        paths
+        |> List.map (fun path -> (build_dir, ocaml_dir, config, path))
+        |> Compiler_process.run_parses
+      in
+      List.iter2
+        (fun path (result : Process.result) ->
+          check (Process.succeeded result) (path ^ " parses");
+          let warns = path = "src/Warns.res" in
+          check
+            (result.stderr <> "" = warns)
+            (path ^ if warns then " prints a warning" else " prints nothing");
+          List.iter
+            (fun published ->
+              check
+                (Sys.file_exists published = not warns)
+                (published
+                ^ if warns then " is not published" else " is published"))
+            [
+              Build_artifacts.published_ast_path ~ocaml_dir path;
+              Filename.concat ocaml_dir (Filename.basename path);
+            ])
+        paths results)
+
 let restore_environment name previous =
   match previous with
   | Some value -> Unix.putenv name value
@@ -332,6 +375,7 @@ let tests =
   >::: [
          "publication" >:: publication_tests;
          "publication_releases_files" >:: publication_releases_files_tests;
+         "parse_publication" >:: parse_publication_tests;
          "domain_ppx_cancellation" >:: domain_ppx_cancellation_test;
          "escaped_exception" >:: escaped_exception_test;
          "domain_execution" >:: domain_execution_test;

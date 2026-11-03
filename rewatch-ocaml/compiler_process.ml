@@ -134,13 +134,17 @@ let publish_parse ~build_dir ~ocaml_dir ~(config : Config.t) path =
     (Filename.concat config.root path)
     (Filename.concat ocaml_dir (Filename.basename path))
 
+(* A parse that printed warnings is published later, on the main domain, once
+   the build has registered the cleanup that makes the next build parse it
+   again and repeat them. Published now, it would outlive a build interrupted
+   before that, and the next build would not report the warnings. *)
 let run_parses ?poll ?on_complete parses =
   parses
   |> List.map (fun (build_dir, ocaml_dir, config, path) ->
       Process.map_result
         (task (parse_request ~build_dir ~config path))
         (fun result ->
-          if Process.succeeded result then
+          if Process.succeeded result && result.stderr = "" then
             publish_parse ~build_dir ~ocaml_dir ~config path;
           result))
   |> run_tasks ?poll ?on_complete

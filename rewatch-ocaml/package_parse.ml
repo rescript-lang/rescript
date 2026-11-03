@@ -86,7 +86,8 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         let published_ast =
           Build_artifacts.published_ast_path ~ocaml_dir path
         in
-        (* A parse in this build published its outputs on its worker. *)
+        (* A parse in this build that printed nothing published its outputs on
+           its worker. *)
         if not published then
           Compiler_process.publish_parse ~build_dir ~ocaml_dir ~config path;
         Compile_assets.refresh_ast compile_assets ~source:absolute_path
@@ -105,7 +106,7 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         attempt.parse_messages <-
           Build_attempt.Parse_error output :: attempt.parse_messages
       | Build_attempt.Parsed_successfully {stderr} ->
-        publish_successful_parse ~published:true stderr
+        publish_successful_parse ~published:(stderr = "") stderr
       | Build_attempt.Use_existing_ast ->
         publish_successful_parse ~published:false "")
     parsed;

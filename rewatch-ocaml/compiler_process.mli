@@ -24,7 +24,8 @@ val run_parses :
   (string * string * Config.t * string) list ->
   Process.result list
 (** Parses each [(build_dir, ocaml_dir, config, path)], publishing every
-    successful parse with {!publish_parse} on the worker that parsed it. *)
+    successful parse that printed nothing with {!publish_parse} on the worker
+    that parsed it. The caller publishes the parses that printed warnings. *)
 
 val task : request -> Process.task
 
