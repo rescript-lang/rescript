@@ -2914,12 +2914,15 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     in
     (* JavaScript runs the finally block after the body or catch has already
        decided how the try is left, so a break or continue there would cancel
-       a pending exception or result. *)
+       a pending exception or result. A finally block that always throws ends
+       the try with no code after it, so it gets no nonreturning-statement
+       warning. *)
     let finally =
       Option.map
         (fun sfinally ->
           with_control_flow_boundary ~in_finally:true (fun () ->
-              type_statement ~context:None env sfinally))
+              type_statement ~nonreturning_warning:false ~context:None env
+                sfinally))
         sfinally
     in
     re
@@ -4767,13 +4770,13 @@ and type_construct ~context env loc lid sargs ty_expected attrs =
 
 (* Typing of statements (expressions whose values are discarded) *)
 
-and type_statement ~context env sexp =
+and type_statement ?(nonreturning_warning = true) ~context env sexp =
   let loc = (final_subexpression sexp).pexp_loc in
   begin_def ();
   let exp = type_exp ~context env sexp in
   end_def ();
   let ty = expand_head env exp.exp_type and tv = newvar () in
-  if is_Tvar ty && ty.level > tv.level then
+  if nonreturning_warning && is_Tvar ty && ty.level > tv.level then
     Location.prerr_warning loc Warnings.Nonreturning_statement;
   let expected_ty = instance_def (Predef.type_unit ()) in
   let context = type_clash_context_in_statement sexp in
