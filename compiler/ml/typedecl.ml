@@ -1783,7 +1783,6 @@ let transl_extension_constructor env type_path type_params typext_params priv
   in
   {
     Typedtree.ext_id = id;
-    ext_name = sext.pext_name;
     ext_type = ext;
     ext_kind = kind;
     ext_loc = sext.pext_loc;

@@ -494,22 +494,15 @@ module Compile = struct
     List.iter Iter.iter_structure_item structure.str_items;
     Js.array (!acc |> Array.of_list)
 
-  let gentype_output ~module_system ~modulename ~sourcefile structure env =
+  let gentype_output ~module_system ~modulename ~sourcefile structure =
     let cmt_annots = Cmt_format.Implementation structure in
     let input_cmt =
       {
         Cmt_format.cmt_modname = modulename;
         cmt_annots;
         cmt_value_dependencies = [];
-        cmt_comments = [];
         cmt_args = [||];
-        cmt_sourcefile = Some sourcefile;
-        cmt_builddir = Sys.getcwd ();
-        cmt_loadpath = Config.get_load_path ();
         cmt_source_digest = None;
-        cmt_initial_env = env;
-        cmt_imports = [];
-        cmt_use_summaries = false;
         cmt_extra_info = {Cmt_utils.deprecated_used = []};
       }
     in
@@ -719,7 +712,7 @@ module Compile = struct
                   inject
                   @@ Js.string
                        (gentype_output ~module_system ~modulename
-                          ~sourcefile:filename structure env) );
+                          ~sourcefile:filename structure) );
               |]
           else [||]
         in
