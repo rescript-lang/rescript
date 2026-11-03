@@ -1,0 +1,1 @@
+- Build: copy the values of a dependency's interface only when a module reads them, after the first use of the same interface in a build, instead of copying all of them when the module first uses the dependency.
