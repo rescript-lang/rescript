@@ -550,7 +550,7 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
       {mb_id; mb_attributes; mb_loc; mb_name = name; mb_expr = {mod_desc}}
     when not
            (String.length name.txt >= 6
-           && (String.sub name.txt 0 6 = "local_") [@doesNotRaise])
+           && (String.sub name.txt 0 6 = "local_") [@doesNotThrow])
          (* %%private generates a dummy module called local_... *) ->
     let item = for_module ~env mod_desc name.txt in
     let declared =

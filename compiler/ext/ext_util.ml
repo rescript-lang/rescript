@@ -34,7 +34,7 @@ let string_of_int_as_char (i : int) : string =
       | '\r' -> "\\r"
       | '\b' -> "\\b"
       | ' ' .. '~' as c ->
-        let s = (Bytes.create [@doesNotRaise]) 1 in
+        let s = (Bytes.create [@doesNotThrow]) 1 in
         Bytes.unsafe_set s 0 c;
         Bytes.unsafe_to_string s
       | _ when Uchar.is_valid i -> Ext_utf8.encode_codepoint i

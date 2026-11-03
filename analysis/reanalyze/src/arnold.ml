@@ -833,10 +833,10 @@ module Compile = struct
             | _ ->
               Stats.log_hygiene_named_arg_value ~label ~loc;
               raise ArgError
-              [@@raises ArgError]
+              [@@throws ArgError]
           in
           function_arg ()
-            [@@raises ArgError]
+            [@@throws ArgError]
         in
         let function_args_opt =
           try Some (function_definition.kind |> List.map get_function_arg)

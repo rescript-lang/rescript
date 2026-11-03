@@ -37,7 +37,7 @@ let unit_expr ~loc =
 
 let safe_type_from_value value_str =
   let value_str = get_label value_str in
-  if value_str = "" || (value_str.[0] [@doesNotRaise]) <> '_' then value_str
+  if value_str = "" || (value_str.[0] [@doesNotThrow]) <> '_' then value_str
   else "T" ^ value_str
 
 let ref_type_var loc = Typ.var ~loc "ref"
@@ -107,7 +107,7 @@ let make_props_type_params_tvar named_type_list =
 let strip_option core_type =
   match core_type with
   | {ptyp_desc = Ptyp_constr ({txt = Lident "option"}, core_types)} ->
-    List.nth_opt core_types 0 [@doesNotRaise]
+    List.nth_opt core_types 0 [@doesNotThrow]
   | _ -> Some core_type
 
 let strip_nullable core_type =
@@ -121,7 +121,7 @@ let strip_nullable core_type =
         Ptyp_constr
           ({txt = Ldot (Ldot (Lident "Stdlib", "Nullable"), "t")}, core_types);
     } ->
-    List.nth_opt core_types 0 [@doesNotRaise]
+    List.nth_opt core_types 0 [@doesNotThrow]
   | _ -> Some core_type
 
 (* Make type params of the props type *)

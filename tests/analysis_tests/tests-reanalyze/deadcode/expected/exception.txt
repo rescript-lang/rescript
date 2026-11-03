@@ -121,7 +121,35 @@
   throwsInFinally might throw Not_found (ExnFinally.res:11:4) and is not annotated with @throws(Not_found)
 
   Exception Analysis
+  ExnOldSpellings.res:5:5-23
+  oldRaisesAnnotation might throw Not_found (ExnOldSpellings.res:5:32) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ExnOldSpellings.res:8:5-22
+  oldRaiseAnnotation might throw Not_found (ExnOldSpellings.res:8:31) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ExnOldSpellings.res:11:5-27
+  singularThrowAnnotation might throw Not_found (ExnOldSpellings.res:11:36) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ExnOldSpellings.res:13:5-19
+  oldDoesNotRaise might throw Assert_failure (ExnOldSpellings.res:13:42) and is not annotated with @throws(Assert_failure)
+
+  Exception Analysis
+  ExnOldSpellings.res:15:5-17
+  oldDoNotRaise might throw Assert_failure (ExnOldSpellings.res:15:38) and is not annotated with @throws(Assert_failure)
+
+  Exception Analysis
+  ExnOldSpellings.res:17:5-21
+  doNotThrowVariant might throw Assert_failure (ExnOldSpellings.res:17:42) and is not annotated with @throws(Assert_failure)
+
+  Exception Analysis
+  ExnOldSpellings.res:19:5-25
+  lowercaseDoesNotThrow might throw Assert_failure (ExnOldSpellings.res:19:48) and is not annotated with @throws(Assert_failure)
+
+  Exception Analysis
   ExternalTest.res:7:5-24
   bigIntFromStringExn2 might throw JsExn (ExternalTest.res:7:35) and is not annotated with @throws(JsExn)
   
-  Analysis reported 31 issues (Exception Analysis:31)
+  Analysis reported 38 issues (Exception Analysis:38)

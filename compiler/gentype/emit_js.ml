@@ -457,7 +457,7 @@ let rec read_cmt_files_recursively ~config ~env
         |> create_export_type_map ~config ~from_cmt_read_recursively:true
              ~file:
                (cmt_file |> Filename.basename
-              |> (Filename.chop_extension [@doesNotRaise]))
+              |> (Filename.chop_extension [@doesNotThrow]))
       in
       let cmt_to_export_type_map =
         env.cmt_to_export_type_map
