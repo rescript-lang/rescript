@@ -1,1 +1,0 @@
-- Speed up type checking in builds: after the first copy of a dependency's interface, later requests only copy it when they read it, not when they only check whether it is a module alias.
