@@ -544,14 +544,15 @@ let current_unit () = Domain.DLS.get current_unit_key
 (* The signature of a persistent structure is a copy of the one in its .cmi
    file whose bound identifiers are renamed ([Subst.signature Subst.identity]).
    The copy is often only asked for to learn that a compilation unit is not a
-   module alias ([normalize_path]), so it is not made then: the stamps and type
-   ids it would have taken are reserved, so every later stamp and id is the
-   same as if it had been made, and the copy is made with exactly those stamps
-   and ids when the signature is first read.
+   module alias ([normalize_path]). When this process has already copied the
+   same .cmi contents (same CRC), e.g. in an earlier request of the same
+   build, the copy is not made then: the stamps and type ids it would take are
+   reserved, so every later stamp and id is the same as if it had been made,
+   and the copy is made with exactly those stamps and ids when the signature
+   is first read. Otherwise (the first copy of an interface, or a one-shot
+   bsc) it is made at once, as before, and its counts are kept.
 
-   The number of stamps and ids a copy takes is learnt from the first copy of
-   the same .cmi contents (keyed by its CRC) and kept for the whole process.
-   It only depends on the signature graph, which the type checker does not
+   The number of stamps and ids a copy takes only depends on the signature graph, which the type checker does not
    change before copying it: only copies of it are given to the rest of the
    type checker. If a reserved copy ever takes a different number of stamps or
    ids, it is thrown away and made again with fresh ones. *)
