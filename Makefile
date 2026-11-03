@@ -137,6 +137,11 @@ test-analysis: lib
 test-reanalyze: lib
 	make -C tests/analysis_tests/tests-reanalyze/deadcode test
 
+# Dead code analysis of the OCaml sources (REANALYZE=path/to/reanalyze.exe)
+.PHONY: dead-code
+dead-code:
+	./scripts/dead_code.sh
+
 # Benchmark reanalyze on larger codebase (COPIES=N for more files)
 benchmark-reanalyze: lib
 	make -C tests/analysis_tests/tests-reanalyze/deadcode-benchmark benchmark COPIES=$(or $(COPIES),50)
