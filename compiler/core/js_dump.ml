@@ -333,8 +333,8 @@ and annotated_parameter_list cxt f l =
     (fun cxt f id ->
       let cxt = Ext_pp_scope.ident cxt f id in
       (match Js_ts_annot.param_type id with
-      | Some ty ->
-        P.string f ":";
+      | Some {ty; optional} ->
+        P.string f (if optional then "?:" else ":");
         P.space f;
         P.string f ty
       | None -> ());
@@ -471,7 +471,8 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
         in
         let cxt =
           match (l, ts_top) with
-          | l, Some _ ->
+          | l, Some x ->
+            P.string f (Js_ts_annot.type_params x);
             P.paren_group f 1 (fun _ -> annotated_parameter_list inner_cxt f l)
           | [single], None when arrow -> Ext_pp_scope.ident inner_cxt f single
           | l, None ->
