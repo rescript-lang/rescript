@@ -156,7 +156,7 @@ let rec skip_white text i =
     | _ -> i
 
 let rec unwrap_if_option (t : Types.type_expr) =
-  match t.desc with
+  match Types.get_desc t with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> unwrap_if_option t1
   | Tconstr (Path.Pident {name = "option"}, [unwrapped_type], _) ->
     unwrapped_type

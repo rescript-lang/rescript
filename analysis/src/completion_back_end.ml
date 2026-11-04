@@ -1129,15 +1129,13 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
         match args with
         | [] -> t_ret
         | args ->
-          {
-            typ with
-            desc =
-              Tarrow
-                ( List.map
-                    (fun (label, t_arg) -> {Types.lbl = label; typ = t_arg})
-                    args,
-                  t_ret );
-          }
+          Types.Transient_expr.create
+            (Tarrow
+               ( List.map
+                   (fun (label, t_arg) -> {Types.lbl = label; typ = t_arg})
+                   args,
+                 t_ret ))
+            ~level:(Types.get_level typ) ~id:(Types.get_id typ)
       in
       let rec process_apply args labels =
         match (args, labels) with
@@ -1173,11 +1171,11 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
         (* A tagged template tag has type taggedTemplate<'param, 'output>;
            applying it (via backtick syntax) yields the 'output type. *)
         let rec unwrap (t : Types.type_expr) =
-          match t.desc with
+          match Types.get_desc t with
           | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> unwrap t1
           | _ -> t
         in
-        match (unwrap typ).desc with
+        match Types.get_desc (unwrap typ) with
         | Tconstr (path, [_param; output_type], _)
           when Path.name path = "taggedTemplate" ->
           [Completion.create "dummy" ~env ~kind:(Completion.Value output_type)]
@@ -1679,25 +1677,29 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
       print_endline "[complete_typed_value]--> TtypeT (Expression)";
     (* Find all values in the module with type t *)
     let value_with_type_t t =
-      match t.Types.desc with
+      match Types.get_desc t with
       | Tconstr (Pident {name = "t"}, [], _) -> true
       | _ -> false
     in
     (* Find all functions in the module that returns type t *)
     let rec fn_returns_type_t t =
-      match t.Types.desc with
+      match Types.get_desc t with
       | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> fn_returns_type_t t1
       | Tarrow _ -> (
+        let is_t t =
+          match Types.get_desc t with
+          | Tconstr (Path.Pident {name = "t"}, _, _) -> true
+          | _ -> false
+        in
         match
           Type_utils.extract_function_type ~env ~state ~package:full.package t
         with
-        | ( (Nolabel, {desc = Tconstr (Path.Pident {name = "t"}, _, _)}) :: _,
-            {desc = Tconstr (Path.Pident {name = "t"}, _, _)} ) ->
+        | (Nolabel, t_arg) :: _, t_ret when is_t t_arg && is_t t_ret ->
           (* Filter out functions that take type t first. These are often
              @send style functions that we don't want to have here because
              they usually aren't meant to create a type t from scratch. *)
           false
-        | _args, {desc = Tconstr (Path.Pident {name = "t"}, _, _)} -> true
+        | _args, t_ret when is_t t_ret -> true
         | _ -> false)
       | _ -> false
     in

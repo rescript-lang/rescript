@@ -63,7 +63,7 @@ let collect_value_binding ~config ~decls ~file ~(current_binding : Location.t)
       in
       let path = module_path.path @ [File_context.module_name_tagged file] in
       let is_first_class_module =
-        match vb.vb_expr.exp_type.desc with
+        match Types.get_desc vb.vb_expr.exp_type with
         | Tpackage _ -> true
         | _ -> false
       in
@@ -158,7 +158,7 @@ let type_path_candidates ~file ~(module_path : Module_path.t) path =
 let add_coercion ~cross_file ~file ~module_path ~source ~target =
   if !Config.analyze_types then
     let type_paths typ =
-      match (Ctype.repr typ).Types.desc with
+      match Types.get_desc (Ctype.repr typ) with
       | Types.Tconstr (path, _, _) ->
         type_path_candidates ~file ~module_path path
       | _ -> []
@@ -319,7 +319,7 @@ let add_record_label_type_references ~config ~refs ~pos_from labels =
 let add_record_rest_type_references_from_path ~config ~decls ~refs ~file
     ~module_path ~pos_from rest =
   if !Config.analyze_types then
-    match (Ctype.repr rest.Typedtree.rest_type).desc with
+    match Types.get_desc (Ctype.repr rest.Typedtree.rest_type) with
     | Types.Tconstr (path, _, _) ->
       let type_paths = type_path_candidates ~file ~module_path path in
       decls |> Declarations.builder_to_list
@@ -380,19 +380,22 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
          Use full Path.t so cross-module re-exports work (Path.Pdot, aliases, etc.). *)
       let manifest_type_path =
         match t.type_manifest with
-        | Some {desc = Tconstr (path, _, _)} -> (
-          let p = path |> Dce_path.from_path_t in
-          match p with
-          | [type_name] ->
-            let module_context =
-              module_path.path @ [File_context.module_name_tagged file]
-            in
-            Some (type_name :: module_context)
-          | _ ->
-            Some
-              (if File_context.is_interface file then
-                 Dce_path.module_to_interface p
-               else Dce_path.module_to_implementation p))
+        | Some manifest -> (
+          match Types.get_desc manifest with
+          | Tconstr (path, _, _) -> (
+            let p = path |> Dce_path.from_path_t in
+            match p with
+            | [type_name] ->
+              let module_context =
+                module_path.path @ [File_context.module_name_tagged file]
+              in
+              Some (type_name :: module_context)
+            | _ ->
+              Some
+                (if File_context.is_interface file then
+                   Dce_path.module_to_interface p
+                 else Dce_path.module_to_implementation p))
+          | _ -> None)
         | _ -> None
       in
       Dead_type.add_declaration ~config ~decls ~file ~module_path ~type_id:id

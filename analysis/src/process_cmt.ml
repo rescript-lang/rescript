@@ -84,10 +84,12 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
               (match type_kind with
               | Type_abstract -> (
                 match type_manifest with
-                | Some {desc = Tconstr (path, args, _)} ->
-                  Abstract (Some (path, args))
-                | Some {desc = Ttuple items} -> Tuple items
-                (* TODO dig *)
+                | Some t -> (
+                  match Types.get_desc t with
+                  | Tconstr (path, args, _) -> Abstract (Some (path, args))
+                  | Ttuple items -> Tuple items
+                  (* TODO dig *)
+                  | _ -> Abstract None)
                 | _ -> Abstract None)
               | Type_open -> Open
               | Type_variant (constructors, _) ->
@@ -449,7 +451,7 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
           | [] -> None
         in
         if unpack_loc_opt <> None then
-          match (Shared.dig pat.pat_type).desc with
+          match Types.get_desc (Shared.dig pat.pat_type) with
           | Tpackage (path, _, _) ->
             let declared =
               Process_attributes.new_declared ~item:(Module.Ident path)

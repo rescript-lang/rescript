@@ -40,15 +40,12 @@ let extra_for_file ~(file : File.t) =
         |> List.iter (fun {Constructor.stamp; cname} ->
             add_reference ~extra stamp cname.loc;
             let t =
-              {
-                Types.id = 0;
-                level = 0;
-                desc =
-                  Tconstr
-                    ( Path.Pident {Ident.stamp; name = d.name.txt; flags = 0},
-                      [],
-                      ref Types.Mnil );
-              }
+              Types.Transient_expr.create
+                (Tconstr
+                   ( Path.Pident {Ident.stamp; name = d.name.txt; flags = 0},
+                     [],
+                     ref Types.Mnil ))
+                ~level:0 ~id:0
             in
             add_loc_item extra cname.loc
               (Typed (d.name.txt, t, Definition (d.stamp, Constructor cname.txt))))
@@ -203,7 +200,7 @@ let get_type_at_path ~env path =
     | None -> `Not_found)
 
 let add_for_field ~env ~extra ~record_type ~field_type {Asttypes.txt; loc} =
-  match (Shared.dig record_type).desc with
+  match Types.get_desc (Shared.dig record_type) with
   | Tconstr (path, _args, _memo) ->
     let t = get_type_at_path ~env path in
     let name = handle_constructor txt in
@@ -225,7 +222,7 @@ let add_for_field ~env ~extra ~record_type ~field_type {Asttypes.txt; loc} =
   | _ -> ()
 
 let add_for_record ~env ~extra ~record_type items =
-  match (Shared.dig record_type).desc with
+  match Types.get_desc (Shared.dig record_type) with
   | Tconstr (path, _args, _memo) ->
     let t = get_type_at_path ~env path in
     items
@@ -251,7 +248,7 @@ let add_for_record ~env ~extra ~record_type items =
 
 let add_for_constructor ~env ~extra constructor_type {Asttypes.txt; loc}
     {Types.cstr_name} =
-  match (Shared.dig constructor_type).desc with
+  match Types.get_desc (Shared.dig constructor_type) with
   | Tconstr (path, _args, _memo) ->
     let name = handle_constructor txt in
     let name_loc = Utils.end_of_location loc (String.length name) in
@@ -366,7 +363,7 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
     in
     if not has_unpack then None
     else
-      match (Shared.dig pattern.pat_type).desc with
+      match Types.get_desc (Shared.dig pattern.pat_type) with
       | Tpackage (path, _, _) -> Some path
       | _ -> None
   in

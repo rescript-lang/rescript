@@ -3,7 +3,7 @@ open Dead_common
 let active () = true
 
 let rec has_optional_args (texpr : Types.type_expr) =
-  match texpr.desc with
+  match Types.get_desc texpr with
   | _ when not (active ()) -> false
   | Tarrow (params, _) ->
     params
@@ -32,7 +32,7 @@ let add_function_reference ~config ~cross_file ~(loc_from : Location.t)
 (* The function boundary is structural: a function's optional arguments are
    exactly the optional parameters of its (one) arrow node. *)
 let rec from_type_expr (texpr : Types.type_expr) =
-  match texpr.desc with
+  match Types.get_desc texpr with
   | _ when not (active ()) -> []
   | Tarrow (params, _) ->
     params
