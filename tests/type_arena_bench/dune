@@ -1,8 +1,0 @@
-; Microbenchmark of Type_arena against today's boxed type nodes; run by hand,
-; see type_arena_bench.ml.
-
-(executable
- (name type_arena_bench)
- (enabled_if
-  (<> %{profile} browser))
- (libraries ml unix))
