@@ -1028,11 +1028,14 @@ let all_labels
     lbl.lbl_all
 
 (* Each label of the record with the expression the literal writes for it, if
-   any, in position order. *)
+   any, in position order. A list rather than an array: [Array.map] over more
+   than 256 labels (JSX props) forces a minor collection, which stops every
+   domain. *)
 let fields_by_position fields =
-  let written = Array.map (fun _ -> None) (all_labels fields) in
+  let lbl_all = all_labels fields in
+  let written = Array.make (Array.length lbl_all) None in
   Array.iter (fun (lbl, _, exp) -> written.(lbl.lbl_pos) <- Some exp) fields;
-  Array.mapi (fun i lbl -> (lbl, written.(i))) (all_labels fields)
+  List.init (Array.length lbl_all) (fun i -> (lbl_all.(i), written.(i)))
 
 (* How [transl_record] builds a record: by copying the fields of [init] one
    by one (or with no [init] at all), or by taking a shallow copy of [init]
@@ -1072,11 +1075,9 @@ let jsx_props_of ~multi (props : expression) =
       Some (Jsx_props_record {fields; init; copy_fields; children})
     in
     let is_array =
-      Lambda.record_fields_are_array
-        (Array.map
-           (fun (lbl : label_description) ->
-             (lbl.lbl_runtime_name, lbl.lbl_optional))
-           (all_labels fields))
+      Lambda.runtime_names_are_array
+        (fun (lbl : label_description) -> lbl.lbl_runtime_name)
+        (all_labels fields)
     in
     match children with
     (* a record with the runtime names "0", "1", ... is an array *)
@@ -1716,7 +1717,7 @@ and transl_jsx_element loc
         match init with
         | Some _ when copy_fields ->
           (* the props the literal leaves out are copied from [init] *)
-          fields_by_position fields |> Array.to_list
+          fields_by_position fields
           |> List.filter_map (fun ((lbl : label_description), value) ->
               match value with
               | Some value -> written lbl value
@@ -1772,9 +1773,14 @@ and transl_record loc env fields repres opt_init_expr =
      it is optional. *)
   let lbl_all = all_labels fields in
   let field_shape () =
-    lbl_all
-    |> Array.map (fun (lbl : Types.label_description) ->
-        (lbl.lbl_runtime_name, lbl.lbl_optional))
+    (* Filled in place: [Array.map] over more than 256 labels would force a
+       minor collection. *)
+    let shape = Array.make (Array.length lbl_all) ("", false) in
+    Array.iteri
+      (fun i (lbl : Types.label_description) ->
+        shape.(i) <- (lbl.lbl_runtime_name, lbl.lbl_optional))
+      lbl_all;
+    shape
   in
   let field_names () =
     lbl_all
@@ -1786,8 +1792,8 @@ and transl_record loc env fields repres opt_init_expr =
       (* Allocate new record with given fields (and remaining fields
          taken from init_expr if any *)
       let init_id = Ident.create "init" in
-      let lv =
-        Array.mapi
+      let ll =
+        List.mapi
           (fun i (lbl, value) ->
             match (value, opt_init_expr) with
             | Some expr, _ -> transl_exp expr
@@ -1808,7 +1814,6 @@ and transl_record loc env fields repres opt_init_expr =
               prim ~primitive:access ~args:[var init_id] loc)
           (fields_by_position fields)
       in
-      let ll = Array.to_list lv in
       let mut =
         if Array.exists (fun lbl -> lbl.lbl_mut = Mutable) lbl_all then Mutable
         else Immutable

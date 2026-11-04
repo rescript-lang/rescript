@@ -3069,12 +3069,18 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
         if fields = [] && repr_opt <> None then ([||], Record_regular)
         else raise (Error (loc, env, Empty_record_literal))
     in
-    let written = written_labels label_descriptions lbl_exp_list in
     let labels_missing =
-      Array.to_list label_descriptions
-      |> List.filter_map (fun lbl ->
-          if written.(lbl.lbl_pos) || label_is_optional lbl then None
-          else Some lbl.lbl_name)
+      (* Records whose labels are all optional, like the hundreds of host
+         element props in JsxDOM.domProps, can't miss a label: check that
+         first, without allocating for each label. Records with a required
+         label, like most component props, take the general path. *)
+      if Array.for_all label_is_optional label_descriptions then []
+      else
+        let written = written_labels label_descriptions lbl_exp_list in
+        Array.to_list label_descriptions
+        |> List.filter_map (fun lbl ->
+            if written.(lbl.lbl_pos) || label_is_optional lbl then None
+            else Some lbl.lbl_name)
     in
     if labels_missing <> [] then
       raise
