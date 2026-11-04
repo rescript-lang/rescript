@@ -6,11 +6,31 @@ export type box<a> = { readonly v: (undefined | (
     a
   | { readonly BS_PRIVATE_NESTED_SOME_NONE: number })) };
 
+export type opt<a> = (undefined | (
+    a
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }));
+
+export type nested = (undefined | (
+    (undefined | number)
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }));
+
+export type callback = (x:(undefined | (
+    (undefined | number)
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }))) => number;
+
 export function keep(o: (undefined | (
     (undefined | number)
   | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }))): (undefined | (
     (undefined | number)
   | { readonly BS_PRIVATE_NESTED_SOME_NONE: number })) {
+  return o;
+}
+
+export function keepAlias<a>(o: opt<a>): opt<a> {
+  return o;
+}
+
+export function keepNested(o: nested): nested {
   return o;
 }
 
@@ -34,6 +54,10 @@ export function boxed(x: number): box<number> {
   return {
     v: x
   };
+}
+
+export function call(f: callback): number {
+  return f(undefined);
 }
 
 /* No side effect */
