@@ -28,6 +28,10 @@ type t = {
   shims_map: Module_name.t Module_name_map.t;
   sources: string list;
   suffix: string;
+  option_payload_may_nest: Types.type_expr -> bool;
+      (** Whether [option<t>] can hold a nested-option marker for this
+          payload [t]: [Some(v)] is a marker when [v] is [undefined] or a
+          marker, so the option then prints with the marker type *)
 }
 
 let default =
@@ -47,6 +51,7 @@ let default =
     shims_map = Module_name_map.empty;
     sources = [];
     suffix = ".bs.js";
+    option_payload_may_nest = (fun _ -> false);
   }
 
 (* ----- CLI-flag backing state ----------------------------------------- *)
@@ -195,4 +200,5 @@ let build_config ~namespace =
     shims_map;
     sources = !(source_dirs_flag ());
     suffix;
+    option_payload_may_nest = default.option_payload_may_nest;
   }

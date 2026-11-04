@@ -470,6 +470,22 @@ let process_variant row_fields =
   in
   row_fields |> loop ~no_payloads:[] ~payloads:[] ~unknowns:[]
 
+(* The runtime's representation of [Some(v)] when [v] is [undefined] or
+   itself a marker: a frozen object holding the nesting depth
+   (Primitive_option.marker). *)
+let nested_option_marker =
+  Object
+    ( Closed,
+      [
+        {
+          mutable_ = Immutable;
+          name_js = "BS_PRIVATE_NESTED_SOME_NONE";
+          optional = Mandatory;
+          type_ = number_t;
+          doc_string = Doc_string.empty;
+        };
+      ] )
+
 let rec translate_arrow_type ~config ~type_vars_gen ~type_env
     (params : Types.arg list) (ret : Types.type_expr) =
   let rev_arg_deps, rev_args =
@@ -539,6 +555,26 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
   | Tconstr (path, [{desc = Tlink te}], r) ->
     {type_expr with desc = Types.Tconstr (path, [te], r)}
     |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+  | Tconstr (path, [payload], _)
+    when Path.same path Predef.path_option
+         && config.Config.option_payload_may_nest payload ->
+    let translation =
+      payload |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+    in
+    {
+      translation with
+      type_ =
+        Option
+          (Variant
+             {
+               inherits = [translation.type_; nested_option_marker];
+               no_payloads = [];
+               payloads = [];
+               polymorphic = false;
+               tag = None;
+               unboxed = false;
+             });
+    }
   | Tconstr (path, type_params, _) ->
     let params_translation =
       type_params
