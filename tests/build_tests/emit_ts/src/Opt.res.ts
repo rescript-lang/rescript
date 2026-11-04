@@ -24,4 +24,8 @@ export function firstPositive(a: number, b: number): (undefined | number) {
   }
 }
 
+export function none(): (undefined | number) {
+  return;
+}
+
 /* No side effect */

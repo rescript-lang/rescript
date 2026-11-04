@@ -1621,7 +1621,13 @@ and function_body ?directive (cxt : cxt) f ~return_unit (b : J.block) : unit =
       ignore
         (statement false cxt f {s with statement_desc = If (bool, then_, [])}
           : cxt)
-    | Return {expression_desc = Undefined _} -> ()
+    (* A function whose body is only [return;] prints an empty body, except
+       under [-bs-emit-ts]: TypeScript requires a [return] in a function
+       whose declared result type is other than [undefined], [void] or
+       [any]. *)
+    | Return {expression_desc = Undefined _} when not (Js_ts_annot.enabled ())
+      ->
+      ()
     | Return exp when return_unit ->
       ignore (statement false cxt f (S.exp exp) : cxt)
     | _ -> ignore (statement false cxt f s : cxt))

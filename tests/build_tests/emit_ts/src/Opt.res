@@ -14,3 +14,5 @@ let firstPositive = (a: int, b: int) =>
   } else {
     None
   }
+
+let none = (): option<int> => None
