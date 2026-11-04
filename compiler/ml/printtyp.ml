@@ -1832,14 +1832,14 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
             "@ @{<info>%s@} is private: its values can only be built in the \
              module that defines it, so another type cannot be coerced to it."
             (Path.name typename)
-        | Coercion_into_array_record {left_record_name; right_record_name} ->
+        | Record_array_mismatch {array_record_name; object_record_name} ->
           fprintf ppf
             "@ The record @{<info>%s@} is represented as a JavaScript array \
-             (its fields have the runtime names \"0\", \"1\", ...), but \
-             @{<info>%s@} is represented as an object, so it cannot be coerced \
-             to it."
-            (Path.name right_record_name)
-            (Path.name left_record_name))
+             (its fields have the runtime names \"0\", \"1\", ...) and \
+             @{<info>%s@} as an object, so neither can be coerced to the \
+             other."
+            (Path.name array_record_name)
+            (Path.name object_record_name))
       | None -> ())
 
 let report_ambiguous_type_error ppf env (tp0, tp0') tpl txt1 txt2 txt3 =

@@ -9,4 +9,4 @@
 
   Type obj is not a subtype of arr 
 
-  The record [1;33marr[0m is represented as a JavaScript array (its fields have the runtime names "0", "1", ...), but [1;33mobj[0m is represented as an object, so it cannot be coerced to it.
+  The record [1;33marr[0m is represented as a JavaScript array (its fields have the runtime names "0", "1", ...) and [1;33mobj[0m as an object, so neither can be coerced to the other.

@@ -104,20 +104,30 @@ function classify(p) {
 }
 
 Mocha.describe("Array_record_test", () => {
-  Mocha.test("an untagged array record payload dispatches as an array", () => {
-    Test_utils.eq("File \"array_record_test.res\", line 106, characters 7-14", "point", "point");
-    Test_utils.eq("File \"array_record_test.res\", line 107, characters 7-14", "point", "point");
-    Test_utils.eq("File \"array_record_test.res\", line 108, characters 7-14", "named", "named");
-    Test_utils.eq("File \"array_record_test.res\", line 109, characters 7-14", "text", "text");
-  });
+  Mocha.test("an untagged array record payload dispatches as an array", () => Test_utils.eq("File \"array_record_test.res\", line 108, characters 6-13", [
+    [
+      1,
+      2
+    ],
+    [],
+    {
+      name: "n"
+    },
+    "t"
+  ].map(classify), [
+    "point",
+    "point",
+    "named",
+    "text"
+  ]));
   Mocha.test("spread over a record with an optional field is an array", () => {
     let r_0 = 1;
     let r = [
       r_0,
       2
     ];
-    Test_utils.ok("File \"array_record_test.res\", line 114, characters 7-14", Array.isArray(r));
-    Test_utils.eq("File \"array_record_test.res\", line 115, characters 7-14", [
+    Test_utils.ok("File \"array_record_test.res\", line 116, characters 7-14", Array.isArray(r));
+    Test_utils.eq("File \"array_record_test.res\", line 117, characters 7-14", [
       1,
       2
     ], [
@@ -128,8 +138,8 @@ Mocha.describe("Array_record_test", () => {
       undefined,
       2
     ];
-    Test_utils.ok("File \"array_record_test.res\", line 117, characters 7-14", Array.isArray(r$1));
-    Test_utils.eq("File \"array_record_test.res\", line 118, characters 7-14", [
+    Test_utils.ok("File \"array_record_test.res\", line 119, characters 7-14", Array.isArray(r$1));
+    Test_utils.eq("File \"array_record_test.res\", line 120, characters 7-14", [
       undefined,
       2
     ], [
@@ -139,9 +149,9 @@ Mocha.describe("Array_record_test", () => {
   });
   Mocha.test("spread over a record with 20 fields is an array", () => {
     let r = updateBig(bigValue);
-    Test_utils.ok("File \"array_record_test.res\", line 123, characters 7-14", Array.isArray(r));
-    Test_utils.eq("File \"array_record_test.res\", line 124, characters 7-14", r.length, 20);
-    Test_utils.eq("File \"array_record_test.res\", line 125, characters 7-14", [
+    Test_utils.ok("File \"array_record_test.res\", line 125, characters 7-14", Array.isArray(r));
+    Test_utils.eq("File \"array_record_test.res\", line 126, characters 7-14", r.length, 20);
+    Test_utils.eq("File \"array_record_test.res\", line 127, characters 7-14", [
       r[0],
       r[1],
       r[19]
@@ -158,8 +168,8 @@ Mocha.describe("Array_record_test", () => {
     ];
     r[0] = 5;
     let r$1 = updateMutable(r);
-    Test_utils.ok("File \"array_record_test.res\", line 132, characters 7-14", Array.isArray(r$1));
-    Test_utils.eq("File \"array_record_test.res\", line 133, characters 7-14", [
+    Test_utils.ok("File \"array_record_test.res\", line 134, characters 7-14", Array.isArray(r$1));
+    Test_utils.eq("File \"array_record_test.res\", line 135, characters 7-14", [
       r$1[0],
       r$1[1]
     ], [
@@ -168,16 +178,16 @@ Mocha.describe("Array_record_test", () => {
     ]);
   });
   Mocha.test("an empty literal is an array", () => {
-    Test_utils.ok("File \"array_record_test.res\", line 137, characters 7-14", Array.isArray(emptyValue));
-    Test_utils.eq("File \"array_record_test.res\", line 138, characters 7-14", emptyValue[0], undefined);
+    Test_utils.ok("File \"array_record_test.res\", line 139, characters 7-14", Array.isArray(emptyValue));
+    Test_utils.eq("File \"array_record_test.res\", line 140, characters 7-14", emptyValue[0], undefined);
   });
   Mocha.test("a type spread keeps the array layout", () => {
-    Test_utils.ok("File \"array_record_test.res\", line 142, characters 7-14", Array.isArray(tripleValue));
-    Test_utils.eq("File \"array_record_test.res\", line 143, characters 7-14", 3, 3);
+    Test_utils.ok("File \"array_record_test.res\", line 144, characters 7-14", Array.isArray(tripleValue));
+    Test_utils.eq("File \"array_record_test.res\", line 145, characters 7-14", 3, 3);
   });
   Mocha.test("runtime names out of order give an object", () => {
-    Test_utils.ok("File \"array_record_test.res\", line 147, characters 7-14", !Array.isArray(swappedValue));
-    Test_utils.eq("File \"array_record_test.res\", line 148, characters 7-14", [
+    Test_utils.ok("File \"array_record_test.res\", line 149, characters 7-14", !Array.isArray(swappedValue));
+    Test_utils.eq("File \"array_record_test.res\", line 150, characters 7-14", [
       1,
       2
     ], [
@@ -197,17 +207,17 @@ Mocha.describe("Array_record_test", () => {
         return -1;
       }
     };
-    Test_utils.eq("File \"array_record_test.res\", line 158, characters 7-14", classify([
+    Test_utils.eq("File \"array_record_test.res\", line 160, characters 7-14", classify([
       0,
       7,
       undefined
     ]), 7);
-    Test_utils.eq("File \"array_record_test.res\", line 159, characters 7-14", classify([
+    Test_utils.eq("File \"array_record_test.res\", line 161, characters 7-14", classify([
       1,
       7,
       9
     ]), 9);
-    Test_utils.eq("File \"array_record_test.res\", line 160, characters 7-14", classify([
+    Test_utils.eq("File \"array_record_test.res\", line 162, characters 7-14", classify([
       1,
       7,
       undefined
@@ -220,8 +230,8 @@ Mocha.describe("Array_record_test", () => {
       3
     ]);
     let rest = match[1];
-    Test_utils.eq("File \"array_record_test.res\", line 165, characters 7-14", match[0], 1);
-    Test_utils.eq("File \"array_record_test.res\", line 166, characters 7-14", [
+    Test_utils.eq("File \"array_record_test.res\", line 167, characters 7-14", match[0], 1);
+    Test_utils.eq("File \"array_record_test.res\", line 168, characters 7-14", [
       rest[1],
       rest[2]
     ], [

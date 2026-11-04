@@ -54,12 +54,12 @@ type subtype_context =
   | Coercion_into_private_type of {typename: Path.t}
       (** The target is a private record or variant, whose values only its own
           module can build. *)
-  | Coercion_into_array_record of {
-      left_record_name: Path.t;
-      right_record_name: Path.t;
+  | Record_array_mismatch of {
+      array_record_name: Path.t;
+      object_record_name: Path.t;
     }
-      (** The target record is represented as a JavaScript array, the source
-          record as an object. *)
+      (** One record is represented as a JavaScript array, the other as an
+          object. *)
 
 type type_pairs = (type_expr * type_expr) list
 exception Unify of type_pairs
