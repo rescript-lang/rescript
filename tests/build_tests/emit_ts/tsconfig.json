@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": false,
+    "paths": {
+      "@rescript/runtime/lib/es6/*.mjs": ["./runtime-dts/*.d.mts"]
+    }
+  },
+  "include": ["src/*.res.ts"]
+}
