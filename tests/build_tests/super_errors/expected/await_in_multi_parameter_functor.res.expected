@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/await_in_multi_parameter_functor.res[0m:[2m6:15-32[0m
+
+  4 [2m│[0m 
+  5 [2m│[0m module Make = (First: Source, Second: Source) => {
+  [1;31m6[0m [2m│[0m   let value = [1;31mawait Second.value[0m
+  7 [2m│[0m }
+  8 [2m│[0m 
+
+  Await on expression not in an async context

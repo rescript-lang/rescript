@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/await_in_nested_functor.res[0m:[2m7:17-33[0m
+
+  5 [2m│[0m module Make = (Source: Source) => {
+  6 [2m│[0m   module Inner = (Other: Source) => {
+  [1;31m7[0m [2m│[0m     let value = [1;31mawait Other.value[0m
+  8 [2m│[0m   }
+  9 [2m│[0m }
+
+  Await on expression not in an async context
