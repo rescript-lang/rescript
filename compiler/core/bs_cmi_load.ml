@@ -43,13 +43,22 @@ let read_file path =
    stored contents they were read from. Reading the same interfaces, above all
    the runtime's, is a sizable part of compiling a small module. The values
    can't be shared between domains: copying a signature marks its types in
-   place for the duration of the copy. *)
+   place for the duration of the copy.
+
+   The type nodes of the cached signatures live in a store of their own,
+   which outlives requests. Emptying the cache retires that store, and a
+   later read starts a new one; the nodes of a retired store may still be
+   used by the request that emptied the cache (it can do so between two
+   reads), so retired stores are freed when the request ends
+   ([release_retired_stores]). *)
 type cached_cmi = {contents: string; cmi: Cmi_format.cmi_infos}
 
 type cmi_cache = {
   mutable generation: int;
   mutable size: int;  (** The length of the cached contents. *)
   cmis: (string, cached_cmi) Hashtbl.t;
+  mutable store: Types.Store.t option;
+  mutable retired: Types.Store.t list;
 }
 
 (* A decoded interface takes a few times the size of its contents, and every
@@ -57,14 +66,43 @@ type cmi_cache = {
    starts over. The runtime's interfaces take 2 MB. *)
 let cmi_cache_budget = 16 * 1024 * 1024
 
+let release_stores cache =
+  List.iter Types.Store.release cache.retired;
+  cache.retired <- []
+
 let cmi_cache_key =
   Domain.DLS.new_key (fun () ->
-      {generation = -1; size = 0; cmis = Hashtbl.create 64})
+      let cache =
+        {
+          generation = -1;
+          size = 0;
+          cmis = Hashtbl.create 64;
+          store = None;
+          retired = [];
+        }
+      in
+      Domain.at_exit (fun () ->
+          Option.iter (fun s -> cache.retired <- s :: cache.retired) cache.store;
+          cache.store <- None;
+          release_stores cache);
+      cache)
 
 let empty_cmi_cache cache ~generation =
   Hashtbl.reset cache.cmis;
   cache.size <- 0;
-  cache.generation <- generation
+  cache.generation <- generation;
+  Option.iter (fun s -> cache.retired <- s :: cache.retired) cache.store;
+  cache.store <- None
+
+let cache_store cache =
+  match cache.store with
+  | Some s -> s
+  | None ->
+    let s = Types.Store.create ~capacity:(64 * 1024) () in
+    cache.store <- Some s;
+    s
+
+let release_retired_stores () = release_stores (Domain.DLS.get cmi_cache_key)
 
 let read_cached_cmi filename path contents =
   let cache = Domain.DLS.get cmi_cache_key in
@@ -73,13 +111,17 @@ let read_cached_cmi filename path contents =
   match Hashtbl.find_opt cache.cmis path with
   | Some cached when cached.contents == contents -> cached.cmi
   | previous ->
-    let cmi = Cmi_format.read_cmi_contents filename contents in
     Option.iter
       (fun previous ->
+        Hashtbl.remove cache.cmis path;
         cache.size <- cache.size - String.length previous.contents)
       previous;
+    (* Before reading: emptying the cache retires the store read into. *)
     if cache.size + String.length contents > cmi_cache_budget then
       empty_cmi_cache cache ~generation:cache.generation;
+    let cmi =
+      Cmi_format.read_cmi_contents ~store:(cache_store cache) filename contents
+    in
     Hashtbl.replace cache.cmis path {contents; cmi};
     cache.size <- cache.size + String.length contents;
     cmi
