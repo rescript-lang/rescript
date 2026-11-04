@@ -209,9 +209,8 @@ let is_variant_type ~(extract_concrete_typedecl : extract_concrete_typedecl)
   with _ -> false
 
 let is_jsx_component_type ~env ty =
-  match Ctype.expand_head env ty with
-  | {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "component", _), _, _)} ->
-    true
+  match Types.get_desc (Ctype.expand_head env ty) with
+  | Tconstr (Pdot (Pident {name = "Jsx"}, "component", _), _, _) -> true
   | _ -> false
 
 let get_variant_constructors
@@ -270,8 +269,13 @@ let print_object_vs_record_hint ppf ~loc =
 let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     (bottom_aliases : (Types.type_expr * Types.type_expr) option) trace
     type_clash_context =
-  match (type_clash_context, bottom_aliases) with
-  | Some (MathOperator {for_float; operator; is_constant}), _ -> (
+  let bottom_descs =
+    match bottom_aliases with
+    | Some (t1, t2) -> Some (Types.get_desc t1, Types.get_desc t2)
+    | None -> None
+  in
+  match (type_clash_context, bottom_aliases, bottom_descs) with
+  | Some (MathOperator {for_float; operator; is_constant}), _, _ -> (
     let operator_for_other_type =
       match operator with
       | "+" -> "+."
@@ -292,8 +296,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       | _ -> "compute"
     in
     (* TODO check int vs float explicitly before showing this *)
-    (match (operator, bottom_aliases) with
-    | "+", Some ({Types.desc = Tconstr (p1, _, _)}, {desc = Tconstr (p2, _, _)})
+    (match (operator, bottom_descs) with
+    | "+", Some (Tconstr (p1, _, _), Tconstr (p2, _, _))
       when Path.same Predef.path_string p1 || Path.same Predef.path_string p2 ->
       fprintf ppf
         "\n\n\
@@ -313,7 +317,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
          @{<info>Int.fromFloat@}."
         operator_text
         (if for_float then "float" else "int"));
-    match (is_constant, bottom_aliases) with
+    match (is_constant, bottom_descs) with
     | Some constant, _ ->
       if for_float then
         fprintf ppf
@@ -327,8 +331,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
           \  - Make @{<info>%s@} an @{<info>int@} by removing the dot or \
            explicitly converting to int"
           constant
-    | _, Some ({Types.desc = Tconstr (p1, _, _)}, {desc = Tconstr (p2, _, _)})
-      -> (
+    | _, Some (Tconstr (p1, _, _), Tconstr (p2, _, _)) -> (
       match (Path.name p1, Path.name p2) with
       | "float", "int" | "int", "float" ->
         fprintf ppf
@@ -338,25 +341,21 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
           (if for_float then "int" else "float")
       | _ -> ())
     | _ -> ())
-  | Some SwitchReturn, _ ->
+  | Some SwitchReturn, _, _ ->
     fprintf ppf
       "\n\n\
       \  All branches in a @{<info>switch@} must return the same type.@,\
        To fix this, change your branch to return the expected type."
-  | Some LetUnwrapReturn, bottom_aliases -> (
+  | Some LetUnwrapReturn, _, bottom_descs -> (
     let kind =
-      match bottom_aliases with
-      | Some ({Types.desc = Tconstr (p, _, _)}, _)
-        when Path.same p Predef.path_option ->
+      match bottom_descs with
+      | Some (Tconstr (p, _, _), _) when Path.same p Predef.path_option ->
         `Option
-      | Some (_, {Types.desc = Tconstr (p, _, _)})
-        when Path.same p Predef.path_option ->
+      | Some (_, Tconstr (p, _, _)) when Path.same p Predef.path_option ->
         `Option
-      | Some ({Types.desc = Tconstr (p, _, _)}, _)
-        when Path.same p Predef.path_result ->
+      | Some (Tconstr (p, _, _), _) when Path.same p Predef.path_result ->
         `Result
-      | Some (_, {Types.desc = Tconstr (p, _, _)})
-        when Path.same p Predef.path_result ->
+      | Some (_, Tconstr (p, _, _)) when Path.same p Predef.path_result ->
         `Result
       | _ -> `Unknown
     in
@@ -402,18 +401,18 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
          @{<info>None/Error@} case explicitly.\n\
         \  - If you want a default value instead of early return, unwrap using \
          @{<info>Option.getOr(default)@} or @{<info>Result.getOr(default)@}.")
-  | Some TryReturn, _ ->
+  | Some TryReturn, _, _ ->
     fprintf ppf
       "\n\n\
       \  The @{<info>try@} body and the @{<info>catch@} block must return the \
        same type.@,\
        To fix this, change your try/catch blocks to return the expected type."
-  | Some IfCondition, _ ->
+  | Some IfCondition, _, _ ->
     fprintf ppf
       "\n\n\
       \  To fix this, change the highlighted code so it evaluates to a \
        @{<info>bool@}."
-  | Some Await, _ ->
+  | Some Await, _, _ ->
     fprintf ppf
       "\n\n\
       \  You're trying to await something that is not a promise.\n\n\
@@ -421,7 +420,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  - Remove the @{<info>await@} if this is not expected to be a promise\n\
       \  - Wrap the expression in @{<info>Promise.resolve@} to convert the \
        expression to a promise"
-  | Some JsxComponent, _ ->
+  | Some JsxComponent, _, _ ->
     fprintf ppf
       "\n\n\
       \  JSX tags must be React components, not plain functions.\n\n\
@@ -432,24 +431,24 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        @{<info>@react.componentWithProps@}\n\
       \  - If this is already a valid component-like value, wrap it with \
        @{<info>React.component(...)@}"
-  | Some IfReturn, _ ->
+  | Some IfReturn, _, _ ->
     fprintf ppf
       "\n\n\
       \  @{<info>if@} expressions must return the same type in all branches \
        (@{<info>if@}, @{<info>else if@}, @{<info>else@})."
-  | Some TernaryReturn, _ ->
+  | Some TernaryReturn, _, _ ->
     fprintf ppf
       "\n\n\
       \  Ternaries (@{<info>?@} and @{<info>:@}) must return the same type in \
        both branches."
-  | Some ComparisonOperator, _ ->
+  | Some ComparisonOperator, _, _ ->
     fprintf ppf "\n\n  You can only compare things of the same type."
-  | Some ArrayValue, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
+  | Some ArrayValue, Some (_, t1), Some (Tobject _, Tconstr _)
     when is_record_type ~extract_concrete_typedecl ~env t1 ->
     (* The array-item mismatch is an object-vs-record confusion; give the
        specific hint rather than the generic array advice. *)
     print_object_vs_record_hint ppf ~loc
-  | Some ArrayValue, _ ->
+  | Some ArrayValue, _, _ ->
     fprintf ppf
       "\n\n\
       \  Arrays can only contain items of the same type.\n\n\
@@ -458,7 +457,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  - Use a tuple, if your array is of fixed length. Tuples can mix types \
        freely, and compiles to a JavaScript array. Example of a tuple: `let \
        myTuple = (10, \"hello\", 15.5, true)"
-  | _, Some ({desc = Tarrow _}, expected)
+  | _, Some (_, expected), Some (Tarrow _, _)
     when is_jsx_component_type ~env expected ->
     fprintf ppf
       "\n\n\
@@ -469,20 +468,15 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        or @{<info>@react.componentWithProps@}\n\
       \  - If this is already a valid component-like value, wrap it with \
        @{<info>React.component(...)@}"
-  | _, Some (_, {desc = Tconstr (p2, _, _)}) when Path.same Predef.path_dict p2
-    ->
+  | _, _, Some (_, Tconstr (p2, _, _)) when Path.same Predef.path_dict p2 ->
     fprintf ppf
       "@,@,Dicts are written like: @{<info>dict{\"a\": 1, \"b\": 2}@}@,"
-  | ( _,
-      Some
-        (({Types.desc = Tconstr (_p1, _, _)} as ty), {desc = Tconstr (p2, _, _)})
-    )
+  | _, Some (ty, _), Some (Tconstr (_p1, _, _), Tconstr (p2, _, _))
     when Path.same Predef.path_unit p2 ->
     fprintf ppf "\n\n";
     let is_jsx_element =
-      match Ctype.expand_head env ty with
-      | {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _)} ->
-        true
+      match Types.get_desc (Ctype.expand_head env ty) with
+      | Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _) -> true
       | _ -> false
     in
     if is_jsx_element then
@@ -496,13 +490,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         \  - If you don't care about the result of this expression, you can \
          assign it to @{<info>_@} via @{<info>let _ = ...@} or pipe it to \
          @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
-  | _, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
+  | _, Some (_, t1), Some (Tobject _, Tconstr _)
     when is_record_type ~extract_concrete_typedecl ~env t1 ->
     print_object_vs_record_hint ppf ~loc
-  | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
-    when Path.same p1 Predef.path_promise ->
+  | _, _, Some (Tconstr (p1, _, _), _) when Path.same p1 Predef.path_promise ->
     fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"
-  | _, Some ({Types.desc = Tconstr (p1, _, _)}, {Types.desc = Ttuple _})
+  | _, _, Some (Tconstr (p1, _, _), Ttuple _)
     when Path.same p1 Predef.path_array ->
     let suggested_rewrite =
       Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
@@ -520,15 +513,14 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       | Some rewrite -> rewrite
       | None -> "")
   | ( _,
+      _,
       Some
-        ( {desc = Tconstr (p, type_params, _)},
-          {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _)} )
-    ) -> (
+        ( Tconstr (p, type_params, _),
+          Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _) ) ) -> (
     (* Looking for a JSX element but got something else *)
     let is_jsx_element ty =
-      match Ctype.expand_head env ty with
-      | {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _)} ->
-        true
+      match Types.get_desc (Ctype.expand_head env ty) with
+      | Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _) -> true
       | _ -> false
     in
 
@@ -575,7 +567,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         (with_configured_jsx_module "array")
     | _ -> ())
   | ( Some (RecordField {optional = true; field_name; jsx = None}),
-      Some ({desc = Tconstr (p, _, _)}, _) )
+      _,
+      Some (Tconstr (p, _, _), _) )
     when Path.same Predef.path_option p ->
     fprintf ppf
       "@,\
@@ -593,7 +586,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       field_name field_name
       (Parser.extract_text_at_loc loc)
   | ( Some (RecordField {optional = true; field_name; jsx = Some _}),
-      Some ({desc = Tconstr (p, _, _)}, _) )
+      _,
+      Some (Tconstr (p, _, _), _) )
     when Path.same Predef.path_option p ->
     fprintf ppf
       "@,\
@@ -610,8 +604,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        @{<info>%s=?%s@}"
       field_name field_name
       (Parser.extract_text_at_loc loc)
-  | ( Some (FunctionArgument {optional = true}),
-      Some ({desc = Tconstr (p, _, _)}, _) )
+  | Some (FunctionArgument {optional = true}), _, Some (Tconstr (p, _, _), _)
     when Path.same Predef.path_option p ->
     fprintf ppf
       "@,\
@@ -626,7 +619,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        with @{<info>?@} to show you want to pass the option, like: \
        @{<info>?%s@}"
       (Parser.extract_text_at_loc loc)
-  | Some BracedIdent, Some (_, ({desc = Tconstr (_, _, _)} as t))
+  | Some BracedIdent, Some (_, t), Some (_, Tconstr (_, _, _))
     when is_record_type ~extract_concrete_typedecl ~env t ->
     fprintf ppf
       "@,\
@@ -655,7 +648,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        with
       | None -> ""
       | Some s -> s)
-  | _, Some ({Types.desc = Tconstr (p1, _, _)}, {desc = Tvariant row_desc})
+  | _, _, Some (Tconstr (p1, _, _), Tvariant row_desc)
     when Path.same Predef.path_string p1 -> (
     (* Check if we have a string constant that could be a polymorphic variant constructor *)
     let target_expr_text = Parser.extract_text_at_loc loc in
@@ -687,7 +680,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
           string_value reprinted
       | _ -> ())
     | None -> ())
-  | _, Some ({Types.desc = Tconstr (p1, _, _)}, ({desc = Tconstr _} as t2))
+  | _, Some (_, t2), Some (Tconstr (p1, _, _), Tconstr _)
     when Path.same Predef.path_string p1
          && is_variant_type ~extract_concrete_typedecl ~env t2 -> (
     (* Check if we have a string constant that could be a regular variant constructor *)
@@ -747,7 +740,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         | None -> ())
       | None -> ())
     | _ -> ())
-  | _, Some (_supplied_type, target_type) ->
+  | _, Some (_supplied_type, target_type), _ ->
     (* Coercion should always target the top level types. *)
     let top_level_types =
       match trace with
@@ -756,7 +749,10 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     in
     let can_show_coercion_message =
       match top_level_types with
-      | Some ({Types.desc = Tvariant _}, {Types.desc = Tvariant _}) ->
+      | Some (t1, t2)
+        when match (Types.get_desc t1, Types.get_desc t2) with
+             | Tvariant _, Tvariant _ -> true
+             | _ -> false ->
         (* Subtyping polymorphic variants give some weird messages sometimes,
         so let's turn it off for now. For an example, turn them on again and try:
         ```
@@ -870,7 +866,7 @@ let type_clash_context_in_statement sexp =
 let print_contextual_unification_error ppf t1 t2 =
   (* TODO: Maybe we should do the same for Null.t and Nullable.t as we do for options
      below, now that they also are more first class for values that might not exist? *)
-  match (t1.Types.desc, t2.Types.desc) with
+  match (Types.get_desc t1, Types.get_desc t2) with
   | Tconstr (p1, _, _), Tconstr (p2, _, _)
     when Path.same p1 Predef.path_option
          && Path.same p2 Predef.path_option <> true ->

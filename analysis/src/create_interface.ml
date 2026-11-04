@@ -237,24 +237,29 @@ let print_signature ~path ~source ~extractor ~signature =
     let react_element =
       Ctype.newconstr (Pdot (Pident (Ident.create "React"), "element", 0)) []
     in
-    match typ.desc with
-    | Tarrow
-        ( {typ = {desc = Tconstr (Path.Pident props_id, type_args, _)}} :: _,
-          ret_type )
-      when Ident.name props_id = "props" ->
-      Some (type_args, ret_type)
-    | Tconstr
-        ( Pdot (Pident {name = "React"}, "component", _),
-          [{desc = Tconstr (Path.Pident props_id, type_args, _)}],
-          _ )
-      when Ident.name props_id = "props" ->
-      Some (type_args, react_element)
+    match Types.get_desc typ with
+    | Tarrow ({typ = props_type} :: _, ret_type) -> (
+      match Types.get_desc props_type with
+      | Tconstr (Path.Pident props_id, type_args, _)
+        when Ident.name props_id = "props" ->
+        Some (type_args, ret_type)
+      | _ -> None)
+    | Tconstr (Pdot (Pident {name = "React"}, "component", _), [props_type], _)
+      -> (
+      match Types.get_desc props_type with
+      | Tconstr (Path.Pident props_id, type_args, _)
+        when Ident.name props_id = "props" ->
+        Some (type_args, react_element)
+      | _ -> None)
     | Tconstr
         ( Pdot (Pident {name = "React"}, "componentLike", _),
-          [{desc = Tconstr (Path.Pident props_id, type_args, _)}; ret_type],
-          _ )
-      when Ident.name props_id = "props" ->
-      Some (type_args, ret_type)
+          [props_type; ret_type],
+          _ ) -> (
+      match Types.get_desc props_type with
+      | Tconstr (Path.Pident props_id, type_args, _)
+        when Ident.name props_id = "props" ->
+        Some (type_args, ret_type)
+      | _ -> None)
     | _ -> None
   in
 
@@ -293,17 +298,18 @@ let print_signature ~path ~source ~extractor ~signature =
                 in
                 {Types.lbl; typ = prop_type})
           in
-          {ret_type with desc = Tarrow (params, ret_type)}
+          Types.Transient_expr.create
+            (Tarrow (params, ret_type))
+            ~level:(Types.get_level ret_type) ~id:(Types.get_id ret_type)
         in
         let fun_type =
           if List.length label_decls = 0 (* No props *) then
             let t_unit =
               Ctype.newconstr (Path.Pident (Ident.create "unit")) []
             in
-            {
-              ret_type with
-              desc = Tarrow ([{Types.lbl = Nolabel; typ = t_unit}], ret_type);
-            }
+            Types.Transient_expr.create
+              (Tarrow ([{Types.lbl = Nolabel; typ = t_unit}], ret_type))
+              ~level:(Types.get_level ret_type) ~id:(Types.get_id ret_type)
           else mk_fun_type label_decls
         in
         sig_item_to_string

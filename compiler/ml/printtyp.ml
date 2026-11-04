@@ -118,9 +118,10 @@ let raw_list pr ppf = function
     fprintf ppf "@[<1>[%a%t]@]" pr a (fun ppf ->
         List.iter (fun x -> fprintf ppf ";@,%a" pr x) l)
 
-let rec safe_repr v = function
-  | {desc = Tlink t} when not (List.memq t v) -> safe_repr (t :: v) t
-  | t -> t
+let rec safe_repr v t =
+  match get_desc t with
+  | Tlink t' when not (List.memq t' v) -> safe_repr (t' :: v) t'
+  | _ -> t
 
 let rec list_of_memo = function
   | Mnil -> []
@@ -135,11 +136,11 @@ let visited_key = Request_local.new_key (fun () -> ref [])
 let visited () = Domain.DLS.get visited_key
 let rec raw_type ppf ty =
   let ty = safe_repr [] ty in
-  if List.memq ty !(visited ()) then fprintf ppf "{id=%d}" ty.id
+  if List.memq ty !(visited ()) then fprintf ppf "{id=%d}" (get_id ty)
   else (
     visited () := ty :: !(visited ());
-    fprintf ppf "@[<1>{id=%d;level=%d;desc=@,%a}@]" ty.id ty.level raw_type_desc
-      ty.desc)
+    fprintf ppf "@[<1>{id=%d;level=%d;desc=@,%a}@]" (get_id ty) (get_level ty)
+      raw_type_desc (get_desc ty))
 
 and raw_type_list tl = raw_list raw_type tl
 
@@ -250,8 +251,9 @@ let rec normalize_type_path ?(cache = false) env p =
   try
     let params, ty, _ = Env.find_type_expansion p env in
     let params = List.map repr params in
-    match repr ty with
-    | {desc = Tconstr (p1, tyl, _)} ->
+    let ty = repr ty in
+    match get_desc ty with
+    | Tconstr (p1, tyl, _) ->
       let tyl = List.map repr tyl in
       if List.length params = List.length tyl && List.for_all2 ( == ) params tyl
       then normalize_type_path ~cache env p1
@@ -261,7 +263,7 @@ let rec normalize_type_path ?(cache = false) env p =
         let l1 = List.map (index params) tyl in
         let p2, s2 = normalize_type_path ~cache env p1 in
         (p2, compose l1 s2)
-    | ty -> (p, Nth (index params ty))
+    | _ -> (p, Nth (index params ty))
   with Not_found -> (Env.normalize_path None env p, Id)
 
 let penalty s =
@@ -402,7 +404,7 @@ let reset_names () =
   name_counter () := 0;
   named_vars () := []
 let add_named_var ty =
-  match ty.desc with
+  match get_desc ty with
   | Tvar (Some name) | Tunivar (Some name) ->
     if List.mem name !(named_vars ()) then ()
     else named_vars () := name :: !(named_vars ())
@@ -441,7 +443,7 @@ let name_of_type name_generator t =
     try Type_map.find t !(weak_var_map ())
     with Not_found ->
       let name =
-        match t.desc with
+        match get_desc t with
         | Tvar (Some name) | Tunivar (Some name) ->
           (* Some part of the type we've already printed has assigned another
            * unification variable to that name. We want to keep the name, so try
@@ -489,7 +491,7 @@ let add_alias ty =
     add_named_var px)
 
 let aliasable ty =
-  match ty.desc with
+  match get_desc ty with
   | Tvar _ | Tunivar _ | Tpoly _ -> false
   | Tconstr (p, _, _) -> not (is_nth (snd (best_type_path p)))
   | _ -> true
@@ -510,7 +512,7 @@ let rec mark_loops_rec visited ty =
   if List.memq px visited && aliasable ty then add_alias px
   else
     let visited = px :: visited in
-    match ty.desc with
+    match get_desc ty with
     | Tvar _ -> add_named_var ty
     | Tarrow (params, ret) ->
       List.iter (fun (arg : Types.arg) -> mark_loops_rec visited arg.typ) params;
@@ -605,7 +607,7 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
     Otyp_var (mark, name)
   else
     let pr_typ () =
-      match ty.desc with
+      match get_desc ty with
       | Tvar _ ->
         (*let lev =
           if is_non_gen sch ty then "/" ^ string_of_int ty.level else "" in*)
@@ -618,7 +620,7 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
             (fun (arg : Types.arg) ->
               let t1 =
                 if is_optional arg.lbl then
-                  match (repr arg.typ).desc with
+                  match get_desc (repr arg.typ) with
                   | Tconstr (path, [ty], _)
                     when Path.same path Predef.path_option ->
                     tree_of_typexp ?printing_context sch ty
@@ -756,12 +758,12 @@ and tree_of_typobject ?printing_context sch fi =
   in
   Otyp_object (fields, rest)
 
-and is_non_gen sch ty = sch && is_Tvar ty && ty.level <> generic_level
+and is_non_gen sch ty = sch && is_Tvar ty && get_level ty <> generic_level
 
 and tree_of_typfields ?printing_context sch rest = function
   | [] ->
     let rest =
-      match rest.desc with
+      match get_desc rest with
       | Tvar _ | Tunivar _ -> Some (is_non_gen sch rest)
       | Tconstr _ -> Some false
       | Tnil -> None
@@ -784,9 +786,10 @@ and tree_of_type_decl id decl =
   | Some ty ->
     let vars = free_variables ty in
     List.iter
-      (function
-        | {desc = Tvar (Some "_")} as ty ->
-          if List.memq ty vars then ty.desc <- Tvar None
+      (fun ty ->
+        match get_desc ty with
+        | Tvar (Some "_") ->
+          if List.memq ty vars then Transient_expr.set_desc ty (Tvar None)
         | _ -> ())
       params
   | None -> ());
@@ -800,8 +803,8 @@ and tree_of_type_decl id decl =
     | Some ty ->
       let ty =
         (* Special hack to hide variant name *)
-        match repr ty with
-        | {desc = Tvariant row} -> (
+        match get_desc (repr ty) with
+        | Tvariant row -> (
           let row = row_repr row in
           match row.row_name with
           | Some (Pident id', _) when Ident.same id id' ->
@@ -968,7 +971,7 @@ and tree_of_constructor ?printing_context ~layout ~position cd =
 and tree_of_label ?printing_context l =
   let opt = l.ld_optional in
   let typ =
-    match l.ld_type.desc with
+    match get_desc l.ld_type with
     | Tconstr (p, [t1], _) when opt && Path.same p Predef.path_option -> t1
     | _ -> l.ld_type
   in
@@ -1211,7 +1214,7 @@ let same_path t t' =
   let t = repr t and t' = repr t' in
   t == t'
   ||
-  match (t.desc, t'.desc) with
+  match (get_desc t, get_desc t') with
   | Tconstr (p, tl, _), Tconstr (p', tl', _) -> (
     let p1, s1 = best_type_path p and p2, s2 = best_type_path p' in
     match (s1, s2) with
@@ -1266,14 +1269,15 @@ let rec type_path_list ppf = function
 
 (* Hide variant name and var, to force printing the expanded type *)
 let hide_variant_name t =
-  match repr t with
-  | {desc = Tvariant row} as t when (row_repr row).row_name <> None ->
-    newty2 t.level
+  let t' = repr t in
+  match get_desc t' with
+  | Tvariant row when (row_repr row).row_name <> None ->
+    newty2 (get_level t')
       (Tvariant
          {
            (row_repr row) with
            row_name = None;
-           row_more = newvar2 (row_more row).level;
+           row_more = newvar2 (get_level (row_more row));
          })
   | _ -> t
 
@@ -1284,7 +1288,7 @@ let prepare_expansion (t, t') =
   (t, t')
 
 let may_prepare_expansion compact (t, t') =
-  match (repr t').desc with
+  match get_desc (repr t') with
   | (Tvariant _ | Tobject _) when compact ->
     mark_loops t;
     (t, t)
@@ -1300,7 +1304,7 @@ let print_tags ppf fields =
       fields
 
 let has_explanation t3 t4 =
-  match (t3.desc, t4.desc) with
+  match (get_desc t3, get_desc t4) with
   | Tfield _, (Tnil | Tconstr _)
   | (Tnil | Tconstr _), Tfield _
   | Tnil, Tconstr _
@@ -1309,8 +1313,10 @@ let has_explanation t3 t4 =
   | Tvar _, _
   | Tvariant _, Tvariant _ ->
     true
-  | ( Tfield {name = l; rest = {desc = Tnil}},
-      Tfield {name = l'; rest = {desc = Tnil}} ) ->
+  | Tfield {name = l; rest = rest1}, Tfield {name = l'; rest = rest2}
+    when match (get_desc rest1, get_desc rest2) with
+         | Tnil, Tnil -> true
+         | _ -> false ->
     l = l'
   | _ -> false
 
@@ -1340,12 +1346,12 @@ let escape_explanation ppf p =
       path p
 
 let explanation unif t3 t4 ppf =
-  match (t3.desc, t4.desc) with
+  match (get_desc t3, get_desc t4) with
   | Ttuple [], Tvar _ | Tvar _, Ttuple [] ->
     fprintf ppf "@,Self type cannot escape its class"
-  | Tconstr (p, _, _), Tvar _ when unif && t4.level < Path.binding_time p ->
+  | Tconstr (p, _, _), Tvar _ when unif && get_level t4 < Path.binding_time p ->
     escape_explanation ppf p
-  | Tvar _, Tconstr (p, _, _) when unif && t3.level < Path.binding_time p ->
+  | Tvar _, Tconstr (p, _, _) when unif && get_level t3 < Path.binding_time p ->
     escape_explanation ppf p
   | Tvar _, Tunivar _ | Tunivar _, Tvar _ ->
     fprintf ppf "@,The universal variable %a would escape its scope" type_expr
@@ -1358,9 +1364,12 @@ let explanation unif t3 t4 ppf =
     else
       fprintf ppf "@,@[<hov>This instance of %a is ambiguous:@ %s@]" type_expr
         t' "it would escape the scope of its equation"
-  | ( Tfield {name = l; typ = f1; rest = {desc = Tnil}},
-      Tfield {name = l'; typ = f2; rest = {desc = Tnil}} )
-    when l = l' ->
+  | ( Tfield {name = l; typ = f1; rest = rest1},
+      Tfield {name = l'; typ = f2; rest = rest2} )
+    when (match (get_desc rest1, get_desc rest2) with
+           | Tnil, Tnil -> true
+           | _ -> false)
+         && l = l' ->
     fprintf ppf
       "@,\
        @,\
@@ -1385,7 +1394,7 @@ let explanation unif t3 t4 ppf =
   | Tnil, Tconstr _ | Tconstr _, Tnil ->
     fprintf ppf
       "@,@[The %s object type has an abstract row, it cannot be closed@]"
-      (if t4.desc = Tnil then "first" else "second")
+      (if get_desc t4 = Tnil then "first" else "second")
   | Tvariant row1, Tvariant row2 -> (
     let row1 = row_repr row1 and row2 = row_repr row2 in
     match
@@ -1445,7 +1454,7 @@ let explanation unif t3 t4 ppf =
   | _ -> ()
 
 let warn_on_missing_def env ppf t =
-  match t.desc with
+  match get_desc t with
   | Tconstr (p, _, _) -> (
     try ignore (Env.find_type p env : Types.type_declaration)
     with Not_found ->
@@ -1476,7 +1485,7 @@ let rec path_same_name p1 p2 =
   | _ -> ()
 
 let type_same_name t1 t2 =
-  match ((repr t1).desc, (repr t2).desc) with
+  match (get_desc (repr t1), get_desc (repr t2)) with
   | Tconstr (p1, _, _), Tconstr (p2, _, _) ->
     path_same_name (fst (best_type_path p1)) (fst (best_type_path p2))
   | _ -> ()

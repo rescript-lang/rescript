@@ -28,7 +28,7 @@ let debug_log_type_arg_context {env; type_args; type_params} =
 
 (** Checks whether this type has any uninstantiated type parameters. *)
 let rec has_tvar (ty : Types.type_expr) : bool =
-  match ty.desc with
+  match Types.get_desc ty with
   | Tvar _ -> true
   | Tarrow (params, ret) ->
     List.exists (fun ({typ} : Types.arg) -> has_tvar typ) params || has_tvar ret
@@ -58,12 +58,12 @@ let find_type_via_loc ~full ~debug (loc : Location.t) =
   | _ -> None
 
 let path_from_type_expr (t : Types.type_expr) =
-  match t.desc with
-  | Tconstr (path, _typeArgs, _)
-  | Tlink {desc = Tconstr (path, _typeArgs, _)}
-  | Tsubst {desc = Tconstr (path, _typeArgs, _)}
-  | Tpoly ({desc = Tconstr (path, _typeArgs, _)}, []) ->
-    Some path
+  match Types.get_desc t with
+  | Tconstr (path, _typeArgs, _) -> Some path
+  | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> (
+    match Types.get_desc t1 with
+    | Tconstr (path, _typeArgs, _) -> Some path
+    | _ -> None)
   | _ -> None
 
 let print_record_from_fields ?name (fields : field list) =
@@ -140,33 +140,49 @@ let instantiate_type ~type_params ~type_args (t : Types.type_expr) =
       | [], _ | _, [] -> t
     in
     let rec loop (t : Types.type_expr) =
-      match t.desc with
+      match Types.get_desc t with
       | Tlink t -> loop t
       | Tvar _ -> apply_sub type_params type_args t
       | Tunivar _ -> t
       | Tconstr (path, args, memo) ->
-        {t with desc = Tconstr (path, args |> List.map loop, memo)}
+        Types.Transient_expr.create
+          (Tconstr (path, args |> List.map loop, memo))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
       | Tsubst t -> loop t
-      | Tvariant rd -> {t with desc = Tvariant (row_desc rd)}
+      | Tvariant rd ->
+        Types.Transient_expr.create
+          (Tvariant (row_desc rd))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
       | Tnil -> t
       | Tarrow (params, ret) ->
-        {
-          t with
-          desc =
-            Tarrow
-              ( List.map
-                  (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
-                  params,
-                loop ret );
-        }
-      | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
-      | Tobject t -> {t with desc = Tobject (loop t)}
+        Types.Transient_expr.create
+          (Tarrow
+             ( List.map
+                 (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
+                 params,
+               loop ret ))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
+      | Ttuple tl ->
+        Types.Transient_expr.create
+          (Ttuple (tl |> List.map loop))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
+      | Tobject t ->
+        Types.Transient_expr.create
+          (Tobject (loop t))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
       | Tfield f ->
-        {t with desc = Tfield {f with typ = loop f.typ; rest = loop f.rest}}
+        Types.Transient_expr.create
+          (Tfield {f with typ = loop f.typ; rest = loop f.rest})
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
       | Tpoly (t, []) -> loop t
-      | Tpoly (t, tl) -> {t with desc = Tpoly (loop t, tl |> List.map loop)}
+      | Tpoly (t, tl) ->
+        Types.Transient_expr.create
+          (Tpoly (loop t, tl |> List.map loop))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
       | Tpackage (p, l, tl) ->
-        {t with desc = Tpackage (p, l, tl |> List.map loop)}
+        Types.Transient_expr.create
+          (Tpackage (p, l, tl |> List.map loop))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
     and row_desc (rd : Types.row_desc) =
       let row_fields =
         rd.row_fields |> List.map (fun (l, rf) -> (l, row_field rf))
@@ -194,41 +210,59 @@ let instantiate_type2 ?(type_arg_context : type_arg_context option)
   | Some {type_args; type_params} ->
     let rec apply_sub tp ta name =
       match (tp, ta) with
-      | {Types.desc = Tvar (Some var_name)} :: t_rest1, t2 :: t_rest2 ->
-        if var_name = name then t2 else apply_sub t_rest1 t_rest2 name
-      | _ :: t_rest1, _ :: t_rest2 -> apply_sub t_rest1 t_rest2 name
+      | tp1 :: t_rest1, t2 :: t_rest2 -> (
+        match Types.get_desc tp1 with
+        | Tvar (Some var_name) ->
+          if var_name = name then t2 else apply_sub t_rest1 t_rest2 name
+        | _ -> apply_sub t_rest1 t_rest2 name)
       | [], _ | _, [] -> t
     in
 
     let rec loop (t : Types.type_expr) =
-      match t.desc with
+      match Types.get_desc t with
       | Tlink t -> loop t
       | Tvar (Some name) -> apply_sub type_params type_args name
       | Tvar _ -> t
       | Tunivar _ -> t
       | Tconstr (path, args, memo) ->
-        {t with desc = Tconstr (path, args |> List.map loop, memo)}
+        Types.Transient_expr.create
+          (Tconstr (path, args |> List.map loop, memo))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
       | Tsubst t -> loop t
-      | Tvariant rd -> {t with desc = Tvariant (row_desc rd)}
+      | Tvariant rd ->
+        Types.Transient_expr.create
+          (Tvariant (row_desc rd))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
       | Tnil -> t
       | Tarrow (params, ret) ->
-        {
-          t with
-          desc =
-            Tarrow
-              ( List.map
-                  (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
-                  params,
-                loop ret );
-        }
-      | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
-      | Tobject t -> {t with desc = Tobject (loop t)}
+        Types.Transient_expr.create
+          (Tarrow
+             ( List.map
+                 (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
+                 params,
+               loop ret ))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
+      | Ttuple tl ->
+        Types.Transient_expr.create
+          (Ttuple (tl |> List.map loop))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
+      | Tobject t ->
+        Types.Transient_expr.create
+          (Tobject (loop t))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
       | Tfield f ->
-        {t with desc = Tfield {f with typ = loop f.typ; rest = loop f.rest}}
+        Types.Transient_expr.create
+          (Tfield {f with typ = loop f.typ; rest = loop f.rest})
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
       | Tpoly (t, []) -> loop t
-      | Tpoly (t, tl) -> {t with desc = Tpoly (loop t, tl |> List.map loop)}
+      | Tpoly (t, tl) ->
+        Types.Transient_expr.create
+          (Tpoly (loop t, tl |> List.map loop))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
       | Tpackage (p, l, tl) ->
-        {t with desc = Tpackage (p, l, tl |> List.map loop)}
+        Types.Transient_expr.create
+          (Tpackage (p, l, tl |> List.map loop))
+          ~level:(Types.get_level t) ~id:(Types.get_id t)
     and row_desc (rd : Types.row_desc) =
       let row_fields =
         rd.row_fields |> List.map (fun (l, rf) -> (l, row_field rf))
@@ -250,7 +284,7 @@ let instantiate_type2 ?(type_arg_context : type_arg_context option)
     loop t
 
 let rec extract_record_type ~state ~env ~package (t : Types.type_expr) =
-  match t.desc with
+  match Types.get_desc t with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
     extract_record_type ~state ~env ~package t1
   | Tconstr (path, type_args, _) -> (
@@ -273,7 +307,7 @@ let rec extract_record_type ~state ~env ~package (t : Types.type_expr) =
   | _ -> None
 
 let rec extract_object_type ~state ~env ~package (t : Types.type_expr) =
-  match t.desc with
+  match Types.get_desc t with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
     extract_object_type ~state ~env ~package t1
   | Tobject t_obj -> Some (env, t_obj)
@@ -292,7 +326,7 @@ let flatten_arrow_params (params : Types.arg list) acc =
 
 let extract_function_type ~state ~env ~package ?(dig_into = true) typ =
   let rec loop ~env acc (t : Types.type_expr) =
-    match t.desc with
+    match Types.get_desc t with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
     | Tarrow (params, t_ret) ->
       loop ~env (flatten_arrow_params params acc) t_ret
@@ -308,7 +342,7 @@ let extract_function_type ~state ~env ~package ?(dig_into = true) typ =
 
 let extract_function_type_with_env ~state ~env ~package typ =
   let rec loop ~env acc (t : Types.type_expr) =
-    match t.desc with
+    match Types.get_desc t with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
     | Tarrow (params, t_ret) ->
       loop ~env (flatten_arrow_params params acc) t_ret
@@ -344,7 +378,7 @@ let maybe_set_type_arg_ctx ?type_arg_context_from_type_manifest ~type_params
 (* TODO(env-stuff) Maybe this could be removed entirely if we can guarantee that we don't have to look up functions from in here. *)
 let extract_function_type2 ?type_arg_context ~state ~env ~package typ =
   let rec loop ?type_arg_context ~env acc (t : Types.type_expr) =
-    match t.desc with
+    match Types.get_desc t with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       loop ?type_arg_context ~env acc t1
     | Tarrow (params, t_ret) ->
@@ -382,7 +416,7 @@ let rec extract_type ?(print_opening_debug = true)
       Printf.printf "[extract_type]--> %s"
         (debug_log_type_arg_context type_arg_context));
   let instantiate_type = instantiate_type2 in
-  match t.desc with
+  match Types.get_desc t with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
     extract_type ?type_arg_context ~print_opening_debug:false ~env ~package
       ~state t1
@@ -482,7 +516,7 @@ let rec extract_type ?(print_opening_debug = true)
               (* Multiple arguments are represented as a Ttuple, while a single argument is just the type expression itself. *)
               (match field with
               | Types.Rpresent (Some type_expr) -> (
-                match type_expr.desc with
+                match Types.get_desc type_expr with
                 | Ttuple args -> args
                 | _ -> [type_expr])
               | _ -> []);
@@ -501,12 +535,12 @@ let rec extract_type ?(print_opening_debug = true)
 
     let instantiated = t |> instantiate_type ?type_arg_context in
     let rec extract_instantiated t =
-      match t.Types.desc with
+      match Types.get_desc t with
       | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> extract_instantiated t1
       | _ -> t
     in
-    match extract_instantiated instantiated with
-    | {desc = Tvar _} ->
+    match Types.get_desc (extract_instantiated instantiated) with
+    | Tvar _ ->
       if Debug.verbose () then
         Printf.printf "[extract_type]--> could not instantiate '%s. Skipping.\n"
           var_name;
@@ -545,7 +579,7 @@ let find_return_type_of_function_at_loc loc ~(env : Query_env.t) ~full ~state
 
 let rec dig_to_relevant_template_name_type ~env ~package ~state ?(suffix = "")
     (t : Types.type_expr) =
-  match t.desc with
+  match Types.get_desc t with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
     dig_to_relevant_template_name_type ~suffix ~env ~package ~state t1
   | Tconstr (Path.Pident {name = "option"}, [t1], _) ->
@@ -566,19 +600,23 @@ let rec resolve_type_for_pipe_completion ~env ~package ~state ~lhs_loc ~full
      This attempts to look up the compiled type for that type parameter by
      looking for compiled information at the loc of that expression. *)
   let typ_from_loc =
-    match t with
-    | {Types.desc = Tvar _} ->
+    match Types.get_desc t with
+    | Tvar _ ->
       find_return_type_of_function_at_loc lhs_loc ~env ~full ~state ~debug:false
     | _ -> None
   in
   match typ_from_loc with
-  | Some ({desc = Tvar _} as t) -> (env, t)
+  | Some t
+    when match Types.get_desc t with
+         | Tvar _ -> true
+         | _ -> false ->
+    (env, t)
   | Some typ_from_loc ->
     typ_from_loc
     |> resolve_type_for_pipe_completion ~lhs_loc ~env ~package ~full ~state
   | None ->
     let rec dig_to_relevant_type ~env ~package (t : Types.type_expr) =
-      match t.desc with
+      match Types.get_desc t with
       | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
         dig_to_relevant_type ~env ~package t1
       (* Don't descend into types named "t". Type t is a convention in the ReScript ecosystem. *)
@@ -974,7 +1012,7 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
 let get_args ~env (t : Types.type_expr) ~full ~state =
   let rec get_args_loop ~env (t : Types.type_expr) ~full
       ~current_argument_position =
-    match t.desc with
+    match Types.get_desc t with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       get_args_loop ~full ~env ~current_argument_position t1
     | Tarrow (params, t_ret) ->
@@ -1006,13 +1044,12 @@ let get_args ~env (t : Types.type_expr) ~full ~state =
   t |> get_args_loop ~env ~full ~current_argument_position:0
 
 let type_is_unit (typ : Types.type_expr) =
-  match typ.desc with
-  | Tconstr (Pident id, _typeArgs, _)
-  | Tlink {desc = Tconstr (Pident id, _typeArgs, _)}
-  | Tsubst {desc = Tconstr (Pident id, _typeArgs, _)}
-  | Tpoly ({desc = Tconstr (Pident id, _typeArgs, _)}, [])
-    when Ident.name id = "unit" ->
-    true
+  match Types.get_desc typ with
+  | Tconstr (Pident id, _typeArgs, _) when Ident.name id = "unit" -> true
+  | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> (
+    match Types.get_desc t1 with
+    | Tconstr (Pident id, _typeArgs, _) when Ident.name id = "unit" -> true
+    | _ -> false)
   | _ -> false
 
 let rec context_path_from_core_type (core_type : Parsetree.core_type) =
@@ -1298,7 +1335,7 @@ let transform_completion_to_pipe_completion ?(synthetic = false) ~env
     unique id `SomeFile.SomeModule.x`.*)
 let rec find_root_type_id ~full ~env ~state (t : Types.type_expr) =
   let debug = false in
-  match t.desc with
+  match Types.get_desc t with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
     find_root_type_id ~full ~env ~state t1
   | Tconstr (path, _, _) -> (
@@ -1376,7 +1413,7 @@ let remove_current_module_if_needed ~env_completion_is_made_from completion_path
   else completion_path
 
 let rec get_obj_fields (texp : Types.type_expr) =
-  match texp.desc with
+  match Types.get_desc texp with
   | Tfield {name; typ = t1; rest = t2} ->
     let fields = t2 |> get_obj_fields in
     (name, t1) :: fields

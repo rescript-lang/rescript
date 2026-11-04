@@ -25,15 +25,15 @@ let free_vars ?(param = false) ty =
   let ret = ref Type_set.empty in
   let rec loop ty =
     let ty = repr ty in
-    if ty.level >= lowest_level then (
-      ty.level <- pivot_level - ty.level;
-      match ty.desc with
+    if get_level ty >= lowest_level then (
+      Transient_expr.set_level ty (pivot_level - get_level ty);
+      match get_desc ty with
       | Tvar _ -> ret := Type_set.add ty !ret
       | Tvariant row -> (
         let row = row_repr row in
         iter_row loop row;
         if not (static_row row) then
-          match row.row_more.desc with
+          match get_desc row.row_more with
           | Tvar _ when param -> ret := Type_set.add ty !ret
           | _ -> loop row.row_more)
       (* XXX: What about Tobject ? *)
@@ -239,7 +239,7 @@ let extension_descr path_ext ext =
     cstr_inlined;
   }
 
-let none = {desc = Ttuple []; level = -1; id = -1}
+let none = Transient_expr.create (Ttuple []) ~level:(-1) ~id:(-1)
 (* Clearly ill-formed type *)
 
 let dummy_label =
@@ -303,10 +303,10 @@ let set_row_name decl path =
   | None -> ()
   | Some ty -> (
     let ty = repr ty in
-    match ty.desc with
+    match get_desc ty with
     | Tvariant row when static_row row ->
       let row =
         {(row_repr row) with row_name = Some (path, decl.type_params)}
       in
-      ty.desc <- Tvariant row
+      Transient_expr.set_desc ty (Tvariant row)
     | _ -> ())

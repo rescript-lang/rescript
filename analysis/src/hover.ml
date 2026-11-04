@@ -308,7 +308,7 @@ let new_hover ~state ~full:{file; package} ~supports_markdown_links loc_item =
     in
     (* Expand first-class modules to the underlying module type signature. *)
     let t = Shared.dig t in
-    match t.desc with
+    match Types.get_desc t with
     | Tpackage (path, _lids, _tys) -> (
       let env = Query_env.from_file file in
       match

@@ -4,11 +4,11 @@ let extract_from_type_expr type_params =
   type_params
   |> List.fold_left
        (fun so_far type_expr ->
-         match type_expr with
-         | {Types.desc = Tvar (Some s)} ->
+         match Types.get_desc type_expr with
+         | Tvar (Some s) ->
            let type_name = s in
            type_name :: so_far
-         | {Types.desc = Tlink _} ->
+         | Tlink _ ->
            (* see if we need to collect more type vars here: t as 'a *)
            so_far
          | _ -> assert false)

@@ -4,7 +4,7 @@ type translation = {dependencies: dep list; type_: type_}
 
 let rec remove_option ~(label : Asttypes.arg_label)
     (type_expr : Types.type_expr) =
-  match (type_expr.desc, label) with
+  match (Types.get_desc type_expr, label) with
   | Tconstr (Path.Pident id, [t], _), Optional {txt = lbl}
     when Ident.name id = "option" ->
     Some (lbl, t)
@@ -510,16 +510,17 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env
 
 and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
     (type_expr : Types.type_expr) =
-  match type_expr.desc with
+  match Types.get_desc type_expr with
   | Tvar None ->
     let type_name =
-      Gen_ident.js_type_name_for_anonymous_type_id ~type_vars_gen type_expr.id
+      Gen_ident.js_type_name_for_anonymous_type_id ~type_vars_gen
+        (Types.get_id type_expr)
     in
     {dependencies = []; type_ = TypeVar type_name}
   | Tvar (Some s) -> {dependencies = []; type_ = TypeVar s}
   | Tobject t_obj ->
     let rec get_field_types (texp : Types.type_expr) =
-      match texp.desc with
+      match Types.get_desc texp with
       | Tfield {name; mutability; typ = t1; rest = t2} ->
         let closed_flafg, fields = t2 |> get_field_types in
         ( closed_flafg,
@@ -536,9 +537,18 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
     in
     let closed_flag, fields_translations = t_obj |> get_field_types in
     translate_obj_type closed_flag fields_translations
-  | Tconstr (path, [{desc = Tlink te}], r) ->
-    {type_expr with desc = Types.Tconstr (path, [te], r)}
-    |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+  | Tconstr (path, [param], r)
+    when match Types.get_desc param with
+         | Tlink _ -> true
+         | _ -> false -> (
+    match Types.get_desc param with
+    | Tlink te ->
+      Types.Transient_expr.create
+        (Types.Tconstr (path, [te], r))
+        ~level:(Types.get_level type_expr)
+        ~id:(Types.get_id type_expr)
+      |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+    | _ -> assert false)
   | Tconstr (path, type_params, _) ->
     let params_translation =
       type_params

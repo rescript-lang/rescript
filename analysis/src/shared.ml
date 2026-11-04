@@ -26,14 +26,14 @@ let try_read_cmi cmi =
     | x -> Some x
 
 let rec dig (te : Types.type_expr) =
-  match te.desc with
+  match Types.get_desc te with
   | Tlink inner -> dig inner
   | Tsubst inner -> dig inner
   | Tpoly (inner, _) -> dig inner
   | _ -> te
 
 let dig_constructor te =
-  match (dig te).desc with
+  match Types.get_desc (dig te) with
   | Tconstr (path, _args, _memo) -> Some path
   | _ -> None
 
@@ -43,7 +43,7 @@ let find_type_constructors (tel : Types.type_expr list) =
     if not (List.exists (Path.same path) !paths) then paths := path :: !paths
   in
   let rec loop (te : Types.type_expr) =
-    match te.desc with
+    match Types.get_desc te with
     | Tlink te1 | Tsubst te1 | Tpoly (te1, _) -> loop te1
     | Tconstr (path, args, _) ->
       add_path path;
