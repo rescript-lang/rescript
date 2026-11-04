@@ -88,6 +88,10 @@ type subtype_context =
       issues: Record_coercion.record_field_subtype_violation list;
     }
   | Coercion_into_private_type of {typename: Path.t}
+  | Record_array_mismatch of {
+      array_record_name: Path.t;
+      object_record_name: Path.t;
+    }
 
 exception Subtype of type_pairs * type_pairs * subtype_context option
 
@@ -3863,7 +3867,10 @@ let rec subtype_rec env trace t1 t2 cstrs =
             (p2, _, {type_kind = Type_record (fields2, repr2)}) ) ->
           let same_repr =
             match (repr1, repr2) with
-            | Record_regular, Record_regular ->
+            (* Not between [Record_array] and [Record_regular]: an object is
+               no array, and an array coerced to an object record would
+               still pass for the array case of an untagged variant *)
+            | Record_regular, Record_regular | Record_array, Record_array ->
               true (* handled in the fields checks *)
             | Record_unboxed b1, Record_unboxed b2 -> b1 = b2
             | Record_inlined _, Record_inlined _ -> repr1 = repr2
@@ -3893,7 +3900,16 @@ let rec subtype_rec env trace t1 t2 cstrs =
               t1,
               t2,
               !(current_univar_pairs ()),
-              None (* TODO(subtype-errors) Record representation *) )
+              match (repr1, repr2) with
+              | Record_regular, Record_array ->
+                Some
+                  (Record_array_mismatch
+                     {array_record_name = p2; object_record_name = p1})
+              | Record_array, Record_regular ->
+                Some
+                  (Record_array_mismatch
+                     {array_record_name = p1; object_record_name = p2})
+              | _ -> None (* TODO(subtype-errors) Record representation *) )
             :: cstrs
         | (p1, _, {type_kind = tk1}), (p2, _, {type_kind = tk2}) ->
           ( trace,

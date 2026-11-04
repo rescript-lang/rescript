@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_rest_array_record.res[0m:[2m5:15-18[0m
+
+  3 [2m│[0m 
+  4 [2m│[0m let split = (r: source) => {
+  [1;31m5[0m [2m│[0m   let {s2, ...[1;31mhead[0m as rest} = r
+  6 [2m│[0m   (s2, rest)
+  7 [2m│[0m }
+
+  The rest of a record pattern cannot have a record type represented as an array (fields with the runtime names "0", "1", ...).

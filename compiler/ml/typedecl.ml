@@ -683,12 +683,11 @@ let transl_declaration ~type_record_as_object env sdecl id =
       match lbls_opt with
       | Some (lbls, lbls') ->
         check_duplicates sdecl.ptype_loc lbls String_set.empty;
-        let optional = Ext_list.exists lbls (fun lbl -> lbl.ld_optional) in
         ( Ttype_record lbls,
           Type_record
             ( lbls',
               if unbox then Record_unboxed false
-              else if optional then Record_regular
+              else if Record_runtime.is_array lbls' then Record_array
               else Record_regular ),
           sdecl )
       | None -> (

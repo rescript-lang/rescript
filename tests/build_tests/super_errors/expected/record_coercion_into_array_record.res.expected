@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_coercion_into_array_record.res[0m:[2m4:26-33[0m
+
+  2 [2m│[0m type arr = {@as("0") a: int, @as("1") b: int}
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m let toArr = (x: obj) => ([1;31mx :> arr[0m)
+  5 [2m│[0m 
+
+  Type obj is not a subtype of arr 
+
+  The record [1;33marr[0m is represented as a JavaScript array (its fields have the runtime names "0", "1", ...) and [1;33mobj[0m as an object, so neither can be coerced to the other.

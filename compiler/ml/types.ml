@@ -157,6 +157,9 @@ and type_kind =
 
 and record_representation =
   | Record_regular (* All fields are boxed / tagged *)
+  | Record_array
+    (* A regular record whose fields have the runtime names "0", "1", ...
+         in declaration order, represented as a JavaScript array *)
   | Record_unboxed of bool (* Unboxed single-field record, inlined or not *)
   | Record_inlined of
       (* Inlined record *)
@@ -327,6 +330,7 @@ type label_description = {
 let same_record_representation x y =
   match x with
   | Record_regular -> y = Record_regular
+  | Record_array -> y = Record_array
   | Record_inlined {name} -> (
     match y with
     | Record_inlined y -> name = y.name

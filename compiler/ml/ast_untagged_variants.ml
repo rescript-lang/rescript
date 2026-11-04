@@ -65,7 +65,8 @@ let report_error ppf =
         "At most one case can be "
         ^ (match kind with
           | ObjectType -> "an object type"
-          | InstanceType Array -> "an array or tuple type"
+          | InstanceType Array ->
+            "an array, a tuple or a record represented as an array"
           | InstanceType i -> "an instance of " ^ Instance.to_string i
           | FunctionType -> "a function type"
           | StringType -> "a string type"

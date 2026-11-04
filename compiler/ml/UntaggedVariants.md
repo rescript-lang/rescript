@@ -292,7 +292,7 @@ The type checker rejects an untagged variant, with
 | Condition | Reason | Fixture |
 | --- | --- | --- |
 | two object cases | At most one case can be an object type. | `UntaggedAtMostOneObject.res` |
-| two cases of one instance class, compared by path (arrays and tuples share `Array`) | At most one case can be an instance of C; for `Array`, an array or tuple type. | `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res`, `untagged_same_class_twice.res` |
+| two cases of one instance class, compared by path (arrays, tuples and records represented as arrays share `Array`) | At most one case can be an instance of C; for `Array`, an array, a tuple or a record represented as an array. | `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res`, `untagged_array_record_and_array.res`, `untagged_same_class_twice.res` |
 | two function cases | At most one case can be a function type. | `UntaggedAtMostOneFunction.res` |
 | two string cases | At most one case can be a string type. | `UntaggedAtMostOneString.res` |
 | two number cases (`int` and `float` count together) | At most one case can be a number type (int or float). | `UntaggedAtMostOneNumber.res` |

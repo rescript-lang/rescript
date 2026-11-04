@@ -31,6 +31,9 @@ type tag_info =
   | Blk_record of {
       fields: (string * bool (* optional *)) array;
       mutable_flag: Asttypes.mutable_flag;
+      array: bool;
+          (* [Record_array]: the fields are the elements of a JavaScript
+             array *)
     }
   | Blk_module of string list
   | Blk_module_export of Ident.t list
@@ -59,14 +62,16 @@ let mutable_flag_of_tag_info (tag : tag_info) =
   | Blk_module_export _ | Blk_extension ->
     Immutable
 
-let blk_record fields mutable_flag = Blk_record {fields; mutable_flag}
+let blk_record fields mutable_flag ~array =
+  Blk_record {fields; mutable_flag; array}
 let blk_record_ext fields mutable_flag = Blk_record_ext {fields; mutable_flag}
 
 let blk_record_inlined fields name num_nonconst ~runtime mutable_flag =
   Blk_record_inlined {fields; name; num_nonconst; mutable_flag; runtime}
 
 let ref_tag_info : tag_info =
-  Blk_record {fields = [|("contents", false)|]; mutable_flag = Mutable}
+  Blk_record
+    {fields = [|("contents", false)|]; mutable_flag = Mutable; array = false}
 
 type field_dbg_info =
   | Fld_record of {name: string}
@@ -844,16 +849,6 @@ and eq_option l1 l2 =
 
 and eq_approx_list ls ls1 = Ext_list.for_all2_no_exn ls ls1 eq_approx
 
-let runtime_names_are_array runtime_name fields =
-  let len = Array.length fields in
-  let rec loop i =
-    if i = len then true
-    else string_of_int i = runtime_name fields.(i) && loop (i + 1)
-  in
-  len <> 0 && loop 0
-
-let record_fields_are_array fields = runtime_names_are_array fst fields
-
 (* The JavaScript value a constant is emitted as by [Lam_compile_const] and
    [Js_dump], not its source constructor. A constant of another
    representation keeps the dispatch at run time. *)
@@ -871,8 +866,8 @@ let untagged_value (c : structured_constant) : Untagged_dispatch.value option =
   | Const_bigint (sign, digits) ->
     Some (Literal (BigInt (Bigint_utils.to_string sign digits)))
   | Const_block (Blk_tuple, _) -> Some Array
-  | Const_block (Blk_record {fields}, _) ->
-    if record_fields_are_array fields then Some Array else Some Object
+  | Const_block (Blk_record {array}, _) ->
+    if array then Some Array else Some Object
   | Const_block
       ( ( Blk_constructor _ | Blk_record_inlined _ | Blk_poly_var
         | Blk_record_ext _ | Blk_module _ | Blk_module_export _ | Blk_extension

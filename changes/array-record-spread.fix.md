@@ -1,0 +1,1 @@
+- Keep records whose fields have the runtime names `"0"`, `"1"`, … JavaScript arrays when they are spread or written as `{}`, and match them as arrays when they are untagged variant payloads.

@@ -294,7 +294,8 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     let use =
       match rep with
       | Record_unboxed _ -> fun x -> x
-      | Record_regular | Record_inlined _ | Record_extension -> Use.guard
+      | Record_regular | Record_array | Record_inlined _ | Record_extension ->
+        Use.guard
     in
     let field env (_, _, e) = expression env e in
     Use.join (use (array field env es)) (option expression env eo)

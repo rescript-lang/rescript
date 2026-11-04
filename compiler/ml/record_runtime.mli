@@ -17,6 +17,10 @@
 
 val declaration_name : Types.label_declaration -> string
 
+val is_array : Types.label_declaration list -> bool
+(** Whether the fields have the runtime names ["0"], ["1"], ... in declaration
+    order, so the record is represented as a JavaScript array. *)
+
 val extra_as_attribute : Parsetree.label_declaration -> Location.t option
 (** The location of a second [@as] naming the field, which is one too many. *)
 

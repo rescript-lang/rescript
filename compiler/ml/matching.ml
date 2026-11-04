@@ -1656,7 +1656,7 @@ let make_record_matching loc all_labels def = function
         let lbl = all_labels.(pos) in
         let access =
           match lbl.lbl_repres with
-          | Record_regular ->
+          | Record_regular | Record_array ->
             prim
               ~primitive:
                 (Pfield (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))
