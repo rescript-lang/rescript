@@ -12,17 +12,17 @@ export type opt<a> = (undefined | (
 
 export type nested = (undefined | (
     (undefined | number)
-  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }));
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }));
 
 export type callback = (x:(undefined | (
     (undefined | number)
-  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }))) => number;
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }))) => number;
 
 export function keep(o: (undefined | (
     (undefined | number)
-  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }))): (undefined | (
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }))): (undefined | (
     (undefined | number)
-  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number })) {
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 })) {
   return o;
 }
 
@@ -36,7 +36,7 @@ export function keepNested(o: nested): nested {
 
 export function skip(o: (undefined | (
     void
-  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }))): number {
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }))): number {
   if (o !== undefined) {
     return 1;
   } else {
@@ -44,7 +44,17 @@ export function skip(o: (undefined | (
   }
 }
 
-export function rewrap<a extends string | number | boolean | bigint>(o: (undefined | a)): (undefined | a) {
+export function rewrap<a extends string | number | boolean | bigint>(o: (undefined | a)): (undefined | a);
+export function rewrap<a extends string | number | boolean | bigint>(o: (undefined | (
+    (undefined | a)
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }))): (undefined | (
+    (undefined | a)
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }));
+export function rewrap<a extends string | number | boolean | bigint>(o: (undefined | (
+    (undefined | a)
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }))): (undefined | (
+    (undefined | a)
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 })) {
   if (o !== undefined) {
     return Primitive_option.some(Primitive_option.valFromOption(o));
   }
