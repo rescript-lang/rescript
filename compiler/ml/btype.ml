@@ -99,19 +99,26 @@ let log_change ch =
 
 (**** Representative of a type ****)
 
-let rec repr_link compress t d t' =
-  match get_desc t' with
-  | Tlink t'' as d' -> repr_link true t d' t''
-  | _ ->
-    if compress then (
-      log_change (Ccompress (t, get_desc t, d));
-      Transient_expr.set_desc t d);
-    t'
+(* Follows [Tlink]s through [link_target], which reads the store's link code
+   without allocating the [Tlink] block [get_desc] would build. A chain of
+   two links or more is compressed: [t] is linked to the end of the chain,
+   as a trail entry records. *)
+let rec repr_end t =
+  let t' = link_target t in
+  if t' == t then t else repr_end t'
 
 let repr t =
-  match get_desc t with
-  | Tlink t' as d -> repr_link false t d t'
-  | _ -> t
+  let t1 = link_target t in
+  if t1 == t then t
+  else
+    let t2 = link_target t1 in
+    if t2 == t1 then t1
+    else
+      let t' = repr_end t2 in
+      let d = Tlink t' in
+      log_change (Ccompress (t, get_desc t, d));
+      Transient_expr.set_desc t d;
+      t'
 
 let rec row_field_repr_aux tl = function
   | Reither (_, tl', _, {contents = Some fi}) ->
