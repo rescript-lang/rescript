@@ -36,6 +36,27 @@ module S = Js_stmt_make
    But the default to be undefined  seems reasonable
 *)
 
+(* [Lam_compile_external_call.hold_arg] for the compiled arguments of an
+   object-creating external, which pair with the labels as in
+   [assemble_obj_args] *)
+let rec hold_obj_args (labels : External_arg_spec.obj_params)
+    (args : (J.block * J.expression) list) =
+  match (labels, args) with
+  | {obj_arg_label = Obj_label _; obj_arg_type = Arg_cst _} :: labels, args ->
+    hold_obj_args labels args
+  | {obj_arg_label = Obj_empty} :: labels, arg :: args ->
+    arg :: hold_obj_args labels args
+  | {obj_arg_label = Obj_label _; obj_arg_type} :: labels, arg :: args ->
+    Lam_compile_external_call.hold_arg ~arg_label:Arg_label
+      ~arg_type:obj_arg_type arg
+    :: hold_obj_args labels args
+  | {obj_arg_label = Obj_optional _; obj_arg_type} :: labels, arg :: args ->
+    Lam_compile_external_call.hold_arg ~arg_label:Arg_optional
+      ~arg_type:obj_arg_type arg
+    :: hold_obj_args labels args
+  | [], [] -> []
+  | [], _ :: _ | _ :: _, [] -> assert false
+
 (* TODO: check stackoverflow *)
 let assemble_obj_args (labels : External_arg_spec.obj_params)
     (args : J.expression list) : J.block * J.expression =
