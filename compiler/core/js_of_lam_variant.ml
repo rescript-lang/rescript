@@ -27,6 +27,34 @@ module S = Js_stmt_make
 
 type arg_expression = Splice0 | Splice1 of E.t | Splice2 of E.t * E.t
 
+(* [eval] and [eval_as_int] read an argument other than a literal once,
+   inside the function that dispatches on it. That is the same as reading it
+   in place when the read has no effect and cannot await. *)
+let eval_in_place (arg : J.expression) =
+  Js_analyzer.no_side_effect_expression arg
+
+(* [eval_as_event] reads an argument other than a literal twice, for the tag
+   (inside the function that dispatches on it, with [@as]) and for the
+   payload. That is the same as reading it once, in place, for constants,
+   variables, and fields, array elements and conditionals of them. A JS global
+   ([@val]) or a JS property read, as from a [@get] external, may run a getter
+   each time, so it does not count. *)
+let eval_as_event_in_place (arg : J.expression) =
+  let rec duplicable (e : J.expression) =
+    match e.expression_desc with
+    | Undefined _ | Bool _ | Number _ | Str _ | Template_literal _
+    | Var (Qualified _) ->
+      true
+    | Var (Id id) -> not (Ext_ident.is_js id)
+    | Static_index (e, _, Some _) -> duplicable e
+    | Array_index (a, b) -> duplicable a && duplicable b
+    | Cond (a, b, c) -> duplicable a && duplicable b && duplicable c
+    | _ -> false
+  in
+  match arg.expression_desc with
+  | Caml_block ([{expression_desc = Str _}; _], _, Blk_poly_var) -> true
+  | _ -> duplicable arg
+
 (* we need destruct [undefined] when input is optional *)
 let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
   if arg == E.undefined then E.undefined
@@ -54,18 +82,13 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
 (* invariant: optional is not allowed in this case *)
 (* arg is a polyvar *)
 
-(** FIXME:
-    1. duplicated evaluation of expressions arg
-     Solution: calcuate the arg once in the beginning
-    2. avoid block for branches <  3
-    or always?
-    a === 444? "a" : a==222? "b"
-*)
+(** A literal passes its tag and its payload, evaluated in place. Any other
+    [arg] is read twice, for the tag and for the payload, so the caller binds
+    it to a variable first unless it is [eval_as_event_in_place]. *)
 let eval_as_event (arg : J.expression)
     (dispatches : (string * string) list option) =
   match arg.expression_desc with
-  | Caml_block ([{expression_desc = Str txt}; cb], _, Blk_poly_var)
-    when Js_analyzer.no_side_effect_expression cb ->
+  | Caml_block ([{expression_desc = Str txt}; cb], _, Blk_poly_var) ->
     let v =
       match dispatches with
       | Some dispatches -> Ext_list.assoc_by_string dispatches txt None
@@ -92,10 +115,6 @@ let eval_as_event (arg : J.expression)
                          } )));
             ]
         | None -> E.poly_var_tag_access arg),
-        (* TODO: improve, one dispatch later,
-           the problem is that we can not create bindings
-           due to the
-        *)
         E.poly_var_value_access arg )
 
 (* we need destruct [undefined] when input is optional *)

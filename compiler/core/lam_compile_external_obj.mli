@@ -25,6 +25,13 @@
 (** Compiles the labelled arguments of an object-creating external to a JS
     object literal. *)
 
+val hold_obj_args :
+  External_arg_spec.obj_params ->
+  (J.block * J.expression) list ->
+  (J.block * J.expression) list
+(** {!Lam_compile_external_call.hold_arg} for the compiled arguments of an
+    object-creating external *)
+
 val assemble_obj_args :
   External_arg_spec.obj_params -> J.expression list -> J.block * J.expression
 (* It returns a block in cases we need set the property dynamically: we need

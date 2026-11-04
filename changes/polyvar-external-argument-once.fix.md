@@ -1,0 +1,1 @@
+- Evaluate a polymorphic variant argument of an external once, in its place among the arguments. An event-style `@string` argument such as `on(t, mk())` ran `mk()` twice, and an `await` in an `@int` argument, or in a `@string` argument with `@as`, was put in a generated function, which is a syntax error.

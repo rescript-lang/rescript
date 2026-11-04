@@ -1776,21 +1776,25 @@ let compile output_prefix =
                 ~info:(call_info_of_apply lambda_cxt.meta appinfo)
                 fn_code args)))
   (* Compiles the arguments of a call or a literal, which are evaluated left to
-     right; see [sequence_arguments]. *)
-  and compile_arguments ?method_callee (lambda_cxt : Lam_compile_context.t)
-      (args : Lambda.t list) : J.block * J.expression list =
+     right; see [sequence_arguments]. [hold] may add statements to the
+     compiled arguments, such as the bindings of
+     [Lam_compile_external_call.hold_args]. *)
+  and compile_arguments ?method_callee ?(hold = Fun.id)
+      (lambda_cxt : Lam_compile_context.t) (args : Lambda.t list) :
+      J.block * J.expression list =
     if args = [] then ([], [])
     else
       let arg_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
       sequence_arguments ?method_callee ~assignable:lambda_cxt.meta.assignable
-        (Ext_list.map args (fun arg ->
-             match compile_lambda arg_cxt arg with
-             | {block; value = Some value} -> (block, value)
-             | {value = None} -> assert false))
+        (hold
+           (Ext_list.map args (fun arg ->
+                match compile_lambda arg_cxt arg with
+                | {block; value = Some value} -> (block, value)
+                | {value = None} -> assert false)))
   and compile_prim (prim_info : Lambda.prim_info)
       (lambda_cxt : Lam_compile_context.t) =
-    let compile_primitive_default primitive args loc =
-      let args_code, args_expr = compile_arguments lambda_cxt args in
+    let compile_primitive_default ?hold primitive args loc =
+      let args_code, args_expr = compile_arguments ?hold lambda_cxt args in
       let exp =
         (* TODO: all can be done in [Lam_compile_primitive.translate] *)
         Lam_compile_primitive.translate output_prefix loc lambda_cxt primitive
@@ -1902,13 +1906,21 @@ let compile output_prefix =
                       body))))
       | _ -> assert false)
     | {primitive = Pjs_object_create labels; args} ->
-      let args_code, args_expr = compile_arguments lambda_cxt args in
+      let args_code, args_expr =
+        compile_arguments
+          ~hold:(Lam_compile_external_obj.hold_obj_args labels)
+          lambda_cxt args
+      in
       let block, exp =
         Lam_compile_external_obj.assemble_obj_args labels args_expr
       in
       Js_output.output_of_block_and_expression lambda_cxt.continuation
         (Ext_list.append args_code block)
         exp
+    | {primitive = Pjs_call {arg_types} as primitive; args; loc} ->
+      compile_primitive_default
+        ~hold:(Lam_compile_external_call.hold_args arg_types)
+        primitive args loc
     | {primitive; args; loc} -> compile_primitive_default primitive args loc
   and collect_dup_overrides (copy_id : Ident.t) (lam : Lambda.t)
       (acc : (Lambda.set_field_dbg_info * Lambda.t) list) :
