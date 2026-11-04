@@ -52,14 +52,6 @@ let check_magic_number filename buffer =
       raise (Error (Wrong_version_interface (filename, "an older")))
     else raise (Error (Not_an_interface filename))
 
-let read_cmi_channel filename ic =
-  try
-    check_magic_number filename
-      (really_input_string ic (String.length Config.cmi_magic_number));
-    input_cmi ic
-  with End_of_file | Failure _ -> raise (Error (Corrupted_interface filename))
-
-(* The same as [read_cmi_channel] on a channel holding [contents]. *)
 let read_cmi_contents filename contents =
   let magic_length = String.length Config.cmi_magic_number in
   if String.length contents < magic_length then

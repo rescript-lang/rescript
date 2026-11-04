@@ -76,8 +76,4 @@ val add_string : t -> string -> unit
     Raise [End_of_file] if the channel contains fewer than [n]
     characters. *)
 
-val output_buffer : out_channel -> t -> unit
-(** [output_buffer oc b] writes the current contents of buffer [b]
-    on the output channel [oc]. *)
-
 val add_string_char : t -> string -> char -> unit

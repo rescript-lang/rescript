@@ -61,8 +61,6 @@ val create_hashtable : ('a * 'b) array -> ('a, 'b) Hashtbl.t
 (* Create a hashtable of the given size and fills it with the
    given bindings. *)
 
-val output_to_bin_file_directly : string -> (string -> out_channel -> 'a) -> 'a
-
 module Int_literal_converter : sig
   val int : string -> int
 end
