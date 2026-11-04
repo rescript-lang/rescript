@@ -586,14 +586,17 @@ let leave_cached_interfaces_clean action =
 
 (* The request's type nodes live in a store of its own, freed when the request
    ends: everything that holds types (errors included) is done with by then.
-   It is outermost, so that the predefined types a request allocates are in
-   it. Interfaces cached by the domain have their own store, whose retired
-   generations ([Bs_cmi_load]) this request may still have used. *)
+   It is inside the wrappers that save and restore the domain's predefined
+   types and initial environment, so that those (created on first use) live
+   in the domain's default store, and outside [start_request], so that the
+   predefined types a request allocates are in it. Interfaces cached by the
+   domain have their own store, whose retired generations ([Bs_cmi_load])
+   this request may still have used. *)
 let with_fresh_request_states ~cwd action =
   Fun.protect ~finally:Bs_cmi_load.release_retired_stores (fun () ->
-      Types.Store.with_store ~capacity:(64 * 1024) (fun () ->
-          Predef.with_fresh (fun () ->
-              Env.with_fresh_initial (fun () ->
+      Predef.with_fresh (fun () ->
+          Env.with_fresh_initial (fun () ->
+              Types.Store.with_store ~capacity:(64 * 1024) (fun () ->
                   Ident.with_fresh (fun () ->
                       Request_local.with_fresh (fun () ->
                           Compiler_request_state.with_fresh ~cwd (fun () ->
