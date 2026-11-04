@@ -1,0 +1,5 @@
+(executable
+ (name type_boundary_bench)
+ (enabled_if
+  (<> %{profile} browser))
+ (libraries ml unix))

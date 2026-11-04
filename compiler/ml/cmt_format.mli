@@ -64,6 +64,15 @@ val set_args : string array -> unit
     files. Long-lived compiler hosts set this at each request boundary. *)
 
 val read_cmt : string -> cmt_infos
+
+(** The boxed [cmt_infos] that [.cmt] files hold ([Typedtree_boxed]), and the
+    conversions [read_cmt] and [save_cmt] make, each in one session. *)
+module Boxed : sig
+  type cmt_infos
+end
+
+val import_cmt : Boxed.cmt_infos -> cmt_infos
+val export_cmt : cmt_infos -> Boxed.cmt_infos
 val read_cmi : string -> Cmi_format.cmi_infos
 
 val save_cmt :
