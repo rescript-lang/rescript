@@ -68,10 +68,32 @@ and field_mutability =
   | Mutability_value of Asttypes.mutable_flag
   | Mutability_link of field_mutability ref
 
+(* The primitives below index the fields of [type_expr] by position: [desc] is
+   field 0 and [level] field 1. Reordering the record would make them read the
+   wrong field without a type error, so the check below fails as soon as the
+   compiler starts instead. *)
+external get_desc : type_expr -> type_desc = "%field0"
+external get_level : type_expr -> int = "%field1"
+let get_id t = t.id
+
+let () =
+  let t = {desc = Tnil; level = 12345; id = 0} in
+  if not (get_desc t == Tnil && get_level t = 12345) then
+    failwith "Types: get_desc and get_level don't match the type_expr fields"
+
+module Transient_expr = struct
+  let create desc ~level ~id = {desc; level; id}
+
+  external set_desc : type_expr -> type_desc -> unit = "%setfield0"
+
+  (* OCaml 5.0 has no [%setfield1]. *)
+  let set_level t level = t.level <- level
+end
+
 module Type_ops = struct
   type t = type_expr
-  let compare t1 t2 = t1.id - t2.id
-  let hash t = t.id
+  let compare t1 t2 = get_id t1 - get_id t2
+  let hash t = get_id t
   let equal t1 t2 = t1 == t2
 end
 
