@@ -415,9 +415,8 @@ let option_some texp =
     texp.exp_loc texp.exp_env
 
 let extract_option_type env ty =
-  match expand_head env ty with
-  | {desc = Tconstr (path, [ty], _)} when Path.same path Predef.path_option ->
-    ty
+  match get_desc (expand_head env ty) with
+  | Tconstr (path, [ty], _) when Path.same path Predef.path_option -> ty
   | _ -> assert false
 
 let extract_concrete_record env ty =
@@ -504,8 +503,8 @@ let finalize_variant pat =
   match pat.pat_desc with
   | Tpat_variant (tag, opat, r) -> (
     let row =
-      match expand_head pat.pat_env pat.pat_type with
-      | {desc = Tvariant row} ->
+      match get_desc (expand_head pat.pat_env pat.pat_type) with
+      | Tvariant row ->
         r := row;
         row_repr row
       | _ -> assert false
@@ -637,7 +636,7 @@ let rec build_as_type env p =
           lbl.lbl_mut = Immutable
           && List.mem_assoc lbl.lbl_pos ppl
           &&
-          match (repr lbl.lbl_arg).desc with
+          match get_desc (repr lbl.lbl_arg) with
           | Tpoly _ -> false
           | _ -> true
         in
@@ -669,7 +668,7 @@ let build_or_pat env loc lid =
   let tyl = List.map (fun _ -> newvar ()) decl.type_params in
   let row0 =
     let ty = expand_head env (newty (Tconstr (path, tyl, ref Mnil))) in
-    match ty.desc with
+    match get_desc ty with
     | Tvariant row when static_row row -> row
     | _ -> raise (Error (lid.loc, env, Not_a_variant_type lid.txt))
   in
@@ -811,8 +810,8 @@ let rec expand_path env p =
   let decl = try Some (Env.find_type p env) with Not_found -> None in
   match decl with
   | Some {type_manifest = Some ty} -> (
-    match repr ty with
-    | {desc = Tconstr (p, _, _)} -> expand_path env p
+    match get_desc (repr ty) with
+    | Tconstr (p, _, _) -> expand_path env p
     | _ -> p (* PR#6394: recursive module may introduce incoherent manifest *))
   | _ ->
     let p' = Env.normalize_path None env p in
@@ -863,22 +862,24 @@ let print_simple_message ppf = function
 
 let show_extra_help ppf _env trace =
   match bottom_aliases trace with
-  | Some
-      ( {Types.desc = Tconstr (actual_path, actual_args, _)},
-        {desc = Tconstr (expected_path, expexted_args, _)} ) -> (
-    match (actual_path, actual_args, expected_path, expexted_args) with
-    | Pident {name = actual_name}, [], Pident {name = expected_name}, [] ->
-      print_simple_conversion ppf (actual_name, expected_name);
-      print_simple_message ppf (actual_name, expected_name)
+  | Some (actual, expected) -> (
+    match (get_desc actual, get_desc expected) with
+    | ( Tconstr (actual_path, actual_args, _),
+        Tconstr (expected_path, expexted_args, _) ) -> (
+      match (actual_path, actual_args, expected_path, expexted_args) with
+      | Pident {name = actual_name}, [], Pident {name = expected_name}, [] ->
+        print_simple_conversion ppf (actual_name, expected_name);
+        print_simple_message ppf (actual_name, expected_name)
+      | _ -> ())
     | _ -> ())
   | _ -> ()
 
 let rec collect_missing_arguments env type1 type2 =
-  match type1 with
+  match get_desc type1 with
   (* why do we use Ctype.matches here? Please see https://github.com/rescript-lang/rescript-compiler/pull/2554 *)
-  | {Types.desc = Tarrow (params, ret)} when Ctype.matches env ret type2 ->
+  | Tarrow (params, ret) when Ctype.matches env ret type2 ->
     Some (List.map (fun ({lbl; typ} : Types.arg) -> (lbl, typ)) params)
-  | {desc = Tarrow (params, ret)} -> (
+  | Tarrow (params, ret) -> (
     match collect_missing_arguments env ret type2 with
     | Some res ->
       Some (List.map (fun ({lbl; typ} : Types.arg) -> (lbl, typ)) params @ res)
@@ -969,7 +970,7 @@ struct
   open Name
 
   let get_type_path d =
-    match (repr (get_type d)).desc with
+    match get_desc (repr (get_type d)) with
     | Tconstr (p, _, _) -> p
     | _ -> assert false
 
@@ -1062,7 +1063,7 @@ end
 (* Record syntax on a dict, e.g. [let d: dict<int> = {foo: 1}]: point to
    [dict{...}] *)
 let check_no_record_syntax_on_dict env loc ty (fields : _ record_element list) =
-  match ((expand_head env ty).desc, fields) with
+  match (get_desc (expand_head env ty), fields) with
   | Tconstr (path, _, _), {lid} :: _ when Path.same path Predef.path_dict ->
     raise
       (Error (loc, env, Record_syntax_on_dict_type (Longident.last lid.txt)))
@@ -1284,9 +1285,10 @@ end)
    freshly created arguments *)
 let unify_head_only loc env ty constr =
   let _, ty_res = instance_constructor constr in
-  match (repr ty_res).desc with
+  match get_desc (repr ty_res) with
   | Tconstr (p, args, m) ->
-    ty_res.desc <- Tconstr (p, List.map (fun _ -> newvar ()) args, m);
+    Transient_expr.set_desc ty_res
+      (Tconstr (p, List.map (fun _ -> newvar ()) args, m));
     enforce_constraints env ty_res;
     unify_pat_types loc env ty_res ty
   | _ -> assert false
@@ -1424,7 +1426,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     let ty = cty.ctyp_type in
     unify_pat_types lloc !env ty expected_ty;
     pattern_force_ref () := force :: !(pattern_force_ref ());
-    match ty.desc with
+    match get_desc ty with
     | Tpoly (body, tyl) ->
       begin_def ();
       let _, ty' = instance_poly ~keep_names:true ~fixed:false tyl body in
@@ -1734,7 +1736,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
             List.iter generalize vars;
             let instantiated tv =
               let tv = expand_head !env tv in
-              (not (is_Tvar tv)) || tv.level <> generic_level
+              (not (is_Tvar tv)) || get_level tv <> generic_level
             in
             if List.exists instantiated vars then
               raise
@@ -2256,10 +2258,10 @@ let check_univars env expans kind exp ty_expected vars =
     Ext_list.filter vars (fun t ->
         let t = repr t in
         generalize t;
-        match t.desc with
-        | Tvar name when t.level = generic_level ->
+        match get_desc t with
+        | Tvar name when get_level t = generic_level ->
           log_type t;
-          t.desc <- Tunivar name;
+          Transient_expr.set_desc t (Tunivar name);
           true
         | _ -> false)
   in
@@ -2275,7 +2277,7 @@ let check_univars env expans kind exp ty_expected vars =
 
 (* Check that a type is not a function *)
 let check_application_result env exp =
-  match (expand_head env exp.exp_type).desc with
+  match get_desc (expand_head env exp.exp_type) with
   | Tarrow _ -> Location.prerr_warning exp.exp_loc Warnings.Partial_application
   | Tvar _ -> ()
   | Tconstr (p, _, _) when Path.same p Predef.path_unit -> ()
@@ -2285,8 +2287,8 @@ let check_application_result env exp =
 let generalizable level ty =
   let rec check ty =
     let ty = repr ty in
-    if ty.level < lowest_level then ()
-    else if ty.level <= level then raise Exit
+    if get_level ty < lowest_level then ()
+    else if get_level ty <= level then raise Exit
     else (
       mark_type_node ty;
       iter_type_expr check ty)
@@ -2319,9 +2321,9 @@ let wrap_unpacks sexp unpacks =
 let contains_variant_either ty =
   let rec loop ty =
     let ty = repr ty in
-    if ty.level >= lowest_level then (
+    if get_level ty >= lowest_level then (
       mark_type_node ty;
-      match ty.desc with
+      match get_desc ty with
       | Tvariant row ->
         let row = row_repr row in
         if not row.row_fixed then
@@ -2504,7 +2506,7 @@ let rec lower_args env seen ty_fun =
   let ty = expand_head env ty_fun in
   if List.memq ty seen then ()
   else
-    match ty.desc with
+    match get_desc ty with
     | Tarrow (params, ty_fun) ->
       List.iter
         (fun ({typ} : Types.arg) ->
@@ -2549,17 +2551,18 @@ type targs = (Asttypes.arg_label * Typedtree.expression option) list
    ordinary, empty-binder form. Assignment uses [type_object_field_value] to
    introduce rather than eliminate a scheme. *)
 let object_field_use_type env typ =
-  match Ctype.repr typ with
-  | {desc = Tpoly (ty, [])} -> instance env ty
-  | {desc = Tpoly (ty, tl)} -> snd (instance_poly ~fixed:false tl ty)
-  | {desc = Tvar _} as ty ->
+  let ty = Ctype.repr typ in
+  match get_desc ty with
+  | Tpoly (ty, []) -> instance env ty
+  | Tpoly (ty, tl) -> snd (instance_poly ~fixed:false tl ty)
+  | Tvar _ ->
     let ty' = newvar () in
     unify env (instance_def ty) (newty (Tpoly (ty', [])));
     ty'
   | _ -> assert false
 
 let object_valid_fields env ty =
-  match (expand_head env ty).desc with
+  match get_desc (expand_head env ty) with
   | Tobject fields ->
     let fields, _ = Ctype.flatten_fields fields in
     let collect_fields li (f : Ctype.field_info) = f.f_name :: li in
@@ -2642,12 +2645,12 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
         raise (Error (lid.loc, env, Jsx_component_without_make module_lid))
     in
     let is_recarg =
-      match (repr desc.val_type).desc with
+      match get_desc (repr desc.val_type) with
       | Tconstr (p, _, _) -> Path.is_constructor_typath p
       | _ -> false
     in
 
-    (match (is_recarg, recarg, (repr desc.val_type).desc) with
+    (match (is_recarg, recarg, get_desc (repr desc.val_type)) with
     | _, Allowed, _ | true, Required, _ | false, Rejected, _ -> ()
     | true, Rejected, _ | false, Required, (Tvar _ | Tconstr _) ->
       raise (Error (loc, env, Inlined_record_escape))
@@ -2968,9 +2971,11 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     let ty_expected0 = instance env ty_expected in
     try
       match
-        (sarg, expand_head env ty_expected, expand_head env ty_expected0)
+        ( sarg,
+          get_desc (expand_head env ty_expected),
+          get_desc (expand_head env ty_expected0) )
       with
-      | Some sarg, {desc = Tvariant row}, {desc = Tvariant row0} -> (
+      | Some sarg, Tvariant row, Tvariant row0 -> (
         let row = row_repr row in
         match
           ( row_field_repr (List.assoc l row.row_fields),
@@ -3576,7 +3581,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
         if separate then (
           end_def ();
           let tv = newvar () in
-          let gen = generalizable tv.level arg.exp_type in
+          let gen = generalizable (get_level tv) arg.exp_type in
           (try unify_var env tv arg.exp_type
            with Unify trace ->
              raise
@@ -3730,7 +3735,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     let ty = newvar () in
     (* remember original level *)
     begin_def ();
-    Ident.set_current_time ty.level;
+    Ident.set_current_time (get_level ty);
     let context = Typetexp.narrow () in
     let modl = !type_module env smodl in
     let id, new_env = Env.enter_module name.txt modl.mod_type env in
@@ -3791,9 +3796,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
       }
   | Pexp_pack m ->
     let p, nl =
-      match Ctype.expand_head env (instance env ty_expected) with
-      | {desc = Tpackage (p, nl, _tl)} -> (p, nl)
-      | {desc = Tvar _} -> raise (Error (loc, env, Cannot_infer_signature))
+      match get_desc (Ctype.expand_head env (instance env ty_expected)) with
+      | Tpackage (p, nl, _tl) -> (p, nl)
+      | Tvar _ -> raise (Error (loc, env, Cannot_infer_signature))
       | _ -> raise (Error (loc, env, Not_a_packed_module ty_expected))
     in
     let modl, tl' = !type_package env m p nl in
@@ -3858,7 +3863,7 @@ and type_newtype ~loc ~env ~name (type_body : Env.t -> Typedtree.expression) =
       type_inlined_types = [];
     }
   in
-  Ident.set_current_time ty.level;
+  Ident.set_current_time (get_level ty);
   let id, new_env = Env.enter_type name decl env in
   Ctype.init_def (Ident.current_time ());
 
@@ -3867,10 +3872,10 @@ and type_newtype ~loc ~env ~name (type_body : Env.t -> Typedtree.expression) =
      type. *)
   let seen = Hashtbl.create 8 in
   let rec replace t =
-    if Hashtbl.mem seen t.id then ()
+    if Hashtbl.mem seen (get_id t) then ()
     else (
-      Hashtbl.add seen t.id ();
-      match t.desc with
+      Hashtbl.add seen (get_id t) ();
+      match get_desc t with
       | Tconstr (Path.Pident id', _, _) when id == id' -> link_type t ty
       | _ -> Btype.iter_type_expr replace t)
   in
@@ -3952,7 +3957,7 @@ and type_function ~async loc attrs env ty_expected_
   (* When the expected type is already an arrow, check the labels first so a
      mismatch gets the dedicated message; committing the literal's labels via
      unification would produce a generic clash. *)
-  (match (expand_head env ty_expected_).desc with
+  (match get_desc (expand_head env ty_expected_) with
   | Tarrow (exp_params, exp_ret)
     when List.length exp_params = List.length labels ->
     let rec check_labels (params : Parsetree.fun_param list)
@@ -3989,7 +3994,7 @@ and type_function ~async loc attrs env ty_expected_
   let ty_params, ty_res =
     (* [ty_expected] was just committed to an arrow with exactly these
        labels, so it can only expand to an arrow. *)
-    match (expand_head env (instance env ty_expected)).desc with
+    match get_desc (expand_head env (instance env ty_expected)) with
     | Tarrow (params, ret) ->
       (List.map (fun (a : Types.arg) -> a.typ) params, ret)
     | _ -> assert false
@@ -4056,7 +4061,9 @@ and type_function ~async loc attrs env ty_expected_
         if has_gadts || erase_either then correct_levels ty_arg else ty_arg
       in
       let propagate =
-        has_gadts || (repr ty_arg_c).level = generic_level || not (is_var spat)
+        has_gadts
+        || get_level (repr ty_arg_c) = generic_level
+        || not (is_var spat)
       in
       if propagate then begin_def ();
       let pattern_force = ref [] in
@@ -4253,7 +4260,7 @@ and type_function ~async loc attrs env ty_expected_
 and type_label_access env srecord lid =
   let record = type_exp ~context:None ~recarg:Allowed env srecord in
   let ty_exp = record.exp_type in
-  (match (expand_head env ty_exp).desc with
+  (match get_desc (expand_head env ty_exp) with
   | Tconstr (path, _, _) when Path.same path Predef.path_dict ->
     (* [someDict.name]: point to [Dict.get] *)
     raise (Error (lid.loc, env, Field_access_on_dict_type))
@@ -4283,7 +4290,7 @@ and type_label_access env srecord lid =
    without type propagation (PR#4862); that label-specific completeness
    recovery is not part of scheme introduction and is not used here. *)
 and type_object_field_value env svalue typ =
-  match (Ctype.repr typ).desc with
+  match get_desc (Ctype.repr typ) with
   | Tpoly (ty, (_ :: _ as tl)) ->
     begin_def ();
     let vars, ty' = instance_poly ~fixed:true tl ty in
@@ -4376,7 +4383,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
       let lhs = type_exp ~context:None env lhs_expr in
       let lhs_type = expand_head env lhs.exp_type in
       let result_type =
-        match (lhs_type.desc, specialization) with
+        match (get_desc lhs_type, specialization) with
         | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
           instance_def (Predef.type_int ())
         | Tconstr (path, _, _), {bool = Some _}
@@ -4410,7 +4417,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
       let rhs_type = expand_head env rhs.exp_type in
       let lhs, rhs, result_type =
         (* Rule 1. Try unifying to lhs *)
-        match (lhs_type.desc, specialization) with
+        match (get_desc lhs_type, specialization) with
         | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
           let rhs =
             type_expect ~context:None env rhs_expr (Predef.type_int ())
@@ -4442,7 +4449,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
           (lhs, rhs, instance_def (Predef.type_string ()))
         | _ -> (
           (* Rule 2. Try unifying to rhs *)
-          match (rhs_type.desc, specialization) with
+          match (get_desc rhs_type, specialization) with
           | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
             let lhs =
               type_expect ~context:None env lhs_expr (Predef.type_int ())
@@ -4497,7 +4504,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
     in
     let ty_arg = List.hd ty_args in
     let exp = type_expect ~context env sarg ty_arg in
-    (match (expand_head env exp.exp_type).desc with
+    (match get_desc (expand_head env exp.exp_type) with
     | Tarrow _ when not total_app ->
       Location.prerr_warning exp.exp_loc Warnings.Partial_application
     | Tvar _ ->
@@ -4510,7 +4517,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
        application, commit it to an arrow matching the call site: this is
        how parameter count and labels are inferred for unannotated function
        parameters. *)
-    (match (expand_head env funct.exp_type).desc with
+    (match get_desc (expand_head env funct.exp_type) with
     | Tvar _ when total_app ->
       let ty_fun = expand_head env funct.exp_type in
       let params =
@@ -4518,7 +4525,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
       in
       let ty_ret = newvar () in
       if
-        ty_fun.level >= ty_ret.level
+        get_level ty_fun >= get_level ty_ret
         && not (is_identity_coercion funct.exp_desc)
       then
         List.iter
@@ -4527,7 +4534,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
           sargs;
       unify env ty_fun (newty (Tarrow (params, ty_ret)))
     | _ -> ());
-    match (expand_head env funct.exp_type).desc with
+    match get_desc (expand_head env funct.exp_type) with
     | Tarrow (params, ty_ret) ->
       let arity = List.length params in
       let nargs = List.length sargs in
@@ -4545,7 +4552,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
               } )
       in
       if total_app && nargs > arity then raise (mk_arity_mismatch_error arity);
-      let lv = (expand_head env funct.exp_type).level in
+      let lv = get_level (expand_head env funct.exp_type) in
       (* Match every parameter, in order, against the syntactic arguments,
          commuting labeled arguments as needed. *)
       let remaining = ref sargs in
@@ -4628,7 +4635,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
           | [] -> ty_ret
           | _ -> newty (Tarrow (extra_params, ty_ret))
         in
-        match (expand_head env ty_res).desc with
+        match get_desc (expand_head env ty_res) with
         | Tarrow _ ->
           if List.length !rev_args >= arity then
             raise
@@ -4782,7 +4789,7 @@ and type_statement ?(nonreturning_warning = true) ~context env sexp =
   let exp = type_exp ~context env sexp in
   end_def ();
   let ty = expand_head env exp.exp_type and tv = newvar () in
-  if nonreturning_warning && is_Tvar ty && ty.level > tv.level then
+  if nonreturning_warning && is_Tvar ty && get_level ty > get_level tv then
     Location.prerr_warning loc Warnings.Nonreturning_statement;
   let expected_ty = instance_def (Predef.type_unit ()) in
   let context = type_clash_context_in_statement sexp in
@@ -4831,7 +4838,7 @@ and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try]) env
   (* Do we need to propagate polymorphism *)
   let propagate =
     has_gadts
-    || (repr ty_arg).level = generic_level
+    || get_level (repr ty_arg) = generic_level
     ||
     match caselist with
     | [{pc_lhs}] when is_var pc_lhs -> false
@@ -4979,7 +4986,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
     List.iter2
       (fun pat binding ->
         let pat =
-          match pat.pat_type.desc with
+          match get_desc pat.pat_type with
           | Tpoly (ty, tl) ->
             {
               pat with
@@ -5092,7 +5099,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
                 unify_exp ~context exp_env exp (instance exp_env expected);
                 exp)
         in
-        match pat.pat_type.desc with
+        match get_desc pat.pat_type with
         | Tpoly (ty, tl) ->
           begin_def ();
           let vars, ty' = instance_poly ~keep_names:true ~fixed:true tl ty in
@@ -5119,7 +5126,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
             if Experimental_features.is_enabled Experimental_features.LetUnwrap
             then
               let ty = repr (Ctype.expand_head env pat.pat_type) in
-              match ty.desc with
+              match get_desc ty with
               | Tconstr (path, _, _)
                 when Path.same path Predef.path_option
                      || Path.same path Predef.path_result ->
@@ -5312,17 +5319,17 @@ let report_error env loc ppf error =
     fprintf ppf "Variable %s must occur on both sides of this | pattern"
       (Ident.name id);
     spellcheck_idents ppf id valid_idents
-  | Expr_type_clash
-      {
-        trace =
-          (_, {desc = Tarrow (params_a, _)})
-          :: (_, {desc = Tarrow (params_b, _)})
-          :: _;
-      }
-    when List.length params_a <> List.length params_b ->
-    let arity_a = List.length params_a |> string_of_int in
-    let arity_b = List.length params_b |> string_of_int in
-    report_arity_mismatch ~arity_a ~arity_b ppf
+  | Expr_type_clash {trace = (_, ty_a) :: (_, ty_b) :: _}
+    when match (get_desc ty_a, get_desc ty_b) with
+         | Tarrow (params_a, _), Tarrow (params_b, _) ->
+           List.length params_a <> List.length params_b
+         | _ -> false -> (
+    match (get_desc ty_a, get_desc ty_b) with
+    | Tarrow (params_a, _), Tarrow (params_b, _) ->
+      let arity_a = List.length params_a |> string_of_int in
+      let arity_b = List.length params_b |> string_of_int in
+      report_arity_mismatch ~arity_a ~arity_b ppf
+    | _ -> assert false)
   | Expr_type_clash {trace; context} ->
     (* modified *)
     fprintf ppf "@[<v>";
@@ -5330,10 +5337,10 @@ let report_error env loc ppf error =
     fprintf ppf "@]"
   | Apply_non_function typ -> (
     (* modified *)
-    match (repr typ).desc with
+    match get_desc (repr typ) with
     | Tarrow (params, return_type) ->
-      let rec count_number_of_args count {Types.desc} =
-        match desc with
+      let rec count_number_of_args count ty =
+        match get_desc ty with
         | Tarrow (params, return_type) ->
           count_number_of_args (count + List.length params) return_type
         | _ -> count
@@ -5546,7 +5553,7 @@ let report_error env loc ppf error =
     - Any mismatch in the number of unlabelled args (since all of them are required)
     *)
     let rec collect_args ?(acc = []) typ =
-      match typ.desc with
+      match get_desc typ with
       | Tarrow (params, next) ->
         collect_args
           ~acc:

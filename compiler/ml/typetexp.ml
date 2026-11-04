@@ -375,7 +375,7 @@ and transl_type_aux env policy styp =
       match decl.type_manifest with
       | None -> unify_var
       | Some ty ->
-        if (repr ty).level = Btype.generic_level then unify_var else unify
+        if get_level (repr ty) = Btype.generic_level then unify_var else unify
     in
     List.iter2
       (fun (sty, cty) ty' ->
@@ -416,13 +416,13 @@ and transl_type_aux env policy styp =
            raise (Error (styp.ptyp_loc, env, Alias_type_mismatch trace)));
         let t = instance env t in
         let px = Btype.proxy t in
-        (match px.desc with
+        (match get_desc px with
         | Tvar None ->
           Btype.log_type px;
-          px.desc <- Tvar (Some alias)
+          Transient_expr.set_desc px (Tvar (Some alias))
         | Tunivar None ->
           Btype.log_type px;
-          px.desc <- Tunivar (Some alias)
+          Transient_expr.set_desc px (Tunivar (Some alias))
         | _ -> ());
         {ty with ctyp_type = t}
     in
@@ -485,18 +485,18 @@ and transl_type_aux env policy styp =
         let cty = transl_type env policy sty in
         let ty = cty.ctyp_type in
         let nm =
-          match repr cty.ctyp_type with
-          | {desc = Tconstr (p, tl, _)} -> Some (p, tl)
+          match get_desc (repr cty.ctyp_type) with
+          | Tconstr (p, tl, _) -> Some (p, tl)
           | _ -> None
         in
         (* Set name if there are no fields yet *)
         if Hashtbl.length hfields <> 0 then name := None else name := nm;
         let fl =
-          match (expand_head env cty.ctyp_type, nm) with
-          | {desc = Tvariant row}, _ when Btype.static_row row ->
+          match (get_desc (expand_head env cty.ctyp_type), nm) with
+          | Tvariant row, _ when Btype.static_row row ->
             let row = Btype.row_repr row in
             row.row_fields
-          | {desc = Tvar _}, Some (p, _) ->
+          | Tvar _, Some (p, _) ->
             raise (Error (sty.ptyp_loc, env, Unbound_type_constructor_2 p))
           | _ -> raise (Error (sty.ptyp_loc, env, Not_a_variant ty))
         in
@@ -558,9 +558,9 @@ and transl_type_aux env policy styp =
         (fun tyl (name, ty1) ->
           let v = Btype.proxy ty1 in
           if deep_occur v ty then
-            match v.desc with
-            | Tvar name when v.level = Btype.generic_level ->
-              v.desc <- Tunivar name;
+            match get_desc v with
+            | Tvar name when get_level v = Btype.generic_level ->
+              Transient_expr.set_desc v (Tunivar name);
               v :: tyl
             | _ -> raise (Error (styp.ptyp_loc, env, Cannot_quantify (name, v)))
           else tyl)
@@ -627,26 +627,30 @@ and transl_fields env policy o fields =
     | Oinherit sty -> (
       let cty = transl_type env policy sty in
       let nm =
-        match repr cty.ctyp_type with
-        | {desc = Tconstr (p, _, _)} -> Some p
+        match get_desc (repr cty.ctyp_type) with
+        | Tconstr (p, _, _) -> Some p
         | _ -> None
       in
       let t = expand_head env cty.ctyp_type in
-      match (t, nm) with
-      | {desc = Tobject {desc = (Tfield _ | Tnil) as tf}}, _ ->
+      match (get_desc t, nm) with
+      | Tobject f, _
+        when match get_desc f with
+             | Tfield _ | Tnil -> true
+             | _ -> false ->
+        let tf = get_desc f in
         if object_row_is_structurally_open t then
           raise (Error (sty.ptyp_loc, env, Opened_object nm));
         let rec iter_add = function
           | Tfield {name = s; mutability; typ = ty1; rest = ty2} ->
             add_typed_field sty.ptyp_loc s ty1
               (Btype.mutability_repr mutability);
-            iter_add ty2.desc
+            iter_add (get_desc ty2)
           | Tnil -> ()
           | _ -> assert false
         in
         iter_add tf;
         OTinherit cty
-      | {desc = Tvar _}, Some p ->
+      | Tvar _, Some p ->
         raise (Error (sty.ptyp_loc, env, Unbound_type_constructor_2 p))
       | _ -> raise (Error (sty.ptyp_loc, env, Not_an_object t)))
   in
@@ -676,25 +680,25 @@ and transl_fields env policy o fields =
 (* Make the rows "fixed" in this type, to make universal check easier *)
 let rec make_fixed_univars ty =
   let ty = repr ty in
-  if ty.level >= Btype.lowest_level then (
+  if get_level ty >= Btype.lowest_level then (
     Btype.mark_type_node ty;
-    match ty.desc with
+    match get_desc ty with
     | Tvariant row ->
       let row = Btype.row_repr row in
       if Btype.is_Tunivar (Btype.row_more row) then
-        ty.desc <-
-          Tvariant
-            {
-              row with
-              row_fixed = true;
-              row_fields =
-                List.map
-                  (fun ((s, f) as p) ->
-                    match Btype.row_field_repr f with
-                    | Reither (c, tl, _m, r) -> (s, Reither (c, tl, true, r))
-                    | _ -> p)
-                  row.row_fields;
-            };
+        Transient_expr.set_desc ty
+          (Tvariant
+             {
+               row with
+               row_fixed = true;
+               row_fields =
+                 List.map
+                   (fun ((s, f) as p) ->
+                     match Btype.row_field_repr f with
+                     | Reither (c, tl, _m, r) -> (s, Reither (c, tl, true, r))
+                     | _ -> p)
+                   row.row_fields;
+             });
       Btype.iter_row make_fixed_univars row
     | _ -> Btype.iter_type_expr make_fixed_univars ty)
 
@@ -859,7 +863,7 @@ let report_error env ppf = function
     Printtyp.reset_and_mark_loops ty;
     fprintf ppf "@[The type %a@ does not expand to a polymorphic variant type@]"
       Printtyp.type_expr ty;
-    match ty.desc with
+    match get_desc ty with
     | Tvar (Some s) ->
       (* PR#7012: help the user that wrote 'Foo instead of `Foo *)
       Misc.did_you_mean ppf (fun () -> ["`" ^ s])
@@ -954,7 +958,10 @@ let report_error env ppf = function
   | Unbound_label (lid, from_type) ->
     (* modified *)
     (match from_type with
-    | Some {desc = Tconstr (p, _, _)} when Path.same p Predef.path_option ->
+    | Some t
+      when match get_desc t with
+           | Tconstr (p, _, _) -> Path.same p Predef.path_option
+           | _ -> false ->
       (* TODO: Extend for nullable/null? *)
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
@@ -967,14 +974,20 @@ let report_error env ppf = function
          @[- Or use @{<info>Option.getOr@} with a default: \
          @{<info>xx->Option.getOr(defaultRecord).%a@}@]@]"
         Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid
-    | Some {desc = Tconstr (p, _, _)} when Path.same p Predef.path_array ->
+    | Some t
+      when match get_desc t with
+           | Tconstr (p, _, _) -> Path.same p Predef.path_array
+           | _ -> false ->
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
          value you're trying to access it on is an @{<info>array@}.@ You need \
          to access an individual element of the array if you want to access an \
          individual record field.@]"
         Printtyp.longident lid
-    | Some ({desc = Tconstr (_p, _, _)} as t1) ->
+    | Some t1
+      when match get_desc t1 with
+           | Tconstr (_p, _, _) -> true
+           | _ -> false ->
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
          thing you're trying to access it on is not a record. @,\n\

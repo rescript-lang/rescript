@@ -34,7 +34,10 @@ let variant_has_case_covering_type
   let has_catch_all_string_case (c : Types.constructor_declaration) =
     let args = c.cd_args in
     match args with
-    | Cstr_tuple [{desc = Tconstr (p, [], _)}] -> path_is_same_fn p
+    | Cstr_tuple [t] -> (
+      match Types.get_desc t with
+      | Tconstr (p, [], _) -> path_is_same_fn p
+      | _ -> false)
     | _ -> false
   in
 
@@ -50,8 +53,18 @@ let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
     let as_payload = c.cd_runtime_tag in
 
     match args with
-    | Cstr_tuple [{desc = Tconstr (p, [], _)}] when unboxed ->
+    | Cstr_tuple [t]
+      when unboxed
+           &&
+           match Types.get_desc t with
+           | Tconstr (_, [], _) -> true
+           | _ -> false ->
       (* Unboxed type, and the constructor has a single item payload.*)
+      let p =
+        match Types.get_desc t with
+        | Tconstr (p, [], _) -> p
+        | _ -> assert false
+      in
       let path_same = check_paths_same p target_path in
       if
         (* unboxed String(string) :> string *)
@@ -260,8 +273,13 @@ let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors ~unboxed
                       string catch-all case. In that case, any polyvariant will match,
                       since the catch-all case will match any string. *)
               match (unboxed, c.cd_args) with
-              | true, Cstr_tuple [{desc = Tconstr (p, _, _)}] ->
-                Path.same p Predef.path_string
+              | true, Cstr_tuple [t]
+                when match Types.get_desc t with
+                     | Tconstr _ -> true
+                     | _ -> false -> (
+                match Types.get_desc t with
+                | Tconstr (p, _, _) -> Path.same p Predef.path_string
+                | _ -> assert false)
               | _ -> polyvariant_value = constructor_name))
         |> List.exists Fun.id)
       polyvariant_runtime_representations

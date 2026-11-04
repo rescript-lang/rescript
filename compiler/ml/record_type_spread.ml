@@ -8,36 +8,37 @@ let substitute_types ~type_map (t : Types.type_expr) =
       | None -> t
       | Some substituted_type -> substituted_type
     in
+    let with_desc (t : Types.type_expr) desc =
+      Types.Transient_expr.create desc ~level:(Types.get_level t)
+        ~id:(Types.get_id t)
+    in
     let rec loop (t : Types.type_expr) =
-      match t.desc with
-      | Tlink t -> {t with desc = Tlink (loop t)}
+      match Types.get_desc t with
+      | Tlink t -> with_desc t (Tlink (loop t))
       | Tvar (Some type_variable_name) ->
         apply_substitution type_variable_name t
       | Tvar None -> t
       | Tunivar _ -> t
       | Tconstr (path, args, _memo) ->
-        {t with desc = Tconstr (path, args |> List.map loop, ref Types.Mnil)}
-      | Tsubst t -> {t with desc = Tsubst (loop t)}
-      | Tvariant rd -> {t with desc = Tvariant (row_desc rd)}
+        with_desc t (Tconstr (path, args |> List.map loop, ref Types.Mnil))
+      | Tsubst t -> with_desc t (Tsubst (loop t))
+      | Tvariant rd -> with_desc t (Tvariant (row_desc rd))
       | Tnil -> t
       | Tarrow (params, ret) ->
-        {
-          t with
-          desc =
-            Tarrow
-              ( List.map
-                  (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
-                  params,
-                loop ret );
-        }
-      | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
-      | Tobject t -> {t with desc = Tobject (loop t)}
+        with_desc t
+          (Tarrow
+             ( List.map
+                 (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
+                 params,
+               loop ret ))
+      | Ttuple tl -> with_desc t (Ttuple (tl |> List.map loop))
+      | Tobject t -> with_desc t (Tobject (loop t))
       | Tfield f ->
-        {t with desc = Tfield {f with typ = loop f.typ; rest = loop f.rest}}
+        with_desc t (Tfield {f with typ = loop f.typ; rest = loop f.rest})
       | Tpoly (t, []) -> loop t
-      | Tpoly (t, tl) -> {t with desc = Tpoly (loop t, tl |> List.map loop)}
+      | Tpoly (t, tl) -> with_desc t (Tpoly (loop t, tl |> List.map loop))
       | Tpackage (p, l, tl) ->
-        {t with desc = Tpackage (p, l, tl |> List.map loop)}
+        with_desc t (Tpackage (p, l, tl |> List.map loop))
     and row_desc (rd : Types.row_desc) =
       let row_fields =
         rd.row_fields |> List.map (fun (l, rf) -> (l, row_field rf))
@@ -80,8 +81,11 @@ let extract_type_vars (type_params : Types.type_expr list)
     (typ : Types.type_expr) =
   (* The type variables applied to the record spread itself. *)
   let applied_type_vars =
-    match Ctype.repr typ with
-    | {desc = Tpoly ({desc = Tconstr (_, tvars, _)}, _)} -> tvars
+    match Types.get_desc (Ctype.repr typ) with
+    | Tpoly (t, _) -> (
+      match Types.get_desc t with
+      | Tconstr (_, tvars, _) -> tvars
+      | _ -> [])
     | _ -> []
   in
   if List.length type_params = List.length applied_type_vars then
@@ -90,7 +94,7 @@ let extract_type_vars (type_params : Types.type_expr list)
     let paired_type_vars = List.combine type_params applied_type_vars in
     paired_type_vars
     |> List.filter_map (fun (t, applied_tvar) ->
-        match t.Types.desc with
+        match Types.get_desc t with
         | Tvar (Some tname) -> Some (tname, applied_tvar)
         | _ -> None)
   else []
@@ -102,7 +106,7 @@ let expand_labels_with_type_spreads (env : Env.t)
   | false -> Some (lbls, lbls')
   | true ->
     let rec extract (t : Types.type_expr) =
-      match t.desc with
+      match Types.get_desc t with
       | Tpoly (t, []) -> extract t
       | _ -> Ctype.repr t
     in

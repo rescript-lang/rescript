@@ -15,7 +15,7 @@ open Ast_untagged_variants
    abbreviations are checked for cycles. *)
 let value_shape ~env (t : Types.type_expr) : value_shape =
   let rec walk fuel (t : Types.type_expr) =
-    match (Btype.repr t).desc with
+    match Types.get_desc (Btype.repr t) with
     | Tconstr (path, _, _) when fuel > 0 -> (
       match Env.find_type path env with
       | {type_shape = (Never_undefined | Recognized_as _) as shape} -> shape
@@ -43,7 +43,7 @@ let payload_kind ~env (t : Types.type_expr) : block_type option =
   match recognized_as ~env t with
   | Some _ as declared -> declared
   | None -> (
-    match (Ctype.expand_head_opt env t).desc with
+    match Types.get_desc (Ctype.expand_head_opt env t) with
     | Ttuple _ -> Some (InstanceType Array)
     | Tarrow _ -> Some FunctionType
     | Tobject _ -> Some ObjectType

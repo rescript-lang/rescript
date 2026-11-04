@@ -50,7 +50,7 @@ let init_shape modl =
     | [] -> []
     | Sig_value (id, {val_kind = Val_reg; val_type = ty}) :: rem ->
       let is_function t =
-        match t.desc with
+        match get_desc t with
         | Tarrow _ -> true
         | _ -> false
       in

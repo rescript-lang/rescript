@@ -534,7 +534,7 @@ let external_returns_unit env (p : Primitive.description) (val_type : type_expr)
   let result_type =
     if p.prim_arity = 0 then val_type
     else
-      match (Ctype.expand_head env val_type).desc with
+      match get_desc (Ctype.expand_head env val_type) with
       | Tarrow (_, ret) -> ret
       | _ -> val_type
   in
@@ -1191,10 +1191,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
     let directive = extract_directive_for_fn e in
     let params, lbody, return_unit = transl_function e.exp_loc fparams body in
     let one_unit_arg =
-      match (fparams, (Ctype.expand_head e.exp_env e.exp_type).desc) with
+      match (fparams, get_desc (Ctype.expand_head e.exp_env e.exp_type)) with
       | [{fp_pat}], Tarrow ([{lbl = Nolabel; typ}], _)
         when Typedtree.pat_bound_idents fp_pat = [] -> (
-        match (Ctype.expand_head e.exp_env typ).desc with
+        match get_desc (Ctype.expand_head e.exp_env typ) with
         | Tconstr (Pident {name = "unit"}, [], _) -> true
         | _ -> false)
       | _ -> false
@@ -1875,7 +1875,7 @@ and transl_record loc env fields repres opt_init_expr =
           | Record_extension ->
             let path =
               let label = lbl_all.(0) in
-              match label.lbl_res.desc with
+              match get_desc label.lbl_res with
               | Tconstr (p, _, _) -> p
               | _ -> assert false
             in

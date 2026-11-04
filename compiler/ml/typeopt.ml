@@ -20,7 +20,7 @@ open Lambda
 
 let scrape_ty env ty =
   let ty = Ctype.expand_head_opt env (Ctype.correct_levels ty) in
-  match ty.desc with
+  match get_desc ty with
   | Tconstr (p, _, _) -> (
     match Env.find_type p env with
     | {type_representation = Unboxed; _} -> (
@@ -31,7 +31,7 @@ let scrape_ty env ty =
     | exception Not_found -> ty)
   | _ -> ty
 
-let scrape env ty = (scrape_ty env ty).desc
+let scrape env ty = get_desc (scrape_ty env ty)
 
 (**  [Types.constructor_description]
      records the type at the definition type so for ['a option]
@@ -47,7 +47,7 @@ let rec cannot_contain_undefined ~visiting (typ : Types.type_expr) (env : Env.t)
   let scraped = scrape_ty env typ in
   Variant_layout.value_shape ~env scraped <> Unstated
   ||
-  match scraped.desc with
+  match get_desc scraped with
   | Tconstr (p, _, _) -> (
     (* all built in types could not inhabit none-like values:
        int, char, float, bool, unit, exn, array, list, nativeint,
@@ -129,7 +129,7 @@ type abstractness = Opaque | Stands_for_another | Not_abstract
    stands for another type: a functor parameter's type, a recursive module's
    type being defined, or a locally abstract type. *)
 let abstractness env ty =
-  match (Ctype.expand_head_opt env ty).desc with
+  match get_desc (Ctype.expand_head_opt env ty) with
   | Tconstr (path, _, _) -> (
     match Env.find_type path env with
     | {type_kind = Type_abstract; type_manifest = None; type_newtype_level} ->
@@ -158,7 +158,7 @@ let undefinedness env ty : undefinedness =
     | Opaque -> Unseen
     | Stands_for_another -> Stands_for_another
     | Not_abstract -> (
-      match (Ctype.expand_head_opt env ty).desc with
+      match get_desc (Ctype.expand_head_opt env ty) with
       | Tobject _ -> Unseen
       | _ -> Can_be_undefined)
 

@@ -33,8 +33,8 @@ let extract_instantiated_concrete_typedecl ~unify_pat_types env loc ty =
   let _, _, decl = Ctype.extract_concrete_typedecl env ty in
   let decl = Ctype.instance_declaration decl in
   let args =
-    match Ctype.expand_head env ty with
-    | {desc = Tconstr (_, args, _)} -> args
+    match get_desc (Ctype.expand_head env ty) with
+    | Tconstr (_, args, _) -> args
     | _ -> assert false
   in
   List.iter2

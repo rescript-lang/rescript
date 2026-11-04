@@ -279,7 +279,7 @@ let params_are_constrained =
   let rec loop = function
     | [] -> false
     | hd :: tl -> (
-      match (Btype.repr hd).desc with
+      match get_desc (Btype.repr hd) with
       | Tvar _ -> List.memq hd tl || loop tl
       | _ -> true)
   in
@@ -1386,13 +1386,13 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
   | Pmod_unpack sexp ->
     let exp = Typecore.type_exp ~context:None env sexp in
     let mty =
-      match Ctype.expand_head env exp.exp_type with
-      | {desc = Tpackage (p, nl, tl)} ->
+      match get_desc (Ctype.expand_head env exp.exp_type) with
+      | Tpackage (p, nl, tl) ->
         if List.exists (fun t -> Ctype.free_variables t <> []) tl then
           raise
             (Error (smod.pmod_loc, env, Incomplete_packed_module exp.exp_type));
         modtype_of_package env smod.pmod_loc p nl tl
-      | {desc = Tvar _} ->
+      | Tvar _ ->
         raise
           (Typecore.Error (smod.pmod_loc, env, Typecore.Cannot_infer_signature))
       | _ ->
