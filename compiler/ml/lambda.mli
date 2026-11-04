@@ -446,6 +446,12 @@ val const_some_none_depth : structured_constant -> int
 
 val const_is_allocating : structured_constant -> bool
 
+val lfunction_can_be_inlined : lfunction -> bool
+(** Whether the function may give way to the code it runs: its body replacing
+    a call to it, or the call it forwards to replacing the function itself. An
+    async function may not, since a call to it returns a promise, and neither
+    may a function with a directive, which applies only to its own body. *)
+
 (* Constructors. [t] is private, so every term outside this module is
    built through one of these.
 
@@ -463,7 +469,7 @@ val const_is_allocating : structured_constant -> bool
    - [not_] rewrites a negated inequality into an equality.
    - [seq] drops a first operand that only allocates.
    - [apply] eta-reduces a function whose body is a single primitive call on
-     its own parameters.
+     its own parameters, if [lfunction_can_be_inlined] allows it.
 
    These fire when a term is rebuilt with new children, which in practice
    means during the optimizer's passes rather than at production: the

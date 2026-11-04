@@ -1088,8 +1088,13 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
     *)
     | _ -> default ())
 
+let lfunction_can_be_inlined (lfunction : lfunction) =
+  (not lfunction.attr.async) && lfunction.attr.directive = None
+
 let rec apply fn args (ap_loc : Location.t) : t =
   match fn with
+  | Lfunction lfunction when not (lfunction_can_be_inlined lfunction) ->
+    Lapply {ap_func = fn; ap_args = args; ap_loc}
   | Lfunction
       {
         params;

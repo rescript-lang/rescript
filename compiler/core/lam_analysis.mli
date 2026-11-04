@@ -31,8 +31,6 @@ val size_upto : limit:int -> Lambda.t -> int
 (** The size of a lambda for inlining decisions if it is below [limit],
     [limit] otherwise. [limit] must be at most 1000. *)
 
-val lfunction_can_be_inlined : Lambda.lfunction -> bool
-
 val ok_to_inline_fun_when_app : Lambda.lfunction -> Lambda.t list -> bool
 
 val small_inline_size : int

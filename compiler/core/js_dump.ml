@@ -394,8 +394,11 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
             Only for a ReScript callee of exactly this arity: [Call_na] is an
             FFI name, where the wrapper truncates extra arguments the JS callee
             would otherwise see, defers the name's resolution to call time, and
-            keeps it from capturing a local of the same name. *)
-         (not is_method) && params_match_call l ls v -> (
+            keeps it from capturing a local of the same name. Never for an
+            async function or one with a directive, which must stay a
+            function, see [Lambda.lfunction_can_be_inlined]. *)
+         (not is_method) && (not async) && directive = None
+         && params_match_call l ls v -> (
     match fn_state with
     | Name_top i | Name_non_top i ->
       let cxt = pp_var_assign cxt f i in

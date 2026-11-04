@@ -444,7 +444,7 @@ let compile output_prefix =
     match ident_info.persistent_closed_lambda with
     | Some (Lfunction ({params; body; _} as lfunction))
       when Ext_list.same_length params ap_args
-           && Lam_analysis.lfunction_can_be_inlined lfunction ->
+           && Lambda.lfunction_can_be_inlined lfunction ->
       (* TODO: serialize it when exporting to save compile time *)
       let _, param_map =
         Lam_closure.is_closed_with_map Set_ident.empty params body

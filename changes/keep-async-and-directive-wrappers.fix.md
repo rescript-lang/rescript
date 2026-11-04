@@ -1,0 +1,1 @@
+- Keep `async` functions and functions with a `@directive` that only forward their parameters to a call.
