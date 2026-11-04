@@ -26,6 +26,7 @@ Hover src/JsxV4.res 14:9
 
 Create Interface src/JsxV4.res
 module M4: {
+  /** Doc Comment For M4 */
   @react.component
   let make: (~first: string, ~fun: string=?, ~second: string=?) => React.element
 }

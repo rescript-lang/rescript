@@ -27,14 +27,14 @@ external padLeft: (
     | #Int(int)
   ],
 ) => string = "padLeft"
-@inline
-let f1: int
+@inline let f1: int
 @inline let f2: string
-@genType @inline
-let f3: int
-@genType @inline
-let f4: string
-@genType @inline let f5: float
+@genType
+@inline let f3: int
+@genType
+@inline let f4: string
+@genType
+@inline let f5: float
 module RFS: {
   @module("fs")
   external readFileSync: (
