@@ -72,13 +72,15 @@ let config () = {Gentype_config.default with everything = true}
    [Some(v)] can be, read off the encoding of [t]:
    - the values of [option<u>] are [undefined] and [Some(v)] for [v] in [u];
    - the value of [unit] is [undefined];
-   - a value of a type that cannot hold [undefined] is no marker either: its
-     option is wrapped with the identity.
+   - a value of a type that cannot hold [undefined] and owns no field
+     [BS_PRIVATE_NESTED_SOME_NONE] is no marker either; a record or an
+     inline record naming that field at run time ([@as]), or an object type,
+     may hold any depth there, which [Primitive_option.some] reads.
    The depth of a marker is a literal type where the encoding is known, and
-   [number] elsewhere: at an abstract type, and at a type declaration's
-   parameter. A function's type parameter that is an option's payload is
-   bounded instead (below), so its values are neither [undefined] nor
-   markers. *)
+   [number] elsewhere: at an abstract type, at a type that may own the key,
+   and at a type declaration's parameter. A function's type parameter that
+   is an option's payload is bounded instead (below), so its values are
+   neither [undefined] nor markers. *)
 type encoding =
   | Known of {undefined: bool; markers: int list}
       (** whether a value can be [undefined], and the depths of the markers
@@ -87,6 +89,34 @@ type encoding =
 
 let some_markers ~undefined ~markers =
   (if undefined then [0] else []) @ List.map succ markers
+
+let marker_key = "BS_PRIVATE_NESTED_SOME_NONE"
+
+(* Whether a value of [t] may own the marker key: a record or an inline
+   record with a field of that runtime name, an object type, or a variant
+   case's payload that may; a declaration not found may. *)
+let rec may_own_marker_key ~env ~visiting (t : Types.type_expr) =
+  let owns (labels : Types.label_declaration list) =
+    List.exists (fun l -> Record_runtime.declaration_name l = marker_key) labels
+  in
+  match (Ctype.expand_head_opt env t).desc with
+  | Tobject _ -> true
+  | Tconstr (path, _, _) when List.exists (Path.same path) visiting -> false
+  | Tconstr (path, _, _) -> (
+    match Env.find_type path env with
+    | {type_kind = Type_record (labels, _)} -> owns labels
+    | {type_kind = Type_variant (cases, _)} ->
+      let visiting = path :: visiting in
+      List.exists
+        (fun (c : Types.constructor_declaration) ->
+          match c.cd_args with
+          | Cstr_record labels -> owns labels
+          | Cstr_tuple args ->
+            List.exists (may_own_marker_key ~env ~visiting) args)
+        cases
+    | _ -> false
+    | exception Not_found -> true)
+  | _ -> false
 
 let rec encoding ~env ~var (t : Types.type_expr) =
   match (Ctype.expand_head_opt env t).desc with
@@ -99,8 +129,10 @@ let rec encoding ~env ~var (t : Types.type_expr) =
     Known {undefined = true; markers = []}
   | Tvar _ -> var t
   | _ ->
-    if Typeopt.type_cannot_contain_undefined t env then
-      Known {undefined = false; markers = []}
+    if
+      Typeopt.type_cannot_contain_undefined t env
+      && not (may_own_marker_key ~env ~visiting:[] t)
+    then Known {undefined = false; markers = []}
     else Unknown
 
 (* The markers [option<t>] can hold at the payload [t]; [var] gives the

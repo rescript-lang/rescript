@@ -18,6 +18,8 @@ export type callback = (x:(undefined | (
     (undefined | number)
   | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }))) => number;
 
+export type keyed = { readonly BS_PRIVATE_NESTED_SOME_NONE: number; readonly tag: string };
+
 export function keep(o: (undefined | (
     (undefined | number)
   | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }))): (undefined | (
@@ -68,6 +70,18 @@ export function boxed(x: number): box<number> {
 
 export function call(f: callback): number {
   return f(undefined);
+}
+
+export function keepKeyed(x: (undefined | (
+    (undefined | (
+    keyed
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }))
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }))): (undefined | (
+    (undefined | (
+    keyed
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }))
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number })) {
+  return x;
 }
 
 /* No side effect */
