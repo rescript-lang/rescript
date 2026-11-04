@@ -393,13 +393,12 @@ Mocha.describe("Optional_external_arg_once_test", () => {
     ]);
     let mode = "light";
     let tmp$2 = mode;
-    let tmp$3 = call(() => {
-      mode = "dark";
-      return "high";
-    });
-    let tmp$4 = {
+    let tmp$3 = {
       level: (() => {
-        switch (tmp$3) {
+        switch (call(() => {
+            mode = "dark";
+            return "high";
+          })) {
           case "low" :
             return 0;
           case "high" :
@@ -408,7 +407,7 @@ Mocha.describe("Optional_external_arg_once_test", () => {
       })()
     };
     if (tmp$2 !== undefined) {
-      tmp$4.mode = (() => {
+      tmp$3.mode = (() => {
         switch (tmp$2) {
           case "light" :
             return "light-mode";
@@ -417,7 +416,7 @@ Mocha.describe("Optional_external_arg_once_test", () => {
         }
       })();
     }
-    let o$1 = tmp$4;
+    let o$1 = tmp$3;
     Test_utils.eq("File \"optional_external_arg_once_test.res\", line 354, characters 7-14", [
       "light-mode",
       10

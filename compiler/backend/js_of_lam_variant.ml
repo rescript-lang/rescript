@@ -27,25 +27,51 @@ module S = Js_stmt_make
 
 type arg_expression = Splice0 | Splice1 of E.t | Splice2 of E.t * E.t
 
+(* Whether evaluating [e] may await, other than in a function it contains.
+   Raw JS code may, unless it is a function or a literal: the compiler does not
+   see what else it does. *)
+let awaits (e : J.expression) =
+  let super = Js_record_iter.super in
+  let iter =
+    {
+      super with
+      expression =
+        (fun self e ->
+          match e.expression_desc with
+          | Await _ | Raw_js_code {code_info = Exp Js_exp_unknown | Stmt _} ->
+            raise_notrace Exit
+          | Fun _ | Raw_js_code {code_info = Exp (Js_function _ | Js_literal _)}
+            ->
+            ()
+          | _ -> super.expression self e);
+    }
+  in
+  match iter.expression iter e with
+  | () -> false
+  | exception Exit -> true
+
 (* [eval] and [eval_as_int] read an argument other than a literal once,
-   inside the function that dispatches on it. That is the same as reading it
-   in place when the read has no effect and cannot await. *)
-let eval_in_place (arg : J.expression) =
-  Js_analyzer.no_side_effect_expression arg
+   inside an arrow function that dispatches on it and is called where the
+   argument is. That is the same as evaluating the argument in place, side
+   effects included, since an arrow function shares [this] and [arguments]
+   with the code around it, and an expression cannot [break], [continue] or
+   [return] other than in a function of its own. Only an [await] cannot move
+   there: it is a syntax error in the arrow function. *)
+let eval_in_place (arg : J.expression) = not (awaits arg)
 
 (* [eval_as_event] reads an argument other than a literal twice, for the tag
    (inside the function that dispatches on it, with [@as]) and for the
    payload. That is the same as reading it once, in place, for constants,
    variables, and fields, array elements and conditionals of them. A JS global
-   ([@val]) or a JS property read, as from a [@get] external, may run a getter
-   each time, so it does not count. *)
+   ([@val]) counts as a variable, like a value of a JS module ([@module]),
+   though either may be a getter. A JS property read does not count: a [@get]
+   external is there to run a getter, and a [@val] or [@module] value with
+   [@scope] is a property read as well, which cannot be told from it. *)
 let eval_as_event_in_place (arg : J.expression) =
   let rec duplicable (e : J.expression) =
     match e.expression_desc with
-    | Undefined _ | Bool _ | Number _ | Str _ | Template_literal _
-    | Var (Qualified _) ->
+    | Undefined _ | Bool _ | Number _ | Str _ | Template_literal _ | Var _ ->
       true
-    | Var (Id id) -> not (Ext_ident.is_js id)
     | Static_index (e, _, Some _) -> duplicable e
     | Array_index (a, b) -> duplicable a && duplicable b
     | Cond (a, b, c) -> duplicable a && duplicable b && duplicable c
