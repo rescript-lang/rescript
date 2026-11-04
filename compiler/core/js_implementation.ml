@@ -140,19 +140,19 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
       let typedtree_coercion = (typedtree, coercion) in
       print_if ppf (Clflags.current ()).dump_typedtree
         Printtyped.implementation_with_coercion typedtree_coercion;
-      (if !((Js_config.current ()).cmi_only) then Warnings.check_fatal ()
-       else
-         let implementation =
-           Translmod.transl_implementation modulename finalenv signature
-             typedtree_coercion
-         in
-         print_if ppf (Clflags.current ()).dump_rawlambda Printlambda.lambda
-           implementation.lambda;
-         let js_program =
-           Lam_compile_main.compile outputprefix implementation
-         in
-         if not !((Js_config.current ()).cmj_only) then
-           Lam_compile_main.lambda_as_module js_program outputprefix);
+      if !((Js_config.current ()).cmi_only) then Warnings.check_fatal ()
+      else (
+        if !((Js_config.current ()).emit_ts) then
+          Js_ts_annot.collect ~module_name:modulename typedtree;
+        let implementation =
+          Translmod.transl_implementation modulename finalenv signature
+            typedtree_coercion
+        in
+        print_if ppf (Clflags.current ()).dump_rawlambda Printlambda.lambda
+          implementation.lambda;
+        let js_program = Lam_compile_main.compile outputprefix implementation in
+        if not !((Js_config.current ()).cmj_only) then
+          Lam_compile_main.lambda_as_module js_program outputprefix);
       process_with_gentype (outputprefix ^ ".cmt"))
 
 let implementation ~parser ppf ?outputprefix fname =

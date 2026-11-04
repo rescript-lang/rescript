@@ -513,6 +513,10 @@ let lambda_as_module (lambda_output : J.deps_program) (output_prefix : string) :
         (Compiler_request_output.stdout_channel ())
   else
     Js_packages_info.iter package_info (fun {module_system; path; suffix} ->
+        let suffix =
+          if !((Js_config.current ()).emit_ts) then Js_ts_annot.ts_suffix suffix
+          else suffix
+        in
         let basename =
           Ext_namespace.change_ext_ns_suffix
             (Filename.basename output_prefix)
