@@ -136,7 +136,9 @@ let new_cell_marks () = {marks = [||]; n_marks = 0; closed = false}
 let push_mark ms m =
   let n = ms.n_marks in
   if n = Array.length ms.marks then (
-    let a = Array.make (max 64 (2 * n)) m in
+    (* Filled with an immediate: [Array.make] of a large array with a young
+       block forces a minor collection first. *)
+    let a = Array.make (Int.max 64 (2 * n)) (Obj.magic 0) in
     Array.blit ms.marks 0 a 0 n;
     ms.marks <- a);
   ms.marks.(n) <- m;
@@ -650,7 +652,7 @@ module Import = struct
         | None ->
           (* Registered before it is filled: each sibling converted here
               finds it, instead of converting the array again. *)
-          let all' = Array.make (Array.length all) l' in
+          let all' = Array.make (Array.length all) (Obj.magic 0) in
           keyed_add c.lbl_arrays_k all h_all all';
           Array.iteri (fun i l -> all'.(i) <- label_description c l) all;
           all');
@@ -1153,7 +1155,7 @@ module Export = struct
         | None ->
           (* Registered before it is filled: each sibling converted here
               finds it, instead of converting the array again. *)
-          let all' = Array.make (Array.length all) l' in
+          let all' = Array.make (Array.length all) (Obj.magic 0) in
           keyed_add c.lbl_arrays_k all h_all all';
           Array.iteri (fun i l -> all'.(i) <- label_description c l) all;
           all');
