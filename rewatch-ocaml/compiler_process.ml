@@ -110,8 +110,7 @@ let run_tasks ?poll ?on_complete tasks =
     ~max_jobs:(Compiler_execution_mode.configured_count ())
     ?poll ?on_complete tasks
 
-let run_requests ?poll ?on_complete requests =
-  requests |> List.map task |> run_tasks ?poll ?on_complete
+let run_requests requests = requests |> List.map task |> run_tasks
 
 (* A request writes its ASTs, interfaces and typed trees into the artifact
    directory that later requests and builds read. They are held in memory

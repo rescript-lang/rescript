@@ -29,7 +29,6 @@ val input_cmi : in_channel -> cmi_infos
 
 (* read a cmi from a filename, checking the magic *)
 val read_cmi : string -> cmi_infos
-val read_cmi_channel : string -> in_channel -> cmi_infos
 
 val read_cmi_contents : string -> string -> cmi_infos
 (** [read_cmi_contents filename contents] reads an interface from the

@@ -12,11 +12,7 @@ val is_held : string -> bool
 val parse_request : artifact_dir:string -> config:Config.t -> string -> request
 val run : ?poll:(unit -> unit) -> request -> Process.result
 
-val run_requests :
-  ?poll:(unit -> unit) ->
-  ?on_complete:(int -> unit) ->
-  request list ->
-  Process.result list
+val run_requests : request list -> Process.result list
 
 val publish_parse : artifact_dir:string -> string -> unit
 (** Writes the AST of a successful parse to the artifact directory. *)

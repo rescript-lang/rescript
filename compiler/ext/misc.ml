@@ -113,19 +113,6 @@ let create_hashtable init =
   Array.iter (fun (key, data) -> Hashtbl.add tbl key data) init;
   tbl
 
-(* File copy *)
-
-let output_to_bin_file_directly filename fn =
-  let filename = Compiler_request_state.resolve_path filename in
-  let oc = open_out_bin filename in
-  match fn filename oc with
-  | v ->
-    close_out oc;
-    v
-  | exception e ->
-    close_out oc;
-    raise e
-
 (* Integer operations *)
 
 module Int_literal_converter = struct
