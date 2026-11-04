@@ -3531,6 +3531,13 @@ let coerces_into_private_type env t1 t2 =
     | None -> true)
   | Some _ | None -> false
 
+(* Whether a variant constructor coerces to the same-named constructor of the
+   target variant, and if not, whether the error can say why *)
+type constructor_coercion =
+  | Coerces
+  | Fails_with of subtype_context
+  | Fails_unexplained
+
 let rec subtype_rec env trace t1 t2 cstrs =
   let t1 = repr t1 in
   let t2 = repr t2 in
@@ -3759,7 +3766,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
               c2
               |> List.iteri (fun position (c : Types.constructor_declaration) ->
                   Hashtbl.add constructor_map (Ident.name c.cd_id) (c, position));
-              let field_subtype_violations =
+              let constructor_coercions =
                 c1
                 |> List.mapi
                      (fun position1 (c : Types.constructor_declaration) ->
@@ -3784,18 +3791,30 @@ let rec subtype_rec env trace t1 t2 cstrs =
                            | [] -> (
                              try
                                let lst = subtype_list env trace tl1 tl2 cstrs in
-                               if List.length lst = List.length cstrs then None
-                               else
-                                 Some
-                                   [ (* TODO(subtype-errors) Variant constructor inline record mismatch *) ]
+                               if List.length lst = List.length cstrs then
+                                 Coerces
+                               else Fails_unexplained
+                               (* TODO(subtype-errors) Variant constructor inline record field type mismatch *)
                              with _ ->
-                               Some
-                                 [ (* TODO(subtype-errors) Variant constructor inline record mismatch *) ]
+                               Fails_unexplained
+                               (* TODO(subtype-errors) Variant constructor inline record field type mismatch *)
                              )
-                           | violations -> Some violations
+                           | violations ->
+                             (* The inline record types are named like the
+                                compiler prints them, e.g. [v1.A]. *)
+                             let inline_record_name p =
+                               Path.Pdot (p, Ident.name c.cd_id, Path.nopos)
+                             in
+                             Fails_with
+                               (Record_fields_mismatch
+                                  {
+                                    left_record_name = inline_record_name p1;
+                                    right_record_name = inline_record_name p2;
+                                    issues = violations;
+                                  })
                          else
-                           Some
-                             [ (* TODO(subtype-errors) Variant constructor representation mismatch*) ]
+                           Fails_unexplained
+                           (* TODO(subtype-errors) Variant constructor representation mismatch*)
                        | ( {Types.cd_args = Cstr_tuple tl1},
                            Some ({Types.cd_args = Cstr_tuple tl2}, position2) )
                          ->
@@ -3806,22 +3825,34 @@ let rec subtype_rec env trace t1 t2 cstrs =
                          then
                            try
                              let lst = subtype_list env trace tl1 tl2 cstrs in
-                             if List.length lst = List.length cstrs then None
-                             else
-                               Some
-                                 [ (* TODO(subtype-errors) Variant constructor tuple mismatch *) ]
-                           with _ ->
-                             Some
-                               [ (* TODO(subtype-errors) Variant constructor tuple mismatch *) ]
+                             if List.length lst = List.length cstrs then Coerces
+                             else Fails_unexplained
+                             (* TODO(subtype-errors) Variant constructor tuple mismatch *)
+                           with _ -> Fails_unexplained
+                           (* TODO(subtype-errors) Variant constructor tuple mismatch *)
                          else
-                           Some
-                             [ (* TODO(subtype-errors) Variant constructor tuple mismatch *) ]
-                       | _ ->
-                         Some [ (* TODO(subtype-errors) Variant other issue *) ])
-                |> List.filter_map Fun.id
+                           Fails_unexplained
+                           (* TODO(subtype-errors) Variant constructor tuple mismatch *)
+                       | _ -> Fails_unexplained
+                       (* TODO(subtype-errors) Variant other issue *))
               in
-              if field_subtype_violations = [] then cstrs
-              else (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
+              if
+                List.for_all
+                  (function
+                    | Coerces -> true
+                    | Fails_with _ | Fails_unexplained -> false)
+                  constructor_coercions
+              then cstrs
+              else
+                (* Report the first failure the error can explain *)
+                let context =
+                  List.find_map
+                    (function
+                      | Fails_with context -> Some context
+                      | Coerces | Fails_unexplained -> None)
+                    constructor_coercions
+                in
+                (trace, t1, t2, !(current_univar_pairs ()), context) :: cstrs)
         | ( (p1, _, {type_kind = Type_record (fields1, repr1)}),
             (p2, _, {type_kind = Type_record (fields2, repr2)}) ) ->
           let same_repr =

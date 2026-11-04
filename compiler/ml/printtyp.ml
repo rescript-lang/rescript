@@ -1729,8 +1729,8 @@ let print_record_field_subtype_violation ppf
         " is configured to be @{<info>\"%s\"@} (via the @as attribute)" as_name
     | None -> fprintf ppf " is @{<info>\"%s\"@}" label);
     fprintf ppf " in record @{<info>%s@}, but in record @{<info>%s@}"
-      (Path.name right_record_name)
-      (Path.name left_record_name);
+      (Path.name left_record_name)
+      (Path.name right_record_name);
     (match right_as with
     | Some as_name ->
       fprintf ppf
@@ -1743,8 +1743,8 @@ let print_record_field_subtype_violation ppf
       "The field @{<info>%s@} is missing in record @{<info>%s@}, but present \
        in record @{<info>%s@}"
       label
-      (Path.name right_record_name)
       (Path.name left_record_name)
+      (Path.name right_record_name)
   | Mutable_mismatch {label} ->
     fprintf ppf
       "The field @{<info>%s@} is mutable in record @{<info>%s@}, but not in \
