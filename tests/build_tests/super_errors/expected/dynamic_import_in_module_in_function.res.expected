@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/dynamic_import_in_module_in_function.res[0m:[2m3:16-25[0m
+
+  1 [2m│[0m let length = values => {
+  2 [2m│[0m   module M = {
+  [1;31m3[0m [2m│[0m     module L = [1;31mawait List[0m
+  4 [2m│[0m     let length = L.length(values)
+  5 [2m│[0m   }
+
+  Await on expression not in an async context

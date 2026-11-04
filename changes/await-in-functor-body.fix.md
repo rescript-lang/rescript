@@ -1,0 +1,1 @@
+- Reject `await`, `for await` and `module M = await List` in a functor body, wherever the functor is defined, and `module M = await List` in a module nested in a function that is not async. These compiled to JavaScript with `await` in a function that is not async, except where the optimizer inlined every application of the functor.
