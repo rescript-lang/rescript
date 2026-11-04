@@ -2015,6 +2015,13 @@ let keep_only_summary env =
     last_reduced_env () := new_env;
     new_env
 
+(* The parts of an environment [keep_only_summary] keeps, and the environment
+   it makes of them. *)
+let summary_parts env = (env.summary, env.local_constraints, env.flags)
+
+let of_summary_parts summary local_constraints flags =
+  {empty with summary; local_constraints; flags}
+
 open Format
 
 (* taken from https://github.com/rescript-lang/ocaml/blob/d4144647d1bf9bc7dc3aadc24c25a7efa3a67915/typing/env.ml#L1842 *)

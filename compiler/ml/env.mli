@@ -208,6 +208,14 @@ val add_import : string -> unit
    except the summary. *)
 
 val keep_only_summary : t -> t
+
+val summary_parts : t -> summary * type_declaration Path_map.t * int
+(** The summary, local constraints and flags of an environment: what
+    [keep_only_summary] keeps. *)
+
+val of_summary_parts : summary -> type_declaration Path_map.t -> int -> t
+(** The environment [keep_only_summary] makes of these parts. *)
+
 type error =
   | Illegal_renaming of string * string * string
   | Inconsistent_import of string * string * string

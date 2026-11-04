@@ -24,13 +24,16 @@
 open Asttypes
 (** Asttypes exposes basic definitions shared both by Parsetree and Types. *)
 
-type type_expr
-(** Type expressions for the core language.
+type type_expr [@@immediate]
+(** Type expressions for the core language: a node of a {!Store}, an
+    immediate integer naming the store and the node's position in it. Physical
+    equality [==] of types is equality of nodes. The node's descriptor, level
+    and identifier are read with {!get_desc}, {!get_level} and {!get_id}.
 
     The [type_desc] variant defines all the possible type expressions one can
-    find in OCaml. [type_expr] wraps this with some annotations.
+    find in OCaml.
 
-    The [level] field tracks the level of polymorphism associated to a type,
+    The level tracks the level of polymorphism associated to a type,
     guiding the generalization algorithm.
     Put shortly, when referring to a type in a given environment, both the type
     and the environment have a level. If the type has an higher level, then it
@@ -39,21 +42,10 @@ type type_expr
     variables printed as ['_a]).
     See [http://okmij.org/ftp/ML/generalization.html] for more information.
 
-    Note about [type_declaration]: one should not make the confusion between
-    [type_expr] and [type_declaration].
-
-    [type_declaration] refers specifically to the [type] construct in OCaml
-    language, where you create and name a new type or type alias.
-
-    [type_expr] is used when you refer to existing types, e.g. when annotating
-    the expected type of a value.
-
-    Also, as the type system of OCaml is generative, a [type_declaration] can
-    have the side-effect of introducing a new type constructor, different from
-    all other known types.
-    Whereas [type_expr] is a pure construct which allows referring to existing
-    types.
- *)
+    Polymorphic comparison and hashing of a structure holding types compare
+    and hash the nodes, not the types they denote: use {!Type_ops} or
+    [Btype]'s tables. [.cmi] and [.cmt] files hold the boxed representation of
+    {!Types_boxed}; [Type_arena] converts between the two. *)
 
 and arg = {lbl: arg_label; typ: type_expr}
 
@@ -181,49 +173,84 @@ and field_mutability =
 
 (** {1 Access to type nodes}
 
-    Code reads the fields of a [type_expr] through these accessors and changes
-    them through the logged setters in [Btype] ([link_type], [set_level],
-    [log_type]). This follows upstream OCaml (4.14 and later), where
-    [type_expr] is abstract, and it separates the type checker from the
-    representation of type nodes, so that the representation can change
-    later, for example to an index into a per-request store.
+    Code reads a node through these accessors and changes it through the
+    logged setters in [Btype] ([link_type], [set_level], [log_type]).
 
-    The record above stays visible for now, so modules which still read its
-    fields directly keep compiling while they are converted. Making
-    [type_expr] abstract is the end state of this refactoring.
+    [get_desc] does not call [Btype.repr]: it returns the node's own
+    descriptor, which can be [Tlink]. Reading a [Tlink] or [Tsubst] descriptor
+    allocates it, as the store keeps those as integers ({!link_target}). *)
 
-    Unlike upstream's [get_desc], [get_desc] does not call [Btype.repr]: it
-    returns the node's own descriptor, which can be [Tlink]. Callers keep
-    calling [repr] first, so path compression and its trail entries happen
-    exactly where they did before.
-
-    [get_desc] and [get_level] are primitives, so they compile to the same
-    field loads as [ty.desc] and [ty.level], also in builds without
-    cross-module inlining. *)
-
-external get_desc : type_expr -> type_desc = "%field0"
+val get_desc : type_expr -> type_desc
 (** The node's descriptor, without following [Tlink]. *)
 
-external get_level : type_expr -> int = "%field1"
+val get_level : type_expr -> int
 
 val get_id : type_expr -> int
-(** The node's unique identifier, allocated by [Btype.newty2]. *)
+(** The node's unique identifier, allocated by [Btype.newty2]. It is not the
+    node's position in its store: ids are kept when a type graph is read from
+    or written to a file. *)
 
-(** Creation and unlogged updates of type nodes. The setters change a field
+val link_target : type_expr -> type_expr
+(** The target of the node's [Tlink] descriptor, or the node itself; does not
+    allocate. *)
+
+val subst_target : type_expr -> type_expr
+(** The target of the node's [Tsubst] descriptor, or the node itself. *)
+
+(** Stores of type nodes.
+
+    A store holds the nodes of one compiler request. Each domain has a
+    default store, used outside {!with_store}; {!with_store} runs an action
+    with a fresh store as the domain's current one and frees it afterwards.
+    New nodes are allocated in the current store. Reading or writing a node
+    goes to the store that owns it, whichever store is current.
+
+    A node must not be used after its store is freed: such a node reads
+    whatever a later user put at its index (memory safe, but wrong). *)
+module Store : sig
+  type t
+
+  val current : unit -> t
+
+  val with_store : ?capacity:int -> (unit -> 'a) -> 'a
+  (** [with_store action] runs [action] with a new current store, restores
+      the previous one afterwards (also when [action] raises) and frees the new
+      store. Calls nest. *)
+
+  val create : ?capacity:int -> unit -> t
+  (** A store that is not current; nodes are put into it with {!newty_in}.
+      Free it with {!release} once no node of it is used any more. *)
+
+  val release : t -> unit
+  val length : t -> int
+
+  val of_node : type_expr -> t
+  (** The store which owns the node. *)
+
+  val nth : t -> int -> type_expr
+  (** [nth s i] is the [i]-th node allocated in [s]. *)
+
+  val index : type_expr -> int
+  (** Position of the node in its store. *)
+
+  val index_bits : int
+  val max_slots : int
+
+  val newty_in : t -> type_desc -> level:int -> id:int -> type_expr
+end
+
+(** Creation and unlogged updates of type nodes. The setters change a node
     without recording its old value on the backtracking trail. Their users are
     [Btype] (node creation, the trail itself, copy sessions and marking), and
     the parts of [Ctype] which either restore their own temporary changes
     (copy marks, level marks, temporary links during unification) or call
     [Btype.log_type] first, which records the old descriptor before a
-    persistent change. Other code uses the logged setters of [Btype].
-
-    Upstream OCaml's setters take a separate [transient_expr], obtained with
-    [Transient_expr.repr], so that they bypass the [repr] built into its
-    [get_desc]. There is no implicit [repr] here, so they take a [type_expr]. *)
+    persistent change. Other code uses the logged setters of [Btype]. *)
 module Transient_expr : sig
   val create : type_desc -> level:int -> id:int -> type_expr
+  (** A new node in the current store. *)
 
-  external set_desc : type_expr -> type_desc -> unit = "%setfield0"
+  val set_desc : type_expr -> type_desc -> unit
   val set_level : type_expr -> int -> unit
 end
 

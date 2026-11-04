@@ -19,7 +19,8 @@ open Asttypes
 
 (* Type expressions for the core language *)
 
-type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
+(* An index into a store, see [Store] below and types.mli. *)
+type type_expr = int
 
 and arg = {lbl: arg_label; typ: type_expr}
 
@@ -68,32 +69,229 @@ and field_mutability =
   | Mutability_value of Asttypes.mutable_flag
   | Mutability_link of field_mutability ref
 
-(* The primitives below index the fields of [type_expr] by position: [desc] is
-   field 0 and [level] field 1. Reordering the record would make them read the
-   wrong field without a type error, so the check below fails as soon as the
-   compiler starts instead. *)
-external get_desc : type_expr -> type_desc = "%field0"
-external get_level : type_expr -> int = "%field1"
-let get_id t = t.id
+(**** Stores ****)
 
-module Transient_expr = struct
-  let create desc ~level ~id = {desc; level; id}
+(* One store per slot. A node is [generation lsl gen_shift lor slot lsl
+   index_bits lor index], so every access finds its store through the global
+   [slots] table: no [Domain.DLS] lookup. Only the domain that owns a store
+   writes it; [slot_lock] orders a store's reuse by another domain after its
+   release.
 
-  external set_desc : type_expr -> type_desc -> unit = "%setfield0"
+   Columns: [descs] holds the descriptor; [meta] holds, for node [i], at
+   [4 * i] the link code, at [4 * i + 1] the level and at [4 * i + 2] the id
+   (interleaved, so one node's integers share a cache line; the fourth word is
+   padding). The link code keeps [Tlink] and [Tsubst] as integers, so that
+   linking and copy marks are integer stores: -1, the descriptor is
+   [descs.(i)]; t >= 0, [Tlink t]; t <= -2, [Tsubst (-2 - t)]. When the code
+   is not -1, [descs.(i)] is the stale descriptor from before the link, kept
+   so restoring it is free.
 
-  (* OCaml 5.0 has no [%setfield1]. *)
-  let set_level t level = t.level <- level
+   With [check_generations], a store's generation changes each time it is
+   released, and every access checks that the node's generation is its
+   store's: a node used after its store was freed raises instead of reading
+   another request's node. Off by default (it costs a compare per access). *)
+type store = {
+  slot: int;
+  mutable generation: int;
+  mutable base: int;
+  mutable descs: type_desc array;
+  mutable meta: int array;
+  mutable length: int;
+}
+
+let check_generations = false
+let index_bits = if Sys.int_size >= 63 then 32 else 22
+let index_mask = (1 lsl index_bits) - 1
+let slot_bits = if Sys.int_size >= 63 then 12 else Sys.int_size - 1 - index_bits
+let max_slots = 1 lsl slot_bits
+let slot_mask = max_slots - 1
+let gen_shift = index_bits + slot_bits
+let gen_mask =
+  if check_generations then (1 lsl (Sys.int_size - 1 - gen_shift)) - 1 else 0
+let max_index = index_mask
+
+let make_meta capacity =
+  let meta = Array.make (4 * capacity) 0 in
+  for i = 0 to capacity - 1 do
+    meta.(4 * i) <- -1
+  done;
+  meta
+
+let base_of slot generation =
+  (generation lsl gen_shift) lor (slot lsl index_bits)
+
+let make_store slot generation capacity =
+  let capacity = max 16 capacity in
+  {
+    slot;
+    generation;
+    base = base_of slot generation;
+    descs = Array.make capacity Tnil;
+    meta = make_meta capacity;
+    length = 0;
+  }
+
+let unused = make_store 0 0 16
+let slots = Array.make max_slots unused
+let slot_lock = Mutex.create ()
+let free_slots = ref []
+let next_slot = ref 0
+let default_capacity = 1024
+
+(* Capacity kept by a released store for its next user; larger columns are
+   dropped so one huge request does not pin memory forever. *)
+let retained_capacity = 1 lsl 20
+
+let acquire capacity =
+  Mutex.lock slot_lock;
+  let slot =
+    match !free_slots with
+    | slot :: rest ->
+      free_slots := rest;
+      Some slot
+    | [] ->
+      if !next_slot < max_slots then (
+        let slot = !next_slot in
+        incr next_slot;
+        Some slot)
+      else None
+  in
+  Mutex.unlock slot_lock;
+  match slot with
+  | None -> failwith "Types: too many type stores alive"
+  | Some slot ->
+    let s = Array.unsafe_get slots slot in
+    if s == unused || Array.length s.descs < capacity then (
+      let s = make_store slot (s.generation land gen_mask) capacity in
+      slots.(slot) <- s;
+      s)
+    else s
+
+let release s =
+  let generation = (s.generation + 1) land gen_mask in
+  if Array.length s.descs > retained_capacity then
+    slots.(s.slot) <- make_store s.slot generation default_capacity
+  else (
+    Array.fill s.descs 0 s.length Tnil;
+    for i = 0 to s.length - 1 do
+      s.meta.(4 * i) <- -1
+    done;
+    s.length <- 0;
+    s.generation <- generation;
+    s.base <- base_of s.slot generation);
+  Mutex.lock slot_lock;
+  free_slots := s.slot :: !free_slots;
+  Mutex.unlock slot_lock
+
+let current_key =
+  Domain.DLS.new_key (fun () ->
+      let s = acquire default_capacity in
+      Domain.at_exit (fun () -> release s);
+      s)
+
+let[@inline] stale t = failwith (Printf.sprintf "Types: stale type node %x" t)
+
+let[@inline] store_of (t : type_expr) =
+  let s = Array.unsafe_get slots ((t lsr index_bits) land slot_mask) in
+  if check_generations && (t lsr gen_shift) land gen_mask <> s.generation then
+    stale t;
+  s
+
+let[@inline] index (t : type_expr) = t land index_mask
+
+let grow s =
+  let n = s.length in
+  let capacity = 2 * Array.length s.descs in
+  if capacity - 1 > max_index then failwith "Types: type store is full";
+  let descs = Array.make capacity Tnil in
+  Array.blit s.descs 0 descs 0 n;
+  s.descs <- descs;
+  let meta = make_meta capacity in
+  Array.blit s.meta 0 meta 0 (4 * n);
+  s.meta <- meta
+
+let[@inline] link_code = function
+  | Tlink t -> t
+  | Tsubst t -> -2 - t
+  | _ -> -1
+
+let newty_in s desc ~level ~id =
+  if s.length = Array.length s.descs then grow s;
+  let i = s.length in
+  s.length <- i + 1;
+  (match link_code desc with
+  | -1 -> s.descs.(i) <- desc
+  | code -> s.meta.(4 * i) <- code);
+  s.meta.((4 * i) + 1) <- level;
+  s.meta.((4 * i) + 2) <- id;
+  s.base lor i
+
+(* Column reads are bounds-checked: a stale node from a freed store must not
+   read outside the arrays. *)
+let[@inline] get_desc t =
+  let s = store_of t and i = index t in
+  let code = s.meta.(4 * i) in
+  if code = -1 then s.descs.(i)
+  else if code >= 0 then Tlink code
+  else Tsubst (-2 - code)
+
+let[@inline] get_level t = (store_of t).meta.((4 * index t) + 1)
+let[@inline] get_id t = (store_of t).meta.((4 * index t) + 2)
+
+let[@inline] link_code_of t = (store_of t).meta.(4 * index t)
+
+let[@inline] link_target t =
+  let code = link_code_of t in
+  if code >= 0 then code else t
+
+let[@inline] subst_target t =
+  let code = link_code_of t in
+  if code <= -2 then -2 - code else t
+
+module Store = struct
+  type t = store
+
+  let current () = Domain.DLS.get current_key
+
+  let with_store ?(capacity = default_capacity) action =
+    let previous = current () in
+    let s = acquire capacity in
+    Domain.DLS.set current_key s;
+    Fun.protect action ~finally:(fun () ->
+        Domain.DLS.set current_key previous;
+        release s)
+
+  let create ?(capacity = default_capacity) () = acquire capacity
+  let release = release
+  let length s = s.length
+  let of_node = store_of
+
+  let nth s i =
+    if i < 0 || i >= s.length then invalid_arg "Types.Store.nth";
+    s.base lor i
+
+  let index = index
+  let index_bits = index_bits
+  let max_slots = max_slots
+  let newty_in = newty_in
 end
 
-let () =
-  let t = {desc = Tnil; level = 0; id = 0} in
-  let desc = Tvar None in
-  t.desc <- desc;
-  t.level <- 12345;
-  let reads_match = get_desc t == desc && get_level t = t.level in
-  Transient_expr.set_desc t Tnil;
-  if not (reads_match && t.desc == Tnil) then
-    failwith "Types: the type_expr primitives don't match its fields"
+module Transient_expr = struct
+  let create desc ~level ~id = newty_in (Store.current ()) desc ~level ~id
+
+  let[@inline] set_desc t desc =
+    let s = store_of t and i = index t in
+    match link_code desc with
+    | -1 ->
+      s.meta.(4 * i) <- -1;
+      (* Restoring the descriptor saved before a link or copy mark writes the
+         value that is already there; skip the write barrier then. *)
+      if s.descs.(i) != desc then s.descs.(i) <- desc
+    | code -> s.meta.(4 * i) <- code
+
+  let[@inline] set_level t level =
+    (store_of t).meta.((4 * index t) + 1) <- level
+end
 
 module Type_ops = struct
   type t = type_expr

@@ -1,0 +1,559 @@
+(* Converts a typed tree of [S] into one of [D], where [S] and [D] are
+   [Typedtree] and [Typedtree_boxed] in one order or the other. compiler/ml/dune
+   instantiates this text twice, as [Typedtree_export] and [Typedtree_import],
+   after a header naming [S], [D] and [L], the converters of the type nodes,
+   declarations and environments the tree holds ([Cmt_leaves]). Every
+   constructor and field is qualified with [S] or [D], so the same text
+   type-checks in both directions; a change to the typed tree that is not
+   made here and in [Typedtree_boxed] makes it fail to compile.
+
+   The tree itself is not memoized: its nodes are not shared (except through
+   the leaves, which [L] memoizes). *)
+
+let list = List.map
+let opt = Option.map
+
+let rec pattern c (p : S.pattern) : D.pattern =
+  {
+    D.pat_desc = pattern_desc c p.S.pat_desc;
+    pat_loc = p.S.pat_loc;
+    pat_extra =
+      list (fun (e, loc, attrs) -> (pat_extra c e, loc, attrs)) p.S.pat_extra;
+    pat_type = L.type_expr c p.S.pat_type;
+    pat_env = L.env c p.S.pat_env;
+    pat_attributes = p.S.pat_attributes;
+  }
+
+and record_pat_rest c (r : S.record_pat_rest) : D.record_pat_rest =
+  {
+    D.rest_ident = r.S.rest_ident;
+    rest_name = r.S.rest_name;
+    rest_type = L.type_expr c r.S.rest_type;
+    excluded_runtime_labels = r.S.excluded_runtime_labels;
+  }
+
+and pat_extra c (e : S.pat_extra) : D.pat_extra =
+  match e with
+  | S.Tpat_constraint t -> D.Tpat_constraint (core_type c t)
+  | S.Tpat_type (p, lid) -> D.Tpat_type (p, lid)
+  | S.Tpat_unpack -> D.Tpat_unpack
+
+and pattern_desc c (d : S.pattern_desc) : D.pattern_desc =
+  match d with
+  | S.Tpat_any -> D.Tpat_any
+  | S.Tpat_var (id, name) -> D.Tpat_var (id, name)
+  | S.Tpat_alias (p, id, name) -> D.Tpat_alias (pattern c p, id, name)
+  | S.Tpat_constant k -> D.Tpat_constant k
+  | S.Tpat_interval (k1, k2) -> D.Tpat_interval (k1, k2)
+  | S.Tpat_tuple ps -> D.Tpat_tuple (list (pattern c) ps)
+  | S.Tpat_construct (lid, cstr, ps) ->
+    D.Tpat_construct
+      (lid, L.constructor_description c cstr, list (pattern c) ps)
+  | S.Tpat_variant (l, p, row) ->
+    D.Tpat_variant (l, opt (pattern c) p, L.row_desc_ref c row)
+  | S.Tpat_record (fields, closed, rest) ->
+    D.Tpat_record
+      ( list
+          (fun (lid, lbl, p, optional) ->
+            (lid, L.label_description c lbl, pattern c p, optional))
+          fields,
+        closed,
+        opt (record_pat_rest c) rest )
+  | S.Tpat_dict entries -> D.Tpat_dict (list (dict_pattern_entry c) entries)
+  | S.Tpat_array ps -> D.Tpat_array (list (pattern c) ps)
+  | S.Tpat_or (p1, p2, row) ->
+    let p1 = pattern c p1 in
+    let p2 = pattern c p2 in
+    D.Tpat_or (p1, p2, opt (L.row_desc c) row)
+
+and dict_pattern_entry c (e : S.dict_pattern_entry) : D.dict_pattern_entry =
+  {
+    D.tdp_key = e.S.tdp_key;
+    tdp_pattern = pattern c e.S.tdp_pattern;
+    tdp_optional = e.S.tdp_optional;
+  }
+
+and expression c (e : S.expression) : D.expression =
+  {
+    D.exp_desc = expression_desc c e.S.exp_desc;
+    exp_loc = e.S.exp_loc;
+    exp_extra =
+      list (fun (x, loc, attrs) -> (exp_extra c x, loc, attrs)) e.S.exp_extra;
+    exp_type = L.type_expr c e.S.exp_type;
+    exp_env = L.env c e.S.exp_env;
+    exp_attributes = e.S.exp_attributes;
+  }
+
+and exp_extra c (x : S.exp_extra) : D.exp_extra =
+  match x with
+  | S.Texp_constraint t -> D.Texp_constraint (core_type c t)
+  | S.Texp_coerce {source_type; target; target_type} ->
+    let source_type = L.type_expr c source_type in
+    let target = core_type c target in
+    D.Texp_coerce {source_type; target; target_type = L.type_expr c target_type}
+  | S.Texp_open (flag, p, lid, env) -> D.Texp_open (flag, p, lid, L.env c env)
+
+and expression_desc c (d : S.expression_desc) : D.expression_desc =
+  match d with
+  | S.Texp_ident (p, lid, vd) ->
+    D.Texp_ident (p, lid, L.value_description c vd)
+  | S.Texp_constant k -> D.Texp_constant k
+  | S.Texp_let (flag, vbs, e) ->
+    let vbs = list (value_binding c) vbs in
+    D.Texp_let (flag, vbs, expression c e)
+  | S.Texp_function {params; body; async} ->
+    let params = list (function_param c) params in
+    D.Texp_function {params; body = expression c body; async}
+  | S.Texp_apply {funct; args; partial; transformed_jsx} ->
+    let funct = expression c funct in
+    D.Texp_apply
+      {
+        funct;
+        args = list (fun (l, e) -> (l, opt (expression c) e)) args;
+        partial;
+        transformed_jsx;
+      }
+  | S.Texp_match (e, cases, exn_cases, partial) ->
+    let e = expression c e in
+    let cases = list (case c) cases in
+    D.Texp_match (e, cases, list (case c) exn_cases, partial)
+  | S.Texp_try (e, cases, finally) ->
+    let e = expression c e in
+    let cases = list (case c) cases in
+    D.Texp_try (e, cases, opt (expression c) finally)
+  | S.Texp_tuple es -> D.Texp_tuple (list (expression c) es)
+  | S.Texp_construct (lid, cstr, es) ->
+    let cstr = L.constructor_description c cstr in
+    D.Texp_construct (lid, cstr, list (expression c) es)
+  | S.Texp_variant (l, e) -> D.Texp_variant (l, opt (expression c) e)
+  | S.Texp_record {fields; representation; extended_expression} ->
+    let fields =
+      Array.map
+        (fun (lbl, lid, e) ->
+          let lbl = L.label_description c lbl in
+          (lbl, lid, expression c e))
+        fields
+    in
+    D.Texp_record
+      {
+        fields;
+        representation;
+        extended_expression = opt (expression c) extended_expression;
+      }
+  | S.Texp_field (e, lid, lbl) ->
+    let e = expression c e in
+    D.Texp_field (e, lid, L.label_description c lbl)
+  | S.Texp_setfield (e1, lid, lbl, e2) ->
+    let e1 = expression c e1 in
+    let lbl = L.label_description c lbl in
+    D.Texp_setfield (e1, lid, lbl, expression c e2)
+  | S.Texp_array es -> D.Texp_array (list (expression c) es)
+  | S.Texp_dict entries -> D.Texp_dict (list (dict_entry c) entries)
+  | S.Texp_spread (kind, es) -> D.Texp_spread (kind, list (expression c) es)
+  | S.Texp_ifthenelse (e1, e2, e3) ->
+    let e1 = expression c e1 in
+    let e2 = expression c e2 in
+    D.Texp_ifthenelse (e1, e2, opt (expression c) e3)
+  | S.Texp_sequence (e1, e2) ->
+    let e1 = expression c e1 in
+    D.Texp_sequence (e1, expression c e2)
+  | S.Texp_break -> D.Texp_break
+  | S.Texp_continue -> D.Texp_continue
+  | S.Texp_while (e1, e2) ->
+    let e1 = expression c e1 in
+    D.Texp_while (e1, expression c e2)
+  | S.Texp_for (id, p, e1, e2, dir, e3) ->
+    let e1 = expression c e1 in
+    let e2 = expression c e2 in
+    D.Texp_for (id, p, e1, e2, dir, expression c e3)
+  | S.Texp_object_get (e, name) -> D.Texp_object_get (expression c e, name)
+  | S.Texp_object_set (e1, name, e2) ->
+    let e1 = expression c e1 in
+    D.Texp_object_set (e1, name, expression c e2)
+  | S.Texp_object_literal fields ->
+    D.Texp_object_literal (list (fun (n, e) -> (n, expression c e)) fields)
+  | S.Texp_letmodule (id, name, me, e) ->
+    let me = module_expr c me in
+    D.Texp_letmodule (id, name, me, expression c e)
+  | S.Texp_letexception (ext, e) ->
+    let ext = extension_constructor c ext in
+    D.Texp_letexception (ext, expression c e)
+  | S.Texp_assert e -> D.Texp_assert (expression c e)
+  | S.Texp_pack me -> D.Texp_pack (module_expr c me)
+  | S.Texp_for_of (id, p, e1, e2) ->
+    let e1 = expression c e1 in
+    D.Texp_for_of (id, p, e1, expression c e2)
+  | S.Texp_for_await_of (id, p, e1, e2) ->
+    let e1 = expression c e1 in
+    D.Texp_for_await_of (id, p, e1, expression c e2)
+  | S.Texp_tagged_template {tag; raw_sources; values} ->
+    let tag = expression c tag in
+    D.Texp_tagged_template {tag; raw_sources; values = list (expression c) values}
+  | S.Texp_template {segments; values} ->
+    D.Texp_template {segments; values = list (expression c) values}
+
+and case c (x : S.case) : D.case =
+  let c_lhs = pattern c x.S.c_lhs in
+  let c_guard = opt (expression c) x.S.c_guard in
+  {D.c_lhs; c_guard; c_rhs = expression c x.S.c_rhs}
+
+and dict_entry c (e : S.dict_entry) : D.dict_entry =
+  match e with
+  | S.Tdict_entry (key, e) -> D.Tdict_entry (key, expression c e)
+  | S.Tdict_spread e -> D.Tdict_spread (expression c e)
+
+and function_param c (p : S.function_param) : D.function_param =
+  {
+    D.fp_lbl = p.S.fp_lbl;
+    fp_param = p.S.fp_param;
+    fp_pat = pattern c p.S.fp_pat;
+    fp_partial = p.S.fp_partial;
+    fp_has_default = p.S.fp_has_default;
+  }
+
+and module_expr c (m : S.module_expr) : D.module_expr =
+  let mod_desc = module_expr_desc c m.S.mod_desc in
+  {
+    D.mod_desc;
+    mod_loc = m.S.mod_loc;
+    mod_type = L.module_type c m.S.mod_type;
+    mod_env = L.env c m.S.mod_env;
+    mod_attributes = m.S.mod_attributes;
+  }
+
+and module_type_constraint c (x : S.module_type_constraint) :
+    D.module_type_constraint =
+  match x with
+  | S.Tmodtype_implicit -> D.Tmodtype_implicit
+  | S.Tmodtype_explicit mty -> D.Tmodtype_explicit (module_type c mty)
+
+and module_expr_desc c (d : S.module_expr_desc) : D.module_expr_desc =
+  match d with
+  | S.Tmod_ident (p, lid) -> D.Tmod_ident (p, lid)
+  | S.Tmod_structure str -> D.Tmod_structure (structure c str)
+  | S.Tmod_functor (id, name, mty, me) ->
+    let mty = opt (module_type c) mty in
+    D.Tmod_functor (id, name, mty, module_expr c me)
+  | S.Tmod_apply (me1, me2, coercion) ->
+    let me1 = module_expr c me1 in
+    let me2 = module_expr c me2 in
+    D.Tmod_apply (me1, me2, module_coercion c coercion)
+  | S.Tmod_constraint (me, mty, constr, coercion) ->
+    let me = module_expr c me in
+    let mty = L.module_type c mty in
+    let constr = module_type_constraint c constr in
+    D.Tmod_constraint (me, mty, constr, module_coercion c coercion)
+  | S.Tmod_unpack (e, mty) ->
+    let e = expression c e in
+    D.Tmod_unpack (e, L.module_type c mty)
+
+and structure c (s : S.structure) : D.structure =
+  let str_items = list (structure_item c) s.S.str_items in
+  {
+    D.str_items;
+    str_type = L.signature c s.S.str_type;
+    str_final_env = L.env c s.S.str_final_env;
+  }
+
+and structure_item c (i : S.structure_item) : D.structure_item =
+  let str_desc = structure_item_desc c i.S.str_desc in
+  {D.str_desc; str_loc = i.S.str_loc; str_env = L.env c i.S.str_env}
+
+and structure_item_desc c (d : S.structure_item_desc) : D.structure_item_desc
+    =
+  match d with
+  | S.Tstr_eval (e, attrs) -> D.Tstr_eval (expression c e, attrs)
+  | S.Tstr_value (flag, vbs) -> D.Tstr_value (flag, list (value_binding c) vbs)
+  | S.Tstr_primitive vd -> D.Tstr_primitive (value_description c vd)
+  | S.Tstr_type (flag, decls) ->
+    D.Tstr_type (flag, list (type_declaration c) decls)
+  | S.Tstr_typext te -> D.Tstr_typext (type_extension c te)
+  | S.Tstr_exception ext -> D.Tstr_exception (extension_constructor c ext)
+  | S.Tstr_module mb -> D.Tstr_module (module_binding c mb)
+  | S.Tstr_recmodule mbs -> D.Tstr_recmodule (list (module_binding c) mbs)
+  | S.Tstr_modtype mtd -> D.Tstr_modtype (module_type_declaration c mtd)
+  | S.Tstr_open od -> D.Tstr_open od
+  | S.Tstr_include incl ->
+    D.Tstr_include (include_infos c (module_expr c) incl)
+  | S.Tstr_attribute attr -> D.Tstr_attribute attr
+
+and module_binding c (mb : S.module_binding) : D.module_binding =
+  {
+    D.mb_id = mb.S.mb_id;
+    mb_name = mb.S.mb_name;
+    mb_expr = module_expr c mb.S.mb_expr;
+    mb_attributes = mb.S.mb_attributes;
+    mb_loc = mb.S.mb_loc;
+  }
+
+and value_binding c (vb : S.value_binding) : D.value_binding =
+  let vb_pat = pattern c vb.S.vb_pat in
+  {
+    D.vb_pat;
+    vb_expr = expression c vb.S.vb_expr;
+    vb_attributes = vb.S.vb_attributes;
+    vb_loc = vb.S.vb_loc;
+  }
+
+and module_coercion c (x : S.module_coercion) : D.module_coercion =
+  match x with
+  | S.Tcoerce_none -> D.Tcoerce_none
+  | S.Tcoerce_structure (pos, ids, fields) ->
+    let pos = list (fun (i, x) -> (i, module_coercion c x)) pos in
+    D.Tcoerce_structure
+      (pos, list (fun (id, i, x) -> (id, i, module_coercion c x)) ids, fields)
+  | S.Tcoerce_functor (x1, x2) ->
+    let x1 = module_coercion c x1 in
+    D.Tcoerce_functor (x1, module_coercion c x2)
+  | S.Tcoerce_primitive pc -> D.Tcoerce_primitive (primitive_coercion c pc)
+  | S.Tcoerce_alias (p, x) -> D.Tcoerce_alias (p, module_coercion c x)
+
+and module_type c (m : S.module_type) : D.module_type =
+  let mty_desc = module_type_desc c m.S.mty_desc in
+  {
+    D.mty_desc;
+    mty_type = L.module_type c m.S.mty_type;
+    mty_env = L.env c m.S.mty_env;
+    mty_loc = m.S.mty_loc;
+    mty_attributes = m.S.mty_attributes;
+  }
+
+and module_type_desc c (d : S.module_type_desc) : D.module_type_desc =
+  match d with
+  | S.Tmty_ident (p, lid) -> D.Tmty_ident (p, lid)
+  | S.Tmty_signature sg -> D.Tmty_signature (signature c sg)
+  | S.Tmty_functor (id, name, arg, res) ->
+    let arg = opt (module_type c) arg in
+    D.Tmty_functor (id, name, arg, module_type c res)
+  | S.Tmty_with (mty, constraints) ->
+    let mty = module_type c mty in
+    D.Tmty_with
+      ( mty,
+        list (fun (p, lid, wc) -> (p, lid, with_constraint c wc)) constraints )
+  | S.Tmty_typeof me -> D.Tmty_typeof (module_expr c me)
+  | S.Tmty_alias (p, lid) -> D.Tmty_alias (p, lid)
+
+and primitive_coercion c (pc : S.primitive_coercion) : D.primitive_coercion =
+  {
+    D.pc_desc = pc.S.pc_desc;
+    pc_type = L.type_expr c pc.S.pc_type;
+    pc_env = L.env c pc.S.pc_env;
+    pc_loc = pc.S.pc_loc;
+    pc_id = pc.S.pc_id;
+  }
+
+and signature c (s : S.signature) : D.signature =
+  let sig_items = list (signature_item c) s.S.sig_items in
+  {
+    D.sig_items;
+    sig_type = L.signature c s.S.sig_type;
+    sig_final_env = L.env c s.S.sig_final_env;
+  }
+
+and signature_item c (i : S.signature_item) : D.signature_item =
+  let sig_desc = signature_item_desc c i.S.sig_desc in
+  {D.sig_desc; sig_env = L.env c i.S.sig_env; sig_loc = i.S.sig_loc}
+
+and signature_item_desc c (d : S.signature_item_desc) : D.signature_item_desc
+    =
+  match d with
+  | S.Tsig_value vd -> D.Tsig_value (value_description c vd)
+  | S.Tsig_type (flag, decls) ->
+    D.Tsig_type (flag, list (type_declaration c) decls)
+  | S.Tsig_typext te -> D.Tsig_typext (type_extension c te)
+  | S.Tsig_exception ext -> D.Tsig_exception (extension_constructor c ext)
+  | S.Tsig_module md -> D.Tsig_module (module_declaration c md)
+  | S.Tsig_recmodule mds -> D.Tsig_recmodule (list (module_declaration c) mds)
+  | S.Tsig_modtype mtd -> D.Tsig_modtype (module_type_declaration c mtd)
+  | S.Tsig_open od -> D.Tsig_open od
+  | S.Tsig_include incl ->
+    D.Tsig_include (include_infos c (module_type c) incl)
+  | S.Tsig_attribute attr -> D.Tsig_attribute attr
+
+and module_declaration c (md : S.module_declaration) : D.module_declaration =
+  {
+    D.md_id = md.S.md_id;
+    md_name = md.S.md_name;
+    md_type = module_type c md.S.md_type;
+    md_attributes = md.S.md_attributes;
+    md_loc = md.S.md_loc;
+  }
+
+and module_type_declaration c (mtd : S.module_type_declaration) :
+    D.module_type_declaration =
+  {
+    D.mtd_id = mtd.S.mtd_id;
+    mtd_name = mtd.S.mtd_name;
+    mtd_type = opt (module_type c) mtd.S.mtd_type;
+    mtd_attributes = mtd.S.mtd_attributes;
+    mtd_loc = mtd.S.mtd_loc;
+  }
+
+and include_infos :
+      'a 'b. _ -> ('a -> 'b) -> 'a S.include_infos -> 'b D.include_infos =
+ fun c f incl ->
+  let incl_mod = f incl.S.incl_mod in
+  {
+    D.incl_mod;
+    incl_type = L.signature c incl.S.incl_type;
+    incl_loc = incl.S.incl_loc;
+    incl_attributes = incl.S.incl_attributes;
+  }
+
+and with_constraint c (wc : S.with_constraint) : D.with_constraint =
+  match wc with
+  | S.Twith_type decl -> D.Twith_type (type_declaration c decl)
+  | S.Twith_module (p, lid) -> D.Twith_module (p, lid)
+  | S.Twith_typesubst decl -> D.Twith_typesubst (type_declaration c decl)
+  | S.Twith_modsubst (p, lid) -> D.Twith_modsubst (p, lid)
+
+and core_type c (t : S.core_type) : D.core_type =
+  let ctyp_desc = core_type_desc c t.S.ctyp_desc in
+  {
+    D.ctyp_desc;
+    ctyp_type = L.type_expr c t.S.ctyp_type;
+    ctyp_env = L.env c t.S.ctyp_env;
+    ctyp_loc = t.S.ctyp_loc;
+    ctyp_attributes = t.S.ctyp_attributes;
+  }
+
+and arg c (a : S.arg) : D.arg =
+  {D.attrs = a.S.attrs; lbl = a.S.lbl; typ = core_type c a.S.typ}
+
+and core_type_desc c (d : S.core_type_desc) : D.core_type_desc =
+  match d with
+  | S.Ttyp_any -> D.Ttyp_any
+  | S.Ttyp_var name -> D.Ttyp_var name
+  | S.Ttyp_arrow (args, ret) ->
+    let args = list (arg c) args in
+    D.Ttyp_arrow (args, core_type c ret)
+  | S.Ttyp_tuple ts -> D.Ttyp_tuple (list (core_type c) ts)
+  | S.Ttyp_constr (p, lid, ts) -> D.Ttyp_constr (p, lid, list (core_type c) ts)
+  | S.Ttyp_object (fields, closed) ->
+    D.Ttyp_object (list (object_field c) fields, closed)
+  | S.Ttyp_alias (t, name) -> D.Ttyp_alias (core_type c t, name)
+  | S.Ttyp_variant (fields, closed, labels) ->
+    D.Ttyp_variant (list (row_field c) fields, closed, labels)
+  | S.Ttyp_poly (names, t) -> D.Ttyp_poly (names, core_type c t)
+  | S.Ttyp_package pack -> D.Ttyp_package (package_type c pack)
+
+and package_type c (pack : S.package_type) : D.package_type =
+  {
+    D.pack_path = pack.S.pack_path;
+    pack_fields = list (fun (lid, t) -> (lid, core_type c t)) pack.S.pack_fields;
+  }
+
+and row_field c (f : S.row_field) : D.row_field =
+  match f with
+  | S.Ttag (name, attrs, b, ts) -> D.Ttag (name, attrs, b, list (core_type c) ts)
+  | S.Tinherit t -> D.Tinherit (core_type c t)
+
+and object_field c (f : S.object_field) : D.object_field =
+  match f with
+  | S.OTtag (name, attrs, t) -> D.OTtag (name, attrs, core_type c t)
+  | S.OTinherit t -> D.OTinherit (core_type c t)
+
+and value_description c (vd : S.value_description) : D.value_description =
+  let val_desc = core_type c vd.S.val_desc in
+  {
+    D.val_id = vd.S.val_id;
+    val_name = vd.S.val_name;
+    val_desc;
+    val_val = L.value_description c vd.S.val_val;
+    val_prim = vd.S.val_prim;
+    val_loc = vd.S.val_loc;
+    val_attributes = vd.S.val_attributes;
+  }
+
+and type_declaration c (d : S.type_declaration) : D.type_declaration =
+  let typ_params = list (fun (t, v) -> (core_type c t, v)) d.S.typ_params in
+  let typ_type = L.type_declaration c d.S.typ_type in
+  let typ_cstrs =
+    list
+      (fun (t1, t2, loc) ->
+        let t1 = core_type c t1 in
+        (t1, core_type c t2, loc))
+      d.S.typ_cstrs
+  in
+  let typ_kind = type_kind c d.S.typ_kind in
+  {
+    D.typ_id = d.S.typ_id;
+    typ_name = d.S.typ_name;
+    typ_params;
+    typ_type;
+    typ_cstrs;
+    typ_kind;
+    typ_private = d.S.typ_private;
+    typ_manifest = opt (core_type c) d.S.typ_manifest;
+    typ_loc = d.S.typ_loc;
+    typ_attributes = d.S.typ_attributes;
+  }
+
+and type_kind c (k : S.type_kind) : D.type_kind =
+  match k with
+  | S.Ttype_abstract -> D.Ttype_abstract
+  | S.Ttype_variant cds -> D.Ttype_variant (list (constructor_declaration c) cds)
+  | S.Ttype_record lds -> D.Ttype_record (list (label_declaration c) lds)
+  | S.Ttype_open -> D.Ttype_open
+
+and label_declaration c (ld : S.label_declaration) : D.label_declaration =
+  {
+    D.ld_id = ld.S.ld_id;
+    ld_name = ld.S.ld_name;
+    ld_runtime_name = ld.S.ld_runtime_name;
+    ld_mutable = ld.S.ld_mutable;
+    ld_optional = ld.S.ld_optional;
+    ld_type = core_type c ld.S.ld_type;
+    ld_loc = ld.S.ld_loc;
+    ld_attributes = ld.S.ld_attributes;
+  }
+
+and constructor_declaration c (cd : S.constructor_declaration) :
+    D.constructor_declaration =
+  let cd_args = constructor_arguments c cd.S.cd_args in
+  {
+    D.cd_id = cd.S.cd_id;
+    cd_name = cd.S.cd_name;
+    cd_runtime_tag = cd.S.cd_runtime_tag;
+    cd_args;
+    cd_res = opt (core_type c) cd.S.cd_res;
+    cd_loc = cd.S.cd_loc;
+    cd_attributes = cd.S.cd_attributes;
+  }
+
+and constructor_arguments c (a : S.constructor_arguments) :
+    D.constructor_arguments =
+  match a with
+  | S.Cstr_tuple ts -> D.Cstr_tuple (list (core_type c) ts)
+  | S.Cstr_record lds -> D.Cstr_record (list (label_declaration c) lds)
+
+and type_extension c (te : S.type_extension) : D.type_extension =
+  let tyext_params = list (fun (t, v) -> (core_type c t, v)) te.S.tyext_params in
+  {
+    D.tyext_path = te.S.tyext_path;
+    tyext_params;
+    tyext_constructors =
+      list (extension_constructor c) te.S.tyext_constructors;
+    tyext_private = te.S.tyext_private;
+    tyext_attributes = te.S.tyext_attributes;
+  }
+
+and extension_constructor c (ext : S.extension_constructor) :
+    D.extension_constructor =
+  let ext_type = L.extension_constructor c ext.S.ext_type in
+  {
+    D.ext_id = ext.S.ext_id;
+    ext_name = ext.S.ext_name;
+    ext_type;
+    ext_kind = extension_constructor_kind c ext.S.ext_kind;
+    ext_loc = ext.S.ext_loc;
+    ext_attributes = ext.S.ext_attributes;
+  }
+
+and extension_constructor_kind c (k : S.extension_constructor_kind) :
+    D.extension_constructor_kind =
+  match k with
+  | S.Text_decl (args, res) ->
+    let args = constructor_arguments c args in
+    D.Text_decl (args, opt (core_type c) res)
+  | S.Text_rebind (p, lid) -> D.Text_rebind (p, lid)

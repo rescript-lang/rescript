@@ -25,15 +25,16 @@ type cmi_infos = {
 val create_cmi : ?check_exists:unit -> string -> cmi_infos -> Digest.t
 
 (* read the cmi information (the magic is supposed to have already been read) *)
-val input_cmi : in_channel -> cmi_infos
+val input_cmi : ?store:Types.Store.t -> in_channel -> cmi_infos
 
 (* read a cmi from a filename, checking the magic *)
 val read_cmi : string -> cmi_infos
-val read_cmi_channel : string -> in_channel -> cmi_infos
+val read_cmi_channel : ?store:Types.Store.t -> string -> in_channel -> cmi_infos
 
-val read_cmi_contents : string -> string -> cmi_infos
+val read_cmi_contents : ?store:Types.Store.t -> string -> string -> cmi_infos
 (** [read_cmi_contents filename contents] reads an interface from the
-    contents of [filename]. *)
+    contents of [filename]. Its signature is imported into [store], by default
+    the current store. *)
 (* Parse an already opened CMI. The caller retains ownership of the channel. *)
 
 (* Error report *)

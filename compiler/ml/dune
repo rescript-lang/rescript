@@ -23,3 +23,28 @@
  (instrumentation
   (backend bisect_ppx))
  (libraries ext flow_parser))
+
+; The typed tree converters of .cmt files: one text, instantiated in each
+; direction (see typedtree_convert.ml.in).
+
+(rule
+ (target typedtree_export.ml)
+ (deps typedtree_convert.ml.in)
+ (action
+  (with-stdout-to
+   %{target}
+   (progn
+    (echo
+     "(* Generated from typedtree_convert.ml.in by compiler/ml/dune. *)\nmodule S = Typedtree\nmodule D = Typedtree_boxed\nmodule L = Cmt_leaves.Export\n\n")
+    (cat typedtree_convert.ml.in)))))
+
+(rule
+ (target typedtree_import.ml)
+ (deps typedtree_convert.ml.in)
+ (action
+  (with-stdout-to
+   %{target}
+   (progn
+    (echo
+     "(* Generated from typedtree_convert.ml.in by compiler/ml/dune. *)\nmodule S = Typedtree_boxed\nmodule D = Typedtree\nmodule L = Cmt_leaves.Import\n\n")
+    (cat typedtree_convert.ml.in)))))

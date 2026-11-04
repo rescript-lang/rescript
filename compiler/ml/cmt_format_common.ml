@@ -52,6 +52,138 @@ type cmt_infos = {
   cmt_extra_info: Cmt_utils.cmt_extra_info;
 }
 
+(* The boxed form of [cmt_infos] in [.cmt] files: the typed tree and the
+   types of [Typedtree_boxed] and [Types_boxed]. *)
+module Boxed = struct
+  module T = Typedtree_boxed
+
+  type binary_annots =
+    | Implementation of T.structure
+    | Interface of T.signature
+    | Partial_implementation of binary_part array
+    | Partial_interface of binary_part array
+
+  and binary_part =
+    | Partial_structure of T.structure
+    | Partial_structure_item of T.structure_item
+    | Partial_expression of T.expression
+    | Partial_pattern of T.pattern
+    | Partial_signature of T.signature
+    | Partial_signature_item of T.signature_item
+    | Partial_module_type of T.module_type
+
+  type cmt_infos = {
+    cmt_modname: string;
+    cmt_annots: binary_annots;
+    cmt_value_dependencies:
+      (Types_boxed.value_description * Types_boxed.value_description) list;
+    cmt_comments: (string * Location.t) list;
+    cmt_args: string array;
+    cmt_sourcefile: string option;
+    cmt_builddir: string;
+    cmt_loadpath: string list;
+    cmt_source_digest: Digest.t option;
+    cmt_initial_env: T.env;
+    cmt_imports: (string * Digest.t option) list;
+    cmt_use_summaries: bool;
+    cmt_extra_info: Cmt_utils.cmt_extra_info;
+  }
+end
+
+(* The whole [cmt_infos] is converted in one session, so that what it shares
+   stays shared. *)
+let export_cmt (cmt : cmt_infos) : Boxed.cmt_infos =
+  Cmt_leaves.Export.run (fun c ->
+      let module E = Typedtree_export in
+      let part = function
+        | Partial_structure s -> Boxed.Partial_structure (E.structure c s)
+        | Partial_structure_item s ->
+          Boxed.Partial_structure_item (E.structure_item c s)
+        | Partial_expression e -> Boxed.Partial_expression (E.expression c e)
+        | Partial_pattern p -> Boxed.Partial_pattern (E.pattern c p)
+        | Partial_signature s -> Boxed.Partial_signature (E.signature c s)
+        | Partial_signature_item s ->
+          Boxed.Partial_signature_item (E.signature_item c s)
+        | Partial_module_type m -> Boxed.Partial_module_type (E.module_type c m)
+      in
+      let cmt_annots : Boxed.binary_annots =
+        match cmt.cmt_annots with
+        | Implementation s -> Implementation (E.structure c s)
+        | Interface s -> Interface (E.signature c s)
+        | Partial_implementation parts ->
+          Partial_implementation (Array.map part parts)
+        | Partial_interface parts -> Partial_interface (Array.map part parts)
+      in
+      let vd = Cmt_leaves.Export.value_description c in
+      let cmt_value_dependencies =
+        List.map
+          (fun (v1, v2) ->
+            let v1 = vd v1 in
+            (v1, vd v2))
+          cmt.cmt_value_dependencies
+      in
+      {
+        Boxed.cmt_modname = cmt.cmt_modname;
+        cmt_annots;
+        cmt_value_dependencies;
+        cmt_comments = cmt.cmt_comments;
+        cmt_args = cmt.cmt_args;
+        cmt_sourcefile = cmt.cmt_sourcefile;
+        cmt_builddir = cmt.cmt_builddir;
+        cmt_loadpath = cmt.cmt_loadpath;
+        cmt_source_digest = cmt.cmt_source_digest;
+        cmt_initial_env = Cmt_leaves.Export.env c cmt.cmt_initial_env;
+        cmt_imports = cmt.cmt_imports;
+        cmt_use_summaries = cmt.cmt_use_summaries;
+        cmt_extra_info = cmt.cmt_extra_info;
+      })
+
+let import_cmt (cmt : Boxed.cmt_infos) : cmt_infos =
+  Cmt_leaves.Import.run (fun c ->
+      let module I = Typedtree_import in
+      let part : Boxed.binary_part -> binary_part = function
+        | Partial_structure s -> Partial_structure (I.structure c s)
+        | Partial_structure_item s ->
+          Partial_structure_item (I.structure_item c s)
+        | Partial_expression e -> Partial_expression (I.expression c e)
+        | Partial_pattern p -> Partial_pattern (I.pattern c p)
+        | Partial_signature s -> Partial_signature (I.signature c s)
+        | Partial_signature_item s ->
+          Partial_signature_item (I.signature_item c s)
+        | Partial_module_type m -> Partial_module_type (I.module_type c m)
+      in
+      let cmt_annots =
+        match cmt.cmt_annots with
+        | Implementation s -> Implementation (I.structure c s)
+        | Interface s -> Interface (I.signature c s)
+        | Partial_implementation parts ->
+          Partial_implementation (Array.map part parts)
+        | Partial_interface parts -> Partial_interface (Array.map part parts)
+      in
+      let vd = Cmt_leaves.Import.value_description c in
+      let cmt_value_dependencies =
+        List.map
+          (fun (v1, v2) ->
+            let v1 = vd v1 in
+            (v1, vd v2))
+          cmt.cmt_value_dependencies
+      in
+      {
+        cmt_modname = cmt.cmt_modname;
+        cmt_annots;
+        cmt_value_dependencies;
+        cmt_comments = cmt.cmt_comments;
+        cmt_args = cmt.cmt_args;
+        cmt_sourcefile = cmt.cmt_sourcefile;
+        cmt_builddir = cmt.cmt_builddir;
+        cmt_loadpath = cmt.cmt_loadpath;
+        cmt_source_digest = cmt.cmt_source_digest;
+        cmt_initial_env = Cmt_leaves.Import.env c cmt.cmt_initial_env;
+        cmt_imports = cmt.cmt_imports;
+        cmt_use_summaries = cmt.cmt_use_summaries;
+        cmt_extra_info = cmt.cmt_extra_info;
+      })
+
 (* Note that in Typerex, there is an awful hack to save a cmt file
    together with the interface file that was generated by ocaml (this
    is because the installed version of ocaml might differ from the one
@@ -100,7 +232,7 @@ let clear_env binary_annots =
 
 exception Error of error
 
-let input_cmt ic = (input_value ic : cmt_infos)
+let input_cmt ic = import_cmt (input_value ic : Boxed.cmt_infos)
 
 (** [read filename] reads a .cmi file as its cmi_infos, or a .cmt or .cmti
     file as its cmt_infos. *)

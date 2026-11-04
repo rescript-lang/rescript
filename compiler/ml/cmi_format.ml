@@ -29,8 +29,14 @@ type cmi_infos = {
   cmi_flags: pers_flags list;
 }
 
-let input_cmi ic =
-  let name, sign = input_value ic in
+(* The signature of a file is the boxed graph of [Types_boxed]; it is imported
+   into [store], by default the current store. *)
+let import_sign ?store (sign : Types_boxed.signature) =
+  Type_arena.Import.run ?store (fun c -> Type_arena.Import.signature c sign)
+
+let input_cmi ?store ic =
+  let name, (sign : Types_boxed.signature) = input_value ic in
+  let sign = import_sign ?store sign in
   let crcs = input_value ic in
   let flags = input_value ic in
   {cmi_name = name; cmi_sign = sign; cmi_crcs = crcs; cmi_flags = flags}
@@ -52,31 +58,44 @@ let check_magic_number filename buffer =
       raise (Error (Wrong_version_interface (filename, "an older")))
     else raise (Error (Not_an_interface filename))
 
-let read_cmi_channel filename ic =
+let read_cmi_channel ?store filename ic =
   try
     check_magic_number filename
       (really_input_string ic (String.length Config.cmi_magic_number));
-    input_cmi ic
+    input_cmi ?store ic
   with End_of_file | Failure _ -> raise (Error (Corrupted_interface filename))
 
 (* The same as [read_cmi_channel] on a channel holding [contents]. *)
-let read_cmi_contents filename contents =
+let read_cmi_parts filename contents =
   let magic_length = String.length Config.cmi_magic_number in
   if String.length contents < magic_length then
     raise (Error (Corrupted_interface filename));
   check_magic_number filename (String.sub contents 0 magic_length);
   try
-    let input offset =
-      let value = Marshal.from_string contents offset in
-      ( value,
-        offset + Marshal.total_size (Bytes.unsafe_of_string contents) offset )
+    let next offset =
+      offset + Marshal.total_size (Bytes.unsafe_of_string contents) offset
     in
-    let (name, sign), offset = input magic_length in
-    let crcs, offset = input offset in
-    let flags, _ = input offset in
-    {cmi_name = name; cmi_sign = sign; cmi_crcs = crcs; cmi_flags = flags}
+    let input offset = (Marshal.from_string contents offset, next offset) in
+    let crcs_offset = next magic_length in
+    let crcs, flags_offset = input crcs_offset in
+    let flags, _ = input flags_offset in
+    (magic_length, crcs, flags)
   with Failure _ | Invalid_argument _ ->
     raise (Error (Corrupted_interface filename))
+
+let read_cmi_contents ?store filename contents =
+  let sign_offset, crcs, flags = read_cmi_parts filename contents in
+  let name, (sign : Types_boxed.signature) =
+    try Marshal.from_string contents sign_offset
+    with Failure _ | Invalid_argument _ ->
+      raise (Error (Corrupted_interface filename))
+  in
+  {
+    cmi_name = name;
+    cmi_sign = import_sign ?store sign;
+    cmi_crcs = crcs;
+    cmi_flags = flags;
+  }
 
 let read_cmi filename =
   match
@@ -93,26 +112,25 @@ let read_cmi filename =
    when [check_exists] is given *)
 let create_cmi ?check_exists filename (cmi : cmi_infos) =
   (* beware: the provided signature must have been substituted for saving *)
+  let sign =
+    Type_arena.Export.run (fun c -> Type_arena.Export.signature c cmi.cmi_sign)
+  in
   let content =
-    Config.cmi_magic_number ^ Marshal.to_string (cmi.cmi_name, cmi.cmi_sign) []
+    Config.cmi_magic_number ^ Marshal.to_string (cmi.cmi_name, sign) []
     (* checkout [output_value] in {!Pervasives} module *)
   in
   let crc = Digest.string content in
-  let cmi_infos =
+  (* The existing file's signature is not needed, only its crcs and flags. *)
+  let old_parts =
     if check_exists = None then None
     else
       Build_file_store.read (Compiler_request_state.resolve_path filename)
-      |> Option.map (read_cmi_contents filename)
+      |> Option.map (fun contents ->
+          let _, crcs, flags = read_cmi_parts filename contents in
+          (crcs, flags))
   in
-  match cmi_infos with
-  | Some
-      {
-        cmi_name = _;
-        cmi_sign = _;
-        cmi_crcs = (old_name, Some old_crc) :: rest;
-        cmi_flags;
-      }
-  (* TODO: design the cmi format so that we don't need read the whole cmi *)
+  match old_parts with
+  | Some ((old_name, Some old_crc) :: rest, cmi_flags)
     when cmi.cmi_name = old_name && crc = old_crc && cmi.cmi_crcs = rest
          && cmi_flags = cmi.cmi_flags ->
     crc

@@ -51,4 +51,5 @@ let save_cmt filename modname binary_annots sourcefile initial_env =
     in
     Build_file_store.write
       (Compiler_request_state.resolve_path filename)
-      (Config.cmt_magic_number ^ Marshal.to_string (cmt : cmt_infos) [])
+      (Config.cmt_magic_number
+      ^ Marshal.to_string (export_cmt cmt : Boxed.cmt_infos) [])
