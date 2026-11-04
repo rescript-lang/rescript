@@ -126,7 +126,7 @@ let test_generalized_instance_preserves_internal_aliasing _ =
   Ctype.generalize pair;
   let inst = Ctype.instance Env.empty pair in
   let a', b' =
-    match (Btype.repr inst).desc with
+    match Types.get_desc (Btype.repr inst) with
     | Types.Ttuple [a'; b'] -> (a', b')
     | _ -> OUnit.assert_failure "expected an instantiated pair"
   in
@@ -251,7 +251,7 @@ let test_nondep_nested_copy_preserves_class_sharing _ =
   Ctype.generalize scheme;
   let copy = Ctype.nondep_type env alias_id scheme in
   let first', second' =
-    match (Btype.repr copy).desc with
+    match Types.get_desc (Btype.repr copy) with
     | Types.Ttuple [first'; _expanded_alias; second'] -> (first', second')
     | _ -> OUnit.assert_failure "expected a copied triple"
   in
@@ -317,7 +317,7 @@ let test_saving_marshal_round_trip _ =
     Marshal.from_string (Marshal.to_string saved []) 0
   in
   let a', b' =
-    match (Btype.repr reloaded).desc with
+    match Types.get_desc (Btype.repr reloaded) with
     | Types.Ttuple [a'; b'] -> (a', b')
     | _ -> OUnit.assert_failure "expected a reloaded pair"
   in
@@ -338,7 +338,7 @@ let test_saving_preserves_class_sharing _ =
   Ctype.generalize pair;
   let saved = Subst.type_expr (Subst.for_saving Subst.identity) pair in
   let a', b' =
-    match (Btype.repr saved).desc with
+    match Types.get_desc (Btype.repr saved) with
     | Types.Ttuple [a'; b'] -> (a', b')
     | _ -> OUnit.assert_failure "expected a saved pair"
   in
@@ -360,8 +360,8 @@ let test_for_saving_copy_order_is_irrelevant _ =
   Ctype.generalize_structure source;
   let saved = Subst.type_expr (Subst.for_saving Subst.identity) source in
   assert_bool "the fixture has different row-copy classifications"
-    ((terminator_of source).level <> Btype.generic_level
-    && (terminator_of saved).level = Btype.generic_level);
+    (Types.get_level (terminator_of source) <> Btype.generic_level
+    && Types.get_level (terminator_of saved) = Btype.generic_level);
   assert_bool "for_saving gives the copied graph an independent class"
     (cell_of source != cell_of saved);
   let copy_pair first second =
@@ -414,7 +414,9 @@ let test_for_saving_fresh_copy_preserves_internal_aliasing _ =
   Ctype.generalize_structure source;
   let saved = Subst.type_expr (Subst.for_saving Subst.identity) source in
   let source_a, source_b, saved_a, saved_b =
-    match ((Btype.repr source).desc, (Btype.repr saved).desc) with
+    match
+      (Types.get_desc (Btype.repr source), Types.get_desc (Btype.repr saved))
+    with
     | Types.Ttuple [source_a; source_b], Types.Ttuple [saved_a; saved_b] ->
       (source_a, source_b, saved_a, saved_b)
     | _ -> OUnit.assert_failure "expected source and saved object pairs"

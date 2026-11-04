@@ -76,11 +76,6 @@ external get_desc : type_expr -> type_desc = "%field0"
 external get_level : type_expr -> int = "%field1"
 let get_id t = t.id
 
-let () =
-  let t = {desc = Tnil; level = 12345; id = 0} in
-  if not (get_desc t == Tnil && get_level t = 12345) then
-    failwith "Types: get_desc and get_level don't match the type_expr fields"
-
 module Transient_expr = struct
   let create desc ~level ~id = {desc; level; id}
 
@@ -89,6 +84,16 @@ module Transient_expr = struct
   (* OCaml 5.0 has no [%setfield1]. *)
   let set_level t level = t.level <- level
 end
+
+let () =
+  let t = {desc = Tnil; level = 0; id = 0} in
+  let desc = Tvar None in
+  t.desc <- desc;
+  t.level <- 12345;
+  let reads_match = get_desc t == desc && get_level t = t.level in
+  Transient_expr.set_desc t Tnil;
+  if not (reads_match && t.desc == Tnil) then
+    failwith "Types: the type_expr primitives don't match its fields"
 
 module Type_ops = struct
   type t = type_expr

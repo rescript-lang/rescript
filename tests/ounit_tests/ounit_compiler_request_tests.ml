@@ -959,14 +959,14 @@ let type_node_id_isolation_tests _context =
         Compiler_request_state.with_fresh (fun () ->
             Request_local.with_fresh (fun () ->
                 let ty = Btype.newgenvar () in
-                let first = ty.Types.id in
+                let first = Types.get_id ty in
                 let snapshot = Btype.snapshot () in
                 Btype.set_level ty 3;
                 Atomic.set left_ready true;
                 wait_for_atomic right_ready;
                 Btype.backtrack snapshot;
                 Atomic.set left_done true;
-                (first, (Btype.newgenvar ()).Types.id, ty.Types.level))))
+                (first, Types.get_id (Btype.newgenvar ()), Types.get_level ty))))
   in
   let right =
     Domain.spawn (fun () ->
@@ -974,14 +974,14 @@ let type_node_id_isolation_tests _context =
             Request_local.with_fresh (fun () ->
                 wait_for_atomic left_ready;
                 let ty = Btype.newgenvar () in
-                let first = ty.Types.id in
+                let first = Types.get_id ty in
                 let snapshot = Btype.snapshot () in
                 Btype.set_level ty 7;
-                let second = (Btype.newgenvar ()).Types.id in
+                let second = Types.get_id (Btype.newgenvar ()) in
                 Atomic.set right_ready true;
                 wait_for_atomic left_done;
                 Btype.backtrack snapshot;
-                (first, second, ty.Types.level))))
+                (first, second, Types.get_level ty))))
   in
   assert_equal (0, 1, Btype.generic_level) (Domain.join left);
   assert_equal (0, 1, Btype.generic_level) (Domain.join right)
@@ -1403,11 +1403,11 @@ let generated_name_isolation_tests _context =
       let repeated_ast = parse "First.res" in
       assert_equal ~printer:(fun _ -> "<binary AST>") first_ast repeated_ast;
       Lambda_exits.reset ();
-      let type_id = (Btype.newgenvar ()).Types.id in
+      let type_id = Types.get_id (Btype.newgenvar ()) in
       let exit_id = Lambda_exits.next_raise_count () in
       ignore (parse "Other.res");
       check
-        ((Btype.newgenvar ()).Types.id = type_id + 1)
+        (Types.get_id (Btype.newgenvar ()) = type_id + 1)
         "an embedded request preserves the host domain's type-node counter";
       check
         (Lambda_exits.next_raise_count () = exit_id + 1)

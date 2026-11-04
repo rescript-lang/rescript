@@ -24,7 +24,7 @@
 open Asttypes
 (** Asttypes exposes basic definitions shared both by Parsetree and Types. *)
 
-type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
+type type_expr
 (** Type expressions for the core language.
 
     The [type_desc] variant defines all the possible type expressions one can
