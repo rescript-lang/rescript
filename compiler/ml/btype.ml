@@ -41,20 +41,23 @@ let pivot_level = (2 * lowest_level) - 1
 let newty2 level desc =
   let state = Compiler_request_state.current () in
   state.type_node_id <- state.type_node_id + 1;
-  {desc; level; id = state.type_node_id}
+  Transient_expr.create desc ~level ~id:state.type_node_id
 let newgenty desc = newty2 generic_level desc
 let newgenvar () = newgenty (Tvar None)
 
 (**** Check some types ****)
 
-let is_Tvar = function
-  | {desc = Tvar _} -> true
+let is_Tvar ty =
+  match get_desc ty with
+  | Tvar _ -> true
   | _ -> false
-let is_Tunivar = function
-  | {desc = Tunivar _} -> true
+let is_Tunivar ty =
+  match get_desc ty with
+  | Tunivar _ -> true
   | _ -> false
-let is_Tconstr = function
-  | {desc = Tconstr _} -> true
+let is_Tconstr ty =
+  match get_desc ty with
+  | Tconstr _ -> true
   | _ -> false
 
 let default_mty = function
@@ -96,16 +99,17 @@ let log_change ch =
 
 (**** Representative of a type ****)
 
-let rec repr_link compress t d = function
-  | {desc = Tlink t' as d'} -> repr_link true t d' t'
-  | t' ->
+let rec repr_link compress t d t' =
+  match get_desc t' with
+  | Tlink t'' as d' -> repr_link true t d' t''
+  | _ ->
     if compress then (
-      log_change (Ccompress (t, t.desc, d));
-      t.desc <- d);
+      log_change (Ccompress (t, get_desc t, d));
+      Transient_expr.set_desc t d);
     t'
 
 let repr t =
-  match t.desc with
+  match get_desc t with
   | Tlink t' as d -> repr_link false t d t'
   | _ -> t
 
@@ -124,7 +128,7 @@ let rec rev_concat l ll =
   | l' :: ll -> rev_concat (l' @ l) ll
 
 let rec row_repr_aux ll row =
-  match (repr row.row_more).desc with
+  match get_desc (repr row.row_more) with
   | Tvariant row' ->
     let f = row.row_fields in
     row_repr_aux (if f = [] then ll else f :: ll) row'
@@ -139,22 +143,23 @@ let rec row_field tag row =
     | (tag', f) :: fields ->
       if tag = tag' then row_field_repr f else find fields
     | [] -> (
-      match repr row.row_more with
-      | {desc = Tvariant row'} -> row_field tag row'
+      match get_desc (repr row.row_more) with
+      | Tvariant row' -> row_field tag row'
       | _ -> Rabsent)
   in
   find row.row_fields
 
 let rec row_more row =
-  match repr row.row_more with
-  | {desc = Tvariant row'} -> row_more row'
-  | ty -> ty
+  let ty = repr row.row_more in
+  match get_desc ty with
+  | Tvariant row' -> row_more row'
+  | _ -> ty
 
 let row_fixed row =
   let row = row_repr row in
   row.row_fixed
   ||
-  match (repr row.row_more).desc with
+  match get_desc (repr row.row_more) with
   | Tvar _ | Tnil -> false
   | Tunivar _ | Tconstr _ -> true
   | _ -> assert false
@@ -181,11 +186,11 @@ let hash_variant s =
 
 let proxy ty =
   let ty0 = repr ty in
-  match ty0.desc with
+  match get_desc ty0 with
   | Tvariant row when not (static_row row) -> row_more row
   | Tobject ty ->
     let rec proxy_obj ty =
-      match ty.desc with
+      match get_desc ty with
       | Tfield {rest = ty} | Tlink ty -> proxy_obj ty
       | Tvar _ | Tunivar _ | Tconstr _ -> ty
       | Tnil -> ty0
@@ -197,11 +202,11 @@ let proxy ty =
 (**** Utilities for fixed row private types ****)
 
 let row_of_type t =
-  match (repr t).desc with
+  match get_desc (repr t) with
   | Tobject t ->
     let rec get_row t =
       let t = repr t in
-      match t.desc with
+      match get_desc t with
       | Tfield {rest = t} -> get_row t
       | _ -> t
     in
@@ -216,7 +221,7 @@ let is_row_name s =
   if l < 4 then false else String.sub s (l - 4) 4 = "#row"
 
 let is_constr_row ~allow_ident t =
-  match t.desc with
+  match get_desc t with
   | Tconstr (Path.Pident id, _, _) when allow_ident ->
     is_row_name (Ident.name id)
   | Tconstr (Path.Pdot (_, s, _), _, _) -> is_row_name s
@@ -234,7 +239,7 @@ let rec iter_row f row =
       | Reither (_, tl, _, _) -> List.iter f tl
       | _ -> ())
     row.row_fields;
-  match (repr row.row_more).desc with
+  match get_desc (repr row.row_more) with
   | Tvariant row -> iter_row f row
   | Tvar _ | Tunivar _ | Tsubst _ | Tconstr _ | Tnil ->
     Misc.may (fun (_, l) -> List.iter f l) row.row_name
@@ -248,7 +253,7 @@ let rec iter_arg_types f = function
     iter_arg_types f params
 
 let iter_type_expr f ty =
-  match ty.desc with
+  match get_desc ty with
   | Tvar _ -> ()
   | Tarrow (params, ret) ->
     iter_arg_types f params;
@@ -343,7 +348,7 @@ let type_iterators =
   and it_type_kind it kind = iter_type_expr_kind (it.it_type_expr it) kind
   and it_do_type_expr it ty =
     iter_type_expr (it.it_type_expr it) ty;
-    match ty.desc with
+    match get_desc ty with
     | Tconstr (p, _, _) | Tpackage (p, _, _) -> it.it_path p
     | Tvariant row -> may (fun (p, _) -> it.it_path p) (row_repr row).row_name
     | _ -> ()
@@ -394,7 +399,7 @@ let copy_row f fixed row keep more =
 (* Since univars may be used as row variables, we need to do some
    encoding during substitution *)
 let rec norm_univar ty =
-  match ty.desc with
+  match get_desc ty with
   | Tunivar _ | Tsubst _ -> ty
   | Tlink ty -> norm_univar ty
   | Ttuple (ty :: _) -> norm_univar ty
@@ -449,7 +454,9 @@ let end_type_copy_session () =
   let type_copy_sessions = Domain.DLS.get type_copy_sessions in
   match !type_copy_sessions with
   | session :: rest ->
-    List.iter (fun (ty, desc) -> ty.desc <- desc) session.saved_desc;
+    List.iter
+      (fun (ty, desc) -> Transient_expr.set_desc ty desc)
+      session.saved_desc;
     List.iter (fun (r, v) -> r := v) session.saved_mutabilities;
     type_copy_sessions := rest
   | [] -> assert false
@@ -486,13 +493,13 @@ let row_terminator_generic rest =
   in
   let rec go t =
     let t = repr t in
-    match Hashtbl.find_opt copy_policy_memo t.id with
+    match Hashtbl.find_opt copy_policy_memo (get_id t) with
     | Some b -> b
     | None ->
       let b =
-        match t.desc with
+        match get_desc t with
         | Tfield {rest} -> go rest
-        | Tvar _ -> t.level = generic_level
+        | Tvar _ -> get_level t = generic_level
         | Tsubst t' ->
           (* Already copied in this session: follow the copy; its fresh
              terminator is generic exactly when the row is being
@@ -500,7 +507,7 @@ let row_terminator_generic rest =
           go t'
         | _ -> false
       in
-      Hashtbl.add copy_policy_memo t.id b;
+      Hashtbl.add copy_policy_memo (get_id t) b;
       b
   in
   go rest
@@ -531,7 +538,7 @@ let rec copy_type_desc ?(keep_names = false) ?(fresh_mutability = false) f =
     in
     Tfield {f_ with mutability; typ = f f_.typ; rest = f f_.rest}
   | Tnil -> Tnil
-  | Tlink ty -> copy_type_desc ~keep_names ~fresh_mutability f ty.desc
+  | Tlink ty -> copy_type_desc ~keep_names ~fresh_mutability f (get_desc ty)
   | Tsubst _ -> assert false
   | Tunivar _ as ty -> ty (* always keep the name *)
   | Tpoly (ty, tyl) ->
@@ -561,18 +568,19 @@ let with_copy_session f =
 (* Mark a type. *)
 let rec mark_type ty =
   let ty = repr ty in
-  if ty.level >= lowest_level then (
-    ty.level <- pivot_level - ty.level;
+  if get_level ty >= lowest_level then (
+    Transient_expr.set_level ty (pivot_level - get_level ty);
     iter_type_expr mark_type ty)
 
 let mark_type_node ty =
   let ty = repr ty in
-  if ty.level >= lowest_level then ty.level <- pivot_level - ty.level
+  if get_level ty >= lowest_level then
+    Transient_expr.set_level ty (pivot_level - get_level ty)
 
 let type_iterators =
   let it_type_expr it ty =
     let ty = repr ty in
-    if ty.level >= lowest_level then (
+    if get_level ty >= lowest_level then (
       mark_type_node ty;
       it.it_do_type_expr it ty)
   in
@@ -581,8 +589,8 @@ let type_iterators =
 (* Remove marks from a type. *)
 let rec unmark_type ty =
   let ty = repr ty in
-  if ty.level < lowest_level then (
-    ty.level <- pivot_level - ty.level;
+  if get_level ty < lowest_level then (
+    Transient_expr.set_level ty (pivot_level - get_level ty);
     iter_type_expr unmark_type ty)
 
 let unmark_iterators =
@@ -697,9 +705,9 @@ let rec label_assoc x (args : sargs) =
 (**********************************)
 
 let undo_change = function
-  | Ctype (ty, desc) -> ty.desc <- desc
-  | Ccompress (ty, desc, _) -> ty.desc <- desc
-  | Clevel (ty, level) -> ty.level <- level
+  | Ctype (ty, desc) -> Transient_expr.set_desc ty desc
+  | Ccompress (ty, desc, _) -> Transient_expr.set_desc ty desc
+  | Clevel (ty, level) -> Transient_expr.set_level ty level
   | Crow (r, v) -> r := v
   | Cmutability (r, v) -> r := v
   | Cuniv (r, v) -> r := v
@@ -708,34 +716,34 @@ let undo_change = function
 type snapshot = changes ref * int
 
 let log_type ty =
-  if ty.id <= (Compiler_request_state.current ()).type_node_last_snapshot then
-    log_change (Ctype (ty, ty.desc))
+  if get_id ty <= (Compiler_request_state.current ()).type_node_last_snapshot
+  then log_change (Ctype (ty, get_desc ty))
 let link_type ty ty' =
   log_type ty;
-  let desc = ty.desc in
-  ty.desc <- Tlink ty';
+  let desc = get_desc ty in
+  Transient_expr.set_desc ty (Tlink ty');
   (* Name is a user-supplied name for this unification variable (obtained
    * through a type annotation for instance). *)
-  match (desc, ty'.desc) with
+  match (desc, get_desc ty') with
   | Tvar name, Tvar name' -> (
     match (name, name') with
     | Some _, None ->
       log_type ty';
-      ty'.desc <- Tvar name
+      Transient_expr.set_desc ty' (Tvar name)
     | None, Some _ -> ()
     | Some _, Some _ ->
-      if ty.level < ty'.level then (
+      if get_level ty < get_level ty' then (
         log_type ty';
-        ty'.desc <- Tvar name)
+        Transient_expr.set_desc ty' (Tvar name))
     | None, None -> ())
   | _ -> ()
 
 (* ; assert (check_memorized_abbrevs ()) *)
 (*  ; check_expans [] ty' *)
 let set_level ty level =
-  if ty.id <= (Compiler_request_state.current ()).type_node_last_snapshot then
-    log_change (Clevel (ty, ty.level));
-  ty.level <- level
+  if get_id ty <= (Compiler_request_state.current ()).type_node_last_snapshot
+  then log_change (Clevel (ty, get_level ty));
+  Transient_expr.set_level ty level
 let set_univar rty ty =
   log_change (Cuniv (rty, !rty));
   rty := Some ty
@@ -797,8 +805,8 @@ let undo_compress (changes, _old) =
     List.iter
       (fun r ->
         match !r with
-        | Change (Ccompress (ty, desc, d), next) when ty.desc == d ->
-          ty.desc <- desc;
+        | Change (Ccompress (ty, desc, d), next) when get_desc ty == d ->
+          Transient_expr.set_desc ty desc;
           r := !next
         | _ -> ())
       log
