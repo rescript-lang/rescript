@@ -120,6 +120,7 @@ let esmodule_program ~output_dir fmt f (x : J.deps_program) =
                  | _ -> None )))
   in
   let () = P.at_least_two_lines f in
+  Js_ts_annot.set_exports x.program.exports;
   (if Js_ts_annot.enabled () then
      match Js_ts_annot.header () with
      | "" -> ()

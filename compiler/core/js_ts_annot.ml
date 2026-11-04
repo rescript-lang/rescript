@@ -14,6 +14,9 @@ type state = {
   names: (string, int) Hashtbl.t;
       (** top-level function name -> its stamp, to report lost stamps *)
   mutable header: string;  (** the module's type declarations *)
+  mutable exports: Ident.t list;  (** the program's exports *)
+  inline_exports: (key, unit) Hashtbl.t;
+      (** exports printed as [export function] *)
 }
 
 let fresh () =
@@ -22,6 +25,8 @@ let fresh () =
     results = Hashtbl.create 16;
     names = Hashtbl.create 16;
     header = "";
+    exports = [];
+    inline_exports = Hashtbl.create 16;
   }
 
 let key = Request_local.new_key fresh
@@ -137,3 +142,24 @@ let param_type (id : Ident.t) = Hashtbl.find_opt (current ()).params (key_of id)
 
 let result_type (id : Ident.t) =
   Hashtbl.find_opt (current ()).results (key_of id)
+
+let set_exports exports =
+  let st = current () in
+  st.exports <- exports;
+  Hashtbl.reset st.inline_exports
+
+(* A top-level function is printed [export function f] when it is exported
+   under its own name. The printer is assumed to print a top-level function
+   under its source name. *)
+let export_inline (id : Ident.t) =
+  enabled ()
+  &&
+  let st = current () in
+  Ext_list.exists st.exports (fun e -> Ident.same e id)
+  && Ext_ident.convert id.name = id.name
+  &&
+  (Hashtbl.replace st.inline_exports (key_of id) ();
+   true)
+
+let exported_inline (id : Ident.t) =
+  enabled () && Hashtbl.mem (current ()).inline_exports (key_of id)

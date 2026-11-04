@@ -519,6 +519,9 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
           param_body ();
           semi f
         | Name_top x ->
+          if Js_ts_annot.export_inline x then (
+            P.string f L.export;
+            P.space f);
           P.string f (L.function_ ~async ~arrow);
           ignore (Ext_pp_scope.ident inner_cxt f x : cxt);
           param_body ()
