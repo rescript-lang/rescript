@@ -122,14 +122,21 @@ let ocaml_to_js_eff ~(arg_label : External_arg_spec.label_noname)
    after its statements, which keeps it in its place among the arguments (see
    [sequence_arguments] in [Lam_compile]). Of an optional argument known to be
    present, only the payload is bound, so that the translation still knows it
-   is present. *)
+   is present. An optional argument whose presence is not known is bound too
+   if it has side effects: an object-creating external evaluates it after the
+   object, and a call that cannot read it twice, for its presence and for its
+   value, gives it to [Primitive_option.valFromOption], which fails on
+   [undefined]. *)
 let hold_arg ~(arg_label : External_arg_spec.label_noname)
     ~(arg_type : External_arg_spec.attr)
     ((block, arg) as compiled : J.block * E.t) : J.block * E.t =
-  let needs_temporary (e : E.t) =
+  let needs_temporary ~presence_known (e : E.t) =
     match arg_type with
     | Poly_var _ -> not (Js_of_lam_variant.eval_as_event_in_place e)
-    | Poly_var_string _ | Int _ -> not (Js_of_lam_variant.eval_in_place e)
+    | Poly_var_string _ | Int _ ->
+      not
+        (Js_of_lam_variant.eval_in_place e
+        && (presence_known || Js_analyzer.no_side_effect_expression e))
     | Arg_cst _ | Extern_unit | Nothing | Ignore | Unwrap -> false
   in
   let hold (e : E.t) =
@@ -138,12 +145,14 @@ let hold_arg ~(arg_label : External_arg_spec.label_noname)
   in
   match (arg_label, arg.expression_desc) with
   | Arg_optional, Optional_block (x, identity) ->
-    if needs_temporary x then
+    if needs_temporary ~presence_known:true x then
       let block, x = hold x in
       (block, {arg with expression_desc = Optional_block (x, identity)})
     else compiled
-  | (Arg_optional | Arg_label | Arg_empty), _ ->
-    if needs_temporary arg then hold arg else compiled
+  | Arg_optional, _ ->
+    if needs_temporary ~presence_known:false arg then hold arg else compiled
+  | (Arg_label | Arg_empty), _ ->
+    if needs_temporary ~presence_known:true arg then hold arg else compiled
 
 (* [hold_arg] for the compiled arguments of a call, which have the
    statements that run before their values are read. The specs pair with the
