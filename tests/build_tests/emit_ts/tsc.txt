@@ -1,8 +1,0 @@
-src/NestMatch.res.ts(16,3): error TS2322: Type 'string | number | bigint | boolean' is not assignable to type 'number | undefined'.
-  Type 'string' is not assignable to type 'number'.
-src/NestMatch.res.ts(16,16): error TS2345: Argument of type 'number | { readonly BS_PRIVATE_NESTED_SOME_NONE: number; } | undefined' is not assignable to parameter of type 'string | number | bigint | boolean | undefined'.
-  Type '{ readonly BS_PRIVATE_NESTED_SOME_NONE: number; }' is not assignable to type 'string | number | bigint | boolean | undefined'.
-src/NestMatch.res.ts(29,42): error TS2345: Argument of type 'number | { readonly BS_PRIVATE_NESTED_SOME_NONE: number; }' is not assignable to parameter of type 'string | number | bigint | boolean'.
-  Type '{ readonly BS_PRIVATE_NESTED_SOME_NONE: number; }' is not assignable to type 'string | number | bigint | boolean'.
-src/NestMatch.res.ts(31,5): error TS2322: Type 'string | number | bigint | boolean' is not assignable to type 'number'.
-  Type 'string' is not assignable to type 'number'.
