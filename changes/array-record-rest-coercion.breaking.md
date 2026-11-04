@@ -1,0 +1,1 @@
+- A record rest pattern whose rest type is a record with the runtime names `"0"`, `"1"`, …, and a coercion of another record to such a record, are now errors, as they produced an object where the type promises a JavaScript array.

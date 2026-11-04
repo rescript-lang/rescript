@@ -37,6 +37,9 @@ type tag_info =
   | Blk_record of {
       fields: (string * bool (* optional *)) array;
       mutable_flag: mutable_flag;
+      array: bool;
+          (* [Record_array]: the fields are the elements of a JavaScript
+             array *)
     }
   | Blk_module of string list
   | Blk_module_export of Ident.t list
@@ -54,7 +57,7 @@ type tag_info =
 
 val tag_label_of_tag_info : tag_info -> string
 val mutable_flag_of_tag_info : tag_info -> mutable_flag
-val blk_record : (string * bool) array -> mutable_flag -> tag_info
+val blk_record : (string * bool) array -> mutable_flag -> array:bool -> tag_info
 
 val blk_record_ext : string array -> mutable_flag -> tag_info
 
@@ -547,13 +550,3 @@ val name_lambda : let_kind -> t -> (Ident.t -> t) -> t
 val bind : let_kind -> Ident.t -> t -> t -> t
 
 val default_function_attribute : function_attribute
-
-val record_fields_are_array : (string * bool) array -> bool
-(** Whether a nonempty record has consecutive field names starting at ["0"],
-    so it is represented as a JavaScript array. Optionality does not affect
-    the layout. *)
-
-val runtime_names_are_array : ('a -> string) -> 'a array -> bool
-(** [record_fields_are_array] over fields of any shape, given their runtime
-    name, so that a caller holding the labels of a large record (JSX props)
-    need not build a copy of them. *)

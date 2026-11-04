@@ -22,6 +22,15 @@ let declaration_name (lbl : Types.label_declaration) =
   | Some name -> name
   | None -> Ident.name lbl.ld_id
 
+(* A record whose fields have the runtime names "0", "1", ... in declaration
+   order is represented as a JavaScript array ([Record_array]). *)
+let is_array (lbls : Types.label_declaration list) =
+  let rec loop i = function
+    | [] -> true
+    | lbl :: rest -> declaration_name lbl = string_of_int i && loop (i + 1) rest
+  in
+  lbls <> [] && loop 0 lbls
+
 (* Two fields collide when they end up with the same runtime name, which a
    rename can cause between fields whose declared names differ. *)
 let rec check_duplicated_labels_aux (lbls : Parsetree.label_declaration list)

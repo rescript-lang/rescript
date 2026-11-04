@@ -131,12 +131,12 @@ let switch_tests =
       assert_fold sw (Const_block (Blk_tuple, [Const_int 1l])) "array";
       assert_fold sw
         (Const_block
-           ( Lambda.blk_record [|("0", false)|] Asttypes.Immutable,
+           ( Lambda.blk_record [|("0", false)|] Asttypes.Immutable ~array:true,
              [Const_int 1l] ))
         "array";
       assert_fold sw
         (Const_block
-           ( Lambda.blk_record [|("x", false)|] Asttypes.Immutable,
+           ( Lambda.blk_record [|("x", false)|] Asttypes.Immutable ~array:false,
              [Const_int 1l] ))
         "object" );
     ( "null without a null case is an object" >:: fun _ ->
@@ -258,18 +258,32 @@ let suites =
              =~ Typecore.constant
                   (Pconst_integer ("999999999999999999999999999", None)) );
            ( "record array layout" >:: fun _ ->
+             (* a field [name], renamed to [runtime] by [@as] if given *)
+             let field (name, runtime) : Types.label_declaration =
+               {
+                 ld_id = Ident.create name;
+                 ld_runtime_name = runtime;
+                 ld_mutable = Asttypes.Immutable;
+                 ld_optional = false;
+                 ld_type = Ctype.newvar ();
+                 ld_loc = Location.none;
+                 ld_attributes = [];
+               }
+             in
              List.iter
                (fun (fields, expected) ->
                  OUnit.assert_equal expected
-                   (Lambda.record_fields_are_array fields))
+                   (Record_runtime.is_array (List.map field fields)))
                [
-                 ([||], false);
-                 ([|("0", false)|], true);
-                 ([|("0", true); ("1", false)|], true);
-                 ([|("1", false)|], false);
-                 ([|("0", false); ("2", false)|], false);
-                 ([|("00", false)|], false);
-                 ([|("name", false)|], false);
+                 ([], false);
+                 ([("a", Some "0")], true);
+                 ([("a", Some "0"); ("b", Some "1")], true);
+                 ([("a", Some "1")], false);
+                 ([("a", Some "1"); ("b", Some "0")], false);
+                 ([("a", Some "0"); ("b", Some "2")], false);
+                 ([("a", Some "0"); ("b", None)], false);
+                 ([("a", Some "00")], false);
+                 ([("name", None)], false);
                ] );
            ( "regexp literals lower to raw JavaScript" >:: fun _ ->
              let expression = Ast_helper.Exp.regexp {|a\/b\d|} "ig" in

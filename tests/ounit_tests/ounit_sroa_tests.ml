@@ -59,6 +59,7 @@ let pair_info =
     {
       fields = [|("left", false); ("right", false)|];
       mutable_flag = Asttypes.Mutable;
+      array = false;
     }
 
 let suites =

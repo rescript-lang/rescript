@@ -15,6 +15,7 @@ type error =
       rest_runtime_name: string;
     }
   | Unboxed_record
+  | Array_record
   | Mutable_source_record
 
 exception Error of Location.t * Env.t * error
@@ -151,6 +152,9 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
       match rest_decl.type_kind with
       | Type_record (_, Record_unboxed _) ->
         raise_error rest_type_lid.loc env Unboxed_record
+      (* the rest is an object spread, which can't produce an array *)
+      | Type_record (_, Record_array) ->
+        raise_error rest_type_lid.loc env Array_record
       | Type_record (labels, _) -> (rest_decl, labels)
       | _ -> raise_error rest_type_lid.loc env (Not_record rest_type_lid.txt))
     | None -> raise_error rest_type_lid.loc env (Not_record rest_type_lid.txt)
@@ -303,6 +307,10 @@ let report_error ppf = function
       field Printtyp.longident rest_type rest_runtime_name source_runtime_name
   | Unboxed_record ->
     fprintf ppf "Record rest patterns cannot be used with unboxed record types."
+  | Array_record ->
+    fprintf ppf
+      "The rest of a record pattern cannot have a record type represented as \
+       an array (fields with the runtime names \"0\", \"1\", ...)."
   | Mutable_source_record ->
     fprintf ppf
       "Record rest patterns cannot be used on records with mutable fields."
