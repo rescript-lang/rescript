@@ -1,8 +1,8 @@
 (** Conversions between the boxed type graphs of {!Types_boxed}, the format
     of [.cmi] and [.cmt] files, and the stores of {!Types}.
 
-    Conversions run in sessions. A session memoizes every converted record
-    and block by physical identity, so it maps a graph with sharing and cycles
+    Conversions run in sessions. An exact session memoizes every converted
+    record and block by physical identity, so it maps a graph with sharing and cycles
     to a graph with the same sharing and cycles; use one session for
     everything that must keep its sharing (for example a whole signature, or
     everything a [.cmt] holds). Identifiers and levels are copied, so ids, and
@@ -20,9 +20,9 @@
 module Import : sig
   type t
 
-  val run : ?store:Types.Store.t -> (t -> 'a) -> 'a
+  val run : ?exact:bool -> ?store:Types.Store.t -> (t -> 'a) -> 'a
   (** [run f] runs a session importing into [store], by default the current
-      store at the time of the call. *)
+      store at the time of the call. See {!Export.run} for [exact]. *)
 
   val type_expr : t -> Types_boxed.type_expr -> Types.type_expr
   val type_desc : t -> Types_boxed.type_desc -> Types.type_desc
@@ -58,7 +58,16 @@ end
 module Export : sig
   type t
 
-  val run : (t -> 'a) -> 'a
+  val run : ?exact:bool -> (t -> 'a) -> 'a
+  (** [run f] runs an export session. An [exact] session (the default)
+      reproduces all the sharing of the source graph, which the bytes of a
+      [.cmi] file depend on. Otherwise only what identity requires is shared:
+      nodes, label descriptions (their [lbl_all] holds themselves),
+      abbreviation and row field cells; other blocks a graph shares are
+      converted once per occurrence. That is cheaper (most of the cost of an
+      exact session is hashing blocks to find them again) and gives the same
+      values, for [.cmt] files, which only need to mean the same. *)
+
   val type_expr : t -> Types.type_expr -> Types_boxed.type_expr
   val type_desc : t -> Types.type_desc -> Types_boxed.type_desc
   val row_desc : t -> Types.row_desc -> Types_boxed.row_desc
@@ -94,6 +103,8 @@ end
 module Memo : sig
   type ('a, 'b) t
 
-  val create : unit -> ('a, 'b) t
+  val create : ?hash:('a -> int) -> unit -> ('a, 'b) t
+  (** With [hash], keys are hashed with it instead of by their contents. *)
+
   val memo : ('a, 'b) t -> ('a -> 'b) -> 'a -> 'b
 end

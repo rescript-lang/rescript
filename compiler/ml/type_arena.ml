@@ -12,20 +12,24 @@ module B = Types_boxed
    correct, but structurally equal distinct blocks share a bucket. The hash
    reads at most three levels and four fields per block: enough to reach the
    immutable [id] of the nodes in a list or an argument, and not far enough
-   to reach the contents of an abbreviation cell below a type_expr, which change
-   while a conversion marks them (see [cell_mark]). Each table has one key
-   type, enforced by the phantom parameters. Immediate values ([[]], [None],
+   to reach the contents of an abbreviation cell below a node, which change
+   while a conversion marks them (see [cell_mark]). Strings (and other blocks
+   without fields) are hashed by their contents above the last level and by
+   their size at the last level: a key's own names tell keys apart, the file
+   name in every location below them does not. Each table has one key type,
+   enforced by the phantom parameters. Immediate values ([[]], [None],
    constant constructors) have no identity and are not memoized. *)
 let rec phys_hash depth (r : Obj.t) =
   if Obj.is_int r then (Obj.obj r : int)
   else
     let tag = Obj.tag r in
-    if tag >= Obj.no_scan_tag then Hashtbl.hash r
+    if tag >= Obj.no_scan_tag then
+      if depth > 0 then Hashtbl.hash r else (tag * 31) + Obj.size r
     else
       let size = Obj.size r in
       let h = ref ((tag * 31) + size) in
       if depth > 0 then
-        for i = 0 to min size 4 - 1 do
+        for i = 0 to Int.min size 4 - 1 do
           h := (!h * 65599) + phys_hash (depth - 1) (Obj.field r i)
         done;
       !h land max_int
@@ -38,7 +42,7 @@ end)
 
 type ('a, 'b) memo = Obj.t Phys.t
 
-let new_memo () : ('a, 'b) memo = Phys.create 256
+let new_memo () : ('a, 'b) memo = Phys.create 16
 
 let memo (m : ('a, 'b) memo) (f : 'a -> 'b) (x : 'a) : 'b =
   let k = Obj.repr x in
@@ -81,6 +85,27 @@ let rec memo_list (m : ('a list, 'b list) memo) (f : 'a -> 'b) (l : 'a list) :
 let memo_option (m : ('a option, 'b option) memo) (f : 'a -> 'b) (o : 'a option)
     : 'b option =
   memo m (Option.map f) o
+
+(* Memo tables with a hash of the caller's choosing, for keys that a hash of
+   their own fields tells apart cheaply (label descriptions, environment
+   summaries): the key is stored with its hash. *)
+module Keyed = Hashtbl.Make (struct
+  type t = Obj.t * int
+  let equal ((a : Obj.t), _) ((b : Obj.t), _) = a == b
+  let hash ((_ : Obj.t), h) = h
+end)
+
+type ('a, 'b) keyed = Obj.t Keyed.t
+
+let new_keyed () : ('a, 'b) keyed = Keyed.create 16
+
+let keyed_find (m : ('a, 'b) keyed) (k : 'a) h : 'b option =
+  match Keyed.find_opt m (Obj.repr k, h) with
+  | Some v -> Some (Obj.obj v)
+  | None -> None
+
+let keyed_add (m : ('a, 'b) keyed) (k : 'a) h (v : 'b) =
+  Keyed.add m (Obj.repr k, h) (Obj.repr v)
 
 (* Abbreviation cells ([Tconstr]'s [abbrev_memo ref]) are distinct mutable
    blocks which all hash alike (almost all hold [Mnil]), so memoizing them,
@@ -156,6 +181,7 @@ end)
 
 module Import = struct
   type t = {
+    exact: bool;
     store: Store.t;
     nodes: type_expr Type_hash.t;
     mutable count: int;
@@ -200,18 +226,19 @@ module Import = struct
     mtds: (B.modtype_declaration, Types.modtype_declaration) memo;
     cstr_descs: (B.constructor_description, constructor_description) memo;
     decl_options: (B.type_declaration option, type_declaration option) memo;
-    lbl_descs: (B.label_description, label_description) memo;
-    lbl_arrays: (B.label_description array, label_description array) memo;
+    lbl_descs_k: (B.label_description, label_description) keyed;
+    lbl_arrays_k: (B.label_description array, label_description array) keyed;
     cells: (B.type_desc, type_desc, B.abbrev_memo, abbrev_memo) cell_marks;
   }
 
-  let create ?store () =
+  let create ~exact ?store () =
     let store =
       match store with
       | Some s -> s
       | None -> Store.current ()
     in
     {
+      exact;
       store;
       nodes = Type_hash.create 1024;
       count = 0;
@@ -249,10 +276,23 @@ module Import = struct
       mtds = new_memo ();
       cstr_descs = new_memo ();
       decl_options = new_memo ();
-      lbl_descs = new_memo ();
-      lbl_arrays = new_memo ();
+      lbl_descs_k = new_keyed ();
+      lbl_arrays_k = new_keyed ();
       cells = new_cell_marks ();
     }
+
+  (* Outside exact sessions only what identity requires is memoized: nodes,
+     label descriptions (whose [lbl_all] holds themselves), abbreviation and
+     row field cells. *)
+  let memo_if c tbl f x = if c.exact then memo tbl f x else f x
+
+  let list_if c tbl f l = if c.exact then memo_list tbl f l else List.map f l
+
+  let option_if c tbl f o =
+    if c.exact then memo_option tbl f o else Option.map f o
+
+  let label_hash (l : B.label_description) =
+    (String.length l.lbl_name * 31) + l.lbl_pos + (65599 * l.lbl_res.B.id)
 
   let nodes c = c.count
 
@@ -267,7 +307,7 @@ module Import = struct
       Transient_expr.set_desc t (desc c ty.B.desc);
       t
 
-  and type_list c l = memo_list c.lists (type_expr c) l
+  and type_list c l = list_if c c.lists (type_expr c) l
 
   and desc c (d : B.type_desc) : type_desc =
     match d with
@@ -283,7 +323,7 @@ module Import = struct
       else
         (* The cell is shared with another descriptor, or the descriptor
            occurs inside its own subgraph (it is then converted twice). *)
-        memo c.descs (fun _ -> Tconstr (p, type_list c l, m.mirror_cell)) d
+        memo_if c c.descs (fun _ -> Tconstr (p, type_list c l, m.mirror_cell)) d
     else
       let saved = !cell in
       let mirror_cell = ref Mnil in
@@ -300,12 +340,12 @@ module Import = struct
       m.mirror
 
   and desc_memo c d =
-    memo c.descs
+    memo_if c c.descs
       (fun (d : B.type_desc) ->
         match d with
         | B.Tvar name -> Tvar name
         | B.Tarrow (args, ret) ->
-          let args = memo_list c.arg_lists (arg c) args in
+          let args = list_if c c.arg_lists (arg c) args in
           Tarrow (args, type_expr c ret)
         | B.Ttuple l -> Ttuple (type_list c l)
         | B.Tconstr (p, l, abbrev) ->
@@ -327,7 +367,9 @@ module Import = struct
       d
 
   and arg c (a : B.arg) : arg =
-    memo c.args (fun (a : B.arg) -> {lbl = a.lbl; typ = type_expr c a.typ}) a
+    memo_if c c.args
+      (fun (a : B.arg) -> {lbl = a.lbl; typ = type_expr c a.typ})
+      a
 
   and abbrev_ref c r =
     let k = boxed_marked !r in
@@ -335,7 +377,7 @@ module Import = struct
     else memo_ref c.abbrevs Mnil (abbrev c) r
 
   and abbrev c (m : B.abbrev_memo) : abbrev_memo =
-    memo c.abbrev_values
+    memo_if c c.abbrev_values
       (fun (m : B.abbrev_memo) ->
         match m with
         | B.Mnil -> Mnil
@@ -347,17 +389,17 @@ module Import = struct
       m
 
   and row_desc c (row : B.row_desc) : row_desc =
-    memo c.rows
+    memo_if c c.rows
       (fun (row : B.row_desc) ->
         let row_fields =
-          memo_list c.row_pair_lists
-            (memo c.row_pairs (fun (l, f) -> (l, row_field c f)))
+          list_if c c.row_pair_lists
+            (memo_if c c.row_pairs (fun (l, f) -> (l, row_field c f)))
             row.row_fields
         in
         let row_more = type_expr c row.row_more in
         let row_name =
-          memo_option c.row_names
-            (memo c.row_name_pairs (fun (p, l) -> (p, type_list c l)))
+          option_if c c.row_names
+            (memo_if c c.row_name_pairs (fun (p, l) -> (p, type_list c l)))
             row.row_name
         in
         {
@@ -370,10 +412,10 @@ module Import = struct
       row
 
   and row_field c (f : B.row_field) : row_field =
-    memo c.row_fields
+    memo_if c c.row_fields
       (fun (f : B.row_field) ->
         match f with
-        | B.Rpresent o -> Rpresent (memo_option c.options (type_expr c) o)
+        | B.Rpresent o -> Rpresent (option_if c c.options (type_expr c) o)
         | B.Reither (b1, l, b2, r) ->
           let l = type_list c l in
           Reither
@@ -381,18 +423,18 @@ module Import = struct
               l,
               b2,
               memo_ref c.row_field_refs None
-                (memo_option c.row_field_options (row_field c))
+                (option_if c c.row_field_options (row_field c))
                 r )
         | B.Rabsent -> Rabsent)
       f
 
-  let type_option c o = memo_option c.options (type_expr c) o
+  let type_option c o = option_if c c.options (type_expr c) o
 
   let rec signature c (sg : B.signature) : Types.signature =
-    memo_list c.sig_lists (signature_item c) sg
+    list_if c c.sig_lists (signature_item c) sg
 
   and signature_item c (item : B.signature_item) : Types.signature_item =
-    memo c.sig_items
+    memo_if c c.sig_items
       (fun (item : B.signature_item) ->
         match item with
         | B.Sig_value (id, v) -> Types.Sig_value (id, value_description c v)
@@ -406,7 +448,7 @@ module Import = struct
       item
 
   and value_description c (v : B.value_description) =
-    memo c.values
+    memo_if c c.values
       (fun (v : B.value_description) : Types.value_description ->
         {
           val_type = type_expr c v.val_type;
@@ -417,13 +459,13 @@ module Import = struct
       v
 
   and type_declaration c (d : B.type_declaration) =
-    memo c.decls
+    memo_if c c.decls
       (fun (d : B.type_declaration) : Types.type_declaration ->
         let type_params = type_list c d.type_params in
         let type_kind = type_kind c d.type_kind in
         let type_manifest = type_option c d.type_manifest in
         let type_inlined_types =
-          memo_list c.inlined_lists (inlined_type c) d.type_inlined_types
+          list_if c c.inlined_lists (inlined_type c) d.type_inlined_types
         in
         {
           type_params;
@@ -443,27 +485,27 @@ module Import = struct
       d
 
   and inlined_type c (i : B.type_inlined_type) =
-    memo c.inlined
+    memo_if c c.inlined
       (fun (B.Record {type_name; labels} : B.type_inlined_type) ->
         Types.Record {type_name; labels = label_list c labels})
       i
 
   and type_kind c (k : B.type_kind) =
-    memo c.kinds
+    memo_if c c.kinds
       (fun (k : B.type_kind) : Types.type_kind ->
         match k with
         | B.Type_abstract -> Type_abstract
         | B.Type_record (labels, repr) -> Type_record (label_list c labels, repr)
         | B.Type_variant (cstrs, layout) ->
           Type_variant
-            (memo_list c.cstr_lists (constructor_declaration c) cstrs, layout)
+            (list_if c c.cstr_lists (constructor_declaration c) cstrs, layout)
         | B.Type_open -> Type_open)
       k
 
-  and label_list c l = memo_list c.label_lists (label_declaration c) l
+  and label_list c l = list_if c c.label_lists (label_declaration c) l
 
   and label_declaration c (l : B.label_declaration) =
-    memo c.labels
+    memo_if c c.labels
       (fun (l : B.label_declaration) : Types.label_declaration ->
         {
           ld_id = l.ld_id;
@@ -477,7 +519,7 @@ module Import = struct
       l
 
   and constructor_arguments c (a : B.constructor_arguments) =
-    memo c.cstr_args
+    memo_if c c.cstr_args
       (fun (a : B.constructor_arguments) : Types.constructor_arguments ->
         match a with
         | B.Cstr_tuple l -> Cstr_tuple (type_list c l)
@@ -485,7 +527,7 @@ module Import = struct
       a
 
   and constructor_declaration c (cd : B.constructor_declaration) =
-    memo c.cstrs
+    memo_if c c.cstrs
       (fun (cd : B.constructor_declaration) : Types.constructor_declaration ->
         let cd_args = constructor_arguments c cd.cd_args in
         {
@@ -499,7 +541,7 @@ module Import = struct
       cd
 
   and extension_constructor c (e : B.extension_constructor) =
-    memo c.exts
+    memo_if c c.exts
       (fun (e : B.extension_constructor) : Types.extension_constructor ->
         let ext_type_params = type_list c e.ext_type_params in
         let ext_args = constructor_arguments c e.ext_args in
@@ -516,19 +558,19 @@ module Import = struct
       e
 
   and module_type c (mty : B.module_type) =
-    memo c.mtys
+    memo_if c c.mtys
       (fun (mty : B.module_type) : Types.module_type ->
         match mty with
         | B.Mty_ident p -> Mty_ident p
         | B.Mty_signature sg -> Mty_signature (signature c sg)
         | B.Mty_functor (id, arg, res) ->
-          let arg = memo_option c.mty_options (module_type c) arg in
+          let arg = option_if c c.mty_options (module_type c) arg in
           Mty_functor (id, arg, module_type c res)
         | B.Mty_alias (pres, p) -> Mty_alias (pres, p))
       mty
 
   and module_declaration c (md : B.module_declaration) =
-    memo c.mds
+    memo_if c c.mds
       (fun (md : B.module_declaration) : Types.module_declaration ->
         {
           md_type = module_type c md.md_type;
@@ -538,23 +580,23 @@ module Import = struct
       md
 
   and modtype_declaration c (mtd : B.modtype_declaration) =
-    memo c.mtds
+    memo_if c c.mtds
       (fun (mtd : B.modtype_declaration) : Types.modtype_declaration ->
         {
-          mtd_type = memo_option c.mty_options (module_type c) mtd.mtd_type;
+          mtd_type = option_if c c.mty_options (module_type c) mtd.mtd_type;
           mtd_attributes = mtd.mtd_attributes;
           mtd_loc = mtd.mtd_loc;
         })
       mtd
 
   and constructor_description c (cd : B.constructor_description) =
-    memo c.cstr_descs
+    memo_if c c.cstr_descs
       (fun (cd : B.constructor_description) : constructor_description ->
         let cstr_res = type_expr c cd.cstr_res in
         let cstr_existentials = type_list c cd.cstr_existentials in
         let cstr_args = type_list c cd.cstr_args in
         let cstr_inlined =
-          memo_option c.decl_options (type_declaration c) cd.cstr_inlined
+          option_if c c.decl_options (type_declaration c) cd.cstr_inlined
         in
         {
           cstr_name = cd.cstr_name;
@@ -571,12 +613,12 @@ module Import = struct
         })
       cd
 
-  (* [lbl_all] holds the label itself: register the label before converting
-     its siblings. *)
+  (* [lbl_all] holds the label itself: register the label, and then its
+     converted [lbl_all], before converting its siblings. *)
   and label_description c (l : B.label_description) : label_description =
-    let k = Obj.repr l in
-    match Phys.find_opt c.lbl_descs k with
-    | Some v -> Obj.obj v
+    let h = label_hash l in
+    match keyed_find c.lbl_descs_k l h with
+    | Some l' -> l'
     | None ->
       let lbl_res = type_expr c l.lbl_res in
       let lbl_arg = type_expr c l.lbl_arg in
@@ -596,9 +638,22 @@ module Import = struct
           lbl_attributes = l.lbl_attributes;
         }
       in
-      Phys.add c.lbl_descs k (Obj.repr l');
+      keyed_add c.lbl_descs_k l h l';
+      let all = l.lbl_all in
+      let h_all =
+        if Array.length all = 0 then 0
+        else Array.length all + (65599 * label_hash all.(0))
+      in
       l'.lbl_all <-
-        memo c.lbl_arrays (Array.map (label_description c)) l.lbl_all;
+        (match keyed_find c.lbl_arrays_k all h_all with
+        | Some all' -> all'
+        | None ->
+          (* Registered before it is filled: each sibling converted here
+              finds it, instead of converting the array again. *)
+          let all' = Array.make (Array.length all) l' in
+          keyed_add c.lbl_arrays_k all h_all all';
+          Array.iteri (fun i l -> all'.(i) <- label_description c l) all;
+          all');
       l'
 
   let check c =
@@ -621,8 +676,8 @@ module Import = struct
   let module_declaration c = checked module_declaration c
   let modtype_declaration c = checked modtype_declaration c
 
-  let run ?store f =
-    let c = create ?store () in
+  let run ?(exact = true) ?store f =
+    let c = create ~exact ?store () in
     Fun.protect ~finally:(fun () -> restore_cells c.cells) (fun () -> f c)
 end
 
@@ -631,6 +686,7 @@ module Export = struct
      identity. *)
 
   type t = {
+    exact: bool;
     nodes: B.type_expr Node_hash.t;
     descs: (type_desc, B.type_desc) memo;
     lists: (type_expr list, B.type_expr list) memo;
@@ -672,13 +728,14 @@ module Export = struct
     mtds: (Types.modtype_declaration, B.modtype_declaration) memo;
     cstr_descs: (constructor_description, B.constructor_description) memo;
     decl_options: (type_declaration option, B.type_declaration option) memo;
-    lbl_descs: (label_description, B.label_description) memo;
-    lbl_arrays: (label_description array, B.label_description array) memo;
+    lbl_descs_k: (label_description, B.label_description) keyed;
+    lbl_arrays_k: (label_description array, B.label_description array) keyed;
     cells: (type_desc, B.type_desc, abbrev_memo, B.abbrev_memo) cell_marks;
   }
 
-  let create () =
+  let create ~exact =
     {
+      exact;
       nodes = Node_hash.create 1024;
       descs = new_memo ();
       lists = new_memo ();
@@ -714,10 +771,23 @@ module Export = struct
       mtds = new_memo ();
       cstr_descs = new_memo ();
       decl_options = new_memo ();
-      lbl_descs = new_memo ();
-      lbl_arrays = new_memo ();
+      lbl_descs_k = new_keyed ();
+      lbl_arrays_k = new_keyed ();
       cells = new_cell_marks ();
     }
+
+  (* Outside exact sessions only what identity requires is memoized: nodes,
+     label descriptions (whose [lbl_all] holds themselves), abbreviation and
+     row field cells. *)
+  let memo_if c tbl f x = if c.exact then memo tbl f x else f x
+
+  let list_if c tbl f l = if c.exact then memo_list tbl f l else List.map f l
+
+  let option_if c tbl f o =
+    if c.exact then memo_option tbl f o else Option.map f o
+
+  let label_hash (l : label_description) =
+    (String.length l.lbl_name * 31) + l.lbl_pos + (65599 * Store.index l.lbl_res)
 
   let rec type_expr c (t : type_expr) : B.type_expr =
     match Node_hash.find_opt c.nodes t with
@@ -728,7 +798,7 @@ module Export = struct
       ty.B.desc <- desc c (get_desc t);
       ty
 
-  and type_list c l = memo_list c.lists (type_expr c) l
+  and type_list c l = list_if c c.lists (type_expr c) l
 
   and desc c (d : type_desc) : B.type_desc =
     (* [Tlink] and [Tsubst] are rebuilt by [get_desc] on every read, so they
@@ -745,7 +815,10 @@ module Export = struct
     if k >= 0 then
       let m = ms.marks.(k) in
       if m.owner == d && m.finished then m.mirror
-      else memo c.descs (fun _ -> B.Tconstr (p, type_list c l, m.mirror_cell)) d
+      else
+        memo_if c c.descs
+          (fun _ -> B.Tconstr (p, type_list c l, m.mirror_cell))
+          d
     else
       let saved = !cell in
       let mirror_cell = ref B.Mnil in
@@ -769,12 +842,12 @@ module Export = struct
       m.mirror
 
   and desc_memo c d =
-    memo c.descs
+    memo_if c c.descs
       (fun (d : type_desc) : B.type_desc ->
         match d with
         | Tvar name -> B.Tvar name
         | Tarrow (args, ret) ->
-          let args = memo_list c.arg_lists (arg c) args in
+          let args = list_if c c.arg_lists (arg c) args in
           B.Tarrow (args, type_expr c ret)
         | Ttuple l -> B.Ttuple (type_list c l)
         | Tconstr (p, l, abbrev) ->
@@ -796,7 +869,7 @@ module Export = struct
       d
 
   and arg c (a : arg) : B.arg =
-    memo c.args
+    memo_if c c.args
       (fun (a : arg) : B.arg -> {lbl = a.lbl; typ = type_expr c a.typ})
       a
 
@@ -806,7 +879,7 @@ module Export = struct
     else memo_ref c.abbrevs B.Mnil (abbrev c) r
 
   and abbrev c (m : abbrev_memo) : B.abbrev_memo =
-    memo c.abbrev_values
+    memo_if c c.abbrev_values
       (fun (m : abbrev_memo) : B.abbrev_memo ->
         match m with
         | Mnil -> B.Mnil
@@ -818,17 +891,17 @@ module Export = struct
       m
 
   and row_desc c (row : row_desc) : B.row_desc =
-    memo c.rows
+    memo_if c c.rows
       (fun (row : row_desc) : B.row_desc ->
         let row_fields =
-          memo_list c.row_pair_lists
-            (memo c.row_pairs (fun (l, f) -> (l, row_field c f)))
+          list_if c c.row_pair_lists
+            (memo_if c c.row_pairs (fun (l, f) -> (l, row_field c f)))
             row.row_fields
         in
         let row_more = type_expr c row.row_more in
         let row_name =
-          memo_option c.row_names
-            (memo c.row_name_pairs (fun (p, l) -> (p, type_list c l)))
+          option_if c c.row_names
+            (memo_if c c.row_name_pairs (fun (p, l) -> (p, type_list c l)))
             row.row_name
         in
         {
@@ -841,10 +914,10 @@ module Export = struct
       row
 
   and row_field c (f : row_field) : B.row_field =
-    memo c.row_fields
+    memo_if c c.row_fields
       (fun (f : row_field) : B.row_field ->
         match f with
-        | Rpresent o -> B.Rpresent (memo_option c.options (type_expr c) o)
+        | Rpresent o -> B.Rpresent (option_if c c.options (type_expr c) o)
         | Reither (b1, l, b2, r) ->
           let l = type_list c l in
           B.Reither
@@ -852,18 +925,18 @@ module Export = struct
               l,
               b2,
               memo_ref c.row_field_refs None
-                (memo_option c.row_field_options (row_field c))
+                (option_if c c.row_field_options (row_field c))
                 r )
         | Rabsent -> B.Rabsent)
       f
 
-  let type_option c o = memo_option c.options (type_expr c) o
+  let type_option c o = option_if c c.options (type_expr c) o
 
   let rec signature c (sg : Types.signature) : B.signature =
-    memo_list c.sig_lists (signature_item c) sg
+    list_if c c.sig_lists (signature_item c) sg
 
   and signature_item c (item : Types.signature_item) : B.signature_item =
-    memo c.sig_items
+    memo_if c c.sig_items
       (fun (item : Types.signature_item) : B.signature_item ->
         match item with
         | Types.Sig_value (id, v) -> Sig_value (id, value_description c v)
@@ -877,7 +950,7 @@ module Export = struct
       item
 
   and value_description c (v : Types.value_description) =
-    memo c.values
+    memo_if c c.values
       (fun (v : Types.value_description) : B.value_description ->
         {
           val_type = type_expr c v.val_type;
@@ -888,13 +961,13 @@ module Export = struct
       v
 
   and type_declaration c (d : Types.type_declaration) =
-    memo c.decls
+    memo_if c c.decls
       (fun (d : Types.type_declaration) : B.type_declaration ->
         let type_params = type_list c d.type_params in
         let type_kind = type_kind c d.type_kind in
         let type_manifest = type_option c d.type_manifest in
         let type_inlined_types =
-          memo_list c.inlined_lists (inlined_type c) d.type_inlined_types
+          list_if c c.inlined_lists (inlined_type c) d.type_inlined_types
         in
         {
           type_params;
@@ -914,13 +987,13 @@ module Export = struct
       d
 
   and inlined_type c (i : Types.type_inlined_type) =
-    memo c.inlined
+    memo_if c c.inlined
       (fun (Types.Record {type_name; labels} : Types.type_inlined_type) ->
         B.Record {type_name; labels = label_list c labels})
       i
 
   and type_kind c (k : Types.type_kind) =
-    memo c.kinds
+    memo_if c c.kinds
       (fun (k : Types.type_kind) : B.type_kind ->
         match k with
         | Types.Type_abstract -> Type_abstract
@@ -928,14 +1001,14 @@ module Export = struct
           Type_record (label_list c labels, repr)
         | Types.Type_variant (cstrs, layout) ->
           Type_variant
-            (memo_list c.cstr_lists (constructor_declaration c) cstrs, layout)
+            (list_if c c.cstr_lists (constructor_declaration c) cstrs, layout)
         | Types.Type_open -> Type_open)
       k
 
-  and label_list c l = memo_list c.label_lists (label_declaration c) l
+  and label_list c l = list_if c c.label_lists (label_declaration c) l
 
   and label_declaration c (l : Types.label_declaration) =
-    memo c.labels
+    memo_if c c.labels
       (fun (l : Types.label_declaration) : B.label_declaration ->
         {
           ld_id = l.ld_id;
@@ -949,7 +1022,7 @@ module Export = struct
       l
 
   and constructor_arguments c (a : Types.constructor_arguments) =
-    memo c.cstr_args
+    memo_if c c.cstr_args
       (fun (a : Types.constructor_arguments) : B.constructor_arguments ->
         match a with
         | Types.Cstr_tuple l -> Cstr_tuple (type_list c l)
@@ -957,7 +1030,7 @@ module Export = struct
       a
 
   and constructor_declaration c (cd : Types.constructor_declaration) =
-    memo c.cstrs
+    memo_if c c.cstrs
       (fun (cd : Types.constructor_declaration) : B.constructor_declaration ->
         let cd_args = constructor_arguments c cd.cd_args in
         {
@@ -971,7 +1044,7 @@ module Export = struct
       cd
 
   and extension_constructor c (e : Types.extension_constructor) =
-    memo c.exts
+    memo_if c c.exts
       (fun (e : Types.extension_constructor) : B.extension_constructor ->
         let ext_type_params = type_list c e.ext_type_params in
         let ext_args = constructor_arguments c e.ext_args in
@@ -988,19 +1061,19 @@ module Export = struct
       e
 
   and module_type c (mty : Types.module_type) =
-    memo c.mtys
+    memo_if c c.mtys
       (fun (mty : Types.module_type) : B.module_type ->
         match mty with
         | Types.Mty_ident p -> Mty_ident p
         | Types.Mty_signature sg -> Mty_signature (signature c sg)
         | Types.Mty_functor (id, arg, res) ->
-          let arg = memo_option c.mty_options (module_type c) arg in
+          let arg = option_if c c.mty_options (module_type c) arg in
           Mty_functor (id, arg, module_type c res)
         | Types.Mty_alias (pres, p) -> Mty_alias (pres, p))
       mty
 
   and module_declaration c (md : Types.module_declaration) =
-    memo c.mds
+    memo_if c c.mds
       (fun (md : Types.module_declaration) : B.module_declaration ->
         {
           md_type = module_type c md.md_type;
@@ -1010,23 +1083,23 @@ module Export = struct
       md
 
   and modtype_declaration c (mtd : Types.modtype_declaration) =
-    memo c.mtds
+    memo_if c c.mtds
       (fun (mtd : Types.modtype_declaration) : B.modtype_declaration ->
         {
-          mtd_type = memo_option c.mty_options (module_type c) mtd.mtd_type;
+          mtd_type = option_if c c.mty_options (module_type c) mtd.mtd_type;
           mtd_attributes = mtd.mtd_attributes;
           mtd_loc = mtd.mtd_loc;
         })
       mtd
 
   and constructor_description c (cd : constructor_description) =
-    memo c.cstr_descs
+    memo_if c c.cstr_descs
       (fun (cd : constructor_description) : B.constructor_description ->
         let cstr_res = type_expr c cd.cstr_res in
         let cstr_existentials = type_list c cd.cstr_existentials in
         let cstr_args = type_list c cd.cstr_args in
         let cstr_inlined =
-          memo_option c.decl_options (type_declaration c) cd.cstr_inlined
+          option_if c c.decl_options (type_declaration c) cd.cstr_inlined
         in
         {
           B.cstr_name = cd.cstr_name;
@@ -1043,12 +1116,12 @@ module Export = struct
         })
       cd
 
-  (* [lbl_all] holds the label itself: register the label before converting
-     its siblings. *)
+  (* [lbl_all] holds the label itself: register the label, and then its
+     converted [lbl_all], before converting its siblings. *)
   and label_description c (l : label_description) : B.label_description =
-    let k = Obj.repr l in
-    match Phys.find_opt c.lbl_descs k with
-    | Some v -> Obj.obj v
+    let h = label_hash l in
+    match keyed_find c.lbl_descs_k l h with
+    | Some l' -> l'
     | None ->
       let lbl_res = type_expr c l.lbl_res in
       let lbl_arg = type_expr c l.lbl_arg in
@@ -1068,9 +1141,22 @@ module Export = struct
           lbl_attributes = l.lbl_attributes;
         }
       in
-      Phys.add c.lbl_descs k (Obj.repr l');
+      keyed_add c.lbl_descs_k l h l';
+      let all = l.lbl_all in
+      let h_all =
+        if Array.length all = 0 then 0
+        else Array.length all + (65599 * label_hash all.(0))
+      in
       l'.lbl_all <-
-        memo c.lbl_arrays (Array.map (label_description c)) l.lbl_all;
+        (match keyed_find c.lbl_arrays_k all h_all with
+        | Some all' -> all'
+        | None ->
+          (* Registered before it is filled: each sibling converted here
+              finds it, instead of converting the array again. *)
+          let all' = Array.make (Array.length all) l' in
+          keyed_add c.lbl_arrays_k all h_all all';
+          Array.iteri (fun i l -> all'.(i) <- label_description c l) all;
+          all');
       l'
 
   let check c =
@@ -1093,14 +1179,30 @@ module Export = struct
   let module_declaration c = checked module_declaration c
   let modtype_declaration c = checked modtype_declaration c
 
-  let run f =
-    let c = create () in
+  let run ?(exact = true) f =
+    let c = create ~exact in
     Fun.protect ~finally:(fun () -> restore_cells c.cells) (fun () -> f c)
 end
 
 module Memo = struct
-  type nonrec ('a, 'b) t = ('a, 'b) memo
+  type ('a, 'b) t = {
+    hash: ('a -> int) option;
+    phys: ('a, 'b) memo;
+    keyed: ('a, 'b) keyed;
+  }
 
-  let create = new_memo
-  let memo = memo
+  let create ?hash () = {hash; phys = new_memo (); keyed = new_keyed ()}
+
+  let memo m f x =
+    match m.hash with
+    | None -> memo m.phys f x
+    | Some _ when Obj.is_int (Obj.repr x) -> f x
+    | Some hash -> (
+      let h = hash x in
+      match keyed_find m.keyed x h with
+      | Some v -> v
+      | None ->
+        let v = f x in
+        keyed_add m.keyed x h v;
+        v)
 end

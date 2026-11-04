@@ -7,7 +7,26 @@
 module B = Types_boxed
 module TB = Typedtree_boxed
 
+(* A summary node is told apart by its kind and what it binds; hashing its
+   contents would walk the declarations it holds. *)
+let summary_hash (s : Obj.t) =
+  let id_hash id =
+    (Ident.binding_time id * 31) + Hashtbl.hash (Ident.name id)
+  in
+  match (Obj.obj s : Env.summary) with
+  | Env_empty -> 0
+  | Env_value (_, id, _) -> 1 + (7 * id_hash id)
+  | Env_type (_, id, _) -> 2 + (7 * id_hash id)
+  | Env_extension (_, id, _) -> 3 + (7 * id_hash id)
+  | Env_module (_, id, _) -> 4 + (7 * id_hash id)
+  | Env_modtype (_, id, _) -> 5 + (7 * id_hash id)
+  | Env_open (_, p) -> 6 + (7 * Hashtbl.hash p)
+  | Env_functor_arg (_, id) -> 7 + (7 * id_hash id)
+  | Env_constraints (_, _) -> 8
+  | Env_copy_types (_, names) -> 9 + (7 * Hashtbl.hash names)
+
 module Export = struct
+  let summary_hash_of (s : Env.summary) = summary_hash (Obj.repr s)
   module A = Type_arena.Export
 
   type t = {
@@ -17,13 +36,14 @@ module Export = struct
     envs: (Env.summary, (Env.t * TB.env) list ref) Type_arena.Memo.t;
   }
 
+  (* Not exact: .cmt files need the same values, not the same sharing. *)
   let run f =
-    A.run (fun types ->
+    A.run ~exact:false (fun types ->
         f
           {
             types;
-            summaries = Type_arena.Memo.create ();
-            envs = Type_arena.Memo.create ();
+            summaries = Type_arena.Memo.create ~hash:summary_hash_of ();
+            envs = Type_arena.Memo.create ~hash:summary_hash_of ();
           })
 
   let type_expr c t = A.type_expr c.types t
@@ -89,6 +109,8 @@ module Export = struct
 end
 
 module Import = struct
+  (* [Typedtree_boxed.summary] has [Env.summary]'s constructors and layout. *)
+  let summary_hash_of (s : TB.summary) = summary_hash (Obj.repr s)
   module A = Type_arena.Import
 
   type t = {
@@ -97,13 +119,14 @@ module Import = struct
     envs: (TB.summary, (TB.env * Env.t) list ref) Type_arena.Memo.t;
   }
 
+  (* Not exact: .cmt files need the same values, not the same sharing. *)
   let run f =
-    A.run (fun types ->
+    A.run ~exact:false (fun types ->
         f
           {
             types;
-            summaries = Type_arena.Memo.create ();
-            envs = Type_arena.Memo.create ();
+            summaries = Type_arena.Memo.create ~hash:summary_hash_of ();
+            envs = Type_arena.Memo.create ~hash:summary_hash_of ();
           })
 
   let type_expr c t = A.type_expr c.types t
