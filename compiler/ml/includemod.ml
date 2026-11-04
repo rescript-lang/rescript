@@ -515,7 +515,7 @@ let find_arity_mismatch env ty1 ty2 =
       let seen = (ty1, ty2) :: seen in
       let ty1 = Btype.repr (Ctype.expand_head env ty1) in
       let ty2 = Btype.repr (Ctype.expand_head env ty2) in
-      match (ty1.desc, ty2.desc) with
+      match (get_desc ty1, get_desc ty2) with
       | Tarrow (params1, ret1), Tarrow (params2, ret2) ->
         let arity1 = List.length params1 in
         let arity2 = List.length params2 in

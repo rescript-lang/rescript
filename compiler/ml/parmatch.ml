@@ -195,7 +195,7 @@ let all_coherent column =
          mixing constructors of different types; such columns are incoherent
          and excluded from the analysis. Compare the declared types. *)
       let head_path p =
-        match (Ctype.expand_head p.pat_env p.pat_type).desc with
+        match get_desc (Ctype.expand_head p.pat_env p.pat_type) with
         | Tconstr (path, _, _) -> Some path
         | _ -> None
       in
@@ -402,12 +402,12 @@ exception Empty (* Empty pattern *)
 
 (* May need a clean copy, cf. PR#4745 *)
 let clean_copy ty =
-  if ty.level = Btype.generic_level then ty
+  if get_level ty = Btype.generic_level then ty
   else Subst.type_expr Subst.identity ty
 
 let get_type_path ty tenv =
   let ty = Ctype.repr (Ctype.expand_head tenv (clean_copy ty)) in
-  match ty.desc with
+  match get_desc ty with
   | Tconstr (path, _, _) -> path
   | _ -> fatal_error "Parmatch.get_type_path"
 
@@ -549,7 +549,7 @@ let pretty_matrix (pss : matrix) =
 (****************************)
 
 let rec get_variant_constructors env ty =
-  match (Ctype.repr ty).desc with
+  match get_desc (Ctype.repr ty) with
   | Tconstr (path, _, _) -> (
     try
       match Env.find_type path env with
@@ -903,8 +903,8 @@ let close_variant env row =
             }))
 
 let row_of_pat pat =
-  match Ctype.expand_head pat.pat_env pat.pat_type with
-  | {desc = Tvariant row} -> Btype.row_repr row
+  match get_desc (Ctype.expand_head pat.pat_env pat.pat_type) with
+  | Tvariant row -> Btype.row_repr row
   | _ -> assert false
 
 (*
@@ -999,7 +999,7 @@ let pat_of_constrs ex_pat cstrs =
 
 let pats_of_type ?(always = false) env ty =
   let ty' = Ctype.expand_head env ty in
-  match ty'.desc with
+  match get_desc ty' with
   | Tconstr (path, _, _) -> (
     try
       match (Env.find_type path env).type_kind with
@@ -1942,7 +1942,7 @@ let check_partial_all v casel =
 let is_dict_pattern (p : Typedtree.pattern) =
   match p.pat_desc with
   | Tpat_record _ -> (
-    match (Ctype.expand_head p.pat_env p.pat_type).desc with
+    match get_desc (Ctype.expand_head p.pat_env p.pat_type) with
     | Tconstr (path, _, _) -> Path.same path Predef.path_dict
     | _ -> false)
   | _ -> false
@@ -1959,7 +1959,7 @@ module Conv = struct
     "#$" ^ name ^ string_of_int current
 
   let conv_record_rest (rest : Typedtree.record_pat_rest) =
-    match (Btype.repr rest.rest_type).desc with
+    match get_desc (Btype.repr rest.rest_type) with
     | Tconstr (path, args, _) ->
       let loc = rest.rest_name.loc in
       let rest_type =
@@ -2242,7 +2242,7 @@ type payload_liveness =
       (** The pattern can match, except for these dead or-pattern alternatives *)
 
 let is_type_path path ty =
-  match (Ctype.repr ty).desc with
+  match get_desc (Ctype.repr ty) with
   | Tconstr (p, _, _) -> Path.same p path
   | _ -> false
 

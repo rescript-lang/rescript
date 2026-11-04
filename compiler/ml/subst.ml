@@ -116,7 +116,8 @@ let reset_for_saving () =
 let newpersty desc =
   let state = Compiler_request_state.current () in
   state.substitution_saved_id <- state.substitution_saved_id - 1;
-  {desc; level = generic_level; id = state.substitution_saved_id}
+  Transient_expr.create desc ~level:generic_level
+    ~id:state.substitution_saved_id
 
 (* ensure that all occurrences of 'Tvar None' are physically shared *)
 let tvar_none = Tvar None
@@ -131,14 +132,15 @@ let ctype_apply_env_empty = ref (fun _ -> assert false)
 (* Similar to [Ctype.nondep_type_rec]. *)
 let rec typexp_rec s ty =
   let ty = repr ty in
-  match ty.desc with
+  match get_desc ty with
   | (Tvar _ | Tunivar _) as desc ->
-    if s.for_saving || ty.id < 0 then (
+    if s.for_saving || get_id ty < 0 then (
       let ty' =
-        if s.for_saving then newpersty (norm desc) else newty2 ty.level desc
+        if s.for_saving then newpersty (norm desc)
+        else newty2 (get_level ty) desc
       in
       save_desc ty desc;
-      ty.desc <- Tsubst ty';
+      Transient_expr.set_desc ty (Tsubst ty');
       ty')
     else ty
   | Tsubst ty -> ty
@@ -147,7 +149,7 @@ let rec typexp_rec s ty =
          ty
   *)
   | _ ->
-    let desc = ty.desc in
+    let desc = get_desc ty in
     save_desc ty desc;
     let tm = row_of_type ty in
     let has_fixed_row =
@@ -155,10 +157,10 @@ let rec typexp_rec s ty =
     in
     (* Make a stub *)
     let ty' = if s.for_saving then newpersty (Tvar None) else newgenvar () in
-    ty.desc <- Tsubst ty';
-    ty'.desc <-
+    Transient_expr.set_desc ty (Tsubst ty');
+    Transient_expr.set_desc ty'
       (if has_fixed_row then
-         match tm.desc with
+         match get_desc tm with
          (* PR#7348 *)
          | Tconstr (Pdot (m, i, pos), tl, _abbrev) ->
            let i' = String.sub i 0 (String.length i - 4) in
@@ -172,7 +174,7 @@ let rec typexp_rec s ty =
            | exception Not_found -> Tconstr (type_path s p, args, ref Mnil)
            | Path _ -> Tconstr (type_path s p, args, ref Mnil)
            | Type_function {params; body} ->
-             (!ctype_apply_env_empty params body args).desc)
+             get_desc (!ctype_apply_env_empty params body args))
          | Tpackage (p, n, tl) ->
            Tpackage (modtype_path s p, n, List.map (typexp_rec s) tl)
          | Tobject t1 -> Tobject (typexp_rec s t1)
@@ -181,34 +183,47 @@ let rec typexp_rec s ty =
            let more = repr row.row_more in
            (* We must substitute in a subtle way *)
            (* Tsubst takes a tuple containing the row var and the variant *)
-           match more.desc with
-           | Tsubst {desc = Ttuple [_; ty2]} ->
+           let already_copied copied =
+             match get_desc copied with
+             | Ttuple [_; _] -> true
+             | _ -> false
+           in
+           match get_desc more with
+           | Tsubst copied when already_copied copied ->
+             let ty2 =
+               match get_desc copied with
+               | Ttuple [_; ty2] -> ty2
+               | _ -> assert false
+             in
              (* This variant type has been already copied *)
-             ty.desc <- Tsubst ty2;
+             Transient_expr.set_desc ty (Tsubst ty2);
              (* avoid Tlink in the new type *)
              Tlink ty2
            | _ -> (
              let dup =
-               s.for_saving || more.level = generic_level || static_row row
+               s.for_saving
+               || get_level more = generic_level
+               || static_row row
                ||
-               match more.desc with
+               match get_desc more with
                | Tconstr _ -> true
                | _ -> false
              in
              (* Various cases for the row variable *)
              let more' =
-               match more.desc with
+               match get_desc more with
                | Tsubst ty -> ty
                | Tconstr _ | Tnil -> typexp_rec s more
                | Tunivar _ | Tvar _ ->
-                 save_desc more more.desc;
-                 if s.for_saving then newpersty (norm more.desc)
-                 else if dup && is_Tvar more then newgenty more.desc
+                 save_desc more (get_desc more);
+                 if s.for_saving then newpersty (norm (get_desc more))
+                 else if dup && is_Tvar more then newgenty (get_desc more)
                  else more
                | _ -> assert false
              in
              (* Register new type first for recursion *)
-             more.desc <- Tsubst (newgenty (Ttuple [more'; ty']));
+             Transient_expr.set_desc more
+               (Tsubst (newgenty (Ttuple [more'; ty'])));
              (* Return a new copy *)
              let row = copy_row (typexp_rec s) true row (not dup) more' in
              match row.row_name with

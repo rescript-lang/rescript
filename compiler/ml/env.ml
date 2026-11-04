@@ -1153,8 +1153,8 @@ let mark_type_path env path =
   with Not_found -> ()
 
 let ty_path t =
-  match repr t with
-  | {desc = Tconstr (path, _, _)} -> path
+  match get_desc (repr t) with
+  | Tconstr (path, _, _) -> path
   | _ -> assert false
 
 let lookup_constructor ?loc lid env =
@@ -1321,8 +1321,9 @@ let find_shadowed_types path env =
 let add_gadt_instance_level lv env =
   {env with gadt_instances = (lv, ref Type_set.empty) :: env.gadt_instances}
 
-let is_Tlink = function
-  | {desc = Tlink _} -> true
+let is_Tlink ty =
+  match get_desc ty with
+  | Tlink _ -> true
   | _ -> false
 
 let gadt_instance_level env t =
@@ -1351,7 +1352,7 @@ let add_gadt_instance_chain env lv t =
     let t = repr t in
     if not (Type_set.mem t !r) then (
       set_typeset r (Type_set.add t !r);
-      match t.desc with
+      match get_desc t with
       | Tconstr (p, _, memo) -> may add_instance (find_expans Private p !memo)
       | _ -> ())
   in
