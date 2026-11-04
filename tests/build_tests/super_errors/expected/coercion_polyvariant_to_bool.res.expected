@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/coercion_polyvariant_to_bool.res[0m:[2m2:16-24[0m
+
+  1 [2m│[0m let p: [#"true"] = #"true"
+  [1;31m2[0m [2m│[0m let b: bool = ([1;31mp :> bool[0m)
+  3 [2m│[0m 
+
+  Type [#"true"] is not a subtype of bool

@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/coercion_string_to_unit.res[0m:[2m1:16-26[0m
+
+  [1;31m1[0m [2m│[0m let u: unit = ([1;31m"a" :> unit[0m)
+  2 [2m│[0m 
+
+  Type string is not a subtype of unit

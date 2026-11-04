@@ -1,0 +1,1 @@
+let s: string = (() :> string)

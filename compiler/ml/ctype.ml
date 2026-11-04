@@ -3698,6 +3698,12 @@ let rec subtype_rec env trace t1 t2 cstrs =
         match
           (extract_concrete_typedecl env t1, extract_concrete_typedecl env t2)
         with
+        | (_, p1, _), (_, p2, _)
+          when Variant_coercion.is_bool_or_unit p1
+               || Variant_coercion.is_bool_or_unit p2 ->
+          (* No other type coerces to or from [bool] or [unit], and the
+             variant errors below would describe them as variants *)
+          (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs
         | ( ( p1,
               _,
               {
@@ -3918,7 +3924,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
           (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
       | Tvariant {row_closed = true; row_fields}, Tconstr (_, [], _)
         when extract_concrete_typedecl_opt env t2
-             |> Variant_coercion.type_is_variant -> (
+             |> Variant_coercion.can_try_coerce_polyvariant_to_variant -> (
         (* TODO(subtype-errors) Polyvariant to variant *)
         match extract_concrete_typedecl env t2 with
         | ( _,

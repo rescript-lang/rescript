@@ -153,6 +153,18 @@ module CoerceVariantBinaryOp = {
   let z = (X :> float) +. (Y :> float) +. 1.5
 }
 
+// [bool] and [unit] coerce to no primitive, since they are not variants at
+// runtime, but a declared variant whose constructors are named like them does
+module CoerceBoolLikeVariant = {
+  type t = False | True
+
+  let t: t = True
+  let s = (t :> string)
+
+  type polyTrue = [#True]
+  let fromPoly = ((#True: polyTrue) :> t)
+}
+
 // A private variant coerces out of itself, but nothing coerces into it from
 // another type
 module PrivateColor: {

@@ -36,13 +36,17 @@ let map_constructors ~(sdecl : Parsetree.type_declaration) ~all_constructors env
    pcd_args = Pcstr_tuple [{ptyp_loc; ptyp_desc = Ptyp_constr (loc, _)}];
   } -> (
     (* This is a variant type spread constructor. Look up its type *)
-    let _, type_decl =
+    let path, type_decl =
       try Typetexp.find_type env ptyp_loc loc.txt
       with _ -> raise (VariantTypeSpreadError (loc.loc, CouldNotFindType))
     in
 
     match type_decl with
     | {type_kind = Type_variant ([], _)} ->
+      raise (VariantTypeSpreadError (loc.loc, InvalidType))
+    | {type_kind = Type_variant _} when Variant_coercion.is_bool_or_unit path ->
+      (* Their constructors would build [true], [false] and [undefined], but
+         would be matched and coerced as the strings of their names *)
       raise (VariantTypeSpreadError (loc.loc, InvalidType))
     | {type_kind = Type_variant (cstrs, _); type_attributes; type_params} ->
       if List.length type_params > 0 then

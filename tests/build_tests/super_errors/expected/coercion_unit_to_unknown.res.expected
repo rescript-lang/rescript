@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/coercion_unit_to_unknown.res[0m:[2m1:19-31[0m
+
+  [1;31m1[0m [2m│[0m let u: unknown = ([1;31m() :> unknown[0m)
+  2 [2m│[0m 
+
+  Type unit is not a subtype of unknown
