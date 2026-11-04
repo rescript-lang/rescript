@@ -91,7 +91,55 @@ let () =
   (* The printer writes the line breaks of a comment it reindents *)
   let formatted = format "let x = 1\n/* a\r\r\n b */\nlet y = 2\n" in
   assert (formatted = "let x = 1\n/* a\n b */\nlet y = 2\n");
-  assert (format (to_crlf formatted) = to_crlf formatted)
+  assert (format (to_crlf formatted) = to_crlf formatted);
+  (* The first line break outside literals and comments gives the line
+     endings, also with no line break or no final one, and after a regex, a
+     JSX closing tag or a division that holds what would otherwise start a
+     literal. The printer writes the line breaks of comments it reindents. *)
+  List.iter
+    (fun (source, expected) ->
+      assert (format source = expected);
+      assert (format expected = expected))
+    [
+      ("let a = 1", "let a = 1\n");
+      ("let a = \"x\r\ny\"", "let a = \"x\r\ny\"\n");
+      ("let a = 1 // c\r", "let a = 1 // c\n");
+      ("let a = \"x\r\ny\"\nlet b = 1", "let a = \"x\r\ny\"\n\nlet b = 1\n");
+      ("let a = \"x\ny\"\r\nlet b = 1", "let a = \"x\ny\"\r\n\r\nlet b = 1\r\n");
+      ("/* a\r\nb */\nlet b = 1\n", "/* a\n b */\nlet b = 1\n");
+      ("/* a\nb */\r\nlet b = 1\r\n", "/* a\r\n b */\r\nlet b = 1\r\n");
+      ( "let a = 1 /* a\r\nb */\nlet b = 1\n",
+        "let a = 1 /* a\n b */\n\nlet b = 1\n" );
+      ( "let t = `${f({a: 1},\r\n 2)}`\nlet x = 1\n",
+        "let t = `${f({a: 1}, 2)}`\r\nlet x = 1\r\n" );
+    ];
+  List.iter
+    (fun source -> assert (format source = source))
+    [
+      "let a = \"x\r\ny\"\n\nlet b = 1\n";
+      "let a = \"x\ny\"\r\n\r\nlet b = 1\r\n";
+      "let c = '\"'\n\nlet s = \"a\r\nb\"\n";
+      "let t = `a${b}c\r\nd`\n\nlet x = 1\n";
+      "let t = `a${b}c\nd`\r\n\r\nlet x = 1\r\n";
+      "let t = `${f({\n    \"a\": `${x}\r\n`,\n  })}\r\n`\n\nlet x = 1\n";
+      "let t = `${switch x {\n  | _ => 1\n  }}\r\n`\n\nlet x = 1\n";
+      "let r = /\"/\n\nlet s = \"a\r\nb\"\n";
+      "let r = (1, /\"/)\n\nlet s = \"a\r\nb\"\n";
+      "let x = a / f(\"/\")\r\nlet y = 2\r\n";
+      "let x = a->f / g(\"/\")\r\nlet y = 2\r\n";
+      "let e = (<a></a>, \"/\")\r\n\r\nlet s = \"a\nb\"\r\n";
+      "let e = <a>{/\"/->f}</a>\r\n\r\nlet s = \"a\nb\"\r\n";
+      "let t = `${/\"/->f}\r\n`\n\nlet x = 1\n";
+      "/** a\r\nb */\nlet x = 1\n";
+      "let e = (\r\n\
+      \  <a />,\r\n\
+      \  <a></a>,\r\n\
+      \  \"x/y\n\
+       z\",\r\n\
+       )\r\n\
+       \r\n\
+       let y = 2\r\n";
+    ]
 
 let () = print_endline "✅ multi printer api tests"
 

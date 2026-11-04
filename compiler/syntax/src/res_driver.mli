@@ -5,6 +5,10 @@ type ('ast, 'diagnostics) parse_result = {
   diagnostics: 'diagnostics;
   invalid: bool;
   comments: Res_comment.t list;
+  newline: string;
+      (* The newline to format the source with: CRLF when its first line break
+         outside literals and comments is CRLF, LF otherwise. The printer
+         copies literals and comments with their bytes unchanged. *)
 }
 
 type 'diagnostics parsing_engine = {

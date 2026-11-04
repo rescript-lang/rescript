@@ -1,6 +1,5 @@
 (* print res files to res syntax *)
 let print_res ~ignore_parse_errors ~is_interface ~filename source =
-  let newline = Res_line_endings.newline source in
   if is_interface then (
     let parse_result =
       Res_driver.parse_interface_from_source ~display_filename:filename ~source
@@ -8,8 +7,9 @@ let print_res ~ignore_parse_errors ~is_interface ~filename source =
     if parse_result.invalid then (
       Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
       if not ignore_parse_errors then raise_notrace Res_driver.Already_reported);
-    Res_printer.print_interface ~width:Res_printer.default_print_width ~newline
-      ~comments:parse_result.comments parse_result.parsetree)
+    Res_printer.print_interface ~width:Res_printer.default_print_width
+      ~newline:parse_result.newline ~comments:parse_result.comments
+      parse_result.parsetree)
   else
     let parse_result =
       Res_driver.parse_implementation_from_source ~display_filename:filename
@@ -19,7 +19,8 @@ let print_res ~ignore_parse_errors ~is_interface ~filename source =
       Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
       if not ignore_parse_errors then raise_notrace Res_driver.Already_reported);
     Res_printer.print_implementation ~width:Res_printer.default_print_width
-      ~newline ~comments:parse_result.comments parse_result.parsetree
+      ~newline:parse_result.newline ~comments:parse_result.comments
+      parse_result.parsetree
 [@@raises Res_driver.Already_reported]
 
 (* print the given file named input to from "language" to res, general interface exposed by the compiler *)

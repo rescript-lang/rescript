@@ -22,6 +22,7 @@ type t = {
       (* current number of utf16 code units since line start *)
   mutable line_offset: int; (* current line offset *)
   mutable lnum: int; (* current line number *)
+  mutable line_break: int;
 }
 
 let position scanner =
@@ -164,6 +165,7 @@ let make ~filename src =
     offset16 = 0;
     line_offset = offset;
     lnum = 1;
+    line_break = -1;
   }
 
 (* generic helpers *)
@@ -173,8 +175,12 @@ let is_whitespace ch =
   | ' ' | '\t' | '\n' | '\r' -> true
   | _ -> false
 
+(* Record the first LF skipped between tokens. Literals and comments consume
+   their own line breaks. *)
 let rec skip_whitespace scanner =
   if is_whitespace scanner.ch then (
+    if scanner.ch = '\n' && scanner.line_break < 0 then
+      scanner.line_break <- scanner.offset;
     next scanner;
     skip_whitespace scanner)
 
