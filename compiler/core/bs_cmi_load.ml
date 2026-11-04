@@ -93,7 +93,14 @@ let load_cmi ~unit_name : Env.Persistent_signature.t option =
   Misc.find_map_in_path_uncap (Config.get_load_path ()) (unit_name ^ ".cmi")
     (fun filename ->
       let path = Compiler_request_state.resolve_path filename in
-      match Build_file_store.read path with
+      (* A build system that starts a request before a dependency has
+         published its interface hands over that interface's contents. *)
+      let contents =
+        match Compiler_request_state.redirect_cmi path with
+        | Some _ as contents -> contents
+        | None -> Build_file_store.read path
+      in
+      match contents with
       | None -> None
       | Some contents ->
         let cmi =

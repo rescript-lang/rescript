@@ -5,6 +5,7 @@ let with_command_runner runner action =
   Fun.protect action ~finally:(fun () -> state.command_runner <- previous)
 
 let command cmdline =
+  Compiler_request_state.before_effect ();
   if !((Clflags.current ()).verbose) then (
     Compiler_request_output.write_stderr "+ ";
     Compiler_request_output.print_stderr cmdline);

@@ -88,6 +88,9 @@ exception Errors
 
 val check_fatal : unit -> unit
 
+val nerrors : unit -> int
+(** Warnings reported as errors since the last {!check_fatal}. *)
+
 val reset_fatal : unit -> unit
 
 val help_warnings : unit -> unit
