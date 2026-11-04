@@ -104,6 +104,12 @@ let CoerceVariantBinaryOp = {
   z: z
 };
 
+let CoerceBoolLikeVariant = {
+  t: "True",
+  s: "True",
+  fromPoly: "True"
+};
+
 let PrivateColor = {
   red: "Red"
 };
@@ -145,6 +151,7 @@ export {
   CoerceFromBigintToVariant,
   CoerceFromPolyvariantToVariant,
   CoerceVariantBinaryOp,
+  CoerceBoolLikeVariant,
   PrivateColor,
   colorToPlain,
   colorToString,

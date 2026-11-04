@@ -19,6 +19,12 @@ type variant_runtime_representation_issue =
       expected_typename: Path.t;
     }
 
+(* [bool] and [unit] are declared as variants, but their values are [true],
+   [false] and [undefined] at runtime, not what the constructors of a declared
+   variant compile to. No variant coercion or spread applies to them. *)
+let is_bool_or_unit (path : Path.t) =
+  Path.same path Predef.path_bool || Path.same path Predef.path_unit
+
 (* Right now we only allow coercing to primitives string/int/float *)
 let can_coerce_primitive (path : Path.t) =
   Path.same path Predef.path_string
@@ -122,9 +128,7 @@ let can_try_coerce_variant_to_primitive
    type_params = [];
    type_representation;
   }
-    when not (Path.same p Predef.path_bool) ->
-    (* bool is represented as a variant internally, so we need to account for that *)
-    (* TODO(subtype-errors) Report about bool? *)
+    when not (is_bool_or_unit p) ->
     let layout = Variant_runtime.get_layout layout_ref in
     Some
       ( p,
@@ -268,7 +272,8 @@ let can_coerce_polyvariant_to_variant ~row_fields ~variant_constructors ~unboxed
   then Ok ()
   else Error `Unknown
 
-let type_is_variant (typ : (Path.t * Path.t * Types.type_declaration) option) =
+let can_try_coerce_polyvariant_to_variant
+    (typ : (Path.t * Path.t * Types.type_declaration) option) =
   match typ with
-  | Some (_, _, {type_kind = Type_variant _; _}) -> true
+  | Some (_, p, {type_kind = Type_variant _}) -> not (is_bool_or_unit p)
   | _ -> false

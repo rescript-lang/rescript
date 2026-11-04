@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/coercion_polyvariant_to_unit.res[0m:[2m2:16-24[0m
+
+  1 [2m│[0m let p: [#"()"] = #"()"
+  [1;31m2[0m [2m│[0m let u: unit = ([1;31mp :> unit[0m)
+  3 [2m│[0m 
+
+  Type [#"()"] is not a subtype of unit
