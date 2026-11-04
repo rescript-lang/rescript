@@ -28,6 +28,7 @@
   compiler_info_tests
   compiler_process_tests
   compiler_scheduler_tests
+  compiler_speculation_tests
   config_tests
   file_util_tests
   format_tests
@@ -35,6 +36,7 @@
   output_tests
   package_metadata_tests
   platform_windows
+  process_speculation_tests
   project_context_tests
   source_tests
   test_support

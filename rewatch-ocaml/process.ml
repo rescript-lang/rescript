@@ -10,6 +10,7 @@ type job = Child.job = {program: string; args: string list; cwd: string}
 type task_kind =
   | External of {job: job; env: Spawn.Env.t option}
   | Concurrent of {run: unit -> result; cancel: unit -> unit}
+  | Adopt_speculation
 
 type task = {kind: task_kind; on_result: result -> result}
 
@@ -42,19 +43,66 @@ let concurrent_task ~cancel ?(on_result = fun result -> result) run =
 let map_result task map =
   {task with on_result = (fun result -> map (task.on_result result))}
 
+let adopt_speculation = {kind = Adopt_speculation; on_result = Fun.id}
+
+(* Messages from tasks to the domain that schedules a dependency graph. The
+   notifier is attached only while a graph runs; a message posted outside that
+   window waits for the next drain or is dropped with the mailbox. *)
+type mailbox = {
+  mailbox_mutex: Mutex.t;
+  messages: (unit -> unit) Queue.t;
+  mutable attached: Child.completion_notifier option;
+}
+
+let create_mailbox () =
+  {mailbox_mutex = Mutex.create (); messages = Queue.create (); attached = None}
+
+let post mailbox message =
+  let notifier =
+    Child.with_lock mailbox.mailbox_mutex (fun () ->
+        Queue.add message mailbox.messages;
+        mailbox.attached)
+  in
+  Option.iter Child.notify_completion notifier
+
+let take_messages mailbox =
+  Child.with_lock mailbox.mailbox_mutex (fun () ->
+      let messages = List.of_seq (Queue.to_seq mailbox.messages) in
+      Queue.clear mailbox.messages;
+      messages)
+
+let with_attached_mailbox mailbox notifier action =
+  match mailbox with
+  | None -> action ()
+  | Some mailbox ->
+    Child.with_lock mailbox.mailbox_mutex (fun () ->
+        mailbox.attached <- Some notifier);
+    Fun.protect action ~finally:(fun () ->
+        Child.with_lock mailbox.mailbox_mutex (fun () ->
+            mailbox.attached <- None))
+
+type 'a speculation = {
+  mailbox: mailbox;
+  candidates: unit -> string list;
+  start: 'a -> task option;
+  abandon: 'a -> unit;
+}
+
 type 'a work = {key: string; dependencies: string list; value: 'a}
 type failure_action =
   | Abort_immediately
   | Stop_new_work
   | Continue_independent_work
 
+(* Higher priority first, then by key. *)
+let compare_ready (first_priority, first_key) (second_priority, second_key) =
+  let by_priority = compare second_priority first_priority in
+  if by_priority <> 0 then by_priority else String.compare first_key second_key
+
 module Work_ready = Set.Make (struct
   type t = int * string
 
-  let compare (first_priority, first_key) (second_priority, second_key) =
-    let by_priority = compare second_priority first_priority in
-    if by_priority <> 0 then by_priority
-    else String.compare first_key second_key
+  let compare = compare_ready
 end)
 
 type cancellation_state =
@@ -137,6 +185,10 @@ let run_concurrent_task pool payload task run cancel =
 
 let run_pool_task pool payload task =
   match task.kind with
+  | Adopt_speculation ->
+    complete_pool_task pool
+      (Task_failed
+         (payload, Invalid_argument "a speculation cannot run as a new task"))
   | Concurrent {run; cancel} -> run_concurrent_task pool payload task run cancel
   | External {job; env} -> (
     match
@@ -277,17 +329,32 @@ let submit_pool_task pool payload task =
       Queue.add (payload, task) pool.queued;
       Condition.signal pool.work_available)
 
-let await_pool_completion ~poll pool =
+type task_origin = Regular | Speculative
+
+type 'a speculation_state =
+  | Speculation_running
+  | Speculation_adopted
+  | Speculation_abandoned
+  | Speculation_held of 'a pool_completion
+
+type 'a pool_event =
+  | Pool_completion of 'a pool_completion
+  | Mailbox_messages of (unit -> unit) list
+
+let await_pool_event ~poll ?mailbox pool =
   let rec wait generation =
     match
       Child.with_lock pool.mutex (fun () ->
           if Queue.is_empty pool.completed_tasks then None
           else Some (Queue.take pool.completed_tasks))
     with
-    | Some completion -> completion
-    | None ->
-      poll ();
-      Child.await_notification pool.notifier generation |> wait
+    | Some completion -> Pool_completion completion
+    | None -> (
+      match Option.map take_messages mailbox with
+      | Some (_ :: _ as messages) -> Mailbox_messages messages
+      | Some [] | None ->
+        poll ();
+        Child.await_notification pool.notifier generation |> wait)
   in
   Child.notifier_generation pool.notifier |> wait
 
@@ -372,8 +439,8 @@ let with_worker_pool ~max_jobs notifier action =
     in
     raise exn
 
-let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
-    works ~next =
+let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll ?speculation
+    notifier works ~next =
   let graph =
     Graph.create_index works
       ~name:(fun work -> work.key)
@@ -423,9 +490,28 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
         Hashtbl.replace remaining_dependents dependency remaining;
         if remaining = 0 then Queue.add dependency leaves)
   done;
+  (* A speculation is a work's first task, started before its dependencies
+     completed. It counts against [max_jobs] while it runs, but only an adopted
+     speculation's result advances the graph. *)
+  let speculations = Hashtbl.create 16 in
+  (* A work speculates at most once: an abandoned speculation is not retried,
+     so abandoning always makes progress. *)
+  let speculated = Hashtbl.create 16 in
+  let unadopted_in_flight = ref 0 in
+  let adopted_completions = Queue.create () in
+  let has_live_speculation key =
+    match Hashtbl.find_opt speculations key with
+    | Some (Speculation_running | Speculation_held _) -> true
+    | Some (Speculation_adopted | Speculation_abandoned) | None -> false
+  in
   let ready = ref Work_ready.empty in
+  (* Ready works with a live speculation: adopting one takes no new job slot. *)
+  let adoptable = Queue.create () in
   let add_ready work =
-    ready := Work_ready.add (Hashtbl.find priorities work.key, work.key) !ready
+    if has_live_speculation work.key then Queue.add work adoptable
+    else
+      ready :=
+        Work_ready.add (Hashtbl.find priorities work.key, work.key) !ready
   in
   List.iter
     (fun work -> if Hashtbl.find pending work.key = 0 then add_ready work)
@@ -433,13 +519,55 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
   let in_flight = ref 0 in
   let stopped = ref false in
   let errors = ref [] in
+  let abandon_one work =
+    match (Hashtbl.find_opt speculations work.key, speculation) with
+    | Some Speculation_running, Some speculation ->
+      Hashtbl.replace speculations work.key Speculation_abandoned;
+      speculation.abandon work.value
+    | Some (Speculation_held _), Some speculation ->
+      Hashtbl.remove speculations work.key;
+      speculation.abandon work.value
+    | (Some (Speculation_adopted | Speculation_abandoned) | None), _
+    | Some (Speculation_running | Speculation_held _), None ->
+      ()
+  in
+  (* A dependent's speculation may have read what this work published before
+     completing, so it goes too. *)
+  let abandon_dependent_speculations work =
+    if Hashtbl.length speculations > 0 then
+      let visited = Hashtbl.create 16 in
+      let rec visit key =
+        Graph.dependents graph key
+        |> List.iter (fun dependent ->
+            if not (Hashtbl.mem visited dependent) then (
+              Hashtbl.add visited dependent ();
+              abandon_one (Graph.find_node graph dependent);
+              visit dependent))
+      in
+      visit work.key
+  in
+  let abandon_speculation work =
+    match Hashtbl.find_opt speculations work.key with
+    | Some (Speculation_running | Speculation_held _) ->
+      abandon_one work;
+      abandon_dependent_speculations work
+    | Some (Speculation_adopted | Speculation_abandoned) | None -> ()
+  in
+  let abandon_all_speculations () =
+    Hashtbl.fold (fun key _ keys -> key :: keys) speculations []
+    |> List.sort String.compare
+    |> List.iter (fun key -> abandon_one (Graph.find_node graph key))
+  in
   let record_error work exn =
     match on_failure exn with
     | Abort_immediately -> raise exn
     | Stop_new_work ->
       stopped := true;
-      errors := (work.key, exn) :: !errors
-    | Continue_independent_work -> errors := (work.key, exn) :: !errors
+      errors := (work.key, exn) :: !errors;
+      abandon_all_speculations ()
+    | Continue_independent_work ->
+      errors := (work.key, exn) :: !errors;
+      abandon_dependent_speculations work
   in
   let complete work =
     Graph.dependents graph work.key
@@ -448,29 +576,134 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
         Hashtbl.replace pending dependent_key remaining;
         if remaining = 0 then add_ready (Graph.find_node graph dependent_key))
   in
+  let submit pool work origin task =
+    submit_pool_task pool (work, origin) task;
+    incr in_flight
+  in
+  let adopt work =
+    match Hashtbl.find_opt speculations work.key with
+    | Some Speculation_running ->
+      Hashtbl.replace speculations work.key Speculation_adopted;
+      decr unadopted_in_flight
+    | Some (Speculation_held completion) ->
+      Hashtbl.remove speculations work.key;
+      Queue.add completion adopted_completions
+    | Some (Speculation_adopted | Speculation_abandoned) | None ->
+      invalid_arg ("no speculation to adopt for " ^ work.key)
+  in
+  let start pool work =
+    try
+      match next work.value None with
+      | None ->
+        abandon_speculation work;
+        complete work
+      | Some {kind = Adopt_speculation; _} -> adopt work
+      | Some task ->
+        abandon_speculation work;
+        submit pool work Regular task
+    with exn ->
+      abandon_speculation work;
+      record_error work exn
+  in
+  let start_speculations pool =
+    match speculation with
+    | None -> ()
+    | Some speculation ->
+      if (not !stopped) && !in_flight < max_jobs then
+        speculation.candidates ()
+        |> List.sort_uniq String.compare
+        |> List.filter_map (fun key ->
+            match Hashtbl.find_opt pending key with
+            | Some remaining
+              when remaining > 0 && not (Hashtbl.mem speculated key) ->
+              Some (Hashtbl.find priorities key, key)
+            | Some _ | None -> None)
+        |> List.sort compare_ready
+        |> List.iter (fun (_, key) ->
+            if !in_flight < max_jobs then
+              let work = Graph.find_node graph key in
+              match speculation.start work.value with
+              | None -> ()
+              | Some task ->
+                Hashtbl.replace speculations key Speculation_running;
+                Hashtbl.replace speculated key ();
+                incr unadopted_in_flight;
+                submit pool work Speculative task)
+  in
   let rec fill pool =
     (* Synchronous tasks and queued domain completions can keep the scheduler
        from reaching the wait path's poll. Check before admitting more work so
        an interrupt stops the next compiler request. *)
     poll ();
-    if (not !stopped) && !in_flight < max_jobs then
-      match Work_ready.min_elt_opt !ready with
-      | None -> ()
-      | Some ((_, key) as ready_key) ->
-        ready := Work_ready.remove ready_key !ready;
-        let work = Graph.find_node graph key in
-        (try
-           match next work.value None with
-           | None -> complete work
-           | Some task ->
-             submit_pool_task pool work task;
-             incr in_flight
-         with exn -> record_error work exn);
-        fill pool
+    if not !stopped then (
+      while not (Queue.is_empty adoptable) do
+        let work = Queue.take adoptable in
+        (* A speculation abandoned since its work became ready: the work
+           waits for a slot like any other. *)
+        if has_live_speculation work.key then start pool work
+        else add_ready work
+      done;
+      (* An adoption can fail the graph; a result adopted from a finished
+         speculation is processed before more work is admitted, so its next
+         task is queued ahead of dependents that may wait for it. *)
+      if
+        (not !stopped)
+        && Queue.is_empty adopted_completions
+        && !in_flight < max_jobs
+      then
+        match Work_ready.min_elt_opt !ready with
+        | None -> start_speculations pool
+        | Some ((_, key) as ready_key) ->
+          ready := Work_ready.remove ready_key !ready;
+          start pool (Graph.find_node graph key);
+          fill pool)
+  in
+  let process_completion pool = function
+    | Task_failed (work, exn) -> record_error work exn
+    | Task_completed (work, result) -> (
+      try
+        match next work.value (Some result) with
+        | Some task -> submit pool work Regular task
+        | None -> complete work
+      with exn -> record_error work exn)
+  in
+  let receive pool completion =
+    decr in_flight;
+    let (work, origin), completion =
+      match completion with
+      | Task_failed ((work, origin), exn) ->
+        ((work, origin), Task_failed (work, exn))
+      | Task_completed ((work, origin), result) ->
+        ((work, origin), Task_completed (work, result))
+    in
+    match origin with
+    | Regular -> process_completion pool completion
+    | Speculative -> (
+      match Hashtbl.find_opt speculations work.key with
+      | Some Speculation_adopted ->
+        Hashtbl.remove speculations work.key;
+        process_completion pool completion
+      | Some Speculation_abandoned ->
+        Hashtbl.remove speculations work.key;
+        decr unadopted_in_flight
+      | Some Speculation_running ->
+        (* The task finished before its work was ready. Its result is kept
+           until the work is started or the speculation abandoned. A compiler
+           request waits for adoption before it returns, so it only gets here
+           by failing before its first gate. *)
+        decr unadopted_in_flight;
+        Hashtbl.replace speculations work.key (Speculation_held completion)
+      | Some (Speculation_held _) | None ->
+        invalid_arg ("unexpected speculation result for " ^ work.key))
   in
   let rec schedule pool =
     fill pool;
-    if !in_flight = 0 then
+    if not (Queue.is_empty adopted_completions) then (
+      process_completion pool (Queue.take adopted_completions);
+      schedule pool)
+    else if !in_flight = 0 then (
+      (* Speculations that finished but were never adopted. *)
+      abandon_all_speculations ();
       match
         !errors
         |> List.sort (fun (first, _) (second, _) -> String.compare first second)
@@ -483,36 +716,42 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
             (fun _ count blocked -> blocked || count > 0)
             pending false
         then invalid_arg "dependency graph contains a cycle"
-        else ()
-    else
-      let completion = await_pool_completion ~poll pool in
-      decr in_flight;
-      (match completion with
-      | Task_failed (work, exn) -> record_error work exn
-      | Task_completed (work, result) -> (
-        try
-          match next work.value (Some result) with
-          | Some task ->
-            submit_pool_task pool work task;
-            incr in_flight
-          | None -> complete work
-        with exn -> record_error work exn));
-      schedule pool
+        else ())
+    else (
+      (* Only completed work makes a speculation's work ready. When nothing
+         else runs, the speculations can never be adopted. *)
+      if !in_flight = !unadopted_in_flight then abandon_all_speculations ();
+      (match
+         await_pool_event ~poll
+           ?mailbox:
+             (Option.map (fun speculation -> speculation.mailbox) speculation)
+           pool
+       with
+      | Pool_completion completion -> receive pool completion
+      | Mailbox_messages messages ->
+        List.iter (fun message -> message ()) messages);
+      schedule pool)
   in
-  with_worker_pool ~max_jobs:(min max_jobs count) notifier schedule
+  let run pool =
+    with_attached_mailbox
+      (Option.map (fun speculation -> speculation.mailbox) speculation)
+      notifier
+      (fun () -> schedule pool)
+  in
+  with_worker_pool ~max_jobs:(min max_jobs count) notifier run
 
 let run_dependency_graph ?(max_jobs = default_max_jobs)
     ?(on_failure =
       function
       | Interrupted _ -> Abort_immediately
-      | _ -> Stop_new_work) ?poll works ~next =
+      | _ -> Stop_new_work) ?poll ?speculation works ~next =
   if max_jobs < 1 then raise (Error "max_jobs must be at least one");
   match works with
   | [] -> ()
   | _ ->
     with_completion_notifier ~poll (fun ~poll notifier ->
-        run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
-          works ~next)
+        run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll
+          ?speculation notifier works ~next)
 
 let run_tasks ?(max_jobs = default_max_jobs) ?poll ?(on_complete = fun _ -> ())
     tasks =

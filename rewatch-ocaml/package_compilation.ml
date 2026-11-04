@@ -74,14 +74,14 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           File_util.ensure_dir (Filename.dirname output))
         config.package_specs
     in
-    let compile_process module_ ~source_kind path =
+    let compile_process ~hooks module_ ~source_kind path =
       Compiler_process.compile_request ~build_dir ~config
         ~common_args:
           (if module_.Source.is_dev then
              prepared_package.development_common_args
            else prepared_package.regular_common_args)
         module_ ~source_kind path
-      |> Compiler_process.task
+      |> Compiler_process.task ~hooks
     in
     let record_published_outputs ~source_kind path =
       match source_kind with
@@ -118,8 +118,8 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
               Compiler_scheduler.create ~key ~dependencies:state.dependencies
                 ~source:module_ ~state ~cmi_path
                 ~prepare:(fun () -> prepare_outputs module_)
-                ~compile:(fun ~source_kind path ->
-                  compile_process module_ ~source_kind path)
+                ~compile:(fun ~hooks ~source_kind path ->
+                  compile_process ~hooks module_ ~source_kind path)
                 ~publish:(fun ~source_kind path result ->
                   Compiler_process.publish ~build_dir ~ocaml_dir ~is_local
                     ~config

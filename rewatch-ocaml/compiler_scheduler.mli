@@ -17,6 +17,22 @@ type namespace_task = {
 }
 type post_build_task = {output: string; task: Process.task}
 
+(* Callbacks for one compile request. [gate] holds back a request started
+   before its dependencies completed; [on_interface_computed] receives the
+   path and the contents of the .cmi an implementation is about to write, once
+   dependents may type check against it; [cmi_redirects] gives the bytes of
+   not yet published .cmi files, by published path, that such a request reads
+   instead of the files; [cmi_directories] are the directories in which the
+   build publishes interfaces. *)
+type compile_hooks = {
+  gate: Speculation_gate.t option;
+  on_interface_computed: (string -> string -> unit) option;
+  cmi_redirects: (string * string) list;
+  cmi_directories: string list;
+}
+
+val no_compile_hooks : compile_hooks
+
 (* Publication can fail after the CMI was copied. The partial outcome is kept
     so dependents are still invalidated even though the module itself remains
     dirty for retry. *)
@@ -36,7 +52,11 @@ val create :
   state:Build_state.module_ ->
   cmi_path:string ->
   prepare:(unit -> unit) ->
-  compile:(source_kind:Source.source_kind -> string -> Process.task) ->
+  compile:
+    (hooks:compile_hooks ->
+    source_kind:Source.source_kind ->
+    string ->
+    Process.task) ->
   publish:
     (source_kind:Source.source_kind ->
     string ->

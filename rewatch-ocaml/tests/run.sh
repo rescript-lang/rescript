@@ -2339,3 +2339,5 @@ test ! -f "$root/lib/build.lock"
 cp "$failure/Broken.fixed" "$failure/src/Broken.res"
 "$port" build "$failure"
 test -f "$failure/src/Broken.js"
+
+sh "$root/rewatch-ocaml/tests/check_pipelining.sh" "$port"
