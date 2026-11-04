@@ -21,13 +21,13 @@ let x = {
   contents: 3
 };
 
-while ((() => {
-    let y = 3;
-    console.log(x.contents.toString());
-    y = y + 1 | 0;
-    x.contents = x.contents + 1 | 0;
-    return (fib(x.contents) + fib(x.contents) | 0) < 20;
-  })()) {
+while (true) {
+  let y = 3;
+  console.log(x.contents.toString());
+  y = y + 1 | 0;
+  if (!(x.contents = x.contents + 1 | 0, (fib(x.contents) + fib(x.contents) | 0) < 20)) {
+    break;
+  }
   console.log((3).toString());
 };
 

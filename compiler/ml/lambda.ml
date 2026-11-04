@@ -727,6 +727,49 @@ let rec is_eta_conversion_exn params inner_args outer_args : t list =
   | [], [], [] -> []
   | _, _, _ -> raise_notrace Not_simple_form
 
+let may_skip_operands (primitive : primitive) =
+  match primitive with
+  | Psequand | Psequor -> true
+  | Pdebugger | Ptypeof | Psome | Psome_not_nest | Pmakeblock _ | Pfield _
+  | Psetfield _ | Pduprecord | Precord_rest _ | Pjs_call _ | Pjsx _
+  | Pjs_object_create _ | Pjs_object_get _ | Pjs_object_set _ | Praise
+  | Pobjcomp _ | Pobjorder | Pobjmin | Pobjmax | Pobjtag | Pobjsize | Pnot
+  | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax | Pnegint | Paddint | Psubint
+  | Pmulint | Pdivint | Pmodint | Ppowint | Pandint | Porint | Pxorint | Pnotint
+  | Plslint | Plsrint | Pasrint | Pintcomp _ | Pintorder | Pintmin | Pintmax
+  | Pintoffloat | Pfloatofint | Pnegfloat | Pmodfloat | Paddfloat | Psubfloat
+  | Pmulfloat | Pdivfloat | Ppowfloat | Pfloatcomp _ | Pfloatorder | Pfloatmin
+  | Pfloatmax | Pnegbigint | Paddbigint | Psubbigint | Ppowbigint | Pmulbigint
+  | Pdivbigint | Pmodbigint | Pandbigint | Porbigint | Pxorbigint | Pnotbigint
+  | Plslbigint | Pasrbigint | Pbigintcomp _ | Pbigintorder | Pbigintmin
+  | Pbigintmax | Pstringlength | Pstringrefu | Pstringrefs | Pstringcomp _
+  | Pstringorder | Pstringmin | Pstringmax | Pstringadd | Pmakearray
+  | Parraylength | Parrayrefu | Parraysetu | Parrayrefs | Pmakelist | Pmakedict
+  | Pdict_has | Pawait | Pimport _ | Pinit_mod | Pupdate_mod | Phash
+  | Phash_mixint | Phash_mixstring | Phash_finalmix | Pis_null_undefined
+  | Pcreate_extension _ | Pjscomp _ | Pnull_to_opt | Pnull_undefined_to_opt
+  | Pis_null | Pis_undefined | Pis_not_none | Pval_from_option
+  | Pval_from_option_not_nest | Pis_poly_var_block | Praw_js_code _
+  | Pjs_fn_method | Ptagged_template _ | Ptemplate _ | Pdict_spread
+  | Parray_spread | Plist_spread ->
+    false
+
+(* Whether [primitive] on [args], the arguments of a call, evaluates them as
+   the call does. [&&] and [||] may skip their right operand, so the argument
+   for it must be one whose evaluation does nothing. *)
+let evaluates_args_as_call (primitive : primitive) (args : t list) =
+  (not (may_skip_operands primitive))
+  ||
+  match args with
+  | [] -> true
+  | _ :: rest ->
+    List.for_all
+      (fun (arg : t) ->
+        match arg with
+        | Lconst _ | Lvar _ -> true
+        | _ -> false)
+      rest
+
 let rec eq_approx (l1 : t) (l2 : t) =
   match l1 with
   | Lglobal_module i1 -> (
@@ -1104,10 +1147,10 @@ let rec apply fn args (ap_loc : Location.t) : t =
               primitive =
                 ( Pnull_to_opt | Pnull_undefined_to_opt | Pis_null
                 | Pis_null_undefined | Ptypeof ) as wrap;
-              args =
-                [Lprim ({primitive = _; args = inner_args} as primitive_call)];
+              args = [Lprim ({primitive; args = inner_args} as primitive_call)];
             };
-      } -> (
+      }
+    when evaluates_args_as_call primitive args -> (
     match is_eta_conversion_exn params inner_args args with
     | args ->
       prim ~primitive:wrap
@@ -1116,10 +1159,8 @@ let rec apply fn args (ap_loc : Location.t) : t =
     | exception Not_simple_form -> Lapply {ap_func = fn; ap_args = args; ap_loc}
     )
   | Lfunction
-      {
-        params;
-        body = Lprim ({primitive = _; args = inner_args} as primitive_call);
-      } -> (
+      {params; body = Lprim ({primitive; args = inner_args} as primitive_call)}
+    when evaluates_args_as_call primitive args -> (
     match is_eta_conversion_exn params inner_args args with
     | args -> prim ~primitive:primitive_call.primitive ~args ap_loc
     | exception _ -> Lapply {ap_func = fn; ap_args = args; ap_loc})
@@ -1128,9 +1169,10 @@ let rec apply fn args (ap_loc : Location.t) : t =
         params;
         body =
           Lsequence
-            ( Lprim ({primitive = _; args = inner_args} as primitive_call),
+            ( Lprim ({primitive; args = inner_args} as primitive_call),
               (Lconst _ as const) );
-      } -> (
+      }
+    when evaluates_args_as_call primitive args -> (
     match is_eta_conversion_exn params inner_args args with
     | args -> seq (prim ~primitive:primitive_call.primitive ~args ap_loc) const
     | exception _ ->

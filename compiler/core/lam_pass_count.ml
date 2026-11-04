@@ -41,7 +41,7 @@ let absorb_info (x : used_info) (y : used_info) =
    locally let-bound variables and is reset when crossing functions and loops,
    so uses of outer bindings are marked as captured. The optimizer uses the
    captured flag to restrict inlining without inflating the occurrence count. *)
-let collect_occurs lam : occ_tbl =
+let collect_occurs ~assignable lam : occ_tbl =
   let occ : occ_tbl = Hash_ident.create 16 in
 
   (* Current use count of a variable. *)
@@ -138,7 +138,8 @@ let collect_occurs lam : occ_tbl =
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when Ext_list.same_length params args
            && Lambda.lfunction_can_be_inlined lfunction ->
-      count bv (Lam_beta_reduce.no_names_beta_reduce params body args)
+      count bv
+        (Lam_beta_reduce.no_names_beta_reduce ~assignable params body args)
     | Lapply {ap_func = l1; ap_args = ll; _} ->
       count bv l1;
       List.iter (count bv) ll
