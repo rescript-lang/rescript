@@ -7,4 +7,4 @@
   [1;31m4[0m [2m│[0m   [1;31m| Tuple((int, int))[0m
   5 [2m│[0m 
 
-  This untagged variant definition is invalid: At most one case can be an array or tuple type.
+  This untagged variant definition is invalid: At most one case can be an array, a tuple or a record represented as an array.

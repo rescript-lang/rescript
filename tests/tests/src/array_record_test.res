@@ -88,7 +88,27 @@ let split = (r: source) => {
   (s0, rest)
 }
 
+// As an untagged payload, an array record is told apart as an array
+type point = {@as("0") px?: int, @as("1") py?: int}
+type named = {name: string}
+
+@unboxed type payload = Point(point) | Named(named) | Text(string)
+
+let classify = (p: payload) =>
+  switch p {
+  | Point(_) => "point"
+  | Named(_) => "named"
+  | Text(_) => "text"
+  }
+
 describe(__MODULE__, () => {
+  test("an untagged array record payload dispatches as an array", () => {
+    eq(__LOC__, classify(Point({px: 1, py: 2})), "point")
+    eq(__LOC__, classify(Point({})), "point")
+    eq(__LOC__, classify(Named({name: "n"})), "named")
+    eq(__LOC__, classify(Text("t")), "text")
+  })
+
   test("spread over a record with an optional field is an array", () => {
     let r = updateOptional({a: 1, b: 0})
     ok(__LOC__, isArray(r))

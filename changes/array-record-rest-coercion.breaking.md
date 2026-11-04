@@ -1,1 +1,1 @@
-- A record rest pattern whose rest type is a record with the runtime names `"0"`, `"1"`, …, and a coercion of another record to such a record, are now errors, as they produced an object where the type promises a JavaScript array.
+- A record rest pattern whose rest type is a record with the runtime names `"0"`, `"1"`, …, a coercion of another record to such a record, and an untagged variant with such a record and an array or tuple case are now errors, as they produced an object where the type promises a JavaScript array, or matched the wrong case.
