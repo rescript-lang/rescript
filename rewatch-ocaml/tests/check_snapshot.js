@@ -1,7 +1,8 @@
 // Usage: node check_snapshot.js SNAPSHOT ACTUAL [ROOT_NAME=PATH...]
 //
 // Normalizes ACTUAL and compares it with the checked-in SNAPSHOT. Every
-// spelling of a root path (with forward or backward slashes) becomes <ROOT_NAME>,
+// spelling of a root path (with forward, backward or escaped backward slashes,
+// as in a quoted string) becomes <ROOT_NAME>,
 // CRLF becomes LF, and backslashes become slashes, so one snapshot serves Unix
 // and Windows. With UPDATE_SNAPSHOTS=1 the snapshot is written instead.
 import fs from "node:fs";
@@ -23,12 +24,16 @@ const replacements = roots
   .flatMap(({ name, spelling }) => [
     { name, spelling },
     { name, spelling: spelling.replaceAll("/", "\\") },
+    { name, spelling: spelling.replaceAll("/", "\\\\") },
   ])
   .sort((a, b) => b.spelling.length - a.spelling.length);
 for (const { name, spelling } of replacements) {
   text = text.split(spelling).join(`<${name}>`);
 }
-text = text.replaceAll("\r\n", "\n").replaceAll("\\", "/");
+text = text
+  .replaceAll("\r\n", "\n")
+  .replaceAll("\\\\", "/")
+  .replaceAll("\\", "/");
 
 if (process.env.UPDATE_SNAPSHOTS === "1") {
   fs.mkdirSync(path.dirname(snapshot), { recursive: true });
