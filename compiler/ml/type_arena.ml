@@ -306,7 +306,12 @@ module Import = struct
       let t = Store.newty_in c.store Tnil ~level:ty.B.level ~id:ty.B.id in
       Type_hash.add c.nodes ty t;
       c.count <- c.count + 1;
-      Transient_expr.set_desc t (desc c ty.B.desc);
+      (match ty.B.desc with
+      | B.Tconstr (p, l, {contents = B.Mnil}) ->
+        (* An empty abbreviation cell is a cache with nothing in it: the
+           node gets its own when one is asked for. *)
+        set_constr t p (type_list c l)
+      | d -> Transient_expr.set_desc t (desc c d));
       t
 
   and type_list c l = list_if c c.lists (type_expr c) l
@@ -797,8 +802,54 @@ module Export = struct
     | None ->
       let ty = {B.desc = B.Tnil; level = get_level t; id = get_id t} in
       Node_hash.add c.nodes t ty;
-      ty.B.desc <- desc c (get_desc t);
+      ty.B.desc <- node_desc c t;
       ty
+
+  (* [desc c (get_desc t)], reading the encoded descriptors without a view.
+     Their views are fresh blocks, which no memo table finds again, so
+     building the boxed descriptor directly is the same. A [Tconstr] whose
+     abbreviation cell was never asked for has a cell holding [Mnil] that
+     nothing else shares. *)
+  and node_desc c t : B.type_desc =
+    match kind t with
+    | Kconstr when not (has_abbrev_cell t) ->
+      B.Tconstr (constr_path t, constr_args c t 0 (constr_length t), ref B.Mnil)
+    | Karrow ->
+      let args = arrow_args c t 0 (arrow_arity t) in
+      B.Tarrow (args, type_expr c (arrow_ret t))
+    | Ktuple -> B.Ttuple (tuple_elems c t 0 (tuple_length t))
+    | Knil -> B.Tnil
+    | Kobject -> B.Tobject (type_expr c (object_fields t))
+    | Kpoly ->
+      let body = type_expr c (poly_body t) in
+      B.Tpoly (body, poly_vars c t 0 (poly_length t))
+    | _ -> desc c (get_desc t)
+
+  and constr_args c t i n =
+    if i = n then []
+    else
+      let x = type_expr c (constr_arg t i) in
+      x :: constr_args c t (i + 1) n
+
+  and tuple_elems c t i n =
+    if i = n then []
+    else
+      let x = type_expr c (tuple_elem t i) in
+      x :: tuple_elems c t (i + 1) n
+
+  and poly_vars c t i n =
+    if i = n then []
+    else
+      let x = type_expr c (poly_var t i) in
+      x :: poly_vars c t (i + 1) n
+
+  and arrow_args c t i n : B.arg list =
+    if i = n then []
+    else
+      let x : B.arg =
+        {lbl = arrow_label t i; typ = type_expr c (arrow_arg t i)}
+      in
+      x :: arrow_args c t (i + 1) n
 
   and type_list c l = list_if c c.lists (type_expr c) l
 

@@ -342,18 +342,24 @@ val iter_children : (type_expr -> unit) -> type_expr -> unit
 
 val copy_into :
   keep_names:bool ->
-  fvar:(type_expr -> type_expr) ->
+  norm:(type_expr -> type_expr) ->
   dst:type_expr ->
   type_expr ->
   (type_expr -> type_expr) ->
   unit
-(** [copy_into ~keep_names ~fvar ~dst src f] gives [dst] the descriptor
+(** [copy_into ~keep_names ~norm ~dst src f] gives [dst] the descriptor
     [Btype.copy_type_desc ~keep_names f] gives for [src]'s, evaluating [f] in
-    the same order ([fvar] maps a [Tpoly]'s variables). [src] must not be
-    [Kboxed], nor a link. Unlogged. *)
+    the same order ([norm (f v)] for a [Tpoly]'s variables). [src] must not
+    be [Kboxed]; its link or copy mark is ignored. Unlogged. *)
 
 val new_constr : level:int -> id:int -> Path.t -> type_expr array -> type_expr
 (** A new node [Tconstr (p, args, ref Mnil)] in the current store. *)
+
+val set_constr_args : type_expr -> Path.t -> type_expr array -> unit
+(** As {!set_constr}, with the arguments in an array. *)
+
+val has_abbrev_cell : type_expr -> bool
+(** Whether {!abbrev_cell} was asked for (or the node was given one). *)
 
 val set_constr : type_expr -> Path.t -> type_expr list -> unit
 (** Unlogged: [Transient_expr.set_desc t (Tconstr (p, args, ref Mnil))]

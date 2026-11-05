@@ -621,39 +621,51 @@ let iter_children f t =
       done
     | _ -> invalid_arg "Types.iter_children: boxed descriptor"
 
+(* Map the [n] pool words of [ss] at [start] through [f] into a new slice of
+   [ds]; returns the slice's start. [f] may allocate nodes (and pool words):
+   the slice is reserved first, and the pools are read afresh after each
+   call. *)
+let map_slice ss ds f start n =
+  let d = pool_alloc ds n in
+  for k = 0 to n - 1 do
+    let v = f ss.pool.(start + k) in
+    ds.pool.(d + k) <- v
+  done;
+  d
+
+let map_slice_norm ss ds f norm start n =
+  let d = pool_alloc ds n in
+  for k = 0 to n - 1 do
+    let v = norm (f ss.pool.(start + k)) in
+    ds.pool.(d + k) <- v
+  done;
+  d
+
+let[@inline] boxed_entry ss ds a =
+  if ss == ds || a < 0 then a else Vec.push ds.boxed (Vec.get ss.boxed a)
+
 (* Give the fresh node [dst] the encoded descriptor of [src] with each child
    [c] replaced by [f c], evaluating [f] in the order [Btype.copy_type_desc]
    does (an arrow's result first, then its parameters; a [Tpoly]'s variables,
-   through [fvar], then its body). Variables lose their names unless
-   [keep_names]; universal variables keep them. A [Tconstr] gets a fresh
-   abbreviation cell. [src] must not be [Kboxed], nor carry a link. *)
-let copy_into ~keep_names ~fvar ~dst src f =
+   mapped through [norm (f v)], then its body). Variables lose their names
+   unless [keep_names]; universal variables keep them. A [Tconstr] gets a
+   fresh abbreviation cell. [src] must not be [Kboxed]; its link is
+   ignored. *)
+let copy_into ~keep_names ~norm ~dst src f =
   let ss = store_of src and so = stride * index src in
   let ds = store_of dst and di = index dst in
   let sm = ss.meta in
   let a = sm.(so + f_a) and b = sm.(so + f_b) and c = sm.(so + f_c) in
-  let same = ss == ds in
-  let map_slice f start n =
-    let d = pool_alloc ds n in
-    for k = 0 to n - 1 do
-      let v = f ss.pool.(start + k) in
-      ds.pool.(d + k) <- v
-    done;
-    d
-  in
-  let boxed_entry a =
-    if same || a < 0 then a else Vec.push ds.boxed (Vec.get ss.boxed a)
-  in
   match sm.(so + f_kind) with
   | 0 (* k_var *) ->
-    set_enc ds di k_var (if keep_names then boxed_entry a else -1) 0 0
+    set_enc ds di k_var (if keep_names then boxed_entry ss ds a else -1) 0 0
   | 1 (* k_arrow *) ->
     let ret = f c in
     let d = pool_alloc ds (2 * b) in
     for k = 0 to b - 1 do
       let code = ss.pool.(a + (2 * k)) in
       let code =
-        if same || code < 0 then code
+        if ss == ds || code < 0 then code
         else Vec.push ds.labels (Vec.get ss.labels code)
       in
       ds.pool.(d + (2 * k)) <- code;
@@ -661,17 +673,17 @@ let copy_into ~keep_names ~fvar ~dst src f =
       ds.pool.(d + (2 * k) + 1) <- v
     done;
     set_enc ds di k_arrow d b ret
-  | 2 (* k_tuple *) -> set_enc ds di k_tuple 0 (map_slice f b c) c
+  | 2 (* k_tuple *) -> set_enc ds di k_tuple 0 (map_slice ss ds f b c) c
   | 3 (* k_constr *) ->
-    let p = if same then a else path_code ds (Vec.get ss.paths a) in
-    let d = map_slice f b c in
+    let p = if ss == ds then a else path_code ds (Vec.get ss.paths a) in
+    let d = map_slice ss ds f b c in
     set_enc ds di k_constr p d c;
     ds.meta.((stride * di) + f_memo) <- -1
   | 4 (* k_object *) -> set_enc ds di k_object (f a) 0 0
   | 5 (* k_nil *) -> set_enc ds di k_nil 0 0 0
-  | 6 (* k_univar *) -> set_enc ds di k_univar (boxed_entry a) 0 0
+  | 6 (* k_univar *) -> set_enc ds di k_univar (boxed_entry ss ds a) 0 0
   | 7 (* k_poly *) ->
-    let d = map_slice fvar b c in
+    let d = map_slice_norm ss ds f norm b c in
     let body = f a in
     set_enc ds di k_poly body d c
   | _ -> invalid_arg "Types.copy_into: boxed descriptor"
@@ -687,6 +699,16 @@ let new_constr_in s ~level ~id p args =
 
 let new_constr ~level ~id p args =
   new_constr_in (Store.current ()) ~level ~id p args
+
+let set_constr_args t p args =
+  let s = store_of t in
+  let n = Array.length args in
+  let start = pool_alloc s n in
+  Array.blit args 0 s.pool start n;
+  set_enc s (index t) k_constr (path_code s p) start n;
+  s.meta.((stride * index t) + f_memo) <- -1
+
+let has_abbrev_cell t = (store_of t).meta.((stride * index t) + f_memo) >= 0
 
 (* Give [t] the descriptor [Tconstr (p, args, ref Mnil)] without allocating
    the cell. *)

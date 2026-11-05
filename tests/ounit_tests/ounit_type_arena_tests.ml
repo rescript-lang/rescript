@@ -166,7 +166,12 @@ let test_sharing _ =
       in
       let args = [shared; distinct; shared] in
       let a = boxed (Types_boxed.Ttuple args) ~id:12 in
-      let cell = ref Types_boxed.Mnil in
+      (* An empty cell holds nothing to share: the import gives each node
+         its own when asked for. A cell holding an expansion is shared. *)
+      let memo =
+        Types_boxed.Mcons (Asttypes.Public, int_path, shared, distinct, Mnil)
+      in
+      let cell = ref memo in
       let b =
         boxed
           (Types_boxed.Tconstr (int_path, [shared; distinct; shared], cell))
@@ -183,7 +188,7 @@ let test_sharing _ =
             let b' = im b in
             (a', b', im b2, im v1, im v2))
       in
-      assert_bool "cells restored after the session" (!cell = Types_boxed.Mnil);
+      assert_bool "cells restored after the session" (!cell == memo);
       (match (Types.get_desc a', Types.get_desc b', Types.get_desc b2') with
       | Types.Ttuple l1, Types.Tconstr (_, l2, c1), Types.Tconstr (_, _, c2)
         -> (

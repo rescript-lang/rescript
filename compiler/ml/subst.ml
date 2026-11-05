@@ -253,8 +253,8 @@ and typexp_constr s ty ty' =
     args.(i) <- typexp_rec s (constr_arg ty i)
   done;
   match Path_map.find p s.types with
-  | exception Not_found -> set_constr ty' (type_path s p) (Array.to_list args)
-  | Path _ -> set_constr ty' (type_path s p) (Array.to_list args)
+  | exception Not_found -> set_constr_args ty' (type_path s p) args
+  | Path _ -> set_constr_args ty' (type_path s p) args
   | Type_function {params; body} ->
     Transient_expr.set_desc ty'
       (get_desc (!ctype_apply_env_empty params body (Array.to_list args)))

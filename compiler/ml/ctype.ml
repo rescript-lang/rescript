@@ -931,7 +931,7 @@ and copy_constr ?env ~copy ty =
       | Mcons _ -> Mlink !(abbreviations ())
       | abbrev -> abbrev
     in
-    copy_into ~keep_names:false ~fvar:copy ~dst:t ty copy;
+    copy_into ~keep_names:false ~norm:Fun.id ~dst:t ty copy;
     match memo with
     | Mnil -> ()
     | memo -> set_abbrev_cell t (ref memo)));

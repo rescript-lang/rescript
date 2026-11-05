@@ -550,7 +550,7 @@ let copy_type_into ?(keep_names = false) ?(fresh_mutability = false) f ~dst src
   | Kboxed ->
     Transient_expr.set_desc dst
       (copy_type_desc ~keep_names ~fresh_mutability f (boxed_desc src))
-  | _ -> copy_into ~keep_names ~fvar:(fun x -> norm_univar (f x)) ~dst src f
+  | _ -> copy_into ~keep_names ~norm:norm_univar ~dst src f
 
 (* Utilities for copying *)
 
