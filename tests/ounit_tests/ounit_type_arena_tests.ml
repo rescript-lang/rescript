@@ -153,9 +153,11 @@ let test_cycles _ =
 let test_sharing _ =
   Types.Store.with_store (fun () ->
       let int_path = Predef.path_int in
-      (* One node used twice, one argument list used by two nodes, one
-         descriptor used by two nodes, two equal but distinct nodes, and
-         one abbreviation cell used by two descriptors. *)
+      (* One node used twice, one descriptor used by two nodes, two equal
+         but distinct nodes, and one abbreviation cell used by two
+         descriptors. Argument lists have no identity in the store (they are
+         encoded in its integer pool and rebuilt by every read), so the two
+         descriptors with the same arguments have lists of their own. *)
       let shared =
         boxed (Types_boxed.Tconstr (int_path, [], ref Types_boxed.Mnil)) ~id:10
       in
@@ -165,7 +167,11 @@ let test_sharing _ =
       let args = [shared; distinct; shared] in
       let a = boxed (Types_boxed.Ttuple args) ~id:12 in
       let cell = ref Types_boxed.Mnil in
-      let b = boxed (Types_boxed.Tconstr (int_path, args, cell)) ~id:13 in
+      let b =
+        boxed
+          (Types_boxed.Tconstr (int_path, [shared; distinct; shared], cell))
+          ~id:13
+      in
       let b2 = boxed (Types_boxed.Tconstr (int_path, [a], cell)) ~id:16 in
       let var = Types_boxed.Tvar None in
       let v1 = boxed var ~id:14 and v2 = boxed var ~id:15 in
@@ -181,7 +187,7 @@ let test_sharing _ =
       (match (Types.get_desc a', Types.get_desc b', Types.get_desc b2') with
       | Types.Ttuple l1, Types.Tconstr (_, l2, c1), Types.Tconstr (_, _, c2)
         -> (
-        assert_bool "shared argument list" (l1 == l2);
+        assert_bool "same arguments" (List.for_all2 ( == ) l1 l2);
         assert_bool "shared abbreviation cell" (c1 == c2);
         match l1 with
         | [x; y; z] ->
