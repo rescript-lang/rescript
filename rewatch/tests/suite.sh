@@ -15,15 +15,12 @@ export REWATCH_EXECUTABLE
 # Make sure we are in the right directory
 cd $(dirname $0)
 
-if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ||
-  "$REWATCH_EXECUTABLE" == */cli/rescript-rust.js ]]; then
+if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ]]; then
   echo "Using rewatch CLI script: $REWATCH_EXECUTABLE"
 else
   echo "Using rewatch executable: $REWATCH_EXECUTABLE"
   eval $(node ./get_bin_paths.js)
-  export RESCRIPT_BSC_EXE
   export RESCRIPT_RUNTIME
-  echo Using bsc executable: $RESCRIPT_BSC_EXE
   echo Using runtime path: $RESCRIPT_RUNTIME
 fi
 

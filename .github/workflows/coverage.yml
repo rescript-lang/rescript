@@ -22,7 +22,6 @@ jobs:
     env:
       OS: ubuntu-26.04-arm
       OCAML_COMPILER: 5.5.2
-      RUST_TARGET: aarch64-unknown-linux-gnu
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -32,11 +31,6 @@ jobs:
 
       - name: Setup Linux dependencies
         uses: ./.github/actions/setup-linux-dependencies
-
-      - name: Build rewatch
-        uses: ./.github/actions/build-rewatch
-        with:
-          cache-target: ${{ env.RUST_TARGET }}
 
       - name: Setup OCaml ${{ env.OCAML_COMPILER }}
         id: setup_ocaml

@@ -25,8 +25,7 @@ The Makefile’s targets build on each other in this order:
 
 1. `yarn-install` runs automatically for targets that need JavaScript tooling (lib, playground, tests, formatting, etc.).
 2. `build` (default target) builds the toolchain binaries (all copied into `packages/@rescript/<platform>/bin`):
-   - `compiler` builds the dune executables (`bsc`, `rescript-*`, `ounit_tests`, etc.), including the OCaml build system and CLI (`rescript`).
-   - `rewatch` builds the Rust implementation of the build system (`rescript-rust`).
+   - `compiler` builds the dune executables (`bsc`, `rescript-*`, `ounit_tests`, etc.), including the build system and CLI (`rescript`).
 3. `lib` uses those toolchain outputs to build the runtime sources.
 4. Test targets (`make test`, `make test-syntax`, etc.) reuse everything above.
 
@@ -34,10 +33,8 @@ The Makefile’s targets build on each other in this order:
 
 Before changing a subsystem, read its local agent instructions and area guide.
 For compiler changes, read [compiler/AGENTS.md](compiler/AGENTS.md). For build
-system changes, read [rewatch-ocaml/AGENTS.md](rewatch-ocaml/AGENTS.md) for the
-OCaml implementation and [rewatch/AGENTS.md](rewatch/AGENTS.md) for the Rust
-one. These apply even
-when the task starts at the repository root. Changes spanning areas need the
+system changes, read [rewatch-ocaml/AGENTS.md](rewatch-ocaml/AGENTS.md). These
+apply even when the task starts at the repository root. Changes spanning areas need the
 relevant guidance from each.
 
 - [`compiler/syntax/README.md`](compiler/syntax/README.md) for parsing,
@@ -47,8 +44,8 @@ relevant guidance from each.
 - [`compiler/core/README.md`](compiler/core/README.md) for Lambda
   optimization and JavaScript generation
 - [`analysis/README.md`](analysis/README.md) for editor analysis
-- [`rewatch-ocaml/README.md`](rewatch-ocaml/README.md) and
-  [`rewatch/README.md`](rewatch/README.md) for the build system
+- [`rewatch-ocaml/README.md`](rewatch-ocaml/README.md) for the build system
+  and [`rewatch/README.md`](rewatch/README.md) for its integration suite
 - [`tools/README.md`](tools/README.md) for `rescript-tools`
 
 ## Coding guidelines
@@ -109,8 +106,8 @@ on `master`. CI runs on every PR in the stack.
 For compiler or standard-library changes, run `make test`. For syntax changes,
 also run `make test-syntax`; use `make test-syntax-roundtrip` when parsing or
 printing changes. Other focused suites are `make test-gentype`,
-`make test-analysis`, `make test-tools`, `make test-rewatch` (OCaml build
-system), and `make test-rewatch-rust` (Rust build system).
+`make test-analysis`, `make test-tools`, and `make test-rewatch` (build
+system).
 
 ### Testing Requirements
 

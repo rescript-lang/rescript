@@ -1,6 +1,6 @@
 let line_clear = "\027[2K\r"
 
-(* Like Rust rewatch, logs go to stdout by default. Commands whose stdout is
+(* Logs go to stdout by default. Commands whose stdout is
    machine-readable output (compiler-args, format) log to stderr instead. *)
 let log ?(channel = stdout) ~minimum ~verbosity ~label message =
   if verbosity >= minimum then

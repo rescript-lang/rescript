@@ -71,9 +71,6 @@ packages/dev-playground/src/*.res.mjs
 packages/dev-playground/public/playground-bundles/*
 !packages/dev-playground/public/playground-bundles/.gitignore
 
-rewatch/target/
-rewatch/rewatch
-
 tests/tools_tests/**/*.res.js
 tests/tools_tests/lib
 tests/analysis_tests*/lib

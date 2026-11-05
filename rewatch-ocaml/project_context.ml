@@ -63,7 +63,7 @@ let workspace_config_for (current : Config.t) =
 
 let workspace_lock_root_for current = (workspace_config_for current).root
 
-(* The same wording as Rust rewatch's debug output, which tests compare. *)
+(* The wording of the debug output, which tests compare. *)
 let describe (config : Config.t) ~(workspace : Config.t) =
   if workspace.root = config.root then
     Printf.sprintf "Created project context for \"%s\" at \"%s\"" config.name

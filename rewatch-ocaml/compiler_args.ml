@@ -38,8 +38,8 @@ let parser_flags ?(ppx_flags = []) (config : Config.t) =
       | [] -> []
       | flag :: arguments ->
         let executable =
-          (* As in Rust rewatch, a path starting with a dot names a file in
-             the package itself; bsc runs the PPX from lib/bs. *)
+          (* A path starting with a dot names a file in the package itself;
+             bsc runs the PPX from lib/bs. *)
           if String.starts_with ~prefix:"." flag then
             Filename.concat config.root flag
           else

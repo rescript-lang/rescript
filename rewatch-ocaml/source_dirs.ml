@@ -1,6 +1,6 @@
 type scan = {build_root: string; scan_dirs: string list}
 
-(* Every scan includes its build root, as in Rust's .sourcedirs.json. *)
+(* Every scan includes its build root (also_scan_build_root). *)
 let scan_json scan =
   `Assoc
     [

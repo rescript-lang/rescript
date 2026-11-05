@@ -1,0 +1,1 @@
+- Remove the Rust build system `rescript-rust`; use `rescript`. Building the compiler no longer needs a Rust toolchain.

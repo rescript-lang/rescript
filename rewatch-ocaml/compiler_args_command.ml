@@ -11,9 +11,9 @@ let source_error path message =
   error (Printf.sprintf "Could not read source file %s: %s" path message)
 
 (* An absolute path with "." and ".." resolved textually, without following
-   symlinks, like Rust's [to_lexical_absolute]. Rust rebuilds the path from
-   its components, so on Windows every separator becomes a backslash, also
-   after the drive of a path such as [D:/project]. *)
+   symlinks. The path is rebuilt from its components, so on Windows every
+   separator becomes a backslash, also after the drive of a path such as
+   [D:/project]. *)
 let lexical_absolute path =
   let path =
     if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path
@@ -101,7 +101,7 @@ let run ~verbosity path =
                dependency.name config.name))
   in
   let runtime = runtime_path resolution config.root in
-  (* As in Rust rewatch, editors get the project root spelled the way they
+  (* Editors get the project root spelled the way they
      named the source, for example through a symlink or a Windows short path:
      they compile the incremental copy of the source under that root. *)
   let project_root =

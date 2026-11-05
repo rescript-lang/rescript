@@ -3,10 +3,9 @@
 This document describes **how `rewatch` infers monorepo structure**, **what invariants are required**, and **how build scope changes** depending on where you invoke the build.
 
 All statements are derived from:
-- `rewatch/src/project_context.rs` – monorepo context detection
-- `rewatch/src/build/packages.rs` – package discovery and traversal
-- `rewatch/src/helpers.rs` – path resolution utilities
-- `rewatch/src/build/{parse.rs,deps.rs,compile.rs}` – build phases
+- `rewatch-ocaml/project_context.ml` – monorepo context detection, locality and dependency lookup
+- `rewatch-ocaml/package_resolution.ml`, `package_traversal.ml`, `package_graph.ml` – package discovery and traversal
+- `rewatch-ocaml/package_parse.ml`, `module_graph.ml`, `package_compilation.ml` – build phases
 
 ---
 
@@ -55,21 +54,19 @@ A resolved dependency path is considered "local" if both conditions are met:
 
 This is why workspace symlinks work: `node_modules/<name>` → real path in repo.
 
-```rust
-// From helpers.rs
-pub fn is_local_package(workspace_path: &Path, canonical_package_path: &Path) -> bool {
-    canonical_package_path.starts_with(workspace_path)
-        && !canonical_package_path
-            .components()
-            .any(|c| c.as_os_str() == "node_modules")
-}
+```ocaml
+(* From project_context.ml *)
+let is_local_dependency_canonical ~workspace path =
+  ...
+  path_is_within_canonical ~root:workspace path
+  && not (contains_component path "node_modules")
 ```
 
 ---
 
 ## Dependency Resolution
 
-All dependencies are resolved via `try_package_path`, which probes in order:
+All dependencies are resolved via `Project_context.dependency_candidates_in`, which probes in order:
 
 | Priority | Path Probed | When Used |
 |----------|-------------|-----------|

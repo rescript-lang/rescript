@@ -547,7 +547,7 @@ if grep 'DEBUG' "$work/format-verbose.out" >/dev/null; then
   exit 1
 fi
 # Format resolves the package graph once, so a package metadata mismatch is
-# reported once, as in Rust. This rewrites rather than checks: on Windows the
+# reported once. This rewrites rather than checks: on Windows the
 # formatter emits CRLF, so --check would flag this LF fixture.
 format_name_mismatch="$work/format-name-mismatch"
 mkdir -p "$format_name_mismatch/src"
@@ -1074,7 +1074,7 @@ if ! wait_for_file "$missing_nested_source/generated/nested/Main.mjs"; then
   cat "$missing_nested_source/watch.log" >&2
   exit 1
 fi
-# Like Rust, the watcher announces why it exits. MSYS cannot deliver a
+# The watcher announces why it exits. MSYS cannot deliver a
 # catchable signal, so the signal case is checked on Unix only.
 kill -TERM "$missing_nested_source_pid"
 wait "$missing_nested_source_pid" 2>/dev/null || true
@@ -2079,7 +2079,7 @@ if [ -f "$package_output_dependency/node_modules/dep/src/Dep.js" ]; then
 fi
 
 # The consumer lists the installed dependency, so building the dependency on
-# its own uses the consumer's output settings, as in Rust rewatch. Its outputs
+# its own uses the consumer's output settings. Its outputs
 # and the consumer's imports therefore do not depend on which build ran first.
 "$port" build "$standalone_output/node_modules/dep"
 test -f "$standalone_output/node_modules/dep/lib/es6/src/Dep.mjs"

@@ -31,12 +31,6 @@ else
 	$(error Unsupported platform $(UNAME_S)-$(UNAME_M))
 endif
 
-define COPY_EXE
-	cp $1 $2
-	chmod 755 $2
-$(if $(filter Windows_NT,$(OS)),,strip $2)
-endef
-
 # Directories
 
 BIN_DIR := packages/@rescript/$(RESCRIPT_PLATFORM)/bin
@@ -62,7 +56,7 @@ BELT_BUILD_STAMP := packages/@rescript/belt/.buildstamp
 
 # Default target
 
-build: compiler rewatch
+build: compiler
 
 # Yarn
 
@@ -75,38 +69,13 @@ $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 	yarn install
 	touch $@
 
-# Rewatch
-
-REWATCH_SOURCES = $(shell find rewatch/src -name '*.rs') rewatch/Cargo.toml rewatch/Cargo.lock
-RESCRIPT_EXE = $(BIN_DIR)/rescript.exe
-RESCRIPT_RUST_EXE := $(BIN_DIR)/rescript-rust.exe
-PACKAGED_RUST_EXE := $(RESCRIPT_RUST_EXE)
-ifdef CI
-	REWATCH_PROFILE := release
-	REWATCH_CARGO_FLAGS := --release
-else
-	REWATCH_PROFILE := debug
-	REWATCH_CARGO_FLAGS :=
-endif
-REWATCH_TARGET := rewatch/target/$(REWATCH_PROFILE)/rescript$(PLATFORM_EXE_EXT)
-
-rewatch: $(PACKAGED_RUST_EXE)
-
-$(PACKAGED_RUST_EXE): $(REWATCH_TARGET)
-	$(call COPY_EXE,$<,$@)
-
-$(REWATCH_TARGET): $(REWATCH_SOURCES)
-	cargo build --manifest-path rewatch/Cargo.toml $(REWATCH_CARGO_FLAGS)
-
-clean-rewatch:
-	cargo clean --manifest-path rewatch/Cargo.toml && rm -rf rewatch/target && rm -f $(PACKAGED_RUST_EXE)
-
 # Compiler
 
 COMPILER_SOURCE_DIRS := compiler tests analysis tools rewatch-ocaml
 COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \))
 COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
+RESCRIPT_EXE := $(BIN_DIR)/rescript.exe
 
 compiler: $(COMPILER_EXES)
 
@@ -187,9 +156,6 @@ test-gentype: lib
 
 test-rewatch: lib
 	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
-
-test-rewatch-rust: lib rewatch
-	./rewatch/tests/suite.sh $(RESCRIPT_RUST_EXE)
 
 test-all: test test-gentype test-analysis test-tools test-rewatch
 
@@ -381,8 +347,8 @@ clean-gentype:
 
 clean-tests: clean-gentype
 
-clean: clean-lib clean-compiler clean-rewatch clean-coverage
+clean: clean-lib clean-compiler clean-coverage
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-rewatch-rust test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat semantic-diff clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean
+.PHONY: yarn-install build compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat semantic-diff clean-compiler clean-lib clean-gentype clean-tests clean

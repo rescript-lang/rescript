@@ -13,11 +13,6 @@ export const projectDir = path.resolve(import.meta.dirname, "..");
 export const compilerRootDir = path.resolve(projectDir, "compiler");
 
 /**
- * path: `<projectDir>/rewatch/`
- */
-export const rewatchDir = path.resolve(projectDir, "rewatch");
-
-/**
  * path: `<projectDir>/tests/`
  */
 export const testDir = path.resolve(projectDir, "tests");

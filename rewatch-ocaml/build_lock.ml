@@ -14,8 +14,8 @@ let malformed_error () =
     "Could not start Rescript build: Could not parse lockfile PID\n\
     \  (try removing it and running the command again)"
 
-(* A writer that cannot link creates the lock and then writes its PID, as Rust
-   rewatch always does, so an empty lock is usually still being written. One
+(* A writer that cannot link creates the lock and then writes its PID, so an
+   empty lock is usually still being written. One
    that stays empty belongs to a writer that died in between. *)
 let being_written path =
   match Unix.stat path with

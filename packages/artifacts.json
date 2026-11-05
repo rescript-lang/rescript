@@ -15,7 +15,6 @@
     "cli/common/runtime.js",
     "cli/common/tools.cjs",
     "cli/common/tools.js",
-    "cli/rescript-rust.js",
     "cli/rescript-tools.js",
     "cli/rescript.js",
     "docs/docson/build-schema.json",
@@ -886,7 +885,6 @@
     "bin/.gitkeep",
     "bin/bsc.exe",
     "bin/rescript-editor-analysis.exe",
-    "bin/rescript-rust.exe",
     "bin/rescript-tools.exe",
     "bin/rescript.exe",
     "package.json"
@@ -899,7 +897,6 @@
     "bin/.gitkeep",
     "bin/bsc.exe",
     "bin/rescript-editor-analysis.exe",
-    "bin/rescript-rust.exe",
     "bin/rescript-tools.exe",
     "bin/rescript.exe",
     "package.json"
@@ -912,7 +909,6 @@
     "bin/.gitkeep",
     "bin/bsc.exe",
     "bin/rescript-editor-analysis.exe",
-    "bin/rescript-rust.exe",
     "bin/rescript-tools.exe",
     "bin/rescript.exe",
     "package.json"
@@ -925,7 +921,6 @@
     "bin/.gitkeep",
     "bin/bsc.exe",
     "bin/rescript-editor-analysis.exe",
-    "bin/rescript-rust.exe",
     "bin/rescript-tools.exe",
     "bin/rescript.exe",
     "package.json"

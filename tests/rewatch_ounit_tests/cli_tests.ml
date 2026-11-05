@@ -155,32 +155,32 @@ let tests =
     "invalid filter regular expressions are rejected during CLI parsing";
   check
     (not (rejects ["build"; "--filter"; "Foo|Bar"]))
-    "Rust-style filter alternation is accepted";
+    "filter alternation is accepted";
   check
     (not (rejects ["build"; "--filter"; "(?:Foo|Bar)\\d+"]))
-    "Rust-style filter groups and shorthand classes are accepted";
+    "filter groups and shorthand classes are accepted";
   check
     (rejects ["build"; "--filter"; "[a-z&&[^aeiou]]"])
     "class set operations are rejected instead of changing meaning";
   check
     (rejects ["build"; "--filter"; "\\QFoo.res\\E"])
-    "Perl quoting unsupported by Rust is rejected";
+    "Perl quoting is rejected";
   check (rejects ["build"; "--filter"; "\\Z"]) "Perl-only anchors are rejected";
   check
     (rejects ["build"; "--filter"; "\\e"])
     "Perl-only character escapes are rejected";
   check
     (rejects ["build"; "--filter"; "\\o{123}"])
-    "braced octal escapes unsupported by Rust are rejected";
+    "braced octal escapes are rejected";
   check
     (rejects ["build"; "--filter"; "[z-a]"])
-    "descending character ranges unsupported by Rust are rejected";
+    "descending character ranges are rejected";
   check
     (rejects ["build"; "--filter"; "[a-\\d]"])
-    "character-class range endpoints unsupported by Rust are rejected";
+    "character-class range endpoints are rejected";
   check
     (rejects ["build"; "--filter"; "[\\d-z]"])
-    "escaped character-class range starts unsupported by Rust are rejected";
+    "escaped character-class range starts are rejected";
   check
     (rejects ["build"; "--filter"; "^[\\W]+\\.res$"])
     "shorthand classes with divergent in-class semantics are rejected";

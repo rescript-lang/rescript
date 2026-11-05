@@ -28,10 +28,10 @@ let tests =
     "file formatting failures retain the source path";
   check
     (Format.format_check_summary 1 = "The file listed above needs formatting")
-    "format check uses Rust's singular summary";
+    "format check uses a singular summary";
   check
     (Format.format_check_summary 2 = "The 2 files listed above need formatting")
-    "format check uses Rust's plural summary";
+    "format check uses a plural summary";
   with_temp_dir (fun root ->
       let parent = Filename.concat root "not-a-directory" in
       let path = Filename.concat parent "A.res" in

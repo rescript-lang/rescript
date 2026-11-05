@@ -19,7 +19,7 @@ for the compiler area you are changing:
 - [type checker and typed tree](compiler/ml/README.md)
 - [Lambda, Lam, and JavaScript generation](compiler/core/README.md)
 - [editor analysis](analysis/README.md)
-- [build system](rewatch/README.md)
+- [build system](rewatch-ocaml/README.md)
 - [`rescript-tools`](tools/README.md)
 
 Public language and library documentation belongs on the
@@ -35,7 +35,6 @@ algorithm and representation invariants belong beside their implementation.
 - [Node.js](https://nodejs.org/) v26.x or newer (the version in `.nvmrc`)
 - [Yarn CLI](https://yarnpkg.com/getting-started/install) (can be installed with `corepack`, Homebrew, etc)
 - C compiler toolchain (usually installed with `xcode` on Mac)
-- Rust toolchain (required to build rewatch; follow the instructions at https://www.rust-lang.org/tools/install and install the version listed as `rust-version` in `rewatch/Cargo.toml`)
 - `opam` (OCaml Package Manager) v2.2.0 or newer
 - VSCode (+ [OCaml Platform Extension](https://marketplace.visualstudio.com/items?itemName=ocamllabs.ocaml-platform))
 
@@ -103,15 +102,6 @@ opam install . --deps-only --with-test --with-dev-setup -y
 
 Run `yarn install`. This will install the npm dependencies required for the build scripts.
 
-#### rustup install
-
-[Rewatch](./rewatch/) is built with rust. Make sure you have [rustup](https://rustup.rs/) installed to manage rust versions.
-
-```sh
-rustup toolchain install 1.91
-rustup override set 1.91
-```
-
 ### B. Devcontainer
 
 As an alternative to the manual installation, the repository provides a [development container](https://containers.dev/) definition that can be used with [VS Code's Remote Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers). Use this to get a stable development environment without having to install anything locally other than VS Code and Docker.
@@ -155,9 +145,6 @@ Additional targets:
 ```sh
 # Build the compiler executables only
 make compiler
-
-# Build rewatch only
-make rewatch
 
 # Run syntax tests
 make test-syntax
@@ -285,12 +272,6 @@ npm link rescript
 #### Use Local BSC with Existing ReScript Installation
 
 The `rescript` build system has the compiler built in, so to test a local compiler change, link the local package as shown above.
-
-The Rust build system, `rescript-rust`, still runs `bsc.exe` and accepts the `RESCRIPT_BSC_EXE` environment variable pointing to your locally compiled `bsc.exe`:
-
-```sh
-RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript-rust
-```
 
 ### Running Automatic Tests
 

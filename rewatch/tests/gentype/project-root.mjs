@@ -3,6 +3,7 @@ import {spawnSync} from "node:child_process";
 import {existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
+import {bsc_exe} from "../../../cli/common/bins.js";
 
 const executable = process.env.REWATCH_EXECUTABLE;
 assert(executable, "REWATCH_EXECUTABLE must be set");
@@ -94,7 +95,7 @@ function checkEditorCompilation(buildDirectory) {
   mkdirSync(incrementalDir);
   const source = join(incrementalDir, "Editor.res");
   writeFileSync(source, "@genType\nlet value = 42\n");
-  const compiled = spawnSync(process.env.RESCRIPT_BSC_EXE, [...args, source], {
+  const compiled = spawnSync(bsc_exe, [...args, source], {
     ...options,
     cwd: join(buildDirectory, "lib", "bs"),
   });

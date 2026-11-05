@@ -259,7 +259,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
           native_reconcile watcher new_scope baseline
         else native_loop watcher new_scope symlink_targets registered_snapshot)
   in
-  (* Like Rust rewatch, announce the shutdown and why before cleaning up. *)
+  (* Announce the shutdown and why before cleaning up. *)
   let report_exit () =
     if show_progress then
       print_endline

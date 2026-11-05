@@ -35,8 +35,7 @@
       "./bin/bsc.exe",
       "./bin/rescript-editor-analysis.exe",
       "./bin/rescript-tools.exe",
-      "./bin/rescript.exe",
-      "./bin/rescript-rust.exe"
+      "./bin/rescript.exe"
     ]
   },
   "engines": {
