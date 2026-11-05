@@ -2644,15 +2644,16 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
            the lookup reports it as unbound), but it defines no component. *)
         raise (Error (lid.loc, env, Jsx_component_without_make module_lid))
     in
+    let val_type = repr desc.val_type in
     let is_recarg =
-      match get_desc (repr desc.val_type) with
-      | Tconstr (p, _, _) -> Path.is_constructor_typath p
+      match kind val_type with
+      | Kconstr -> Path.is_constructor_typath (constr_path val_type)
       | _ -> false
     in
 
-    (match (is_recarg, recarg, get_desc (repr desc.val_type)) with
+    (match (is_recarg, recarg, kind val_type) with
     | _, Allowed, _ | true, Required, _ | false, Rejected, _ -> ()
-    | true, Rejected, _ | false, Required, (Tvar _ | Tconstr _) ->
+    | true, Rejected, _ | false, Required, (Kvar | Kconstr) ->
       raise (Error (loc, env, Inlined_record_escape))
     | false, Required, _ -> () (* will fail later *));
     rue
@@ -4517,8 +4518,8 @@ and type_application ~context total_app env funct (sargs : sargs) :
        application, commit it to an arrow matching the call site: this is
        how parameter count and labels are inferred for unannotated function
        parameters. *)
-    (match get_desc (expand_head env funct.exp_type) with
-    | Tvar _ when total_app ->
+    (match kind (expand_head env funct.exp_type) with
+    | Kvar when total_app ->
       let ty_fun = expand_head env funct.exp_type in
       let params =
         List.map (fun (l1, _) -> {Types.lbl = l1; typ = newvar ()}) sargs

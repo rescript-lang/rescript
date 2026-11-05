@@ -1608,22 +1608,34 @@ let occur_univar env ty =
           visited := Type_map.add ty bound !visited;
           true
     then
-      match get_desc ty with
-      | Tunivar _ ->
+      match kind ty with
+      | Kunivar ->
         if not (Type_set.mem ty bound) then raise (Unify [(ty, newgenvar ())])
-      | Tpoly (ty, tyl) ->
-        let bound = List.fold_right Type_set.add (List.map repr tyl) bound in
-        occur_rec bound ty
-      | Tconstr (_, [], _) -> ()
-      | Tconstr (p, tl, _) -> (
+      | Kpoly -> (
+        match get_desc ty with
+        | Tpoly (ty, tyl) ->
+          let bound = List.fold_right Type_set.add (List.map repr tyl) bound in
+          occur_rec bound ty
+        | _ -> assert false)
+      | Kconstr when constr_length ty = 0 -> ()
+      | Kconstr -> (
+        let n = constr_length ty in
         try
-          let td = Env.find_type p env in
-          List.iter2
-            (fun t v ->
+          let td = Env.find_type (constr_path ty) env in
+          (* As [List.iter2] over the arguments and the variances. *)
+          let rec iter i = function
+            | v :: rest when i < n ->
               if Variance.(mem May_pos v || mem May_neg v) then
-                occur_rec bound t)
-            tl td.type_variance
-        with Not_found -> List.iter (occur_rec bound) tl)
+                occur_rec bound (constr_arg ty i);
+              iter (i + 1) rest
+            | [] when i = n -> ()
+            | _ -> invalid_arg "List.iter2"
+          in
+          iter 0 td.type_variance
+        with Not_found ->
+          for i = 0 to n - 1 do
+            occur_rec bound (constr_arg ty i)
+          done)
       | _ -> iter_type_expr (occur_rec bound) ty
   in
   try
@@ -2792,9 +2804,9 @@ let unify_var env t1 t2 =
   let t1 = repr t1 and t2 = repr t2 in
   if t1 == t2 then ()
   else
-    match (get_desc t1, get_desc t2) with
-    | Tvar _, Tconstr _ when deep_occur t1 t2 -> unify (ref env) t1 t2
-    | Tvar _, _ -> (
+    match (kind t1, kind t2) with
+    | Kvar, Kconstr when deep_occur t1 t2 -> unify (ref env) t1 t2
+    | Kvar, _ -> (
       let reset_tracing = check_trace_gadt_instances env in
       try
         occur env t1 t2;
@@ -2961,6 +2973,18 @@ let may_instantiate inst_nongen t1 =
   if inst_nongen then get_level t1 <> generic_level - 1
   else get_level t1 = generic_level
 
+(* Two arrows with the same labels, pairwise. *)
+let same_arrow_labels t1 t2 =
+  let n = arrow_arity t1 in
+  n = arrow_arity t2
+  &&
+  let rec ok i =
+    i >= n
+    || Asttypes.same_arg_label (arrow_label t1 i) (arrow_label t2 i)
+       && ok (i + 1)
+  in
+  ok 0
+
 let rec moregen inst_nongen type_pairs env t1 t2 =
   if t1 == t2 then ()
   else
@@ -2969,12 +2993,16 @@ let rec moregen inst_nongen type_pairs env t1 t2 =
     if t1 == t2 then ()
     else
       try
-        match (get_desc t1, get_desc t2) with
-        | Tvar _, _ when may_instantiate inst_nongen t1 ->
+        match (kind t1, kind t2) with
+        | Kvar, _ when may_instantiate inst_nongen t1 ->
           moregen_occur env (get_level t1) t2;
           occur env t1 t2;
           link_type t1 t2
-        | Tconstr (p1, [], _), Tconstr (p2, [], _) when Path.same p1 p2 -> ()
+        | Kconstr, Kconstr
+          when constr_length t1 = 0
+               && constr_length t2 = 0
+               && same_constr_path t1 t2 ->
+          ()
         | _ -> (
           let t1' = expand_head env t1 in
           let t2' = expand_head env t2 in
@@ -2985,48 +3013,67 @@ let rec moregen inst_nongen type_pairs env t1 t2 =
             try Type_pairs.find type_pairs (t1', t2')
             with Not_found -> (
               Type_pairs.add type_pairs (t1', t2') ();
-              match (get_desc t1', get_desc t2') with
-              | Tvar _, _ when may_instantiate inst_nongen t1' ->
+              match (kind t1', kind t2') with
+              | Kvar, _ when may_instantiate inst_nongen t1' ->
                 moregen_occur env (get_level t1') t2;
                 link_type t1' t2
-              | Tarrow (params1, ret1), Tarrow (params2, ret2)
-                when List.length params1 = List.length params2
-                     && List.for_all2
-                          (fun (a1 : Types.arg) (a2 : Types.arg) ->
-                            Asttypes.same_arg_label a1.lbl a2.lbl)
-                          params1 params2 ->
-                List.iter2
-                  (fun (a1 : Types.arg) (a2 : Types.arg) ->
-                    moregen inst_nongen type_pairs env a1.typ a2.typ)
-                  params1 params2;
-                moregen inst_nongen type_pairs env ret1 ret2
-              | Ttuple tl1, Ttuple tl2 ->
-                moregen_list inst_nongen type_pairs env tl1 tl2
-              | Tconstr (p1, tl1, _), Tconstr (p2, tl2, _) when Path.same p1 p2
-                ->
-                moregen_list inst_nongen type_pairs env tl1 tl2
-              | Tpackage (p1, n1, tl1), Tpackage (p2, n2, tl2) -> (
-                try
-                  unify_package env
-                    (moregen_list inst_nongen type_pairs env)
-                    (get_level t1') p1 n1 tl1 (get_level t2') p2 n2 tl2
-                with Not_found -> raise (Unify []))
-              | Tvariant row1, Tvariant row2 ->
-                moregen_row inst_nongen type_pairs env row1 row2
-              | Tobject fi1, Tobject fi2 ->
-                moregen_fields inst_nongen type_pairs env fi1 fi2
-              | Tfield _, Tfield _ ->
-                (* Actually unused *)
-                moregen_fields inst_nongen type_pairs env t1' t2'
-              | Tnil, Tnil -> ()
-              | Tpoly (t1, []), Tpoly (t2, []) ->
-                moregen inst_nongen type_pairs env t1 t2
-              | Tpoly (t1, tl1), Tpoly (t2, tl2) ->
-                enter_poly env (current_univar_pairs ()) t1 tl1 t2 tl2
-                  (moregen inst_nongen type_pairs env)
-              | Tunivar _, Tunivar _ ->
-                unify_univar t1' t2' !(current_univar_pairs ())
-              | _, _ -> raise (Unify [])))
+              | Karrow, Karrow when same_arrow_labels t1' t2' ->
+                for i = 0 to arrow_arity t1' - 1 do
+                  moregen inst_nongen type_pairs env (arrow_arg t1' i)
+                    (arrow_arg t2' i)
+                done;
+                moregen inst_nongen type_pairs env (arrow_ret t1')
+                  (arrow_ret t2')
+              | Kconstr, Kconstr when same_constr_path t1' t2' ->
+                let n = constr_length t1' in
+                if n <> constr_length t2' then raise (Unify []);
+                for i = 0 to n - 1 do
+                  moregen inst_nongen type_pairs env (constr_arg t1' i)
+                    (constr_arg t2' i)
+                done
+              | _ -> (
+                match (get_desc t1', get_desc t2') with
+                | Tvar _, _ when may_instantiate inst_nongen t1' ->
+                  moregen_occur env (get_level t1') t2;
+                  link_type t1' t2
+                | Tarrow (params1, ret1), Tarrow (params2, ret2)
+                  when List.length params1 = List.length params2
+                       && List.for_all2
+                            (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                              Asttypes.same_arg_label a1.lbl a2.lbl)
+                            params1 params2 ->
+                  List.iter2
+                    (fun (a1 : Types.arg) (a2 : Types.arg) ->
+                      moregen inst_nongen type_pairs env a1.typ a2.typ)
+                    params1 params2;
+                  moregen inst_nongen type_pairs env ret1 ret2
+                | Ttuple tl1, Ttuple tl2 ->
+                  moregen_list inst_nongen type_pairs env tl1 tl2
+                | Tconstr (p1, tl1, _), Tconstr (p2, tl2, _)
+                  when Path.same p1 p2 ->
+                  moregen_list inst_nongen type_pairs env tl1 tl2
+                | Tpackage (p1, n1, tl1), Tpackage (p2, n2, tl2) -> (
+                  try
+                    unify_package env
+                      (moregen_list inst_nongen type_pairs env)
+                      (get_level t1') p1 n1 tl1 (get_level t2') p2 n2 tl2
+                  with Not_found -> raise (Unify []))
+                | Tvariant row1, Tvariant row2 ->
+                  moregen_row inst_nongen type_pairs env row1 row2
+                | Tobject fi1, Tobject fi2 ->
+                  moregen_fields inst_nongen type_pairs env fi1 fi2
+                | Tfield _, Tfield _ ->
+                  (* Actually unused *)
+                  moregen_fields inst_nongen type_pairs env t1' t2'
+                | Tnil, Tnil -> ()
+                | Tpoly (t1, []), Tpoly (t2, []) ->
+                  moregen inst_nongen type_pairs env t1 t2
+                | Tpoly (t1, tl1), Tpoly (t2, tl2) ->
+                  enter_poly env (current_univar_pairs ()) t1 tl1 t2 tl2
+                    (moregen inst_nongen type_pairs env)
+                | Tunivar _, Tunivar _ ->
+                  unify_univar t1' t2' !(current_univar_pairs ())
+                | _, _ -> raise (Unify []))))
       with Unify trace -> raise (Unify ((t1, t2) :: trace))
 
 and moregen_list inst_nongen type_pairs env tl1 tl2 =
@@ -3245,15 +3292,19 @@ let rec eqtype rename type_pairs subst env t1 t2 =
     if t1 == t2 then ()
     else
       try
-        match (get_desc t1, get_desc t2) with
-        | Tvar _, Tvar _ when rename -> (
+        match (kind t1, kind t2) with
+        | Kvar, Kvar when rename -> (
           try
             normalize_subst subst;
             if List.assq t1 !subst != t2 then raise (Unify [])
           with Not_found ->
             if List.exists (fun (_, t) -> t == t2) !subst then raise (Unify []);
             subst := (t1, t2) :: !subst)
-        | Tconstr (p1, [], _), Tconstr (p2, [], _) when Path.same p1 p2 -> ()
+        | Kconstr, Kconstr
+          when constr_length t1 = 0
+               && constr_length t2 = 0
+               && same_constr_path t1 t2 ->
+          ()
         | _ -> (
           let t1' = expand_head_rigid env t1 in
           let t2' = expand_head_rigid env t2 in
