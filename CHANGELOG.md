@@ -76,7 +76,6 @@
 - Allow `$` in identifiers, e.g. `let count$ = signal(0)`. https://github.com/rescript-lang/rescript/pull/8791
 - `rescript` now runs a build system rewritten in OCaml; the Rust implementation remains available as `rescript-rust`. https://github.com/rescript-lang/rescript/pull/8780
 - Allow an untagged variant to have both a `true` or `false` literal case and a `bool` payload case. https://github.com/rescript-lang/rescript/pull/8777 https://github.com/rescript-lang/rescript/pull/9036
-- Support Windows on ARM through the x64 binaries. https://github.com/rescript-lang/rescript/pull/8776
 
 #### :bug: Bug fix
 
@@ -169,6 +168,7 @@
 - Fix a `@val` global being read from a local binding of the same name. https://github.com/rescript-lang/rescript/pull/8785
 - Fix parser recovery and completion for a missing record or dict value, as in `{a: , b: 1}`. https://github.com/rescript-lang/rescript/pull/8779
 - Fix generated JavaScript names colliding with identifiers containing `$`. https://github.com/rescript-lang/rescript/pull/8778
+- Fix installing on Windows on ARM, broken since v12, by using the x64 binaries again. https://github.com/rescript-lang/rescript/pull/8776
 - Fix editor completion of values from modules included with `include await M`. https://github.com/rescript-lang/rescript/pull/8770
 - Fix editor completion inside dict literals and dict patterns. https://github.com/rescript-lang/rescript/pull/8770
 - Report the required Node.js version 22 when the platform package can't be found. https://github.com/rescript-lang/rescript/pull/8770
