@@ -281,6 +281,74 @@ let test_domains _ =
   assert_bool "every domain round-trips"
     (List.for_all (fun d -> Domain.join d) domains)
 
+(* The labels of a record share one [lbl_all] array, which holds them. A
+   conversion keeps that: every converted label's [lbl_all] is one array
+   holding the converted labels, in both kinds of session and back. (It
+   used to be converted again for each sibling, quadratic in the number of
+   fields, in time and in the size of a .cmt.) *)
+let test_label_arrays _ =
+  Types.Store.with_store (fun () ->
+      let n = 300 in
+      let record =
+        Types.Transient_expr.create
+          (Types.Tconstr (Predef.path_int, [], ref Types.Mnil))
+          ~level:0 ~id:1
+      in
+      let field =
+        Types.Transient_expr.create (Types.Tvar None) ~level:0 ~id:2
+      in
+      let labels =
+        Array.init n (fun i : Types.label_description ->
+            {
+              lbl_name = Printf.sprintf "f%d" i;
+              lbl_runtime_name = Printf.sprintf "f%d" i;
+              lbl_res = record;
+              lbl_arg = field;
+              lbl_mut = Asttypes.Immutable;
+              lbl_optional = false;
+              lbl_pos = i;
+              lbl_all = [||];
+              lbl_repres = Types.Record_regular;
+              lbl_private = Asttypes.Public;
+              lbl_loc = Location.none;
+              lbl_attributes = [];
+            })
+      in
+      Array.iter
+        (fun (l : Types.label_description) -> l.lbl_all <- labels)
+        labels;
+      let check_boxed what (converted : Types_boxed.label_description array) =
+        let all = converted.(0).lbl_all in
+        assert_equal ~printer:string_of_int n (Array.length all);
+        Array.iteri
+          (fun i (l : Types_boxed.label_description) ->
+            assert_bool (what ^ ": one lbl_all array") (l.lbl_all == all);
+            assert_bool (what ^ ": lbl_all holds the labels") (all.(i) == l))
+          converted
+      in
+      List.iter
+        (fun exact ->
+          let what = if exact then "exact" else "not exact" in
+          let boxed =
+            A.Export.run ~exact (fun c ->
+                Array.map (A.Export.label_description c) labels)
+          in
+          check_boxed what boxed;
+          let back =
+            A.Import.run ~exact (fun c ->
+                Array.map (A.Import.label_description c) boxed)
+          in
+          let all = back.(0).lbl_all in
+          Array.iteri
+            (fun i (l : Types.label_description) ->
+              assert_bool (what ^ ": imported lbl_all shared") (l.lbl_all == all);
+              assert_bool
+                (what ^ ": imported lbl_all holds the labels")
+                (all.(i) == l);
+              assert_equal (Printf.sprintf "f%d" i) l.lbl_name)
+            back)
+        [true; false])
+
 let suites =
   __FILE__
   >::: [
@@ -290,4 +358,5 @@ let suites =
          "sharing" >:: test_sharing;
          "node operations" >:: test_node_operations;
          "domains" >:: test_domains;
+         "label arrays" >:: test_label_arrays;
        ]
