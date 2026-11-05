@@ -128,9 +128,12 @@ check_snapshot() {
     if $windows_posix_shell; then
       _snapshot_name=${_snapshot_root%%=*}
       _snapshot_path=${_snapshot_root#*=}
+      # The runner's TEMP may itself be a short 8.3 path, so ask for the
+      # long and the short spelling explicitly.
       set -- "$@" \
         "$_snapshot_name=$(cygpath -am "$_snapshot_path")" \
-        "$_snapshot_name=$(cygpath -am -s "$_snapshot_path")"
+        "$_snapshot_name=$(cygpath -aml "$_snapshot_path")" \
+        "$_snapshot_name=$(cygpath -ams "$_snapshot_path")"
     fi
     _snapshot_root_count=$((_snapshot_root_count - 1))
   done

@@ -4,6 +4,9 @@
 # snapshots/command_validation; UPDATE_SNAPSHOTS=1 rewrites them.
 set -eu
 . "$(dirname "$0")/test_helpers.sh"
+# CI forces colors; the snapshots hold redirected output, which has none.
+# Cases that test forced colors set the variable themselves.
+unset CLICOLOR_FORCE
 
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 rescript=${1:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
