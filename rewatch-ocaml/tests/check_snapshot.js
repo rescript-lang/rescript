@@ -1,16 +1,25 @@
 // Usage: node check_snapshot.js SNAPSHOT ACTUAL [ROOT_NAME=PATH...]
+//        node check_snapshot.js --normalize OUTPUT ACTUAL [ROOT_NAME=PATH...]
 //
-// Normalizes ACTUAL and compares it with the checked-in SNAPSHOT. Every
-// spelling of a root path (with forward, backward or escaped backward slashes,
-// as in a quoted string) becomes <ROOT_NAME>,
-// CRLF becomes LF, and backslashes become slashes, so one snapshot serves Unix
-// and Windows. With UPDATE_SNAPSHOTS=1 the snapshot is written instead.
+// Normalizes ACTUAL and compares it with the checked-in SNAPSHOT, or with
+// --normalize writes it to OUTPUT. Every spelling of a root path (with
+// forward, backward or escaped backward slashes, as in a quoted string)
+// becomes <ROOT_NAME> and CRLF becomes LF. On Windows backslashes also become
+// slashes, so one snapshot serves Unix and Windows; elsewhere they are kept,
+// so a snapshot can hold an escape such as \n and a path printed with
+// backslashes on Unix is a difference. With UPDATE_SNAPSHOTS=1 the snapshot
+// is written instead.
 import fs from "node:fs";
 import path from "node:path";
 
-const [snapshot, actual, ...roots] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const normalizeOnly = args[0] === "--normalize";
+if (normalizeOnly) args.shift();
+const [snapshot, actual, ...roots] = args;
 if (snapshot === undefined || actual === undefined) {
-  throw new Error("Usage: check_snapshot.js SNAPSHOT ACTUAL [NAME=PATH...]");
+  throw new Error(
+    "Usage: check_snapshot.js [--normalize] SNAPSHOT ACTUAL [NAME=PATH...]",
+  );
 }
 
 let text = fs.readFileSync(actual, "utf8");
@@ -30,10 +39,15 @@ const replacements = roots
 for (const { name, spelling } of replacements) {
   text = text.split(spelling).join(`<${name}>`);
 }
-text = text
-  .replaceAll("\r\n", "\n")
-  .replaceAll("\\\\", "/")
-  .replaceAll("\\", "/");
+text = text.replaceAll("\r\n", "\n");
+if (process.platform === "win32") {
+  text = text.replaceAll("\\\\", "/").replaceAll("\\", "/");
+}
+
+if (normalizeOnly) {
+  fs.writeFileSync(snapshot, text);
+  process.exit(0);
+}
 
 if (process.env.UPDATE_SNAPSHOTS === "1") {
   fs.mkdirSync(path.dirname(snapshot), { recursive: true });

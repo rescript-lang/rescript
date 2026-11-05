@@ -116,10 +116,32 @@ file_link_if_supported() {
 # spellings of each PATH are replaced as well. UPDATE_SNAPSHOTS=1 rewrites the
 # snapshot.
 check_snapshot() {
-  _snapshot_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
   _snapshot_file=$1
-  _snapshot_actual=$2
+  shift
+  _snapshot_node "" "$(_snapshot_dir)/snapshots/$_snapshot_file" "$@"
+}
+
+# normalize_paths INPUT OUTPUT [NAME=PATH...]: writes INPUT to OUTPUT
+# normalized as check_snapshot normalizes it, for checks that grep the output.
+normalize_paths() {
+  _snapshot_input=$1
+  _snapshot_output=$2
   shift 2
+  _snapshot_node --normalize "$_snapshot_output" "$_snapshot_input" "$@"
+}
+
+_snapshot_dir() {
+  CDPATH= cd -- "$(dirname -- "$0")" && pwd
+}
+
+# _snapshot_node MODE TARGET ACTUAL [NAME=PATH...]: runs check_snapshot.js,
+# adding the native spellings of each PATH on Windows. MODE is empty or
+# --normalize.
+_snapshot_node() {
+  _snapshot_mode=$1
+  _snapshot_target=$2
+  _snapshot_actual=$3
+  shift 3
   _snapshot_root_count=$#
   while [ "$_snapshot_root_count" -gt 0 ]; do
     _snapshot_root=$1
@@ -137,8 +159,8 @@ check_snapshot() {
     fi
     _snapshot_root_count=$((_snapshot_root_count - 1))
   done
-  node "$_snapshot_dir/check_snapshot.js" \
-    "$_snapshot_dir/snapshots/$_snapshot_file" "$_snapshot_actual" "$@"
+  node "$(_snapshot_dir)/check_snapshot.js" ${_snapshot_mode:+"$_snapshot_mode"} \
+    "$_snapshot_target" "$_snapshot_actual" "$@"
 }
 
 # directory_link TARGET LINK: a symlink, or a junction on Windows, which needs

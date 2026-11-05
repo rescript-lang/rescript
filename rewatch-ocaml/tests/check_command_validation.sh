@@ -15,13 +15,10 @@ work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-command-validation-XXXXXX")
 # Compiler diagnostics contain canonical paths. Resolve platform aliases such
 # as macOS's /var -> /private/var before deriving paths used for comparison.
 work=$(realpath "$work")
-native_work=$work
-native_short_work=$work
+# Commands that rescript runs (--after-build) get the native spelling.
+command_work=$work
 if $windows_posix_shell; then
-  native_work=$(cd "$work" && pwd -W)
-  native_user=$(cygpath -w "$USERPROFILE" | tr '\\' '/')
-  native_short_user=$(cygpath -w -s "$USERPROFILE" | tr '\\' '/')
-  native_short_work=${native_work/"$native_user"/"$native_short_user"}
+  command_work=$(cd "$work" && pwd -W)
 fi
 lock_owner_pid() {
   local shell_pid=$1
@@ -33,7 +30,6 @@ lock_owner_pid() {
     printf '%s\n' "$shell_pid"
   fi
 }
-command_work=$native_work
 terminate_and_wait() {
   local pid=$1
   local label=$2
@@ -364,31 +360,8 @@ strip_ansi() {
 # normalize_project_path INPUT OUTPUT PROJECT: replaces every spelling of
 # PROJECT with <ROOT>, for checks that grep for project-relative paths.
 normalize_project_path() {
-  local input=$1
-  local output=$2
-  local project=$3
-  local native_project=$project
-  local native_short_project=$project
-  case $(uname -s) in
-    MINGW*|MSYS*)
-      native_project=$(cd "$project" && pwd -W)
-      native_short_project=${native_project/"$native_user"/"$native_short_user"}
-      ;;
-  esac
-  PROJECT_PATH=$project PROJECT_NATIVE_PATH=$native_project \
-    PROJECT_SHORT_PATH=$native_short_project node -e '
-    const fs = require("fs");
-    let text = fs.readFileSync(process.argv[1], "utf8");
-    for (const project of [process.env.PROJECT_PATH, process.env.PROJECT_NATIVE_PATH, process.env.PROJECT_SHORT_PATH]) {
-      for (const spelling of [project, project.replaceAll("/", "\\")]) {
-        text = text.split(spelling).join("<ROOT>");
-      }
-    }
-    text = text.replaceAll("\r\n", "\n");
-    text = text.replaceAll("\\", "/");
-    text = text.replaceAll("./<ROOT>/", "./");
-    fs.writeFileSync(process.argv[2], text);
-  ' "$input" "$output"
+  normalize_paths "$1" "$2.paths" "ROOT=$3"
+  sed 's#\./<ROOT>/#./#g' "$2.paths" >"$2"
 }
 
 dump_output() {
@@ -476,15 +449,14 @@ check_output_snapshot() {
   fi
 }
 
+# require_error_contains NAME FRAGMENT: the last run's stderr contains
+# FRAGMENT, in which the temporary directory may have any spelling.
 require_error_contains() {
   local name=$1
-  local fragment=$2
-  local native_fragment=${fragment/"$work"/"$native_work"}
-  local native_short_fragment=${fragment/"$work"/"$native_short_work"}
-  if ! { grep -F "$fragment" "$work/rescript.err" >/dev/null || \
-      tr '\\' '/' <"$work/rescript.err" | grep -F "$native_fragment" >/dev/null || \
-      tr '\\' '/' <"$work/rescript.err" | grep -F "$native_short_fragment" >/dev/null; }; then
-    printf '%s: expected the error to contain %s\n' "$name" "$fragment" >&2
+  local fragment=${2//"$work"/<WORK>}
+  normalize_paths "$work/rescript.err" "$work/rescript.err.norm" "WORK=$work"
+  if ! grep -F "$fragment" "$work/rescript.err.norm" >/dev/null; then
+    printf '%s: expected the error to contain %s\n' "$name" "$2" >&2
     dump_output
     exit 1
   fi
