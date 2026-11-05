@@ -86,10 +86,10 @@ under the process owners described below.
 - The CLI uses Cmdliner: help is rendered as a man page, `--no-timing` takes
   no value, help takes precedence over version, and `--version` also works
   after a subcommand.
-- `--filter` supports a common subset of regular expression syntax
-  (alternation, groups, character classes, shorthand classes) and rejects
-  other constructs, such as `(?i)`, with an error. Non-ASCII names are matched
-  byte-wise.
+- `--filter` takes a Perl-style regular expression as the
+  [Re](https://github.com/ocaml/ocaml-re) library reads it. Constructs it
+  cannot match, such as backreferences, are rejected with an error. Non-ASCII
+  names are matched byte-wise.
 - A failing `--after-build` command fails the build. On Unix, hooks inherit
   redirected stdin but not an interactive terminal, because they run in their
   own process group.

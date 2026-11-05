@@ -597,20 +597,11 @@ fi
 checked=$((checked + 1))
 run_case implicit-conflicting-verbosity exit2 -v -q
 run_case build-conflicting-verbosity exit2 build --verbose --quiet
-run_case filter-perl-quoting exit2 build --filter '\QFoo.res\E' "$project"
-run_case filter-comment-group exit2 build --filter '(?#note)Foo' "$project"
-run_case filter-octal-escape exit2 build --filter '\123' "$project"
-run_case filter-braced-octal-escape exit2 build --filter '\o{123}' "$project"
-run_case filter-perl-control-escape-e exit2 build --filter '\e' "$project"
-run_case filter-perl-anchor-g exit2 build --filter '\G' "$project"
-run_case filter-perl-anchor-z exit2 build --filter '\Z' "$project"
-run_case filter-descending-range exit2 build --filter '[z-a]' "$project"
-run_case filter-escaped-range-start exit2 build --filter '[\d-z]' "$project"
-run_case filter-in-class-nonword exit2 build --filter \
-  '^[\W]+\.res$' "$project"
-run_case filter-collating-element exit2 build --filter '[[.a.]]' "$project"
-run_case filter-class-algebra exit2 build --filter \
-  '[a-z&&[^aeiou]]' "$project"
+run_case filter-perl-quoting accept build --filter '\QA.res\E' "$project"
+run_case filter-invalid exit2 build --filter '(' "$project"
+require_error_contains filter-invalid 'invalid regular expression'
+run_case filter-backreference exit2 build --filter '(A)\1' "$project"
+require_error_contains filter-backreference 'unsupported regular expression'
 run_case build-no-timing-preserves-folder accept build --no-timing "$project"
 run_case compiler-args-source accept compiler-args "$project/src/A.res"
 run_case compiler-args-extension reject compiler-args "$project/src/A.txt"

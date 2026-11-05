@@ -160,33 +160,11 @@ let tests =
     (not (rejects ["build"; "--filter"; "(?:Foo|Bar)\\d+"]))
     "filter groups and shorthand classes are accepted";
   check
-    (rejects ["build"; "--filter"; "[a-z&&[^aeiou]]"])
-    "class set operations are rejected instead of changing meaning";
+    (not (rejects ["build"; "--filter"; "\\QFoo.res\\E"]))
+    "Perl quoting is accepted";
   check
-    (rejects ["build"; "--filter"; "\\QFoo.res\\E"])
-    "Perl quoting is rejected";
-  check (rejects ["build"; "--filter"; "\\Z"]) "Perl-only anchors are rejected";
-  check
-    (rejects ["build"; "--filter"; "\\e"])
-    "Perl-only character escapes are rejected";
-  check
-    (rejects ["build"; "--filter"; "\\o{123}"])
-    "braced octal escapes are rejected";
-  check
-    (rejects ["build"; "--filter"; "[z-a]"])
-    "descending character ranges are rejected";
-  check
-    (rejects ["build"; "--filter"; "[a-\\d]"])
-    "character-class range endpoints are rejected";
-  check
-    (rejects ["build"; "--filter"; "[\\d-z]"])
-    "escaped character-class range starts are rejected";
-  check
-    (rejects ["build"; "--filter"; "^[\\W]+\\.res$"])
-    "shorthand classes with divergent in-class semantics are rejected";
-  check
-    (rejects ["build"; "--filter"; "[[.a.]]"])
-    "collating elements with divergent class semantics are rejected";
+    (rejects ["build"; "--filter"; "(Foo)\\1"])
+    "backreferences, which Re cannot match, are rejected";
   check
     (rejects ["format"; "--stdin"; ".txt"])
     "format stdin validates the source extension";
