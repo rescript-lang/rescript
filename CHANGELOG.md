@@ -11,6 +11,34 @@
 
 # 13.0.0-alpha.7
 
+#### :star: Highlights
+
+1. **A new build system, much faster**
+   - `rescript` now runs a build system rewritten in OCaml that compiles modules in-process on several CPU cores instead of starting `bsc` for every file. The Rust implementation remains available as `rescript-rust`. https://github.com/rescript-lang/rescript/pull/8780 https://github.com/rescript-lang/rescript/pull/8781 https://github.com/rescript-lang/rescript/pull/9170
+   - Modules with many JSX DOM elements compile up to 10× faster, with `.cmt` files up to 30× smaller. https://github.com/rescript-lang/rescript/pull/9149
+   - Large char ranges, list literals, nested inlining and `let rec` groups no longer take quadratic time. https://github.com/rescript-lang/rescript/pull/8893 https://github.com/rescript-lang/rescript/pull/8794 https://github.com/rescript-lang/rescript/pull/8801 https://github.com/rescript-lang/rescript/pull/9153
+2. **New language features**
+   - `try … finally`. https://github.com/rescript-lang/rescript/pull/8931
+   - Int range patterns such as `200 .. 299`, with `char` now an alias of `int`. https://github.com/rescript-lang/rescript/pull/8894 https://github.com/rescript-lang/rescript/pull/8892
+   - `$` in identifiers, e.g. `let count$ = signal(0)`. https://github.com/rescript-lang/rescript/pull/8791
+   - `for..of` over generators and iterators directly. https://github.com/rescript-lang/rescript/pull/8937
+   - `debugger()` as a plain function. https://github.com/rescript-lang/rescript/pull/9163
+3. **Untagged variants for real JavaScript APIs**
+   - `@instanceOf("Class")` and `@typeOf` make bound JavaScript classes and opaque types untagged variant cases; `File`, `Blob`, `JsError`, `Symbol` and the `Intl` classes work as cases. https://github.com/rescript-lang/rescript/pull/8950
+   - Many soundness and matching fixes, and smaller switches that test literals and `typeof` before any `instanceof`. https://github.com/rescript-lang/rescript/pull/9015
+4. **Standard library**
+   - `Temporal` bindings. https://github.com/rescript-lang/rescript/pull/9094
+   - Typed arrays as distinct types. https://github.com/rescript-lang/rescript/pull/9050
+5. **React Server Components**
+   - Nested components such as `<Sidebar.Provider />` work as client references, since every nested `make` is exported flat. https://github.com/rescript-lang/rescript/pull/8904
+6. **The v13 cleanup**
+   - The APIs deprecated in v12 are removed; run `rescript-tools migrate-all` with 12.3.2 before upgrading. https://github.com/rescript-lang/rescript/pull/9052
+   - `@deriving(abstract)` and `jsConverter`, the `@ocaml.*` attributes, `@ocaml.doc`/`@ns.doc` doc comments, record syntax for dicts and macOS Intel support are removed. See the breaking changes below.
+7. **Correctness and tooling**
+   - More correct JavaScript: left-to-right evaluation order, `await` rejected where it produced invalid JavaScript, NaN comparisons, and closed type holes with mutable records.
+   - A more faithful formatter: it keeps line endings, comments and attributes, and handles byte order marks.
+   - Clearer error messages: signature mismatches show only the differing items, in ReScript syntax.
+
 #### :boom: Breaking Change
 
 - Records whose fields are named `"0"`, `"1"`, … with `@as` are JavaScript arrays; record rest patterns, coercions and untagged variants that would treat them as objects are now errors. https://github.com/rescript-lang/rescript/pull/9224
