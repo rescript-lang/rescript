@@ -4,17 +4,31 @@ import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mj
 
 function decodeGroup(group) {
   let id = group.id;
-  if (typeof id !== "string") {
+  if (id === undefined) {
+    return [
+      "e",
+      "f"
+    ];
+  }
+  let id$1 = Primitive_option.valFromOption(id);
+  if (typeof id$1 !== "string") {
     return [
       "e",
       "f"
     ];
   }
   let name = group.name;
-  if (typeof name === "string") {
+  if (name === undefined) {
     return [
-      id,
-      name
+      "e",
+      "f"
+    ];
+  }
+  let name$1 = Primitive_option.valFromOption(name);
+  if (typeof name$1 === "string") {
+    return [
+      id$1,
+      name$1
     ];
   } else {
     return [
@@ -25,7 +39,11 @@ function decodeGroup(group) {
 }
 
 function decodeNull(x) {
-  let tmp = x.field;
+  let match = x.field;
+  if (match === undefined) {
+    return "no";
+  }
+  let tmp = Primitive_option.valFromOption(match);
   if (tmp === null) {
     return "yes it's null";
   } else {
