@@ -1,4 +1,4 @@
-# Helpers shared by the OCaml rewatch test scripts. Source this file; it is
+# Helpers shared by the rewatch-ocaml test scripts. Source this file; it is
 # POSIX sh because run.sh runs under sh. Without `local`, the helpers keep their
 # state in `_`-prefixed variables so they never overwrite a caller's.
 #
@@ -108,6 +108,34 @@ file_link_if_supported() {
   else
     ln -s "$_link_target" "$_link_path"
   fi
+}
+
+# check_snapshot SNAPSHOT ACTUAL [NAME=PATH...]: compares ACTUAL with the
+# snapshot file rewatch-ocaml/tests/snapshots/SNAPSHOT after replacing each
+# PATH by <NAME> (see check_snapshot.js). On Windows the native long and short
+# spellings of each PATH are replaced as well. UPDATE_SNAPSHOTS=1 rewrites the
+# snapshot.
+check_snapshot() {
+  _snapshot_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+  _snapshot_file=$1
+  _snapshot_actual=$2
+  shift 2
+  _snapshot_root_count=$#
+  while [ "$_snapshot_root_count" -gt 0 ]; do
+    _snapshot_root=$1
+    shift
+    set -- "$@" "$_snapshot_root"
+    if $windows_posix_shell; then
+      _snapshot_name=${_snapshot_root%%=*}
+      _snapshot_path=${_snapshot_root#*=}
+      set -- "$@" \
+        "$_snapshot_name=$(cygpath -am "$_snapshot_path")" \
+        "$_snapshot_name=$(cygpath -am -s "$_snapshot_path")"
+    fi
+    _snapshot_root_count=$((_snapshot_root_count - 1))
+  done
+  node "$_snapshot_dir/check_snapshot.js" \
+    "$_snapshot_dir/snapshots/$_snapshot_file" "$_snapshot_actual" "$@"
 }
 
 # directory_link TARGET LINK: a symlink, or a junction on Windows, which needs

@@ -1,0 +1,7 @@
+DEBUG:	Building source file-tree for package: verbose-output
+DEBUG:	Compiling file: A
+DEBUG:	Created project context for "verbose-output" at "<PROJECT>/rescript.json"
+DEBUG:	Generating AST for module: A
+DEBUG:	Parsing package: verbose-output
+TRACE:	Compiled 2 out of 2 in the universe
+compile dirty: A

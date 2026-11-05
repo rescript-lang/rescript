@@ -1,29 +1,30 @@
 #!/bin/bash
+# Checks the DEBUG and TRACE events of `rescript -v build` and `-vv build`
+# against snapshots/verbose_output. Only the event lines are compared, sorted,
+# so parallel compilation does not reorder them.
 set -eu
+. "$(dirname "$0")/test_helpers.sh"
 
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
-rust=${1:-$root/rewatch/target/debug/rescript}
-ocaml=${2:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
-rust=$(realpath "$rust")
-ocaml=$(realpath "$ocaml")
+rescript=${1:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
+rescript=$(realpath "$rescript")
 work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-verbose-output-XXXXXX")
 cleanup() {
   rm -rf "$work"
 }
 trap cleanup EXIT
 
-for implementation in rust-v ocaml-v rust-vv ocaml-vv; do
-  mkdir -p "$work/$implementation/src"
+for level in v vv; do
+  mkdir -p "$work/$level/src"
   printf '{"name":"verbose-output","sources":["src"]}\n' \
-    >"$work/$implementation/rescript.json"
-  printf 'let value = 1\n' >"$work/$implementation/src/A.res"
-  printf 'let value = A.value\n' >"$work/$implementation/src/B.res"
-  printf 'let value = 2\n' >"$work/$implementation/src/Authored.res"
-  printf 'let value: int\n' >"$work/$implementation/src/WithInterface.resi"
-  printf 'let value = 3\n' >"$work/$implementation/src/WithInterface.res"
+    >"$work/$level/rescript.json"
+  printf 'let value = 1\n' >"$work/$level/src/A.res"
+  printf 'let value = A.value\n' >"$work/$level/src/B.res"
+  printf 'let value = 2\n' >"$work/$level/src/Authored.res"
+  printf 'let value: int\n' >"$work/$level/src/WithInterface.resi"
+  printf 'let value = 3\n' >"$work/$level/src/WithInterface.res"
 done
 
-export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$root/_build/default/compiler/bsc/rescript_compiler_main.exe}
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$root/packages/@rescript/runtime}
 
 normalize_events() {
@@ -43,74 +44,36 @@ normalize_events() {
     | sort >"$output"
 }
 
+# capture NAME LEVEL: runs a build of the LEVEL project and checks its events
+# against snapshots/verbose_output/NAME.txt.
 capture() {
-  implementation=$1
-  executable=$2
-  level=$3
-  project="$work/$implementation"
+  name=$1
+  level=$2
+  project="$work/$level"
   (
     cd "$project"
-    "$executable" "$level" build >"$work/$implementation.stdout" \
-      2>"$work/$implementation.stderr"
+    "$rescript" "-$level" build >"$work/$name.stdout" 2>"$work/$name.stderr"
   )
-  if [ -s "$work/$implementation.stderr" ]; then
-    echo "$implementation unexpectedly wrote verbose build output to stderr" >&2
-    cat "$work/$implementation.stderr" >&2
+  if [ -s "$work/$name.stderr" ]; then
+    echo "$name unexpectedly wrote verbose build output to stderr" >&2
+    cat "$work/$name.stderr" >&2
     exit 1
   fi
-  normalize_events "$work/$implementation.stdout" \
-    "$work/$implementation.events"
+  normalize_events "$work/$name.stdout" "$work/$name.events"
+  check_snapshot "verbose_output/$name.txt" "$work/$name.events" \
+    "PROJECT=$project"
 }
 
-capture rust-v "$rust" -v
-capture ocaml-v "$ocaml" -v
-capture rust-vv "$rust" -vv
-capture ocaml-vv "$ocaml" -vv
+capture v v
+capture vv vv
 
-compare_events() {
-  rust_events=$1
-  ocaml_events=$2
-  if ! cmp -s "$rust_events" "$ocaml_events"; then
-    echo "Verbose semantic output differs" >&2
-    printf '%s\n' '--- Rust events ---' >&2
-    cat "$rust_events" >&2
-    printf '%s\n' '--- OCaml events ---' >&2
-    cat "$ocaml_events" >&2
-    exit 1
-  fi
-}
-
-compare_events "$work/rust-v.events" "$work/ocaml-v.events"
-compare_events "$work/rust-vv.events" "$work/ocaml-vv.events"
-
-if grep -E '^(TRACE:|compile dirty:)' "$work/ocaml-v.events" >/dev/null; then
+if grep -E '^(TRACE:|compile dirty:)' "$work/v.events" >/dev/null; then
   echo "-v unexpectedly emitted trace-level events" >&2
-  cat "$work/ocaml-v.events" >&2
+  cat "$work/v.events" >&2
   exit 1
 fi
 
-capture_incremental() {
-  implementation=$1
-  executable=$2
-  project="$work/$implementation"
-  printf 'let value = 2\n' >"$project/src/A.res"
-  (
-    cd "$project"
-    "$executable" -vv build >"$work/$implementation-incremental.stdout" \
-      2>"$work/$implementation-incremental.stderr"
-  )
-  if [ -s "$work/$implementation-incremental.stderr" ]; then
-    echo "$implementation incremental verbose output reached stderr" >&2
-    cat "$work/$implementation-incremental.stderr" >&2
-    exit 1
-  fi
-  normalize_events "$work/$implementation-incremental.stdout" \
-    "$work/$implementation-incremental.events"
-}
-
-capture_incremental rust-vv "$rust"
-capture_incremental ocaml-vv "$ocaml"
-compare_events "$work/rust-vv-incremental.events" \
-  "$work/ocaml-vv-incremental.events"
+printf 'let value = 2\n' >"$work/vv/src/A.res"
+capture vv-incremental vv
 
 echo "Verbose semantic output matched"

@@ -1,0 +1,8 @@
+status: 0
+--- stderr
+WARN:
+
+Package name mismatch for <ROOT>:
+The package.json name is "package-name", while the rescript.json name is "config-name"
+This inconsistency will cause issues with package resolution.
+

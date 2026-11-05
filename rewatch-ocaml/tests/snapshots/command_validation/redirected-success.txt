@@ -1,0 +1,6 @@
+status: 0
+--- stdout
+Cleaned 0/0
+Parsed 4 source files
+Compiled 4 modules
+--- stderr
