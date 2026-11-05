@@ -587,14 +587,22 @@ let clear_imports () =
   Consistbl.clear (crc_units ());
   imported_units () := String_set.empty
 
+(* By default a compilation records the CRCs of the interfaces it reads and
+   of those these recorded in turn, so that an interface changes whenever one
+   below it does. With -bs-record-read-imports it records only the interfaces
+   it reads: ReScript has no link step that needs them all, and a build system
+   that rebuilds a module when an interface it read changed then need not
+   rebuild the modules that read none of them. The CRCs that the interfaces
+   recorded are checked against each other either way. *)
 let check_consistency ps =
+  let record = not !((Clflags.current ()).record_read_imports_only) in
   try
     List.iter
       (fun (name, crco) ->
         match crco with
         | None -> ()
         | Some crc ->
-          add_import name;
+          if record then add_import name;
           Consistbl.check (crc_units ()) name crc ps.ps_filename)
       ps.ps_crcs
   with Consistbl.Inconsistency (name, source, auth) ->
@@ -1861,7 +1869,13 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
     List.iter (fun (name, crc) -> prerr_endline name) imports;*)
   Btype.cleanup_abbrev ();
   Subst.reset_for_saving ();
-  let sg = Subst.signature (Subst.for_saving Subst.identity) sg in
+  (* Reading an imported interface creates identifiers, so without a fixed
+     start the saved signature, and its CRC, would change whenever an import
+     grows, even though the signature itself did not. *)
+  let sg =
+    Ident.with_baseline_stamps (fun () ->
+        Subst.signature (Subst.for_saving Subst.identity) sg)
+  in
   let flags =
     match deprecated with
     | Some s -> [Deprecated s]

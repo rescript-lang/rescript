@@ -46,10 +46,10 @@ val set_dependencies : t -> key:string -> string list -> unit
 val mark_dependents_compile_dirty :
   ?visited:(string, unit) Hashtbl.t -> t -> module_ -> unit
 (** Marks the direct source dependents of [module_], looking through namespace
-    maps. Dependents further away are marked only when a dependent's own
-    recompilation publishes a changed CMI ({!record_published_cmi}), because a
-    byte-identical CMI cannot affect them. [visited] is shared across one
-    publication batch so each dependent is visited once. *)
+    maps. A dependent further away recompiles only if an interface it was
+    compiled against changed its CRC, which the scheduler checks when it gets
+    to it ({!Published_interface.imports_changed}). [visited] is shared across
+    one publication batch so each dependent is visited once. *)
 
 val record_published_cmi :
   ?dirty_propagation:(string, unit) Hashtbl.t ->
@@ -59,6 +59,11 @@ val record_published_cmi :
   path:string ->
   cmi_change ->
   unit
+
+val record_current_cmt :
+  compile_assets:Compile_assets.t -> module_ -> cmt_path:string -> unit
+(** Records the time of the module's .cmt, after it was compiled or found to
+    have read only unchanged interfaces. *)
 
 val record_successful_compile :
   compile_assets:Compile_assets.t -> module_ -> cmt_path:string -> unit

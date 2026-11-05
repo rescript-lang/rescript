@@ -64,6 +64,11 @@ val set_args : string array -> unit
     files. Long-lived compiler hosts set this at each request boundary. *)
 
 val read_cmt : string -> cmt_infos
+
+val read_cmt_contents : string -> string -> cmt_infos
+(** [read_cmt_contents filename contents] reads a .cmt file from the contents
+    of [filename]. *)
+
 val read_cmi : string -> Cmi_format.cmi_infos
 
 val save_cmt :

@@ -34,6 +34,12 @@ val read_cmi_channel : string -> in_channel -> cmi_infos
 val read_cmi_contents : string -> string -> cmi_infos
 (** [read_cmi_contents filename contents] reads an interface from the
     contents of [filename]. *)
+
+val read_crcs_and_flags :
+  string -> string -> (string * Digest.t option) list * pers_flags list
+(** [read_crcs_and_flags filename contents] reads the CRCs and flags of the
+    interface in [contents], without reading its signature. The first CRC is
+    the interface's own; the others are those of its imports. *)
 (* Parse an already opened CMI. The caller retains ownership of the channel. *)
 
 (* Error report *)

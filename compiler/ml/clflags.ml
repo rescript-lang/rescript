@@ -24,6 +24,7 @@ type t = {
   color: Misc.Color.setting option ref;
   assume_no_mli: mli_status ref;
   dont_record_crc_unit: string option ref;
+  record_read_imports_only: bool ref;
   bs_gentype: bool ref;
   jsx_preserve: bool ref;
   no_assert_false: bool ref;
@@ -55,6 +56,7 @@ let create () =
     color = ref None (* -color *);
     assume_no_mli = ref Mli_non_exists;
     dont_record_crc_unit = ref None;
+    record_read_imports_only = ref false (* -bs-record-read-imports *);
     bs_gentype = ref false;
     jsx_preserve = ref false (* -bs-jsx-preserve *);
     no_assert_false = ref false;
@@ -101,6 +103,7 @@ let reset () =
   state.color := Some Misc.Color.Always;
   state.assume_no_mli := Mli_non_exists;
   state.dont_record_crc_unit := None;
+  state.record_read_imports_only := false;
   state.bs_gentype := false;
   state.jsx_preserve := false;
   state.no_assert_false := false;

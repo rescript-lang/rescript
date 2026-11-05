@@ -163,6 +163,86 @@ let copy_tests _context =
         (File_util.read_file destination = "changed")
         "copies are written to disk")
 
+let save_interface path ?(name = "A") ?(flags = []) crcs =
+  File_util.ensure_dir (Filename.dirname path);
+  ignore
+    (Cmi_format.create_cmi path
+       {cmi_name = name; cmi_sign = []; cmi_crcs = crcs; cmi_flags = flags})
+
+let change_printer = function
+  | Build_state.Cmi_changed -> "changed"
+  | Cmi_unchanged -> "unchanged"
+  | Cmi_change_unknown -> "unknown"
+
+(* An interface is changed for its dependents when its own CRC or its flags
+   change. One that only records other CRCs for its imports is published with
+   its previous modification time. *)
+let publish_interface_tests _context =
+  with_temp_dir (fun root ->
+      let source = Filename.concat root "bs/A.cmi" in
+      let destination = Filename.concat root "ocaml/A.cmi" in
+      let publish () = Published_interface.publish ~source ~destination in
+      let check_change expected message =
+        assert_equal ~printer:change_printer ~msg:message expected (publish ())
+      in
+      save_interface source [("B", Some (Digest.string "first"))];
+      File_util.ensure_dir (Filename.dirname destination);
+      check_change Cmi_changed "a first interface is new";
+      check_change Cmi_unchanged "the same interface is unchanged";
+      Unix.utimes destination 1000. 1000.;
+      save_interface source [("B", Some (Digest.string "second"))];
+      check_change Cmi_unchanged "other CRCs for imports leave it unchanged";
+      check
+        (File_util.read_file destination = File_util.read_file source)
+        "an interface with other imports is still published";
+      check
+        ((Unix.stat destination).st_mtime = 1000.)
+        "it keeps its modification time";
+      save_interface source ~flags:[Deprecated "use B"] [];
+      check_change Cmi_changed "new flags change it";
+      save_interface source ~name:"Other" [];
+      check_change Cmi_changed "a new CRC changes it";
+      check
+        ((Unix.stat destination).st_mtime > 1000.)
+        "a changed interface has a new modification time")
+
+(* A module is out of date when an interface of this build that it read has
+   another CRC than the one it recorded. *)
+let imports_changed_tests _context =
+  with_temp_dir (fun root ->
+      let interface name = Filename.concat root (name ^ ".cmi") in
+      save_interface (interface "B") ~name:"B" [];
+      let current =
+        match Cmi_format.read_cmi (interface "B") with
+        | {cmi_crcs = (_, crc) :: _} -> crc
+        | {cmi_crcs = []} -> assert_failure "an interface records its own CRC"
+      in
+      let published = function
+        | "B" -> Some (interface "B")
+        | _ -> None
+      in
+      let imports_changed ?(has_interface = false) recorded =
+        save_interface (interface "A") recorded;
+        Published_interface.imports_changed ~published ~cmi_path:(interface "A")
+          ~has_interface
+      in
+      check
+        (not
+           (imports_changed
+              [("B", current); ("Outside", Some (Digest.string "any"))]))
+        "current CRCs and imports from outside the build are unchanged";
+      check
+        (imports_changed [("B", Some (Digest.string "old"))])
+        "another recorded CRC is a change";
+      check
+        (imports_changed ~has_interface:true [("B", current)])
+        "an implementation whose typed tree is missing counts as changed";
+      Sys.remove (interface "A");
+      check
+        (Published_interface.imports_changed ~published
+           ~cmi_path:(interface "A") ~has_interface:false)
+        "a missing interface counts as changed")
+
 let parallel_map_tests _context =
   let items = List.init 1000 Fun.id in
   check
@@ -185,5 +265,7 @@ let tests =
          "ast_header_boundary" >:: ast_header_boundary_tests;
          "parsed_dependencies" >:: parsed_dependencies_tests;
          "copy" >:: copy_tests;
+         "publish_interface" >:: publish_interface_tests;
+         "imports_changed" >:: imports_changed_tests;
          "parallel_map" >:: parallel_map_tests;
        ]

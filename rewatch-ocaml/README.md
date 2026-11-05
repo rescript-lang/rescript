@@ -68,7 +68,8 @@ Independent parse and compile requests run on a bounded pool of OCaml domains.
 The pool has `min(8, max(1, CPUs - 1))` workers; set `REWATCH_COMPILER_DOMAINS`
 to choose another count: a positive integer, lowered to the machine's limit of
 `max(12, min(32, CPUs))`. The main domain schedules dependencies;
-workers run compiler requests and publish what they produce.
+workers run compiler requests, publish what they produce, and check the
+imports of modules that may have read a changed interface.
 
 The driver gives each request fresh compiler state (flags, warnings, caches,
 predefined types, identifier counters) and restores it on every exit, so
@@ -112,6 +113,14 @@ These are intentional:
 - A damaged published AST, such as one cut short by a killed build, makes its
   module parse again. Rust reads whatever dependency lines it finds in it, and
   panics if the file can't be read.
+- A module is compiled again only when an interface it read changed its CRC,
+  not whenever the `.cmi` of a dependency changed. Compile requests pass
+  `-bs-record-read-imports`, so an interface records only the interfaces its
+  module read. One published again with its CRC unchanged keeps its
+  modification time, and a module found to have read only unchanged
+  interfaces gets a new `.cmt` time. A build after an interface change can
+  therefore compile fewer modules than Rust rewatch, which compiles every
+  dependent of a `.cmi` whose bytes changed.
 - OpenTelemetry export is not implemented.
 
 ## Platforms

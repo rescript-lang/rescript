@@ -170,11 +170,7 @@ let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
         (* Dependents read the published .cmi and .cmj, so the store keeps
            them; nothing in the build reads the other copies again. *)
         (match artifact with
-        | Cmi ->
-          cmi_change :=
-            if File_util.copy_build_file_if_different source destination then
-              Compiler_scheduler.Cmi_changed
-            else Compiler_scheduler.Cmi_unchanged
+        | Cmi -> cmi_change := Published_interface.publish ~source ~destination
         | Required "cmj" -> File_util.copy_build_file source destination
         | Required _ -> File_util.copy_build_file ~keep:false source destination
         | Optional _ ->
@@ -288,7 +284,11 @@ let compile_request ~build_dir ~(config : Config.t) ~common_args
       ~has_interface:(Option.is_some module_.interface)
       ~path
   in
-  {args; cwd = build_dir}
+  (* Interfaces then record only what their modules read, which is what the
+     scheduler checks before rebuilding a module whose dependencies changed.
+     Other build systems compile without it, so it is not part of the
+     arguments that `rescript compiler-args` prints. *)
+  {args = "-bs-record-read-imports" :: args; cwd = build_dir}
 
 let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~has_interface
     ~source_kind path result =

@@ -47,6 +47,17 @@ let with_fresh action =
   Domain.DLS.set counter_key {currentstamp = baseline; reinit_level = baseline};
   Fun.protect action ~finally:(fun () -> Domain.DLS.set counter_key previous)
 
+(* Identifiers numbered from the baseline cannot meet the predefined ones,
+   which all come before it. *)
+let with_baseline_stamps action =
+  let state = counter () in
+  let previous = state.currentstamp in
+  Option.iter
+    (fun baseline -> state.currentstamp <- baseline)
+    (Atomic.get request_baseline);
+  Fun.protect action ~finally:(fun () ->
+      state.currentstamp <- max previous state.currentstamp)
+
 let create s =
   let state = counter () in
   state.currentstamp <- state.currentstamp + 1;

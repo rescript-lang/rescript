@@ -59,6 +59,11 @@ val capture_request_baseline : unit -> unit
 val with_fresh : (unit -> 'a) -> 'a
 (* Give one request its own stamp counter and restore the prior counter. *)
 
+val with_baseline_stamps : (unit -> 'a) -> 'a
+(* Number the identifiers that the action creates from the request baseline,
+   so they do not depend on how many identifiers were created before. Later
+   identifiers continue after both. *)
+
 type 'a tbl
 (* Association tables from identifiers to type 'a. *)
 
