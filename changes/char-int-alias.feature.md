@@ -1,1 +1,0 @@
-- `char` is now an alias of `int`, so char literals and ints mix freely, including in `switch` patterns.

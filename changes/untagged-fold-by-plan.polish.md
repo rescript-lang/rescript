@@ -1,1 +1,0 @@
-- Fold a match on an untagged constant by evaluating the dispatch the code is printed from, so folding and the generated code agree, also for values outside every case.

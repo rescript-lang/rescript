@@ -9,10 +9,30 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 13.0.0-alpha.7 (Unreleased)
+# 13.0.0-alpha.7
 
 #### :boom: Breaking Change
 
+- A record rest pattern whose rest type is a record with the runtime names `"0"`, `"1"`, …, a coercion between such a record and a record represented as an object (in either direction), and an untagged variant with such a record and an array or tuple case are now errors, as they produced an object where the type promises a JavaScript array, or matched the wrong case. https://github.com/rescript-lang/rescript/pull/9224
+- Replace the `%debugger` extension with a `debugger()` function in `Pervasives`. `%debugger` is now a syntax error that points to `debugger()`. https://github.com/rescript-lang/rescript/pull/9163
+- Coercing another type into a private record or variant is an error: only the module defining a private type can build its values. Coercing out of a private type still works. https://github.com/rescript-lang/rescript/pull/9125
+- `TypedArray.map` and `TypedArray.mapWithIndex` now keep the element type, because a typed array converts the results of `map` to its own element type. https://github.com/rescript-lang/rescript/pull/9112
+- The new `Temporal` stdlib module shadows a project module named `Temporal`, so rename such a module. A nested module named `Temporal` is now exported to JS as `$$Temporal`, like modules named after other JS globals such as `Intl`, so that it no longer shadows the global `Temporal`. https://github.com/rescript-lang/rescript/pull/9094
+- Remove the standard library APIs deprecated in v12, including `List.has` and the `Error` and `Exn` modules. Run `rescript-tools migrate-all` with ReScript 12.3.2 before upgrading to migrate your code automatically. https://github.com/rescript-lang/rescript/pull/9052
+- Typed arrays are distinct types: `Int8Array.t` and the others are private abbreviations of `TypedArray.t<_>`, so an untagged variant can no longer take one typed array for another. Use each module's own functions, such as `Int8Array.get`, or upcast with `(view :> TypedArray.t<int>)` to call the `TypedArray` functions. https://github.com/rescript-lang/rescript/pull/9050
+- `@instanceOf` that introduces a class on an abbreviation of an abstract type requires a private abbreviation: write `@instanceOf("Element") type element = private node`. https://github.com/rescript-lang/rescript/pull/9050
+- `@unboxed` applies to a whole variant and can no longer be written on a constructor. Write `@unboxed type t = ...` instead. A constructor whose payload is an inline record with one field became that record object, while `@unboxed` on its type makes the value the field: give the record type a name to keep the object. https://github.com/rescript-lang/rescript/pull/9040
+- Give `.cmi` and `.cmt` files ReScript magic numbers (`ResCmi…`, `ResCmt…`) instead of OCaml-style ones, and bump all magic numbers at release time instead of in pull requests. https://github.com/rescript-lang/rescript/pull/9000
+- Editor hover, completion and `rescript-tools doc` read doc comments only from `/** */` comments (`@res.doc`); the legacy `@ocaml.doc` and `@ns.doc` attributes are no longer shown. Replace them with doc comments. https://github.com/rescript-lang/rescript/pull/8992
+- Remove the OCaml attribute spellings `@ocaml.deprecated`, `@ocaml.unboxed`, `@ocaml.immediate`, `@ocaml.warnerror`, `@ocaml.warning`, `@ocaml.ppwarning`, `@ocaml.boxed`, `@ocaml.deprecated_mutable`, `@ocaml.text` and `%ocaml.error`, and the `%extension_constructor` extension. `@boxed` and `@deprecated_mutable` are no longer interpreted and are ignored. PPX output keeps working: the PPX bridge renames `ocaml.warning`, `ocaml.ppwarning` and `ocaml.error` to the bare names. https://github.com/rescript-lang/rescript/pull/8928
+- Drop support for macOS on Intel (darwin-x64). Intel Mac users can stay on ReScript 12. https://github.com/rescript-lang/rescript/pull/8912
+- Remove `@res.hoistedFunction`, which nested `make` flat exports replace; other nested functions are no longer exported flat. https://github.com/rescript-lang/rescript/pull/8904
+- `rescript` compiles with its embedded compiler and ignores `RESCRIPT_BSC_EXE`, which now only affects `rescript-rust`. https://github.com/rescript-lang/rescript/pull/8781
+- The OCaml build system rejects duplicate keys in `rescript.json` maps, a `namespace-entry` without a namespace, and a value after `--no-timing`. https://github.com/rescript-lang/rescript/pull/8780
+- `rescript --filter` supports the common subset of regular expression syntax and rejects other constructs, such as `(?i)`. https://github.com/rescript-lang/rescript/pull/8780
+- A failing `--after-build` command fails the build, and on Unix the command no longer gets an interactive terminal. https://github.com/rescript-lang/rescript/pull/8780
+- `rescript format -v` and `rescript compiler-args -v` write their logs to stderr instead of stdout. https://github.com/rescript-lang/rescript/pull/8780
+- `rescript` does not export OpenTelemetry traces; `rescript-rust` still does. https://github.com/rescript-lang/rescript/pull/8780
 - `\"_"` is no longer allowed as a quoted identifier, as it couldn't be told apart from the `_` wildcard and placeholder. https://github.com/rescript-lang/rescript/pull/8795
 - Record syntax no longer creates or matches dicts, e.g. `let d: dict<int> = {foo: 1}`; it's an error pointing to `dict{...}`. https://github.com/rescript-lang/rescript/pull/8751
 - Remove the call-site `@inlined` attribute, which was parsed but never affected code generation. It is now reported as a misplaced attribute (warning 53). https://github.com/rescript-lang/rescript/pull/8734
@@ -22,12 +42,126 @@
 
 #### :rocket: New Feature
 
+- Add `Temporal` bindings to the standard library, covering durations, instants, plain and zoned dates and times, and `Temporal.Now`, plus `Date.toTemporalInstant`. They need a runtime that provides Temporal, such as Node.js 26. Compare Temporal values with the `equals` and `compare` functions of their module, since `==`, `compare`, `<` and `>` treat any two of them as equal. GenType maps Temporal types to TypeScript's `Temporal.*` types, which need TypeScript 6.0 or later and its `esnext.temporal` lib (included in `ESNext`). https://github.com/rescript-lang/rescript/pull/9094
+- Iterator and generator types are covariant in their yield and return types and contravariant in their resume type, `Array.arrayLike` is covariant, and `taggedTemplate` is contravariant in its parameters and covariant in its output. https://github.com/rescript-lang/rescript/pull/8981
+- Add `@instanceOf("Class")` and `@typeOf("…")` for abstract types and type abbreviations, so that values of bound JavaScript classes and opaque primitive types can be untagged variant cases. A private abbreviation of another annotated type declares a subclass. https://github.com/rescript-lang/rescript/pull/8950
+- `for..of` and `for await..of` accept generators and other iterator types directly, without `asIterable`. https://github.com/rescript-lang/rescript/pull/8937
+- Add `try ... finally { ... }` and `try ... catch { ... } finally { ... }`, compiled to JavaScript `finally` blocks. https://github.com/rescript-lang/rescript/pull/8931
+- Export every nested `make` as a flat value such as `A$B$make` and read it that way from other modules, so nested JSX components work as React Server Components client references. https://github.com/rescript-lang/rescript/pull/8904
+- Int range patterns such as `200 .. 299` are supported in `switch`, and their bounds may mix ints and chars. https://github.com/rescript-lang/rescript/pull/8894
+- `char` is now an alias of `int`, so char literals and ints mix freely, including in `switch` patterns. https://github.com/rescript-lang/rescript/pull/8892
+- `rescript` now runs a build system rewritten in OCaml; the Rust implementation remains available as `rescript-rust`. https://github.com/rescript-lang/rescript/pull/8780
 - Support Windows 11 on ARM by installing the x64 binaries, which Windows runs through its x64 emulation. https://github.com/rescript-lang/rescript/pull/8776
 - Allow `$` in identifiers, e.g. `let count$ = signal(0)`. https://github.com/rescript-lang/rescript/pull/8791
 - Allow an untagged variant to have both a boolean literal case and a boolean payload case, e.g. `@unboxed type t = | @as(true) A | B(bool)`, like for strings and numbers. https://github.com/rescript-lang/rescript/pull/8777
 
 #### :bug: Bug fix
 
+- Build a recursive `let rec` value of a record whose fields have the runtime names `"0"`, `"1"`, … as a JavaScript array instead of an object. https://github.com/rescript-lang/rescript/pull/9232
+- Keep records whose fields have the runtime names `"0"`, `"1"`, … JavaScript arrays when they are spread or written as `{}`, and match them as arrays when they are untagged variant payloads. https://github.com/rescript-lang/rescript/pull/9224
+- Reject `await`, `for await` and `module M = await List` in a functor body, wherever the functor is defined, and `module M = await List` in a module nested in a function that is not async. These compiled to JavaScript with `await` in a function that is not async, except where the optimizer inlined every application of the functor. https://github.com/rescript-lang/rescript/pull/9220
+- Reject coercing `unit` to `string`, as in `(() :> string)`, and a closed polymorphic variant to `bool` or `unit`, as from `[#"true" | #"false"]` to `bool`. These compiled, but left `undefined` typed as a `string`, or a string typed as a `bool` or `unit`, and type errors suggested them as fixes. https://github.com/rescript-lang/rescript/pull/9218
+- Reject spreading `bool` or `unit` into a variant, as in `type t = | ...bool | Other`. The variant held `true`, `false` and `undefined`, but its switches and coercions took them for the strings `"true"`, `"false"` and `"()"`. https://github.com/rescript-lang/rescript/pull/9218
+- Evaluate a polymorphic variant argument of an external once, in its place among the arguments. An event-style `@string` argument such as `on(t, mk())` ran `mk()` twice, and an `await` in an `@int` argument, or in a `@string` argument with `@as`, was put in a generated function, which is a syntax error. https://github.com/rescript-lang/rescript/pull/9217
+- Editor "create interface" keeps the doc comments, `@deprecated` and genType and reanalyze annotations written on `let` bindings. https://github.com/rescript-lang/rescript/pull/9207
+- Parse several doc comments before the `|` of a variant constructor, variant spread or polymorphic variant tag, as the formatter prints them. https://github.com/rescript-lang/rescript/pull/9203
+- Take the formatter's line endings from a line break outside string literals and comments. https://github.com/rescript-lang/rescript/pull/9201
+- Complete elements of an array literal with a spread, such as `[...xs, <cursor>]`, from the array's element type. https://github.com/rescript-lang/rescript/pull/9199
+- Evaluate the arguments of an inlined call left to right, as the call does. https://github.com/rescript-lang/rescript/pull/9177
+- Compile a `while` condition that needs statements into the loop, so `await`, `break` and `continue` work in it. https://github.com/rescript-lang/rescript/pull/9177
+- Keep `async` functions and functions with a `@directive` that only forward their parameters to a call. https://github.com/rescript-lang/rescript/pull/9176
+- Reject `await` in a function that an async function returns directly, as in `async x => y => await y`, which produced JavaScript with `await` outside an async function. https://github.com/rescript-lang/rescript/pull/9169
+- Fix the location of template literals without interpolations ending one character early in projects that use PPXs. https://github.com/rescript-lang/rescript/pull/9166
+- Fix `%todo` calling a user-defined `JsError` module instead of the standard library one. https://github.com/rescript-lang/rescript/pull/9160
+- Fix the location in the `%todo` error message: the file's base name instead of its absolute path, and columns instead of character offsets. https://github.com/rescript-lang/rescript/pull/9160
+- Evaluate arguments and literal elements left to right when a later one is a block that compiles to statements, which could produce wrong values. https://github.com/rescript-lang/rescript/pull/9159
+- Stop generalizing the type of a record spread `{...base, field: value}` that copies a mutable field from `base`, which let a value be stored at one type and read at another. https://github.com/rescript-lang/rescript/pull/9158
+- Stop generalizing the type of an empty record literal `{}` whose record has a mutable field, which let a value be stored at one type and read at another. https://github.com/rescript-lang/rescript/pull/9152
+- Editor "find references" on a record field no longer lists record literals that leave the optional field out. https://github.com/rescript-lang/rescript/pull/9149
+- Report an error for `@@jsxConfig` versions other than 4 instead of silently disabling the JSX transform. https://github.com/rescript-lang/rescript/pull/9145
+- Indent type declarations and externals copied by `createInterface` at their place in the interface instead of by their source column. https://github.com/rescript-lang/rescript/pull/9144
+- Print the `@as` names of fields and constructors and the strings of externals as they are written, so that non-ASCII letters are no longer turned into escapes that read back as other characters in error messages, hover and generated interfaces. https://github.com/rescript-lang/rescript/pull/9143
+- Keep `@tag`, `@notUndefined`, `@instanceOf` and `@typeOf` when printing a type declaration, in error messages, hover and generated interfaces. https://github.com/rescript-lang/rescript/pull/9136
+- Test a mutable field again after a guard that may have changed it, instead of taking a `switch` case that no longer matches. https://github.com/rescript-lang/rescript/pull/9131
+- Accept an attribute or doc comment in front of a `let` that destructures a GADT constructor, and let `@warning` on a pattern cover that pattern's unused variables. https://github.com/rescript-lang/rescript/pull/9128
+- Keep the comments around the spread of a list pattern without other items when formatting, as in `list{/* c */ ...r}`. https://github.com/rescript-lang/rescript/pull/9127
+- Accept source files that start with a UTF-8 byte order mark, keeping it when formatting, and end a line at a carriage return without a line feed. https://github.com/rescript-lang/rescript/pull/9120
+- Fix the formatter's placement of a doc comment on a single hugged parameter, of doc comments after an attribute, and of a comment before a list's tail spread, and the extra newline after a file with only a line comment. https://github.com/rescript-lang/rescript/pull/9119
+- Fix the coercion hint after a parenthesized operand and name the expected type as the error message shows it. https://github.com/rescript-lang/rescript/pull/9118
+- Evaluate JSX children after the other props in plain JSX mode, as in preserve mode. https://github.com/rescript-lang/rescript/pull/9117
+- Make `bsc -format` keep the line breaks inside string, template and character literals and polymorphic variant names as written, and format comments with `\r\r\n` stably. https://github.com/rescript-lang/rescript/pull/9116
+- Accept attributes and doc comments after `= private`, and a doc comment after `=` in front of a type expression such as `int`. https://github.com/rescript-lang/rescript/pull/9115
+- Fix the JavaScript simplifier treating equal float literals, or an int and a float literal of the same value, as different constants, which turned `x == 2.5 && x == 2.5` into `false`. https://github.com/rescript-lang/rescript/pull/9114
+- Fix untagged variant matches involving boolean literals that skipped the checks for the other cases. https://github.com/rescript-lang/rescript/pull/9113
+- Type `copyWithin` and `copyAllWithin` of typed arrays as returning the typed array instead of an `array`. https://github.com/rescript-lang/rescript/pull/9112
+- Fix the formatter moving an attribute or doc comment in front of a labeled parameter alias like `~a as x: int` onto the alias. https://github.com/rescript-lang/rescript/pull/9111
+- Fill cases added by the exhaustive-switch and add-missing-cases code actions with `%todo` instead of the removed `failwith("TODO")`. https://github.com/rescript-lang/rescript/pull/9110
+- Editor "create interface" keeps the attributes and doc comments written in front of a type declaration, such as `@tag` and `@unboxed`. https://github.com/rescript-lang/rescript/pull/9096
+- Record coercion no longer turns an immutable field into a mutable one, and requires a field that is mutable in both records to have the same type in both. https://github.com/rescript-lang/rescript/pull/9086
+- The formatter keeps `let f: type a. t => a = x =>` on one line when it fits, instead of breaking after `:` and `=` whenever the body spans several lines. https://github.com/rescript-lang/rescript/pull/9082
+- Editor "create interface" prints the types of applied functors and included modules instead of copying unrelated source lines. https://github.com/rescript-lang/rescript/pull/9077
+- Keep a line comment in the operand of `switch`, `if`, `try` or a loop in the operand instead of moving it into the block when formatting. https://github.com/rescript-lang/rescript/pull/9061
+- Parse a doc comment before a function parameter, so formatting a `@res.doc` parameter attribute no longer produces code that doesn't parse. https://github.com/rescript-lang/rescript/pull/9055
+- Print a type reached through a module alias once in type errors, without repeating it as its expansion. https://github.com/rescript-lang/rescript/pull/9054
+- Suggest a coercion to the whole expected type, not the nested part that differs. https://github.com/rescript-lang/rescript/pull/9053
+- Make the formatter keep each file's line endings. On Windows it no longer rewrites LF files with CRLF or reports them in `rescript format --check`, and formatting a CRLF file no longer adds a carriage return inside multi-line comments, template literals and raw JS on every run. https://github.com/rescript-lang/rescript/pull/9042
+- Fix matching a bool payload of an untagged variant beside a bool literal case in a match that does not name every case. https://github.com/rescript-lang/rescript/pull/9036
+- On Windows, let other programs delete or rename files while the build system reads them, so stopping a watcher by removing `lib/watch.lock` no longer fails intermittently. https://github.com/rescript-lang/rescript/pull/9034
+- Label syntax diagnostics with `ReScript` as their source. https://github.com/rescript-lang/rescript/pull/9031
+- Use file URI links with one-based line and column fragments in analysis Markdown
+  instead of the VSCode-specific navigation command. https://github.com/rescript-lang/rescript/pull/9031
+- Include document version `0` in analysis-generated code action edits. https://github.com/rescript-lang/rescript/pull/9031
+- Fix negated float comparisons with NaN: `!(x < 0.0)` compiled to `x >= 0.0`, which is `false` for NaN. https://github.com/rescript-lang/rescript/pull/9024
+- Fix a stack overflow when compiling `option` of a recursive `@unboxed` variant. https://github.com/rescript-lang/rescript/pull/9019
+- Fix untagged variant switches with a default arm matching class instances in the object case and literals in a payload case of their kind. https://github.com/rescript-lang/rescript/pull/9010
+- Reject an implementation whose variant cases with a payload have other `@as` tags than the interface states, and print those tags in type declarations. https://github.com/rescript-lang/rescript/pull/9009
+- Keep `Some(U)` distinct from `None` when `U` is a constant case represented by `undefined` (`@as(undefined)`). https://github.com/rescript-lang/rescript/pull/9008
+- Print `private` for abbreviations and variants in type mismatch errors and other printed type declarations. https://github.com/rescript-lang/rescript/pull/8999
+- Editor completion shows the polymorphic variant labels `#644` and `#""` as the formatter prints them, instead of `#"644"` and `#`. https://github.com/rescript-lang/rescript/pull/8990
+- genType emits `char` as the TypeScript type `number` instead of `char`, which TypeScript does not know. https://github.com/rescript-lang/rescript/pull/8988
+- Report an error when two bindings of a module get the same JavaScript name, such as `delete` and `$$delete`, instead of emitting a duplicate or overwritten export. https://github.com/rescript-lang/rescript/pull/8982
+- Reject `@as` literals of one variant that are the same JavaScript value, such as `@as(1)` and `@as(1.0)`, and accept `@as(1)` beside `@as(1n)`. https://github.com/rescript-lang/rescript/pull/8965
+- Reject an implementation that can hold `undefined` for a type its interface declares `@notUndefined`, which made `Some(None)` of the type `None` in clients. https://github.com/rescript-lang/rescript/pull/8950
+- An untagged variant with both `Blob` and `File` cases matches files as `File`, whatever the order of its cases. `File.t` is now a private abbreviation of `Blob.t`, and `JsError.t`, `Symbol.t` and the `Intl` classes can be untagged variant cases. https://github.com/rescript-lang/rescript/pull/8950
+- Stop `rescript` from rebuilding the modules of a `"."` or `"./src"` source
+  dir, and their dependents, on every build when nothing changed. https://github.com/rescript-lang/rescript/pull/8940
+- Make a module reached only as `Namespace.Module` from inside its own
+  namespace a dependency, so it builds first and its changes rebuild the user. https://github.com/rescript-lang/rescript/pull/8939
+- Evaluate the callee and arguments of a partial application `f(a, ...)` once, so an `await` in them no longer ends up in a non-async function. https://github.com/rescript-lang/rescript/pull/8936
+- Parse a switch guard that calls a function named `async`. https://github.com/rescript-lang/rescript/pull/8935
+- Reject a namespace in `rescript.json` that is not a valid module name, such as one derived from the package name `_`. https://github.com/rescript-lang/rescript/pull/8927
+- Find compiled files under the module's name as written before its uncapitalized form, so error messages on case-insensitive file systems show `ABC.cmi` instead of `aBC.cmi`. https://github.com/rescript-lang/rescript/pull/8925
+- Warn when another module uses a `@deprecated` `let` binding from a module without an interface file. https://github.com/rescript-lang/rescript/pull/8924
+- Make `rescript-tools migrate` leave files untouched when no migration applies instead of reformatting them. https://github.com/rescript-lang/rescript/pull/8922
+- genType refers to values and modules named like JS keywords or globals by the names the compiler gives them in JS, such as `$$delete`. https://github.com/rescript-lang/rescript/pull/8920
+- Keep attributes and doc comments written in front of a record or `..` type representation, attaching them to the type declaration instead of dropping them. https://github.com/rescript-lang/rescript/pull/8919
+- Keep inline records in exception and constructor declarations multiline when the source has a line break after `{`. https://github.com/rescript-lang/rescript/pull/8918
+- Reanalyze no longer reports `Division_by_zero` for `/` and `mod` with a non-zero literal divisor. https://github.com/rescript-lang/rescript/pull/8917
+- Make `rescript-tools migrate` refuse a file that changed since its last build instead of migrating it with stale locations. https://github.com/rescript-lang/rescript/pull/8916
+- Warn about untagged variant payload patterns that can never match because a literal case has the same value, like `S("a")` with `@as("a") A | S(string)`, and treat `@as(true) Yes | Ans(bool)` as fully covered by `Yes | Ans(false)`. https://github.com/rescript-lang/rescript/pull/8914
+- Fix the formatter dropping spreads of array and list literals, attributes on literals with spreads, and comments in list literals with spreads. https://github.com/rescript-lang/rescript/pull/8905
+- Fix a compiler crash ("Fatal error: Matching.comp_exit") on a guarded or-pattern that an earlier case makes unreachable. https://github.com/rescript-lang/rescript/pull/8896
+- Fix template and braced payloads of `%raw` and `%ffi` compiling differently when a PPX is used. https://github.com/rescript-lang/rescript/pull/8879
+- Fix quadratic compile time and memory of large character range patterns. https://github.com/rescript-lang/rescript/pull/8868
+- Remove the temporary PPX files when a PPX fails or a build is interrupted. https://github.com/rescript-lang/rescript/pull/8864
+- Report an error for JSX elements whose props are an `@unboxed` record, which isn't an object and broke at runtime or in JSX preserve mode. https://github.com/rescript-lang/rescript/pull/8857
+- Fix the formatter indenting dict literal rows after a spread twice. https://github.com/rescript-lang/rescript/pull/8853
+- Fix the formatter dropping comments in dict patterns, variant spread patterns and dict literals with spreads. https://github.com/rescript-lang/rescript/pull/8850
+- Fix `module M = await (P: S)` at the top level of a module compiling to a static import of `P`. https://github.com/rescript-lang/rescript/pull/8848
+- Fix external PPXs turning `Primitive_dict.make(...)` calls into dict literals and flattening dict literals spread into dict literals. https://github.com/rescript-lang/rescript/pull/8846
+- Fix the formatter printing a typed first-class module of a nested or attributed `await` in a form that does not parse. https://github.com/rescript-lang/rescript/pull/8845
+- Fix JSX preserve mode copying the props of an element with only a spread when it is printed as a call. https://github.com/rescript-lang/rescript/pull/8844
+- Fix a compiler crash and wrong code for matches that test an optional record field or dict key both for a value (`{x: 1}`) and for presence (`{x: ?None}`, `{x: ?Some(v)}`), and for untagged variant cases on an optional field. https://github.com/rescript-lang/rescript/pull/8842
+- `rescript-rust`: keep watching a source folder on Linux when an overlapping recursive source folder is removed from `rescript.json`. https://github.com/rescript-lang/rescript/pull/8839
+- Add the `allowed-dependents`, `namespace-entry` and `features` keys, a source's `feature` and the object form of dependencies to the `rescript.json` schema, so editors no longer flag them. https://github.com/rescript-lang/rescript/pull/8835
+- Preserve parentheses around statements that start with a regexp literal, so formatting cannot turn them into division continuing the previous statement. https://github.com/rescript-lang/rescript/pull/8720
+- Preserve the scope of attributes on ternary conditions when formatting. https://github.com/rescript-lang/rescript/pull/8720
+- Fix integer range patterns at int32 boundaries and wrapped nondecimal patterns matching incorrect values. https://github.com/rescript-lang/rescript/pull/8717
+- Integer patterns that alias the same int32 value (e.g. `0xFFFF_FFFF` and `-1`) may now produce unused-case warnings. https://github.com/rescript-lang/rescript/pull/8717
+- `rescript-rust`: keep watch mode running after full rebuild initialization fails, retry initialization on source edits, and watch newly added dependencies for configuration fixes. https://github.com/rescript-lang/rescript/pull/8641
+- Allow `rescript clean` to remove generated files when the source module graph is invalid, including out-of-source `lib/es6` and `lib/js` outputs in the project and its dependencies. https://github.com/rescript-lang/rescript/pull/8640
+- Fix GenType path resolution for Windows short paths and POSIX symlinked project paths, and prevent traversal from hanging at a filesystem root. https://github.com/rescript-lang/rescript/pull/8639
+- Rewatch: rebuild source dependencies when the consuming project's package output settings change. https://github.com/rescript-lang/rescript/pull/8540
 - Fix parser recovery and editor completion when a record or dict value is missing before a comma, e.g. `{a: , b: 1}`. https://github.com/rescript-lang/rescript/pull/8779
 - Derive module names from file names consistently, fixing files like `Button.test.res` that could not reference `Button`, and `.res`/`.resi` pairs with dotted or non-ASCII names. https://github.com/rescript-lang/rescript/pull/8797
 - Fix the formatter printing escaped identifiers starting with `_`, like `\"_'"`, in a form that doesn't parse. https://github.com/rescript-lang/rescript/pull/8795
@@ -59,8 +193,53 @@
 
 #### :memo: Documentation
 
+- Fix installation link in README.md. https://github.com/rescript-lang/rescript/pull/9138
+- State in the `rescript.json` schema that `namespace-entry` requires `namespace`, as `rescript` rejects it otherwise. https://github.com/rescript-lang/rescript/pull/8984
+
 #### :nail_care: Polish
 
+- Coercion errors no longer describe `bool` and `unit` as variants that could be given `@as` or `@unboxed`. https://github.com/rescript-lang/rescript/pull/9218
+- A variant coercion that fails on a missing, optional or `@as`-renamed inline record field now says which field is wrong, and record coercion errors no longer swap the two record names for a missing field or a different `@as` name. https://github.com/rescript-lang/rescript/pull/9205
+- Build: give compiler workers a larger minor heap, which cuts garbage collection pauses that stop every domain. https://github.com/rescript-lang/rescript/pull/9188
+- Build: compile JSX elements without copying every label of their props record, which removed most garbage collection pauses in builds of JSX-heavy projects on several domains. https://github.com/rescript-lang/rescript/pull/9187
+- OCaml rewatch: read each interface, `.cmj`, AST and source at most once per build, read the headers of existing ASTs once and in parallel, and publish outputs from memory instead of reading them back. On a large project, this cuts the time of a clean build by about a third, and of a no-op build or one that recompiles a single module by about 40%. https://github.com/rescript-lang/rescript/pull/9170
+- Give template literal segments the location of their text, without the surrounding backquotes, `${` or `}`. https://github.com/rescript-lang/rescript/pull/9166
+- Clearer errors for an unknown deriver (`@deriving(lenses)` is not supported. The only deriver is `@deriving(accessors)`.) and for a configuration passed to `@deriving(accessors)`. https://github.com/rescript-lang/rescript/pull/9157
+- Split large `let rec` groups into their recursive components in time linear in their size; a group of 16,000 bindings compiles about twice as fast. https://github.com/rescript-lang/rescript/pull/9153
+- Stop storing a `None` expression for every optional field a record literal leaves out. Modules with many JSX DOM elements now compile up to 10× faster, use far less memory, and get `.cmt` files up to 30× smaller. https://github.com/rescript-lang/rescript/pull/9149
+- Stop suggesting the `@uncurry` decorator in editor completion; the compiler no longer supports it. https://github.com/rescript-lang/rescript/pull/9146
+- Show a signature mismatch as the actual and the expected declaration, each under its location, with only the items that differ and the module path to them. https://github.com/rescript-lang/rescript/pull/9140
+- Keep the location of an extension constructor or exception declared in an interface, so that errors and reanalyze point to it. https://github.com/rescript-lang/rescript/pull/9140
+- Report every difference between the record fields or variant constructors of an implementation and its interface, matched by name: missing, extra, renamed and reordered entries, and say which side is the actual and which the expected declaration. https://github.com/rescript-lang/rescript/pull/9133
+- Multi-line types, signatures and module types in error messages are indented under their heading instead of starting at column 0. https://github.com/rescript-lang/rescript/pull/9091
+- A type error in the body after a `let` that destructures a GADT constructor no longer talks about switch branches. https://github.com/rescript-lang/rescript/pull/9081
+- Existential types of GADT constructors are shown as `$a` instead of `$Any_'a`, and an escaping one is explained by naming the constructor that binds it. https://github.com/rescript-lang/rescript/pull/9080
+- A GADT constructor in a type declared without `rec` reports the same `type rec` hint whichever constructor it is, also in signatures. https://github.com/rescript-lang/rescript/pull/9079
+- Signature mismatch errors name variant constructors as constructors, write functor positions and quotes in ReScript syntax, and print `type t += A` with a single space. https://github.com/rescript-lang/rescript/pull/9078
+- Add missing JSX DOM event handlers and capture variants through React 19.3, including dialog, fullscreen, toggle, scroll-end, and transition events, with typed toggle states and source. https://github.com/rescript-lang/rescript/pull/9075
+- Leave out checks of an untagged variant switch whose outcome runs the same code, and test a literal without an arm with `===` only when the payload dispatch would run a class check on it. https://github.com/rescript-lang/rescript/pull/9047
+- Fold a match on an untagged constant by evaluating the dispatch the code is printed from, so folding and the generated code agree, also for values outside every case. https://github.com/rescript-lang/rescript/pull/9046
+- Reuse one object per depth for nested `None` (`Some(None)`, `Some(Some(None))`, …), so creating one no longer allocates and `Some(None) === Some(None)` holds. https://github.com/rescript-lang/rescript/pull/9025
+- Stop emitting bare conditions like `x === null;` and empty `if`/`else` branches. https://github.com/rescript-lang/rescript/pull/9024
+- Drop `Primitive_option.some`/`valFromOption` calls when matching on `Some(x)` with `x` a variable. https://github.com/rescript-lang/rescript/pull/9022
+- Allow `@notUndefined` on type abbreviations, and `@typeOf` restating a builtin type's kind, as in `@typeOf("number") type count = int`; a constructor `A` and `@as("A") A` now agree across interfaces and coercions. https://github.com/rescript-lang/rescript/pull/9017
+- Match an untagged variant with one `switch` over its literals and one `switch (typeof x)` over its primitive cases before any class check, so that strings and numbers skip `instanceof` and a class missing at run time no longer throws for them. https://github.com/rescript-lang/rescript/pull/9015
+- List floats and bigints in the error for an invalid `@as` payload, since `@as` accepts them. https://github.com/rescript-lang/rescript/pull/8987
+- Format a blank line before and after a top-level or module-level item that spans several lines. https://github.com/rescript-lang/rescript/pull/8961
+- Require `= private` for every subclass declared with `@instanceOf`, also in phantom type hierarchies, and fold `null` into an untagged variant's object case as it is matched at run time. https://github.com/rescript-lang/rescript/pull/8950
+- Accept a payload on `@react.componentWithProps` again, as in 12.x, with a deprecation warning: it never had an effect. https://github.com/rescript-lang/rescript/pull/8944
+- Use constant arguments directly when inlining a function in generated JavaScript, instead of binding them to variables first. https://github.com/rescript-lang/rescript/pull/8942
+- Import the default export, instead of the module namespace, for `@module` externals whose `@scope` starts with `"default"`. https://github.com/rescript-lang/rescript/pull/8923
+- Report a spread of the wrong collection type, such as a list spread into an array, as a mismatch of the spread instead of an array item. https://github.com/rescript-lang/rescript/pull/8905
+- Char range patterns such as `'\u{0}' .. '\u{10FFFF}'` compile as fast as a single character, and missing-case warnings show ranges instead of listing every character. https://github.com/rescript-lang/rescript/pull/8893
+- Explain that a JSX tag needs a component module that defines `make`, when the module it names doesn't. https://github.com/rescript-lang/rescript/pull/8885
+- Report a JSX component annotation with an unsupported payload, such as `@react.component("x")`, or a second one on the same definition, instead of ignoring it. https://github.com/rescript-lang/rescript/pull/8884
+- Treat `json` template literals outside `` @as(json`...`) _ `` as ordinary tagged templates instead of rejecting them. https://github.com/rescript-lang/rescript/pull/8875
+- Remove unused record copies (`{...r, a: 1}`) again, which were kept since dict spreads compile to object spreads. https://github.com/rescript-lang/rescript/pull/8843
+- Remove the `rescript/lib/es6/*` and `rescript/lib/js/*` package exports, which pointed to files the `rescript` package doesn't contain; the runtime JS is in `@rescript/runtime`. https://github.com/rescript-lang/rescript/pull/8837
+- Stop inlining nested calls more than four levels deep, so a chain of small functions that call each other no longer makes compile time and output size grow quadratically. https://github.com/rescript-lang/rescript/pull/8801
+- Speed up `rescript` builds by compiling modules inside the build system on several CPU cores, instead of starting `bsc` for every file. https://github.com/rescript-lang/rescript/pull/8781
+- Wrap JSX expression children and standalone comments in braces to prepare for future literal text support. Preserve comment grouping and blank lines, convert safe line comments to block comments, and keep unbraced children valid. https://github.com/rescript-lang/rescript/pull/8666
 - Speed up type checking of record expressions and patterns with many fields whose type is not known from context. https://github.com/rescript-lang/rescript/pull/8799
 - Print list literals with one list cell per line, so their output no longer grows quadratically with their length. https://github.com/rescript-lang/rescript/pull/8794
 - Compile dict spreads to object spread syntax instead of `Object.assign`. https://github.com/rescript-lang/rescript/pull/8747
@@ -81,6 +260,58 @@
 
 #### :house: Internal
 
+- Require `lsp` below 1.28, whose `SnippetTextEdit` text edits the analysis CLI doesn't handle yet. https://github.com/rescript-lang/rescript/pull/9234
+- Represent `%todo` with a `Pexp_todo` parsetree node. PPXs still see the extension. https://github.com/rescript-lang/rescript/pull/9161
+- Dispatch `@deriving` by name instead of through a registry that had a single deriver. https://github.com/rescript-lang/rescript/pull/9157
+- Remove the unused syntax benchmark CI step and the macOS 13 docstring test workaround. https://github.com/rescript-lang/rescript/pull/9147
+- Remove dead code: the `js_stdout` flag, gentype's Curry import path, an unused analysis type cache, the OCaml toplevel entry point, commented-out OCaml code and the unused `Otyp_attribute` outcome node. https://github.com/rescript-lang/rescript/pull/9146
+- Fail the Semantic Diff check when a commit message has no description below its subject. https://github.com/rescript-lang/rescript/pull/9097
+- Develop and test with Node.js 26, and run the stdlib tests in the installation tests on Node.js 22, the oldest supported version. https://github.com/rescript-lang/rescript/pull/9059
+- Upgrade js_of_ocaml and wasm_of_ocaml to 6.5.0 for a smaller, faster-building playground compiler. https://github.com/rescript-lang/rescript/pull/9051
+- Build the dispatch of a switch on an untagged variant as a plan before printing it. https://github.com/rescript-lang/rescript/pull/9045
+- Upgrade the development toolchain and CI builds to OCaml 5.5.2. https://github.com/rescript-lang/rescript/pull/9043
+- Run the syntax roundtrip tests and the OCaml and ReScript format checks on Windows CI. https://github.com/rescript-lang/rescript/pull/9042
+- Run the full compiler unit tests, runtime docstring tests, analysis, tools and gentype tests, and the `unicode` and `duplicated_symlinked_packages` build tests on Windows CI. https://github.com/rescript-lang/rescript/pull/9041
+- Update vite to 8.3.5 in the dev playground, resolving its open security alerts. https://github.com/rescript-lang/rescript/pull/9011
+- Remove dead code, stale comments and unused test inputs left by recent changes, including the unused `cmt_interface_digest` field of `.cmt` files. https://github.com/rescript-lang/rescript/pull/8991
+- Make the concurrent async compiler request test report a failed compile instead of a cleanup error, and remove its temporary directory. https://github.com/rescript-lang/rescript/pull/8989
+- Run the semantic diff renderer's tests (`yarn test-commit-records`) in CI. https://github.com/rescript-lang/rescript/pull/8986
+- Add `make test-rewatch-rust`, which runs the build system suite against the Rust implementation, and document that `make test-rewatch` tests the OCaml one. https://github.com/rescript-lang/rescript/pull/8983
+- Document the rules of untagged variants in `compiler/ml/UntaggedVariants.md`, with tests pinning them. https://github.com/rescript-lang/rescript/pull/8952
+- Untagged variants recognize stdlib classes only through their `@instanceOf` annotations; the compiler's list of stdlib type names is gone. https://github.com/rescript-lang/rescript/pull/8950
+- Route API documentation checks and publication to the website branch matching
+  the compiler major (`v12`, `v13`, and later), keeping the target unchanged when
+  a release becomes current stable or moves to a maintenance branch. https://github.com/rescript-lang/rescript/pull/8945
+- Semantic Diff pages draw reanalyze reports as findings, Before and After aligned by finding. https://github.com/rescript-lang/rescript/pull/8929
+- Update Binaryen to 133 in CI, pin cometkim/rclone-actions to a commit, and let Dependabot update the actions used by composite actions. https://github.com/rescript-lang/rescript/pull/8913
+- Commit records describe each changed compiler object in its own form (parse and typed trees, Lambda and JavaScript, diagnostics, typing rules, clause matrices, representations) Before and After, and the semantic diff page draws each form in its own way, Before and After side by side. https://github.com/rescript-lang/rescript/pull/8908
+- Represent array and list literals with spreads with a dedicated parsetree node. https://github.com/rescript-lang/rescript/pull/8905
+- Remove the hashing fast paths for switches with many distinct constants, which char ranges no longer need. https://github.com/rescript-lang/rescript/pull/8900
+- Remove the error variant catalog `tests/ERROR_VARIANTS.md`; its untested variants are tracked in #8897. https://github.com/rescript-lang/rescript/pull/8898
+- Update Yarn to 4.18.1, mocha to 12, Biome to 2.5.15, actions/setup-node to v7 and other development dependencies, resolving all open Dependabot security alerts. https://github.com/rescript-lang/rescript/pull/8890
+- Upgrade opam to 2.6.1 in the devcontainer. https://github.com/rescript-lang/rescript/pull/8889
+- Fragments no longer need a PR link; the release adds it from the squash commit that merged the fragment. https://github.com/rescript-lang/rescript/pull/8888
+- Represent `@react.component`, `@jsx.component` and their `componentWithProps` forms with a dedicated parsetree node. https://github.com/rescript-lang/rescript/pull/8884
+- Build the OCaml rewatch against libuv 1.53.0 via the rescript-lang/luv fork. https://github.com/rescript-lang/rescript/pull/8883
+- Represent `%raw`, `%ffi` and `%%raw` with dedicated parsetree nodes. https://github.com/rescript-lang/rescript/pull/8879
+- Represent fixed external arguments, written `@as(value) _`, with a dedicated parsetree node. https://github.com/rescript-lang/rescript/pull/8875
+- Add commit records, a commit message format that answers recurring review questions, and a semantic diff page rendered from them and linked on each pull request. https://github.com/rescript-lang/rescript/pull/8870
+- OCaml rewatch: reuse one copy buffer per worker instead of allocating one per published file, which makes clean builds faster. https://github.com/rescript-lang/rescript/pull/8869
+- OCaml rewatch: `compiler-args` keeps the project root spelled as the caller named the source, as Rust rewatch does since #8639. https://github.com/rescript-lang/rescript/pull/8867
+- Make compiler requests safe to run repeatedly and in parallel in one process, as a preparation for compiling in-process in the OCaml build system. https://github.com/rescript-lang/rescript/pull/8864
+- Remove the unused restoring of the PPX context, including the cookie store. https://github.com/rescript-lang/rescript/pull/8859
+- Add tests for dict literals in reanalyze, comments around module `await`, and locations in the dict v0 AST bridge. https://github.com/rescript-lang/rescript/pull/8856
+- Test `@apply.transforms` in `rescript-tools migrate`. https://github.com/rescript-lang/rescript/pull/8855
+- Fix stale comments and docs in the syntax and reanalyze sources. https://github.com/rescript-lang/rescript/pull/8854
+- Remove the unused cursor filter of the editor analysis `.cmt` dump and the unused `report` field of reanalyze declarations. https://github.com/rescript-lang/rescript/pull/8852
+- Fix stale comments in the compiler and the `Private_label` entry of the error variant catalog. https://github.com/rescript-lang/rescript/pull/8851
+- Remove dead code and duplicated checks in the type-checker-to-Lambda translation. https://github.com/rescript-lang/rescript/pull/8849
+- Rewatch: fix doc comments that contradicted the code. https://github.com/rescript-lang/rescript/pull/8841
+- Fix spurious failures when updating the super_errors snapshots, where the long-path runs could compare against snapshots still being rewritten. https://github.com/rescript-lang/rescript/pull/8840
+- Give the `rescript_tools_binary_path` build test its own `package.json`, so it catches `#cli/*` imports in user code again, and drop the deleted source folders from the `weird_deps` and `weird_devdeps` fixtures. https://github.com/rescript-lang/rescript/pull/8838
+- Run the TypeScript type check of the JS sources in CI. https://github.com/rescript-lang/rescript/pull/8836
+- Fix stale references in the developer docs, test comments and the error variant catalog. https://github.com/rescript-lang/rescript/pull/8835
+- Add before/after optimization views and inline diffs to the developer playground's Lambda tab, with optional optimized Lambda output, deferred hidden-panel updates, and debounced comparisons while editing. https://github.com/rescript-lang/rescript/pull/8636
 - Remove OCaml leftovers: unused warning numbers, the `Record_float_unused` representation, the `ns.braces` attribute name and unused `Ast_helper` functions. https://github.com/rescript-lang/rescript/pull/8805
 - Remove the S-expression parsetree printer (`res_parser -print sexp`). https://github.com/rescript-lang/rescript/pull/8803
 - Use one set of OCaml warning flags for the whole repository, including the editor analysis and tools. https://github.com/rescript-lang/rescript/pull/8796

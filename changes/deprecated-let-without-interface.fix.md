@@ -1,1 +1,0 @@
-- Warn when another module uses a `@deprecated` `let` binding from a module without an interface file.

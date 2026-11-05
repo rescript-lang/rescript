@@ -1,1 +1,0 @@
-- Accept an attribute or doc comment in front of a `let` that destructures a GADT constructor, and let `@warning` on a pattern cover that pattern's unused variables.

@@ -1,1 +1,0 @@
-- Require `lsp` below 1.28, whose `SnippetTextEdit` text edits the analysis CLI doesn't handle yet.

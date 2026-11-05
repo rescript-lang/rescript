@@ -1,1 +1,0 @@
-- Fix negated float comparisons with NaN: `!(x < 0.0)` compiled to `x >= 0.0`, which is `false` for NaN.

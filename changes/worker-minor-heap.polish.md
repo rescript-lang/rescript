@@ -1,1 +1,0 @@
-- Build: give compiler workers a larger minor heap, which cuts garbage collection pauses that stop every domain.

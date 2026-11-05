@@ -1,1 +1,0 @@
-- Explain that a JSX tag needs a component module that defines `make`, when the module it names doesn't. https://github.com/rescript-lang/rescript/pull/8885

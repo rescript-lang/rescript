@@ -1,1 +1,0 @@
-- Fix installation link in README.md. https://github.com/rescript-lang/rescript/pull/9138

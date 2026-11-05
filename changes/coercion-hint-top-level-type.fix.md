@@ -1,1 +1,0 @@
-- Suggest a coercion to the whole expected type, not the nested part that differs.

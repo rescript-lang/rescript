@@ -1,1 +1,0 @@
-- Fix a stack overflow when compiling `option` of a recursive `@unboxed` variant.

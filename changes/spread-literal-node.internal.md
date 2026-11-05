@@ -1,1 +1,0 @@
-- Represent array and list literals with spreads with a dedicated parsetree node.

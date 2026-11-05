@@ -1,1 +1,0 @@
-- OCaml rewatch: `compiler-args` keeps the project root spelled as the caller named the source, as Rust rewatch does since #8639. https://github.com/rescript-lang/rescript/pull/8867

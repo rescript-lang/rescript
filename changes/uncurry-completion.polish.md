@@ -1,1 +1,0 @@
-- Stop suggesting the `@uncurry` decorator in editor completion; the compiler no longer supports it.

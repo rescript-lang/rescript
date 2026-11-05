@@ -1,1 +1,0 @@
-- Accept source files that start with a UTF-8 byte order mark, keeping it when formatting, and end a line at a carriage return without a line feed.

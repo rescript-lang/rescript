@@ -1,1 +1,0 @@
-- Clearer errors for an unknown deriver (`@deriving(lenses)` is not supported. The only deriver is `@deriving(accessors)`.) and for a configuration passed to `@deriving(accessors)`.

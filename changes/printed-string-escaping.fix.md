@@ -1,1 +1,0 @@
-- Print the `@as` names of fields and constructors and the strings of externals as they are written, so that non-ASCII letters are no longer turned into escapes that read back as other characters in error messages, hover and generated interfaces.

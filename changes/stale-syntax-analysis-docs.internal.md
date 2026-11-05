@@ -1,1 +1,0 @@
-- Fix stale comments and docs in the syntax and reanalyze sources. https://github.com/rescript-lang/rescript/pull/8854

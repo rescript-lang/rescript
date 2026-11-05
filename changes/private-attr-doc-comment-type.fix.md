@@ -1,1 +1,0 @@
-- Accept attributes and doc comments after `= private`, and a doc comment after `=` in front of a type expression such as `int`.

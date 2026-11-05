@@ -1,1 +1,0 @@
-- Reject an implementation that can hold `undefined` for a type its interface declares `@notUndefined`, which made `Some(None)` of the type `None` in clients.

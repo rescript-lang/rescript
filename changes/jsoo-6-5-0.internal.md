@@ -1,1 +1,0 @@
-- Upgrade js_of_ocaml and wasm_of_ocaml to 6.5.0 for a smaller, faster-building playground compiler.

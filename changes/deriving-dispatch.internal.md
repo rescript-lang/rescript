@@ -1,1 +1,0 @@
-- Dispatch `@deriving` by name instead of through a registry that had a single deriver.

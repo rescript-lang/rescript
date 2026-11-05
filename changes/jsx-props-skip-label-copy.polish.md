@@ -1,1 +1,0 @@
-- Build: compile JSX elements without copying every label of their props record, which removed most garbage collection pauses in builds of JSX-heavy projects on several domains.

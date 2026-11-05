@@ -1,1 +1,0 @@
-- Add `make test-rewatch-rust`, which runs the build system suite against the Rust implementation, and document that `make test-rewatch` tests the OCaml one.
