@@ -161,6 +161,17 @@ jobs:
           path: rescript-lang.org
           ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
 
+      # Yarn reads every .yarnrc.yml from its working directory up to the
+      # root, so inside this checkout the website's Yarn would also read
+      # ours, which can hold settings its version doesn't know. Processes
+      # started through the link run in the moved directory, so Yarn no
+      # longer sees ours, and the paths below stay the same.
+      - name: Move rescript-lang.org out of this checkout
+        run: |
+          mv rescript-lang.org "$RUNNER_TEMP/rescript-lang.org"
+          ln -s "$RUNNER_TEMP/rescript-lang.org" rescript-lang.org
+        shell: bash
+
       - name: Download API docs
         uses: actions/download-artifact@v8
         with:
