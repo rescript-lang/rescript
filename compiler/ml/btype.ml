@@ -47,18 +47,9 @@ let newgenvar ?name () = newgenty (Tvar name)
 
 (**** Check some types ****)
 
-let is_Tvar ty =
-  match get_desc ty with
-  | Tvar _ -> true
-  | _ -> false
-let is_Tunivar ty =
-  match get_desc ty with
-  | Tunivar _ -> true
-  | _ -> false
-let is_Tconstr ty =
-  match get_desc ty with
-  | Tconstr _ -> true
-  | _ -> false
+let is_Tvar ty = kind ty = Kvar
+let is_Tunivar ty = kind ty = Kunivar
+let is_Tconstr ty = kind ty = Kconstr
 
 let default_mty = function
   | Some mty -> mty
@@ -75,6 +66,7 @@ let default_mty = function
 
 type change =
   | Ctype of type_expr * type_desc
+  | Clink of type_expr * int
   | Ccompress of type_expr * type_desc * type_desc
   | Clevel of type_expr * int
   | Crow of row_field option ref * row_field option
@@ -209,16 +201,23 @@ let proxy ty =
 (**** Utilities for fixed row private types ****)
 
 let row_of_type t =
-  match get_desc (repr t) with
-  | Tobject t ->
+  let t' = repr t in
+  match kind t' with
+  | Kobject ->
     let rec get_row t =
       let t = repr t in
-      match get_desc t with
-      | Tfield {rest = t} -> get_row t
+      match kind t with
+      | Kboxed -> (
+        match boxed_desc t with
+        | Tfield {rest = t} -> get_row t
+        | _ -> t)
       | _ -> t
     in
-    get_row t
-  | Tvariant row -> row_more row
+    get_row (object_fields t')
+  | Kboxed -> (
+    match boxed_desc t' with
+    | Tvariant row -> row_more row
+    | _ -> t)
   | _ -> t
 
 let has_constr_row t = (not (is_Tconstr t)) && is_Tconstr (row_of_type t)
@@ -228,10 +227,12 @@ let is_row_name s =
   if l < 4 then false else String.sub s (l - 4) 4 = "#row"
 
 let is_constr_row ~allow_ident t =
-  match get_desc t with
-  | Tconstr (Path.Pident id, _, _) when allow_ident ->
-    is_row_name (Ident.name id)
-  | Tconstr (Path.Pdot (_, s, _), _, _) -> is_row_name s
+  match kind t with
+  | Kconstr -> (
+    match constr_path t with
+    | Path.Pident id when allow_ident -> is_row_name (Ident.name id)
+    | Path.Pdot (_, s, _) -> is_row_name s
+    | _ -> false)
   | _ -> false
 
 (**********************************)
@@ -252,29 +253,21 @@ let rec iter_row f row =
     Misc.may (fun (_, l) -> List.iter f l) row.row_name
   | _ -> assert false
 
+(* Reads the store's integers ([iter_children]) except for the boxed
+   descriptors; builds no view. *)
 let iter_type_expr f ty =
-  match get_desc ty with
-  | Tvar _ -> ()
-  | Tarrow (params, ret) ->
-    List.iter (fun {typ} -> f typ) params;
-    f ret
-  | Ttuple l -> List.iter f l
-  | Tconstr (_, l, _) -> List.iter f l
-  | Tobject ty -> f ty
-  | Tvariant row ->
-    iter_row f row;
-    f (row_more row)
-  | Tfield {typ = ty1; rest = ty2} ->
-    f ty1;
-    f ty2
-  | Tnil -> ()
-  | Tlink ty -> f ty
-  | Tsubst ty -> f ty
-  | Tunivar _ -> ()
-  | Tpoly (ty, tyl) ->
-    f ty;
-    List.iter f tyl
-  | Tpackage (_, _, l) -> List.iter f l
+  match kind ty with
+  | Kboxed -> (
+    match boxed_desc ty with
+    | Tvariant row ->
+      iter_row f row;
+      f (row_more row)
+    | Tfield {typ = ty1; rest = ty2} ->
+      f ty1;
+      f ty2
+    | Tpackage (_, _, l) -> List.iter f l
+    | _ -> ())
+  | _ -> iter_children f ty
 
 let rec iter_abbrev f = function
   | Mnil -> ()
@@ -348,9 +341,13 @@ let type_iterators =
   and it_type_kind it kind = iter_type_expr_kind (it.it_type_expr it) kind
   and it_do_type_expr it ty =
     iter_type_expr (it.it_type_expr it) ty;
-    match get_desc ty with
-    | Tconstr (p, _, _) | Tpackage (p, _, _) -> it.it_path p
-    | Tvariant row -> may (fun (p, _) -> it.it_path p) (row_repr row).row_name
+    match kind ty with
+    | Kconstr -> it.it_path (constr_path ty)
+    | Kboxed -> (
+      match boxed_desc ty with
+      | Tpackage (p, _, _) -> it.it_path p
+      | Tvariant row -> may (fun (p, _) -> it.it_path p) (row_repr row).row_name
+      | _ -> ())
     | _ -> ()
   and it_path _p = () in
   {
@@ -417,7 +414,7 @@ let mutability_repr r =
   | Mutability_link _ -> assert false
 
 type type_copy_session = {
-  mutable saved_desc: (type_expr * type_desc) list;
+  mutable saved_desc: type_expr list;
   mutable saved_mutabilities: (field_mutability ref * field_mutability) list;
   mutable new_mutabilities: field_mutability ref list;
   mutable copy_policy_memo: (int, bool) Hashtbl.t option;
@@ -454,9 +451,7 @@ let end_type_copy_session () =
   let type_copy_sessions = Domain.DLS.get type_copy_sessions in
   match !type_copy_sessions with
   | session :: rest ->
-    List.iter
-      (fun (ty, desc) -> Transient_expr.set_desc ty desc)
-      session.saved_desc;
+    List.iter (fun ty -> set_link_code ty (-1)) session.saved_desc;
     List.iter (fun (r, v) -> r := v) session.saved_mutabilities;
     type_copy_sessions := rest
   | [] -> assert false
@@ -546,11 +541,25 @@ let rec copy_type_desc ?(keep_names = false) ?(fresh_mutability = false) f =
     Tpoly (f ty, tyl)
   | Tpackage (p, n, l) -> Tpackage (p, n, List.map f l)
 
+(* [Transient_expr.set_desc dst (copy_type_desc ~keep_names
+   ~fresh_mutability f desc)] for the descriptor [desc] of [src] (under its
+   copy mark, if any), building no view for the encoded descriptors. *)
+let copy_type_into ?(keep_names = false) ?(fresh_mutability = false) f ~dst src
+    =
+  match stored_kind src with
+  | Kboxed ->
+    Transient_expr.set_desc dst
+      (copy_type_desc ~keep_names ~fresh_mutability f (boxed_desc src))
+  | _ -> copy_into ~keep_names ~fvar:(fun x -> norm_univar (f x)) ~dst src f
+
 (* Utilities for copying *)
 
-let save_desc ty desc =
+(* Record that [ty], which has no link, is about to get a copy mark: the
+   end of the session removes the mark, which brings the descriptor under it
+   back. *)
+let save_mark ty =
   let session = current_type_copy_session () in
-  session.saved_desc <- (ty, desc) :: session.saved_desc
+  session.saved_desc <- ty :: session.saved_desc
 
 (* Restored type descriptions. *)
 let cleanup_types () = end_type_copy_session ()
@@ -706,6 +715,7 @@ let rec label_assoc x (args : sargs) =
 
 let undo_change = function
   | Ctype (ty, desc) -> Transient_expr.set_desc ty desc
+  | Clink (ty, code) -> set_link_code ty code
   | Ccompress (ty, desc, _) -> Transient_expr.set_desc ty desc
   | Clevel (ty, level) -> Transient_expr.set_level ty level
   | Crow (r, v) -> r := v
@@ -718,14 +728,22 @@ type snapshot = changes ref * int
 let log_type ty =
   if get_id ty <= (Compiler_request_state.current ()).type_node_last_snapshot
   then log_change (Ctype (ty, get_desc ty))
+
+(* A change of the link alone is undone by restoring the link code: the
+   descriptor under it does not change. *)
+let log_link ty =
+  if get_id ty <= (Compiler_request_state.current ()).type_node_last_snapshot
+  then log_change (Clink (ty, link_code ty))
+
 let link_type ty ty' =
-  log_type ty;
-  let desc = get_desc ty in
-  Transient_expr.set_desc ty (Tlink ty');
+  log_link ty;
+  let k = kind ty in
+  set_link ty ty';
   (* Name is a user-supplied name for this unification variable (obtained
    * through a type annotation for instance). *)
-  match (desc, get_desc ty') with
-  | Tvar name, Tvar name' -> (
+  match (k, kind ty') with
+  | Kvar, Kvar -> (
+    let name = var_name ty and name' = var_name ty' in
     match (name, name') with
     | Some _, None ->
       log_type ty';

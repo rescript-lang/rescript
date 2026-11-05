@@ -132,116 +132,132 @@ let ctype_apply_env_empty = ref (fun _ -> assert false)
 (* Similar to [Ctype.nondep_type_rec]. *)
 let rec typexp_rec s ty =
   let ty = repr ty in
-  match get_desc ty with
-  | (Tvar _ | Tunivar _) as desc ->
+  match kind ty with
+  | Kvar | Kunivar ->
     if s.for_saving || get_id ty < 0 then (
+      (* Variables' views do not allocate. *)
+      let desc = get_desc ty in
       let ty' =
         if s.for_saving then newpersty (norm desc)
         else newty2 (get_level ty) desc
       in
-      save_desc ty desc;
+      save_mark ty;
       Transient_expr.set_desc ty (Tsubst ty');
       ty')
     else ty
-  | Tsubst ty -> ty
+  | Ksubst -> subst_target ty
   (* cannot do it, since it would omit substitution
      | Tvariant row when not (static_row row) ->
          ty
   *)
-  | _ ->
-    let desc = get_desc ty in
-    save_desc ty desc;
-    let tm = row_of_type ty in
-    let has_fixed_row =
-      (not (is_Tconstr ty)) && is_constr_row ~allow_ident:false tm
-    in
+  | k ->
+    save_mark ty;
+    let tm = if k = Kconstr then ty else row_of_type ty in
+    let has_fixed_row = k <> Kconstr && is_constr_row ~allow_ident:false tm in
     (* Make a stub *)
     let ty' = if s.for_saving then newpersty (Tvar None) else newgenvar () in
     Transient_expr.set_desc ty (Tsubst ty');
-    Transient_expr.set_desc ty'
-      (if has_fixed_row then
-         match get_desc tm with
-         (* PR#7348 *)
-         | Tconstr (Pdot (m, i, pos), tl, _abbrev) ->
-           let i' = String.sub i 0 (String.length i - 4) in
-           Tconstr (type_path s (Pdot (m, i', pos)), tl, ref Mnil)
-         | _ -> assert false
-       else
-         match desc with
-         | Tconstr (p, args, _abbrev) -> (
-           let args = List.map (typexp_rec s) args in
-           match Path_map.find p s.types with
-           | exception Not_found -> Tconstr (type_path s p, args, ref Mnil)
-           | Path _ -> Tconstr (type_path s p, args, ref Mnil)
-           | Type_function {params; body} ->
-             get_desc (!ctype_apply_env_empty params body args))
-         | Tpackage (p, n, tl) ->
-           Tpackage (modtype_path s p, n, List.map (typexp_rec s) tl)
-         | Tobject t1 -> Tobject (typexp_rec s t1)
-         | Tvariant row -> (
-           let row = row_repr row in
-           let more = repr row.row_more in
-           (* We must substitute in a subtle way *)
-           (* Tsubst takes a tuple containing the row var and the variant *)
-           let already_copied copied =
-             match get_desc copied with
-             | Ttuple [_; _] -> true
-             | _ -> false
-           in
-           match get_desc more with
-           | Tsubst copied when already_copied copied ->
-             let ty2 =
-               match get_desc copied with
-               | Ttuple [_; ty2] -> ty2
-               | _ -> assert false
-             in
-             (* This variant type has been already copied *)
-             Transient_expr.set_desc ty (Tsubst ty2);
-             (* avoid Tlink in the new type *)
-             Tlink ty2
-           | _ -> (
-             let dup =
-               s.for_saving
-               || get_level more = generic_level
-               || static_row row
-               ||
-               match get_desc more with
-               | Tconstr _ -> true
-               | _ -> false
-             in
-             (* Various cases for the row variable *)
-             let more' =
-               match get_desc more with
-               | Tsubst ty -> ty
-               | Tconstr _ | Tnil -> typexp_rec s more
-               | Tunivar _ | Tvar _ ->
-                 save_desc more (get_desc more);
-                 if s.for_saving then newpersty (norm (get_desc more))
-                 else if dup && is_Tvar more then newgenty (get_desc more)
-                 else more
-               | _ -> assert false
-             in
-             (* Register new type first for recursion *)
-             Transient_expr.set_desc more
-               (Tsubst (newgenty (Ttuple [more'; ty'])));
-             (* Return a new copy *)
-             let row = copy_row (typexp_rec s) true row (not dup) more' in
-             match row.row_name with
-             | Some (p, tl) ->
-               Tvariant
-                 {
-                   row with
-                   row_name =
-                     (if to_subst_by_type_function s p then None
-                      else Some (type_path s p, tl));
-                 }
-             | None -> Tvariant row))
-         | _ ->
-           (* A graph prepared for persistence must not retain mutable cells
+    (if (not has_fixed_row) && k = Kconstr then typexp_constr s ty ty'
+     else if (not has_fixed_row) && k <> Kboxed && k <> Kobject then
+       copy_type_into ~fresh_mutability:s.for_saving (typexp_rec s) ~dst:ty' ty
+     else
+       let desc =
+         match k with
+         | Kboxed -> boxed_desc ty
+         | _ -> Tobject (object_fields ty)
+       in
+       Transient_expr.set_desc ty'
+         (if has_fixed_row then
+            match get_desc tm with
+            (* PR#7348 *)
+            | Tconstr (Pdot (m, i, pos), tl, _abbrev) ->
+              let i' = String.sub i 0 (String.length i - 4) in
+              Tconstr (type_path s (Pdot (m, i', pos)), tl, ref Mnil)
+            | _ -> assert false
+          else
+            match desc with
+            | Tpackage (p, n, tl) ->
+              Tpackage (modtype_path s p, n, List.map (typexp_rec s) tl)
+            | Tobject t1 -> Tobject (typexp_rec s t1)
+            | Tvariant row -> (
+              let row = row_repr row in
+              let more = repr row.row_more in
+              (* We must substitute in a subtle way *)
+              (* Tsubst takes a tuple containing the row var and the variant *)
+              let already_copied copied =
+                match get_desc copied with
+                | Ttuple [_; _] -> true
+                | _ -> false
+              in
+              match get_desc more with
+              | Tsubst copied when already_copied copied ->
+                let ty2 =
+                  match get_desc copied with
+                  | Ttuple [_; ty2] -> ty2
+                  | _ -> assert false
+                in
+                (* This variant type has been already copied *)
+                Transient_expr.set_desc ty (Tsubst ty2);
+                (* avoid Tlink in the new type *)
+                Tlink ty2
+              | _ -> (
+                let dup =
+                  s.for_saving
+                  || get_level more = generic_level
+                  || static_row row
+                  ||
+                  match get_desc more with
+                  | Tconstr _ -> true
+                  | _ -> false
+                in
+                (* Various cases for the row variable *)
+                let more' =
+                  match get_desc more with
+                  | Tsubst ty -> ty
+                  | Tconstr _ | Tnil -> typexp_rec s more
+                  | Tunivar _ | Tvar _ ->
+                    save_mark more;
+                    if s.for_saving then newpersty (norm (get_desc more))
+                    else if dup && is_Tvar more then newgenty (get_desc more)
+                    else more
+                  | _ -> assert false
+                in
+                (* Register new type first for recursion *)
+                Transient_expr.set_desc more
+                  (Tsubst (newgenty (Ttuple [more'; ty'])));
+                (* Return a new copy *)
+                let row = copy_row (typexp_rec s) true row (not dup) more' in
+                match row.row_name with
+                | Some (p, tl) ->
+                  Tvariant
+                    {
+                      row with
+                      row_name =
+                        (if to_subst_by_type_function s p then None
+                         else Some (type_path s p, tl));
+                    }
+                | None -> Tvariant row))
+            | _ ->
+              (* A graph prepared for persistence must not retain mutable cells
               from the live typing graph. Fresh cells still use the enclosing
               copy session, so sharing within the saved graph is preserved. *)
-           copy_type_desc ~fresh_mutability:s.for_saving (typexp_rec s) desc);
+              copy_type_desc ~fresh_mutability:s.for_saving (typexp_rec s) desc));
     ty'
+
+(* The [Tconstr] case of [typexp_rec]: [ty] is marked with [Tsubst ty']. *)
+and typexp_constr s ty ty' =
+  let p = constr_path ty in
+  let n = constr_length ty in
+  let args = Array.make n ty' in
+  for i = 0 to n - 1 do
+    args.(i) <- typexp_rec s (constr_arg ty i)
+  done;
+  match Path_map.find p s.types with
+  | exception Not_found -> set_constr ty' (type_path s p) (Array.to_list args)
+  | Path _ -> set_constr ty' (type_path s p) (Array.to_list args)
+  | Type_function {params; body} ->
+    Transient_expr.set_desc ty'
+      (get_desc (!ctype_apply_env_empty params body (Array.to_list args)))
 
 (*
    Always make a copy of the type. If this is not done, type levels

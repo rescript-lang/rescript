@@ -437,6 +437,9 @@ let get_desc t =
   else if code >= 0 then Tlink code
   else Tsubst (-2 - code)
 
+(* The descriptor under the node's link or copy mark, if any. *)
+let stored_desc t = decode (store_of t) (stride * index t)
+
 let[@inline] get_level t = (store_of t).meta.((stride * index t) + f_level)
 let[@inline] get_id t = (store_of t).meta.((stride * index t) + f_id)
 
@@ -486,6 +489,212 @@ module Transient_expr = struct
   let[@inline] set_level t level =
     (store_of t).meta.((stride * index t) + f_level) <- level
 end
+
+(**** Kind-specific accessors ****)
+
+type kind =
+  | Kvar
+  | Karrow
+  | Ktuple
+  | Kconstr
+  | Kobject
+  | Knil
+  | Kunivar
+  | Kpoly
+  | Kboxed
+  | Klink
+  | Ksubst
+
+(* [kind] is a constant-only variant: its values are the immediates 0..10 in
+   declaration order, the [k_*] codes for the encoded kinds. *)
+let[@inline] kind_of_int (k : int) : kind = Obj.magic k
+
+let[@inline] kind t : kind =
+  let s = store_of t and o = stride * index t in
+  let code = s.meta.(o + f_link) in
+  if code = -1 then kind_of_int s.meta.(o + f_kind)
+  else if code >= 0 then Klink
+  else Ksubst
+
+let[@inline] stored_kind t : kind =
+  kind_of_int (store_of t).meta.((stride * index t) + f_kind)
+
+let[@inline] payload_a t = (store_of t).meta.((stride * index t) + f_a)
+let[@inline] payload_b t = (store_of t).meta.((stride * index t) + f_b)
+let[@inline] payload_c t = (store_of t).meta.((stride * index t) + f_c)
+
+let var_name t =
+  let s = store_of t in
+  let a = s.meta.((stride * index t) + f_a) in
+  if a < 0 then None
+  else
+    match Vec.get s.boxed a with
+    | Tvar name | Tunivar name -> name
+    | _ -> None
+
+let[@inline] arrow_arity t = payload_b t
+let[@inline] arrow_arg t k = (store_of t).pool.(payload_a t + (2 * k) + 1)
+
+let arrow_label t k =
+  let s = store_of t in
+  label_of s s.pool.(payload_a t + (2 * k))
+
+let[@inline] arrow_label_is_nolabel t k =
+  (store_of t).pool.(payload_a t + (2 * k)) < 0
+
+let[@inline] arrow_ret t = payload_c t
+let[@inline] tuple_length t = payload_c t
+let[@inline] tuple_elem t k = (store_of t).pool.(payload_b t + k)
+let[@inline] constr_path t = Vec.get (store_of t).paths (payload_a t)
+let[@inline] constr_length t = payload_c t
+let[@inline] constr_arg t k = (store_of t).pool.(payload_b t + k)
+
+let same_constr_path t1 t2 =
+  let s1 = store_of t1 and s2 = store_of t2 in
+  let a1 = payload_a t1 and a2 = payload_a t2 in
+  (s1 == s2 && a1 = a2)
+  ||
+  let p1 = Vec.get s1.paths a1 and p2 = Vec.get s2.paths a2 in
+  p1 == p2 || Path.same p1 p2
+
+let[@inline] object_fields t = payload_a t
+let[@inline] poly_body t = payload_a t
+let[@inline] poly_length t = payload_c t
+let[@inline] poly_var t k = (store_of t).pool.(payload_b t + k)
+let boxed_desc t = Vec.get (store_of t).boxed (payload_a t)
+
+let abbrev_cell t =
+  let s = store_of t in
+  abbrev_cell_in s (stride * index t)
+
+(* The contents of the abbreviation cell, without creating it. *)
+let abbrev_memo t =
+  let s = store_of t in
+  let k = s.meta.((stride * index t) + f_memo) in
+  if k >= 0 then !(Vec.get s.memos k) else Mnil
+
+let clear_abbrev_memo t =
+  let s = store_of t in
+  let k = s.meta.((stride * index t) + f_memo) in
+  if k >= 0 then Vec.get s.memos k := Mnil
+
+let set_abbrev_cell t cell =
+  let s = store_of t in
+  s.meta.((stride * index t) + f_memo) <- Vec.push s.memos cell
+
+let[@inline] link_code t = link_code_of t
+
+let[@inline] set_link_code t code =
+  (store_of t).meta.((stride * index t) + f_link) <- code
+
+let[@inline] set_link t target = set_link_code t target
+let[@inline] set_subst t target = set_link_code t (-2 - target)
+
+(* The children of the node, in [Btype.iter_type_expr]'s order, except for
+   [Kboxed] nodes, which [f_boxed] is given. A link (or copy mark) has its
+   target as only child. [f] may allocate nodes: the pool is read afresh
+   after each call. *)
+let iter_children f t =
+  let s = store_of t and o = stride * index t in
+  let m = s.meta in
+  let code = m.(o + f_link) in
+  if code >= 0 then f code
+  else if code <= -2 then f (-2 - code)
+  else
+    let a = m.(o + f_a) and b = m.(o + f_b) and c = m.(o + f_c) in
+    match m.(o + f_kind) with
+    | 0 (* k_var *) | 5 (* k_nil *) | 6 (* k_univar *) -> ()
+    | 1 (* k_arrow *) ->
+      for k = 0 to b - 1 do
+        f s.pool.(a + (2 * k) + 1)
+      done;
+      f c
+    | 2 (* k_tuple *) | 3 (* k_constr *) ->
+      for k = b to b + c - 1 do
+        f s.pool.(k)
+      done
+    | 4 (* k_object *) -> f a
+    | 7 (* k_poly *) ->
+      f a;
+      for k = b to b + c - 1 do
+        f s.pool.(k)
+      done
+    | _ -> invalid_arg "Types.iter_children: boxed descriptor"
+
+(* Give the fresh node [dst] the encoded descriptor of [src] with each child
+   [c] replaced by [f c], evaluating [f] in the order [Btype.copy_type_desc]
+   does (an arrow's result first, then its parameters; a [Tpoly]'s variables,
+   through [fvar], then its body). Variables lose their names unless
+   [keep_names]; universal variables keep them. A [Tconstr] gets a fresh
+   abbreviation cell. [src] must not be [Kboxed], nor carry a link. *)
+let copy_into ~keep_names ~fvar ~dst src f =
+  let ss = store_of src and so = stride * index src in
+  let ds = store_of dst and di = index dst in
+  let sm = ss.meta in
+  let a = sm.(so + f_a) and b = sm.(so + f_b) and c = sm.(so + f_c) in
+  let same = ss == ds in
+  let map_slice f start n =
+    let d = pool_alloc ds n in
+    for k = 0 to n - 1 do
+      let v = f ss.pool.(start + k) in
+      ds.pool.(d + k) <- v
+    done;
+    d
+  in
+  let boxed_entry a =
+    if same || a < 0 then a else Vec.push ds.boxed (Vec.get ss.boxed a)
+  in
+  match sm.(so + f_kind) with
+  | 0 (* k_var *) ->
+    set_enc ds di k_var (if keep_names then boxed_entry a else -1) 0 0
+  | 1 (* k_arrow *) ->
+    let ret = f c in
+    let d = pool_alloc ds (2 * b) in
+    for k = 0 to b - 1 do
+      let code = ss.pool.(a + (2 * k)) in
+      let code =
+        if same || code < 0 then code
+        else Vec.push ds.labels (Vec.get ss.labels code)
+      in
+      ds.pool.(d + (2 * k)) <- code;
+      let v = f ss.pool.(a + (2 * k) + 1) in
+      ds.pool.(d + (2 * k) + 1) <- v
+    done;
+    set_enc ds di k_arrow d b ret
+  | 2 (* k_tuple *) -> set_enc ds di k_tuple 0 (map_slice f b c) c
+  | 3 (* k_constr *) ->
+    let p = if same then a else path_code ds (Vec.get ss.paths a) in
+    let d = map_slice f b c in
+    set_enc ds di k_constr p d c;
+    ds.meta.((stride * di) + f_memo) <- -1
+  | 4 (* k_object *) -> set_enc ds di k_object (f a) 0 0
+  | 5 (* k_nil *) -> set_enc ds di k_nil 0 0 0
+  | 6 (* k_univar *) -> set_enc ds di k_univar (boxed_entry a) 0 0
+  | 7 (* k_poly *) ->
+    let d = map_slice fvar b c in
+    let body = f a in
+    set_enc ds di k_poly body d c
+  | _ -> invalid_arg "Types.copy_into: boxed descriptor"
+
+(* A [Tconstr] node whose abbreviation cell is created when asked for. *)
+let new_constr_in s ~level ~id p args =
+  let t = alloc s ~level ~id in
+  let n = Array.length args in
+  let start = pool_alloc s n in
+  Array.blit args 0 s.pool start n;
+  set_enc s (index t) k_constr (path_code s p) start n;
+  t
+
+let new_constr ~level ~id p args =
+  new_constr_in (Store.current ()) ~level ~id p args
+
+(* Give [t] the descriptor [Tconstr (p, args, ref Mnil)] without allocating
+   the cell. *)
+let set_constr t p args =
+  let s = store_of t in
+  let start = encode_list s args in
+  set_enc s (index t) k_constr (path_code s p) start (s.pool_len - start);
+  s.meta.((stride * index t) + f_memo) <- -1
 
 module Type_ops = struct
   type t = type_expr

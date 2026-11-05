@@ -183,6 +183,10 @@ and field_mutability =
 val get_desc : type_expr -> type_desc
 (** The node's descriptor, without following [Tlink]. *)
 
+val stored_desc : type_expr -> type_desc
+(** The descriptor under the node's [Tlink] or [Tsubst], if any; else the
+    same as {!get_desc}. *)
+
 val get_level : type_expr -> int
 
 val get_id : type_expr -> int
@@ -253,6 +257,107 @@ module Transient_expr : sig
   val set_desc : type_expr -> type_desc -> unit
   val set_level : type_expr -> int -> unit
 end
+
+(** {1 Kind-specific accessors}
+
+    The store encodes most descriptors as integers, and {!get_desc} builds a
+    boxed view of them: it allocates for [Tarrow], [Ttuple], [Tconstr],
+    [Tobject] and [Tpoly]. Hot paths read the encoded descriptor with these
+    accessors instead, which allocate nothing. They read the descriptor
+    under a link or copy mark, so the caller must have checked {!kind}
+    first. *)
+
+type kind =
+  | Kvar
+  | Karrow
+  | Ktuple
+  | Kconstr
+  | Kobject
+  | Knil
+  | Kunivar
+  | Kpoly
+  | Kboxed  (** [Tfield], [Tvariant] or [Tpackage]: see {!boxed_desc}. *)
+  | Klink
+  | Ksubst
+
+val kind : type_expr -> kind
+(** [Klink]/[Ksubst] when the node is a link or copy mark, else the kind of
+    its descriptor. *)
+
+val stored_kind : type_expr -> kind
+(** The kind of the descriptor under a link or copy mark. *)
+
+val var_name : type_expr -> string option
+val arrow_arity : type_expr -> int
+val arrow_arg : type_expr -> int -> type_expr
+val arrow_label : type_expr -> int -> arg_label
+val arrow_label_is_nolabel : type_expr -> int -> bool
+val arrow_ret : type_expr -> type_expr
+val tuple_length : type_expr -> int
+val tuple_elem : type_expr -> int -> type_expr
+val constr_path : type_expr -> Path.t
+val constr_length : type_expr -> int
+val constr_arg : type_expr -> int -> type_expr
+
+val same_constr_path : type_expr -> type_expr -> bool
+(** [Path.same] of the paths of two [Tconstr] nodes. *)
+
+val object_fields : type_expr -> type_expr
+val poly_body : type_expr -> type_expr
+val poly_length : type_expr -> int
+val poly_var : type_expr -> int -> type_expr
+
+val boxed_desc : type_expr -> type_desc
+(** The descriptor of a [Kboxed] node (no allocation). *)
+
+val abbrev_cell : type_expr -> abbrev_memo ref
+(** The abbreviation cell of a [Tconstr] node, the one its view holds;
+    created holding [Mnil] on first use. *)
+
+val abbrev_memo : type_expr -> abbrev_memo
+(** The contents of the abbreviation cell ([Mnil] if it was never asked
+    for), without creating it. *)
+
+val clear_abbrev_memo : type_expr -> unit
+(** [abbrev_cell t := Mnil], without creating the cell. *)
+
+val set_abbrev_cell : type_expr -> abbrev_memo ref -> unit
+
+val link_code : type_expr -> int
+(** -1: no link; [t >= 0]: [Tlink t]; [t <= -2]: [Tsubst (-2 - t)]. *)
+
+val set_link_code : type_expr -> int -> unit
+(** Unlogged: set or (with -1) remove a link or copy mark. Removing it
+    restores the encoded descriptor underneath. *)
+
+val set_link : type_expr -> type_expr -> unit
+(** Unlogged [Transient_expr.set_desc t (Tlink t')], without the block. *)
+
+val set_subst : type_expr -> type_expr -> unit
+(** Unlogged [Transient_expr.set_desc t (Tsubst t')], without the block. *)
+
+val iter_children : (type_expr -> unit) -> type_expr -> unit
+(** The children of a node not [Kboxed], in [Btype.iter_type_expr]'s order;
+    a link's or copy mark's target. *)
+
+val copy_into :
+  keep_names:bool ->
+  fvar:(type_expr -> type_expr) ->
+  dst:type_expr ->
+  type_expr ->
+  (type_expr -> type_expr) ->
+  unit
+(** [copy_into ~keep_names ~fvar ~dst src f] gives [dst] the descriptor
+    [Btype.copy_type_desc ~keep_names f] gives for [src]'s, evaluating [f] in
+    the same order ([fvar] maps a [Tpoly]'s variables). [src] must not be
+    [Kboxed], nor a link. Unlogged. *)
+
+val new_constr : level:int -> id:int -> Path.t -> type_expr array -> type_expr
+(** A new node [Tconstr (p, args, ref Mnil)] in the current store. *)
+
+val set_constr : type_expr -> Path.t -> type_expr list -> unit
+(** Unlogged: [Transient_expr.set_desc t (Tconstr (p, args, ref Mnil))]
+    without allocating a cell. *)
 
 module Type_ops : sig
   type t = type_expr

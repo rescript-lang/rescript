@@ -124,12 +124,23 @@ val copy_type_desc :
     result classes which are independent from the source, while preserving
     class sharing among fields copied in the same session. *)
 
+val copy_type_into :
+  ?keep_names:bool ->
+  ?fresh_mutability:bool ->
+  (type_expr -> type_expr) ->
+  dst:type_expr ->
+  type_expr ->
+  unit
+(** [copy_type_into f ~dst src] gives [dst] the description [copy_type_desc f]
+    gives for [src]'s, without building a view of [src]'s description. *)
+
 val copy_row :
   (type_expr -> type_expr) -> bool -> row_desc -> bool -> type_expr -> row_desc
 
-val save_desc : type_expr -> type_desc -> unit
-(** Record a temporary change to a source type description in the current copy
-    session. The session restores the description when it ends. *)
+val save_mark : type_expr -> unit
+(** Record that a source type node without a link is about to get a [Tsubst]
+    copy mark, in the current copy session. The session removes the mark,
+    restoring the description under it, when it ends. *)
 
 val with_copy_session : (unit -> 'a) -> 'a
 (** Run a graph-copy operation with scoped temporary state.
