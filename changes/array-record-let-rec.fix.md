@@ -1,0 +1,1 @@
+- Build a recursive `let rec` value of a record whose fields have the runtime names `"0"`, `"1"`, … as a JavaScript array instead of an object.

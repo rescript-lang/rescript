@@ -222,8 +222,9 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Caml_block
       ( _,
         _,
-        ( Blk_record _ | Blk_module _ | Blk_poly_var | Blk_extension
-        | Blk_record_ext _ | Blk_record_inlined _ | Blk_constructor _ ) )
+        ( Blk_record {array = false}
+        | Blk_module _ | Blk_poly_var | Blk_extension | Blk_record_ext _
+        | Blk_record_inlined _ | Blk_constructor _ ) )
   | Object _ ->
     true
   | Json_literal _ -> true

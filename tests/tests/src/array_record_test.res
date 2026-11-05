@@ -88,6 +88,16 @@ let split = (r: source) => {
   (s0, rest)
 }
 
+// A recursive value starts as an empty array that is then filled
+type rec cell = {@as("0") value: int, @as("1") next: cell}
+
+let rec constantCell = {value: 1, next: constantCell}
+
+let makeCell = value => {
+  let rec cell = {value, next: cell}
+  cell
+}
+
 // As an untagged payload, an array record is told apart as an array
 type point = {@as("0") px?: int, @as("1") py?: int}
 type named = {name: string}
@@ -102,6 +112,14 @@ let classify = (p: payload) =>
   }
 
 describe(__MODULE__, () => {
+  test("a recursive array record is an array", () => {
+    ok(__LOC__, isArray(constantCell))
+    eq(__LOC__, constantCell.next.next.value, 1)
+    let cell = makeCell(7)
+    ok(__LOC__, isArray(cell))
+    eq(__LOC__, cell.next.value, 7)
+  })
+
   test("an untagged array record payload dispatches as an array", () => {
     // Through Array.map, so that the match runs instead of being folded
     eq(
