@@ -25,16 +25,15 @@
 3. **Untagged variants for JavaScript classes**
    - `@instanceOf("Class")` and `@typeOf` make bound JavaScript classes and opaque types untagged variant cases; `File`, `Blob`, `JsError`, `Symbol` and the `Intl` classes work as cases. https://github.com/rescript-lang/rescript/pull/8950
    - Switches on untagged variants generate less code and test literals and `typeof` before any `instanceof`. https://github.com/rescript-lang/rescript/pull/9015
-4. **`Temporal` bindings** in the standard library. https://github.com/rescript-lang/rescript/pull/9094
+4. **Standard library**
+   - `Temporal` bindings. https://github.com/rescript-lang/rescript/pull/9094
 5. **React Server Components**
    - Nested components such as `<Sidebar.Provider />` work as client references. https://github.com/rescript-lang/rescript/pull/8904
-6. **Platforms**
-   - Windows on ARM is supported through the x64 binaries; macOS on Intel is no longer supported. https://github.com/rescript-lang/rescript/pull/8776 https://github.com/rescript-lang/rescript/pull/8912
+6. **Error messages**
+   - Signature mismatches show only the items that differ, in ReScript syntax. https://github.com/rescript-lang/rescript/pull/9140 https://github.com/rescript-lang/rescript/pull/9078
 7. **Upgrading from v12**
    - The APIs deprecated in v12 are removed; run `rescript-tools migrate-all` with 12.3.2 before upgrading. https://github.com/rescript-lang/rescript/pull/9052
-   - `@deriving(abstract)` and `@deriving(jsConverter)`, the `@ocaml.*` attributes, `@ocaml.doc`/`@ns.doc` doc comments and record syntax for dicts are removed. See the breaking changes below.
-8. **Error messages**
-   - Signature mismatches show only the items that differ, in ReScript syntax. https://github.com/rescript-lang/rescript/pull/9140 https://github.com/rescript-lang/rescript/pull/9078
+   - `@deriving(abstract)` and `@deriving(jsConverter)`, the `@ocaml.*` attributes, `@ocaml.doc`/`@ns.doc` doc comments, record syntax for dicts and macOS Intel support are removed. See the breaking changes below. https://github.com/rescript-lang/rescript/pull/8729 https://github.com/rescript-lang/rescript/pull/8928 https://github.com/rescript-lang/rescript/pull/8992 https://github.com/rescript-lang/rescript/pull/8751 https://github.com/rescript-lang/rescript/pull/8912
 
 #### :boom: Breaking Change
 
