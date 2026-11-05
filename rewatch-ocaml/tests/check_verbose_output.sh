@@ -41,7 +41,7 @@ normalize_events() {
         }
         /^compile dirty: / { print }
       ' \
-    | sort >"$output"
+    | LC_ALL=C sort >"$output"
 }
 
 # capture NAME LEVEL: runs a build of the LEVEL project and checks its events
