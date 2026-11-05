@@ -1,1 +1,0 @@
-- Take the right arm for `Some` of an `@as(undefined)` case in a switch on an option of an untagged variant.
