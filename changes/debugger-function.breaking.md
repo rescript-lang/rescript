@@ -1,1 +1,0 @@
-- Replace the `%debugger` extension with a `debugger()` function in `Pervasives`. `%debugger` is now a syntax error that points to `debugger()`.

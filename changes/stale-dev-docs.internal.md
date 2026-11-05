@@ -1,1 +1,0 @@
-- Fix stale references in the developer docs, test comments and the error variant catalog. https://github.com/rescript-lang/rescript/pull/8835

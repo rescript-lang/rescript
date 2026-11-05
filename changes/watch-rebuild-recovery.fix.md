@@ -1,1 +1,0 @@
-- `rescript-rust`: keep watch mode running after full rebuild initialization fails, retry initialization on source edits, and watch newly added dependencies for configuration fixes. https://github.com/rescript-lang/rescript/pull/8641

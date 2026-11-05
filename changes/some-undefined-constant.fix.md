@@ -1,1 +1,0 @@
-- Keep `Some(U)` distinct from `None` when `U` is a constant case represented by `undefined` (`@as(undefined)`).

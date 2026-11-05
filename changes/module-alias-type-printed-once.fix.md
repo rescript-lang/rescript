@@ -1,1 +1,0 @@
-- Print a type reached through a module alias once in type errors, without repeating it as its expansion.

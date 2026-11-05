@@ -1,1 +1,0 @@
-- Take the formatter's line endings from a line break outside string literals and comments.

@@ -1,1 +1,0 @@
-- Keep attributes and doc comments written in front of a record or `..` type representation, attaching them to the type declaration instead of dropping them.

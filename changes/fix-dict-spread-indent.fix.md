@@ -1,1 +1,0 @@
-- Fix the formatter indenting dict literal rows after a spread twice. https://github.com/rescript-lang/rescript/pull/8853

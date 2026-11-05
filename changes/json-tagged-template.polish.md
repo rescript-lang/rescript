@@ -1,1 +1,0 @@
-- Treat `json` template literals outside `` @as(json`...`) _ `` as ordinary tagged templates instead of rejecting them. https://github.com/rescript-lang/rescript/pull/8875

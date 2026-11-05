@@ -1,1 +1,0 @@
-- Remove the standard library APIs deprecated in v12, including `List.has` and the `Error` and `Exn` modules. Run `rescript-tools migrate-all` with ReScript 12.3.2 before upgrading to migrate your code automatically.

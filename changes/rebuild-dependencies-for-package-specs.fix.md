@@ -1,1 +1,0 @@
-- Rewatch: rebuild source dependencies when the consuming project's package output settings change. https://github.com/rescript-lang/rescript/pull/8540

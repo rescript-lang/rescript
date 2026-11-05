@@ -1,2 +1,0 @@
-- Reject coercing `unit` to `string`, as in `(() :> string)`, and a closed polymorphic variant to `bool` or `unit`, as from `[#"true" | #"false"]` to `bool`. These compiled, but left `undefined` typed as a `string`, or a string typed as a `bool` or `unit`, and type errors suggested them as fixes.
-- Reject spreading `bool` or `unit` into a variant, as in `type t = | ...bool | Other`. The variant held `true`, `false` and `undefined`, but its switches and coercions took them for the strings `"true"`, `"false"` and `"()"`.

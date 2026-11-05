@@ -1,1 +1,0 @@
-- Fix the formatter dropping comments in dict patterns, variant spread patterns and dict literals with spreads. https://github.com/rescript-lang/rescript/pull/8850

@@ -1,1 +1,0 @@
-- Evaluate the callee and arguments of a partial application `f(a, ...)` once, so an `await` in them no longer ends up in a non-async function.

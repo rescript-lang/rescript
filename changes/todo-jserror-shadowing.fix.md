@@ -1,2 +1,0 @@
-- Fix `%todo` calling a user-defined `JsError` module instead of the standard library one.
-- Fix the location in the `%todo` error message: the file's base name instead of its absolute path, and columns instead of character offsets.

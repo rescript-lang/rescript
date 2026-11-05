@@ -1,1 +1,0 @@
-- Add `try ... finally { ... }` and `try ... catch { ... } finally { ... }`, compiled to JavaScript `finally` blocks.

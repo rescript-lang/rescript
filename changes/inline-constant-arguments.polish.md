@@ -1,1 +1,0 @@
-- Use constant arguments directly when inlining a function in generated JavaScript, instead of binding them to variables first.

@@ -1,1 +1,0 @@
-- Coercion errors no longer describe `bool` and `unit` as variants that could be given `@as` or `@unboxed`.

@@ -1,1 +1,0 @@
-- List floats and bigints in the error for an invalid `@as` payload, since `@as` accepts them.

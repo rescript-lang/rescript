@@ -1,1 +1,0 @@
-- Reject a namespace in `rescript.json` that is not a valid module name, such as one derived from the package name `_`.

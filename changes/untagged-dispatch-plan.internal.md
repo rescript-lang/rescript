@@ -1,1 +1,0 @@
-- Build the dispatch of a switch on an untagged variant as a plan before printing it.

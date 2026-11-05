@@ -1,1 +1,0 @@
-- Existential types of GADT constructors are shown as `$a` instead of `$Any_'a`, and an escaping one is explained by naming the constructor that binds it.

@@ -1,1 +1,0 @@
-- Represent fixed external arguments, written `@as(value) _`, with a dedicated parsetree node. https://github.com/rescript-lang/rescript/pull/8875

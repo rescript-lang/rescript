@@ -1,1 +1,0 @@
-- Fix a compiler crash ("Fatal error: Matching.comp_exit") on a guarded or-pattern that an earlier case makes unreachable.

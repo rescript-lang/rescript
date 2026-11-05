@@ -1,1 +1,0 @@
-- Complete elements of an array literal with a spread, such as `[...xs, <cursor>]`, from the array's element type.

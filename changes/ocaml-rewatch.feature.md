@@ -1,1 +1,0 @@
-- `rescript` now runs a build system rewritten in OCaml; the Rust implementation remains available as `rescript-rust`. https://github.com/rescript-lang/rescript/pull/8780

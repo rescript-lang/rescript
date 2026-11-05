@@ -1,2 +1,0 @@
-- Evaluate the arguments of an inlined call left to right, as the call does.
-- Compile a `while` condition that needs statements into the loop, so `await`, `break` and `continue` work in it.
