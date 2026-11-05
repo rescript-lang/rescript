@@ -150,9 +150,10 @@ let namespace_from_package_name name =
 
 (* A string namespace combined with a namespace-entry is converted with the
    Pascal case of the convert_case Rust crate (0.6) that the original build
-   system used, which rescript.json files already depend on: "my_lib" names the namespace MyLib. Words split at
-   '-', '_' and ' ' (which are dropped), between a lower-case letter and an
-   upper-case letter or digit, between an upper-case letter and a digit,
+   system used, which rescript.json files already depend on: "my_lib" names
+   the namespace MyLib. Words split at '-', '_' and ' ' (which are dropped),
+   between a lower-case letter and an upper-case letter or digit, between an
+   upper-case letter and a digit,
    between a digit and a letter, and before the last capital of an acronym
    followed by a lower-case letter ("ABCdef" -> "AB", "Cdef"). Each word is
    then capitalized and the rest lower-cased. Characters that are neither

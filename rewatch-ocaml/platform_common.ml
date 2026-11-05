@@ -1,6 +1,6 @@
-(* The current directory is not searched: a
-   project file named like a tool (cmd.exe, node) must not run in its place. A
-   program in the current directory needs an explicit path. *)
+(* The current directory is not searched: a project file named like a tool
+   (cmd.exe, node) must not run in its place. A program in the current
+   directory needs an explicit path. *)
 let resolve_program ~path_separator ~executable_extensions ~normalize_directory
     ~executable_is_usable ~cwd program =
   if (not (Filename.is_implicit program)) || Filename.dirname program <> "."

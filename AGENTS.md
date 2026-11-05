@@ -34,8 +34,8 @@ The Makefile’s targets build on each other in this order:
 Before changing a subsystem, read its local agent instructions and area guide.
 For compiler changes, read [compiler/AGENTS.md](compiler/AGENTS.md). For build
 system changes, read [rewatch-ocaml/AGENTS.md](rewatch-ocaml/AGENTS.md). These
-apply even when the task starts at the repository root. Changes spanning areas need the
-relevant guidance from each.
+apply even when the task starts at the repository root. Changes spanning areas
+need the relevant guidance from each.
 
 - [`compiler/syntax/README.md`](compiler/syntax/README.md) for parsing,
   printing, and JSX transformation

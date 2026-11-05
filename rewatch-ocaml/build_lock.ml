@@ -15,8 +15,8 @@ let malformed_error () =
     \  (try removing it and running the command again)"
 
 (* A writer that cannot link creates the lock and then writes its PID, so an
-   empty lock is usually still being written. One
-   that stays empty belongs to a writer that died in between. *)
+   empty lock is usually still being written. One that stays empty belongs to
+   a writer that died in between. *)
 let being_written path =
   match Unix.stat path with
   | stats -> Unix.gettimeofday () -. stats.Unix.st_mtime < 5.0

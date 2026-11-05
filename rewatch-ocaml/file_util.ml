@@ -131,11 +131,11 @@ let copy_existing_file source destination =
   Fun.protect
     ~finally:(fun () -> close_in_noerr input_channel)
     (fun () ->
-      (* The copy writes in place: replacing the file by a
-         rename would leave stale entries on case-insensitive virtiofs mounts
-         (Docker on macOS) for the compiler's lowercase .cmi lookups. A failed
-         copy removes its partial destination, so the next build publishes it
-         again instead of reading a truncated .cmi or .cmj. *)
+      (* The copy writes in place: replacing the file by a rename would leave
+         stale entries on case-insensitive virtiofs mounts (Docker on macOS)
+         for the compiler's lowercase .cmi lookups. A failed copy removes its
+         partial destination, so the next build publishes it again instead of
+         reading a truncated .cmi or .cmj. *)
       Build_file_store.forget destination;
       let output_channel = open_out_bin destination in
       try

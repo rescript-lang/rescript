@@ -101,9 +101,9 @@ let run ~verbosity path =
                dependency.name config.name))
   in
   let runtime = runtime_path resolution config.root in
-  (* Editors get the project root spelled the way they
-     named the source, for example through a symlink or a Windows short path:
-     they compile the incremental copy of the source under that root. *)
+  (* Editors get the project root spelled the way they named the source, for
+     example through a symlink or a Windows short path: they compile the
+     incremental copy of the source under that root. *)
   let project_root =
     Project_context.nearest_config_path
       (Filename.dirname (lexical_absolute path))
