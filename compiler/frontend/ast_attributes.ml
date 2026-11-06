@@ -194,16 +194,17 @@ let as_const (attrs : t) =
                         _ );
                 };
               ] -> (
-            (* Check that it is a valid object literal. *)
+            (* Check that it is exactly one JavaScript literal. *)
             match
               Classify_function.classify
                 ~check:
                   (pexp_loc, Bs_flow_ast_utils.flow_deli_offset (Some "json"))
                 s
             with
-            | Js_literal _ -> Json s
+            | Js_literal _ when Classify_function.is_fixed_literal s -> Json s
             | _ ->
-              Location.raise_errorf ~loc:pexp_loc "an object literal expected")
+              Location.raise_errorf ~loc:pexp_loc
+                "The json payload must be a JavaScript literal")
           | _ -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)))
 
 let locg = Location.none

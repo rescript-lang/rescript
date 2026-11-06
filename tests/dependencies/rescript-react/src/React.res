@@ -158,7 +158,7 @@ external useEffectOnEveryRender: (unit => option<unit => unit>) => unit = "useEf
 external useEffect: (unit => option<unit => unit>, 'deps) => unit = "useEffect"
 
 @module("react")
-external useEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit = "useEffect"
+external useEffect0: (unit => option<unit => unit>, %raw("[]")) => unit = "useEffect"
 
 @module("react")
 external useEffect1: (unit => option<unit => unit>, array<'a>) => unit = "useEffect"
@@ -189,8 +189,7 @@ external useLayoutEffectOnEveryRender: (unit => option<unit => unit>) => unit = 
 external useLayoutEffect: (unit => option<unit => unit>, 'deps) => unit = "useLayoutEffect"
 
 @module("react")
-external useLayoutEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit =
-  "useLayoutEffect"
+external useLayoutEffect0: (unit => option<unit => unit>, %raw("[]")) => unit = "useLayoutEffect"
 
 @module("react")
 external useLayoutEffect1: (unit => option<unit => unit>, array<'a>) => unit = "useLayoutEffect"
@@ -221,7 +220,7 @@ external useLayoutEffect7: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e, '
 external useMemo: (unit => 'any, 'deps) => 'any = "useMemo"
 
 @module("react")
-external useMemo0: (unit => 'any, @as(json`[]`) _) => 'any = "useMemo"
+external useMemo0: (unit => 'any, %raw("[]")) => 'any = "useMemo"
 
 @module("react")
 external useMemo1: (unit => 'any, array<'a>) => 'any = "useMemo"
@@ -248,7 +247,7 @@ external useMemo7: (unit => 'any, ('a, 'b, 'c, 'd, 'e, 'f, 'g)) => 'any = "useMe
 external useCallback: ('f, 'deps) => 'f = "useCallback"
 
 @module("react")
-external useCallback0: ('f, @as(json`[]`) _) => 'f = "useCallback"
+external useCallback0: ('f, %raw("[]")) => 'f = "useCallback"
 
 @module("react")
 external useCallback1: ('f, array<'a>) => 'f = "useCallback"
@@ -288,7 +287,7 @@ external useImperativeHandle: (nullable<ref<'value>>, unit => 'value, 'deps) => 
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle0: (nullable<ref<'value>>, unit => 'value, @as(json`[]`) _) => unit =
+external useImperativeHandle0: (nullable<ref<'value>>, unit => 'value, %raw("[]")) => unit =
   "useImperativeHandle"
 
 @module("react")
@@ -342,7 +341,7 @@ external useInsertionEffectOnEveryRender: (unit => option<unit => unit>) => unit
 external useInsertionEffect: (unit => option<unit => unit>, 'deps) => unit = "useInsertionEffect"
 
 @module("react")
-external useInsertionEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit =
+external useInsertionEffect0: (unit => option<unit => unit>, %raw("[]")) => unit =
   "useInsertionEffect"
 
 @module("react")
@@ -405,7 +404,7 @@ module Uncurried = {
   external useCallback: ('f, 'deps) => 'f = "useCallback"
 
   @module("react")
-  external useCallback0: ('f, @as(json`[]`) _) => 'f = "useCallback"
+  external useCallback0: ('f, %raw("[]")) => 'f = "useCallback"
 
   @module("react")
   external useCallback1: ('f, array<'a>) => 'f = "useCallback"

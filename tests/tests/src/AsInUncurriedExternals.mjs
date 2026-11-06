@@ -19,9 +19,15 @@ function shouldNotFail(objectMode, name) {
   return 3;
 }
 
-let x = somescope.somefn({foo:true});
+let x = somescope.somefn({"foo":true});
 
 let y = somescope.stringfn("ab");
+
+let style = Object.assign({}, {
+  color: "red"
+}, {
+  display: "flex"
+});
 
 export {
   mo,
@@ -29,5 +35,6 @@ export {
   shouldNotFail,
   x,
   y,
+  style,
 }
 /* x Not a pure module */

@@ -27,3 +27,8 @@ val classify : ?check:Location.t * int -> string -> Js_raw_info.exp
 val classify_exp : (Loc.t, Loc.t) Flow_ast.Expression.t -> Js_raw_info.exp
 
 val classify_stmt : string -> Js_raw_info.stmt
+
+val is_fixed_literal : string -> bool
+(** Whether [source] is exactly one JavaScript literal. The generated code
+    embeds the source verbatim, so trailing tokens, which [classify] ignores,
+    and comments, which could swallow the code that follows, are rejected. *)

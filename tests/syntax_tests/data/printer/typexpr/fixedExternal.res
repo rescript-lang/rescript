@@ -22,3 +22,15 @@ external commented: (/* a */ @as(1) /* b */ _ /* c */, @as(/* d */ "s") _, int) 
 type notExternal = (@as(1) _, int) => int
 
 @val external payloadAttributes: (@as(@foo 1) _, @as(@foo json`{}`) _, int) => int = "f"
+
+@val
+external raw: (%raw("{}"), %raw(`"img"`), ~mode: %raw("[1, 2]"), int) => int = "f"
+
+@val external singleRaw: %raw("null") => int = "f"
+
+@val
+external rawCommented: (/* a */ %raw("1") /* b */, %raw(/* c */ "2"), int) => int = "f"
+
+@val external legacyNumbers: (@as(007) _, @as(1_000) _, int) => int = "f"
+
+@val external templateSyntax: (@as("${x}") _, @as("a`b") _, @as("\\`") _, int) => int = "f"

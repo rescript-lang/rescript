@@ -28,7 +28,11 @@ let rec is_obj_literal (x : _ Flow_ast.Expression.t) : bool =
   | StringLiteral _ | BooleanLiteral _ | NullLiteral _ | NumberLiteral _
   | BigIntLiteral _ | RegExpLiteral _ | ModuleRefLiteral _ ->
     true
-  | Unary {operator = Minus; argument} -> is_obj_literal argument
+  (* Negating anything but a number converts it to a primitive, which can run
+     a [valueOf] method. *)
+  | Unary {operator = Minus; argument = _, (NumberLiteral _ | BigIntLiteral _)}
+    ->
+    true
   | Object {properties} -> Ext_list.for_all properties is_literal_kv
   | Array {elements} ->
     Ext_list.for_all elements (fun x ->
@@ -39,7 +43,16 @@ let rec is_obj_literal (x : _ Flow_ast.Expression.t) : bool =
 
 and is_literal_kv (x : _ Flow_ast.Expression.Object.property) =
   match x with
-  | Property (_, Init {value}) -> is_obj_literal value
+  | Property
+      ( _,
+        Init
+          {
+            key =
+              StringLiteral _ | NumberLiteral _ | BigIntLiteral _ | Identifier _;
+            value;
+          } ) ->
+    is_obj_literal value
+  (* A computed key such as [[f()]] runs code. *)
   | _ -> false
 
 let classify_exp (prog : _ Flow_ast.Expression.t) : Js_raw_info.exp =
@@ -103,6 +116,29 @@ let classify ?(check : (Location.t * int) option) (prog : string) :
     Js_exp_unknown
   | Some _, [] | None, [] -> classify_exp prog
   | None, _ :: _ -> Js_exp_unknown
+
+let is_fixed_literal (source : string) : bool =
+  let open Parser_flow in
+  (* The output is strict mode JavaScript, which rejects legacy octal literals
+     and escapes. *)
+  let parse_options =
+    Some {Parser_env.default_parse_options with use_strict = true}
+  in
+  let env = Parser_env.init_env ~parse_options None source in
+  match
+    do_parse env
+      (fun env ->
+        let expression = Parse.expression env in
+        let token = Parser_env.Peek.token env in
+        (* Eating the last token records the comments lexed before it,
+           including those already attached to [expression]. *)
+        Parser_env.Eat.token env;
+        (expression, token, Parser_env.comments env))
+      false
+  with
+  | (expression, Token.T_EOF, []), [] -> is_obj_literal expression
+  | _ -> false
+  | exception _ -> false
 
 let classify_stmt (prog : string) : Js_raw_info.stmt =
   let result = Parser_flow.parse_program false None prog in

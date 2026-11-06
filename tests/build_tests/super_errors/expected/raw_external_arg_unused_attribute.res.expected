@@ -1,0 +1,10 @@
+
+  [1;31mWarning number 101[0m (configured as error) 
+  [36m/.../fixtures/raw_external_arg_unused_attribute.res[0m:[2m1:14-20[0m
+
+  [1;31m1[0m [2m│[0m external f: ([1;31m@ignore[0m %raw("1"), int) => int = "f"
+  2 [2m│[0m 
+
+  Unused attribute: @ignore
+This attribute has no effect here.
+For example, some attributes are only meaningful in externals.

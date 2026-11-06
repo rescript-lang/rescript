@@ -50,4 +50,54 @@ let suites =
              (Classify_function.classify_stmt "// only a comment");
            OUnit.assert_equal Js_raw_info.Js_stmt_unknown
              (Classify_function.classify_stmt "console.log('hello')") );
+         ( "fixed literals are exactly one literal" >:: fun _ ->
+           List.iter
+             (fun source ->
+               OUnit.assert_bool source
+                 (Classify_function.is_fixed_literal source))
+             [
+               "1";
+               "-1";
+               "-1n";
+               "-1.5";
+               "{a: -2}";
+               "1n";
+               {|"s"|};
+               "{}";
+               "0o7";
+               "0";
+               {|"\0"|};
+               "{a: [1, null]}";
+               "/a/g";
+               "undefined";
+               "true";
+               {|{"a": 1, 2: 3, b: [4]}|};
+             ];
+           List.iter
+             (fun source ->
+               OUnit.assert_bool source
+                 (not (Classify_function.is_fixed_literal source)))
+             [
+               "007";
+               {|"\07"|};
+               "{[f()]: 0}";
+               {|{["a"]: 0}|};
+               "{a: {[f()]: 0}}";
+               "-[]";
+               "{x: -{}}";
+               "-/a/";
+               {|-"1"|};
+               "-true";
+               "-(-1)";
+               "1 2";
+               "1) + alert(2";
+               "1; alert(2)";
+               "1, 2";
+               "1 // comment";
+               "/* comment */ 1";
+               "x";
+               "f()";
+               "`t`";
+               "";
+             ] );
        ]

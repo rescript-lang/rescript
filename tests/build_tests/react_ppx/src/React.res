@@ -130,7 +130,7 @@ external useReducerWithMapState: (
 external useEffect: (unit => option<unit => unit>) => unit = "useEffect"
 
 @module("react")
-external useEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit = "useEffect"
+external useEffect0: (unit => option<unit => unit>, %raw("[]")) => unit = "useEffect"
 
 @module("react")
 external useEffect1: (unit => option<unit => unit>, array<'a>) => unit = "useEffect"
@@ -158,8 +158,7 @@ external useEffect7: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e, 'f, 'g)
 external useLayoutEffect: (unit => option<unit => unit>) => unit = "useLayoutEffect"
 
 @module("react")
-external useLayoutEffect0: (unit => option<unit => unit>, @as(json`[]`) _) => unit =
-  "useLayoutEffect"
+external useLayoutEffect0: (unit => option<unit => unit>, %raw("[]")) => unit = "useLayoutEffect"
 
 @module("react")
 external useLayoutEffect1: (unit => option<unit => unit>, array<'a>) => unit = "useLayoutEffect"
@@ -190,7 +189,7 @@ external useLayoutEffect7: (unit => option<unit => unit>, ('a, 'b, 'c, 'd, 'e, '
 external useMemo: (unit => 'any) => 'any = "useMemo"
 
 @module("react")
-external useMemo0: (unit => 'any, @as(json`[]`) _) => 'any = "useMemo"
+external useMemo0: (unit => 'any, %raw("[]")) => 'any = "useMemo"
 
 @module("react")
 external useMemo1: (unit => 'any, array<'a>) => 'any = "useMemo"
@@ -220,8 +219,7 @@ type callback<'input, 'output> = 'input => 'output
 external useCallback: ('input => 'output) => callback<'input, 'output> = "useCallback"
 
 @module("react")
-external useCallback0: ('input => 'output, @as(json`[]`) _) => callback<'input, 'output> =
-  "useCallback"
+external useCallback0: ('input => 'output, %raw("[]")) => callback<'input, 'output> = "useCallback"
 
 @module("react")
 external useCallback1: ('input => 'output, array<'a>) => callback<'input, 'output> = "useCallback"
@@ -257,7 +255,7 @@ external useContext: Context.t<'any> => 'any = "useContext"
 @module("react") external useRef: 'value => Ref.t<'value> = "useRef"
 
 @module("react")
-external useImperativeHandle0: (nullable<Ref.t<'value>>, unit => 'value, @as(json`[]`) _) => unit =
+external useImperativeHandle0: (nullable<Ref.t<'value>>, unit => 'value, %raw("[]")) => unit =
   "useImperativeHandle"
 
 @module("react")

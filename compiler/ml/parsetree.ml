@@ -96,10 +96,11 @@ and arg =
       attrs: attributes;
       lbl: arg_label;
       value: fixed_value loc; (* located at the payload *)
-      loc: Location.t; (* the whole argument, from [@as] to [_] *)
+      loc: Location.t; (* the whole argument *)
     }
 (* An external function argument whose value is fixed by the binding and
-   omitted at call sites, written [@as(value) _]. *)
+   omitted at call sites, written [%raw(source)] or, in the deprecated form,
+   [@as(value) _]. *)
 
 and fixed_value =
   | Pfixed_int of string loc (* [@as(1)]: the integer literal's source *)
@@ -107,7 +108,8 @@ and fixed_value =
   | Pfixed_template of string loc
     (* [@as(`s`)]: the source between the backquotes *)
   | Pfixed_json of string loc
-(* [@as(json`{}`)]: the JavaScript source between the backquotes *)
+    (* [@as(json`{}`)]: the JavaScript source between the backquotes *)
+  | Pfixed_raw of raw_source (* [%raw("{}")] *)
 
 and core_type_desc =
   | Ptyp_any (*  _ *)

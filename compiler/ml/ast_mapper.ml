@@ -115,6 +115,7 @@ module T = struct
                  | Pfixed_template source ->
                    Pfixed_template (map_loc sub source)
                  | Pfixed_json source -> Pfixed_json (map_loc sub source)
+                 | Pfixed_raw source -> Pfixed_raw (map_raw_source sub source)
                in
                Parsetree.Parg_fixed
                  {

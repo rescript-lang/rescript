@@ -2,7 +2,7 @@
 
 val of_payload : Parsetree.payload -> Parsetree.fixed_value Location.loc option
 (** The fixed value denoted by an [@as] payload: an integer, a string, a
-    non-interpolated backquoted string, or a [json] literal. *)
+    non-interpolated backquoted string, or a [json] literal, braced or not. *)
 
 val to_expression :
   ?loc:Location.t -> Parsetree.fixed_value -> Parsetree.expression
@@ -12,8 +12,12 @@ val to_attribute :
   ?loc:Location.t -> Parsetree.fixed_value Location.loc -> Parsetree.attribute
 (** The [@as] attribute that spells [value], with its name located at [loc]. *)
 
-val underscore_loc : Location.t -> Location.t
-(** The location of the [_] that ends a fixed argument located at [loc]. *)
+val closing_loc : Location.t -> Location.t
+(** The location of the last character of a fixed argument located at [loc]:
+    the [)] of [%raw(...)] or the [_] of [@as(value) _]. *)
+
+val js_source : Parsetree.fixed_value -> string
+(** The JavaScript source of a fixed value, as [%raw] spells it. *)
 
 val as_name_loc : Location.t -> Location.t
 (** The location of the [@as] that starts a fixed argument located at [loc]. *)

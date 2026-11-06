@@ -126,6 +126,13 @@ let arg_label_loc i ppf = function
   | Optional {txt = s} -> line i ppf "Optional \"%s\"\n" s
   | Labelled {txt = s} -> line i ppf "Labelled \"%s\"\n" s
 
+let raw_source i ppf (source : raw_source) =
+  match source with
+  | Raw_string {txt; loc} ->
+    line i ppf "Raw_string %S %a\n" txt fmt_location loc
+  | Raw_template {txt; loc} ->
+    line i ppf "Raw_template %S %a\n" txt fmt_location loc
+
 let fixed_value i ppf (x : fixed_value) =
   match x with
   | Pfixed_int source ->
@@ -138,13 +145,9 @@ let fixed_value i ppf (x : fixed_value) =
     line i ppf "Pfixed_template %S %a\n" source.txt fmt_location source.loc
   | Pfixed_json source ->
     line i ppf "Pfixed_json %S %a\n" source.txt fmt_location source.loc
-
-let raw_source i ppf (source : raw_source) =
-  match source with
-  | Raw_string {txt; loc} ->
-    line i ppf "Raw_string %S %a\n" txt fmt_location loc
-  | Raw_template {txt; loc} ->
-    line i ppf "Raw_template %S %a\n" txt fmt_location loc
+  | Pfixed_raw source ->
+    line i ppf "Pfixed_raw\n";
+    raw_source (i + 1) ppf source
 
 let rec core_type i ppf x =
   line i ppf "core_type %a\n" fmt_location x.ptyp_loc;
