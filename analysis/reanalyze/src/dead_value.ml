@@ -594,26 +594,27 @@ let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
 
 (* Merge a location's references to another one's *)
 let process_value_dependency ~config ~refs ~file_deps ~cross_file
-    ( ({
-         val_loc =
-           {loc_start = {pos_fname = fn_to} as pos_to; loc_ghost = ghost1} as
-           loc_to;
-         val_type = type_to;
-       } :
-        Types.value_description),
-      ({
-         val_loc =
-           {loc_start = {pos_fname = fn_from} as pos_from; loc_ghost = ghost2}
-           as loc_from;
-         val_type = type_from;
-       } :
-        Types.value_description) ) =
+    ({
+       value_loc =
+         {loc_start = {pos_fname = fn_to} as pos_to; loc_ghost = ghost1} as
+         loc_to;
+       spec_loc =
+         {loc_start = {pos_fname = fn_from} as pos_from; loc_ghost = ghost2} as
+         loc_from;
+       optional_args;
+     } :
+      Cmt_format.value_dependency) =
   if (not ghost1) && (not ghost2) && pos_to <> pos_from then (
     let add_file_reference = file_is_implementation_of fn_to fn_from in
     add_value_reference ~config ~refs ~file_deps ~binding:Location.none
       ~add_file_reference ~loc_from ~loc_to;
-    Dead_optional_args.add_function_reference ~config ~cross_file ~loc_from
-      ~loc_to ~type_from ~type_to)
+    (* The compiler decides this from the two types rather than reanalyze
+       consulting its declaration table: references can be collected before
+       their target declaration is visited, notably in [let rec ... and ...]
+       groups. *)
+    if optional_args then
+      Dead_optional_args.add_function_reference ~config ~cross_file ~loc_from
+        ~loc_to)
 
 let process_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
     ~cmt_value_dependencies ~do_types ~do_externals
