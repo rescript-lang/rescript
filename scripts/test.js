@@ -10,7 +10,6 @@ import {
   ounitTestBin,
   projectDir,
 } from "#dev/paths";
-
 import {
   execBin,
   execBuild,
@@ -20,6 +19,9 @@ import {
   rescript,
   shell,
 } from "#dev/process";
+import { ensureTestLock } from "#dev/test_lock";
+
+await ensureTestLock();
 
 let ounitTest = false;
 let mochaTest = false;
