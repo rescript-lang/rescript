@@ -1,0 +1,1 @@
+- Write a quarter less into `.cmt` files by dropping data no tool reads (full value descriptions in the value dependencies, OCaml-only fields, environment summaries).

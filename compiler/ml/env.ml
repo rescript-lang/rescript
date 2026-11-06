@@ -147,18 +147,6 @@ end
 
 module Path_map = Map.Make (Path)
 
-type summary =
-  | Env_empty
-  | Env_value of summary * Ident.t * value_description
-  | Env_type of summary * Ident.t * type_declaration
-  | Env_extension of summary * Ident.t * extension_constructor
-  | Env_module of summary * Ident.t * module_declaration
-  | Env_modtype of summary * Ident.t * modtype_declaration
-  | Env_open of summary * Path.t
-  | Env_functor_arg of summary * Ident.t
-  | Env_constraints of summary * type_declaration Path_map.t
-  | Env_copy_types of summary * string list
-
 module Tycomp_tbl = struct
   (** This module is used to store components of types (i.e. labels
         and constructors).  We keep a representation of each nested
@@ -376,7 +364,6 @@ type t = {
   modtypes: modtype_declaration Id_tbl.t;
   components: module_components Id_tbl.t;
   functor_args: unit Ident.tbl;
-  summary: summary;
   local_constraints: type_declaration Path_map.t;
   gadt_instances: (int * Type_set.t ref) list;
   flags: int;
@@ -456,7 +443,6 @@ let empty =
     modules = Id_tbl.empty;
     modtypes = Id_tbl.empty;
     components = Id_tbl.empty;
-    summary = Env_empty;
     local_constraints = Path_map.empty;
     gadt_instances = [];
     flags = 0;
@@ -1089,7 +1075,7 @@ let copy_types l env =
   let values =
     List.fold_left (fun env s -> Id_tbl.update s f env) env.values l
   in
-  {env with values; summary = Env_copy_types (env.summary, l)}
+  {env with values}
 
 let mark_value_used env name vd =
   if not (is_implicit_coercion env) then
@@ -1552,11 +1538,7 @@ and check_value_name name loc =
 and store_value ?check id decl env =
   check_value_name (Ident.name id) decl.val_loc;
   may (fun f -> check_usage decl.val_loc id f (value_declarations ())) check;
-  {
-    env with
-    values = Id_tbl.add id decl env.values;
-    summary = Env_value (env.summary, id, decl);
-  }
+  {env with values = Id_tbl.add id decl env.values}
 
 and store_type ~check id info env =
   let loc = info.type_loc in
@@ -1599,7 +1581,6 @@ and store_type ~check id info env =
         (fun (id, descr) labels -> Tycomp_tbl.add id descr labels)
         labels env.labels;
     types = Id_tbl.add id (info, descrs) env.types;
-    summary = Env_type (env.summary, id, info);
   }
 
 and store_type_infos id info env =
@@ -1608,11 +1589,7 @@ and store_type_infos id info env =
      manifest-ness of the type.  Used in components_of_module to
      keep track of type abbreviations (e.g. type t = float) in the
      computation of label representations. *)
-  {
-    env with
-    types = Id_tbl.add id (info, ([], [])) env.types;
-    summary = Env_type (env.summary, id, info);
-  }
+  {env with types = Id_tbl.add id (info, ([], [])) env.types}
 
 and store_extension ~check id ext env =
   let loc = ext.ext_loc in
@@ -1636,7 +1613,6 @@ and store_extension ~check id ext env =
     env with
     constrs =
       Tycomp_tbl.add id (Datarepr.extension_descr (Pident id) ext) env.constrs;
-    summary = Env_extension (env.summary, id, ext);
   }
 
 and store_module ~check id md env =
@@ -1655,15 +1631,10 @@ and store_module ~check id md env =
         (components_of_module ~deprecated ~loc:md.md_loc env Subst.identity
            (Pident id) md.md_type)
         env.components;
-    summary = Env_module (env.summary, id, md);
   }
 
 and store_modtype id info env =
-  {
-    env with
-    modtypes = Id_tbl.add id info env.modtypes;
-    summary = Env_modtype (env.summary, id, info);
-  }
+  {env with modtypes = Id_tbl.add id info env.modtypes}
 
 (* Compute the components of a functor application in a path. *)
 
@@ -1690,11 +1661,7 @@ let _ =
 (* Insertion of bindings by identifier *)
 
 let add_functor_arg id env =
-  {
-    env with
-    functor_args = Ident.add id () env.functor_args;
-    summary = Env_functor_arg (env.summary, id);
-  }
+  {env with functor_args = Ident.add id () env.functor_args}
 
 let add_value ?check id desc env = store_value ?check id desc env
 
@@ -1781,17 +1748,7 @@ let add_components slot root env0 comps =
 
   let modules = add (fun x -> `Module x) comps.comp_modules env0.modules in
 
-  {
-    env0 with
-    summary = Env_open (env0.summary, root);
-    constrs;
-    labels;
-    values;
-    types;
-    modtypes;
-    components;
-    modules;
-  }
+  {env0 with constrs; labels; values; types; modtypes; components; modules}
 
 let open_signature slot root env0 =
   match get_components (find_module_descr root env0) with
@@ -2003,16 +1960,11 @@ let last_env () = Domain.DLS.get last_env_key
 let last_reduced_env_key = Request_local.new_key (fun () -> ref empty)
 let last_reduced_env () = Domain.DLS.get last_reduced_env_key
 
-let keep_only_summary env =
+let keep_only_local_constraints env =
   if !(last_env ()) == env then !(last_reduced_env ())
   else
     let new_env =
-      {
-        empty with
-        summary = env.summary;
-        local_constraints = env.local_constraints;
-        flags = env.flags;
-      }
+      {empty with local_constraints = env.local_constraints; flags = env.flags}
     in
     last_env () := env;
     last_reduced_env () := new_env;
