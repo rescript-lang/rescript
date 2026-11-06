@@ -1,0 +1,1 @@
+- Exception analysis reads `@throws` from library and external declarations, including third-party ones, instead of a built-in list, and a `@throws` on a `let` now reaches other modules even without an interface.

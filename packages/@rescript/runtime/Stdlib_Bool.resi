@@ -45,6 +45,7 @@ switch Bool.fromStringOrThrow("notAValidBoolean") {
 }
 ```
 */
+@throws(Invalid_argument)
 let fromStringOrThrow: string => bool
 
 /**

@@ -1440,11 +1440,18 @@ and type_structure funct_body anchor env sstr =
       in
       (* The environment keeps let-bound values without attributes, so uses
          in this module do not warn. The signature carries their [deprecated]
-         attributes, so uses from other modules do. *)
-      let deprecated =
+         attributes, so uses from other modules do, and their [throws]
+         attributes, which reanalyze's exception analysis reads at calls from
+         other modules. Other attributes stay out: a doc comment in the .cmi
+         would make editing it recompile the module's dependents. *)
+      let signature_attributes (attrs : Parsetree.attributes) =
+        Builtin_attributes.deprecated_attributes attrs
+        @ List.filter (fun ({txt}, _) -> txt = "throws") attrs
+      in
+      let kept_attributes =
         List.concat_map
           (fun (vb : value_binding) ->
-            match Builtin_attributes.deprecated_attributes vb.vb_attributes with
+            match signature_attributes vb.vb_attributes with
             | [] -> []
             | attrs ->
               List.map (fun id -> (id, attrs)) (pat_bound_idents vb.vb_pat))
@@ -1458,7 +1465,9 @@ and type_structure funct_body anchor env sstr =
             let vd = Env.find_value (Pident id) newenv in
             let vd =
               match
-                List.find_opt (fun (id', _) -> Ident.same id id') deprecated
+                List.find_opt
+                  (fun (id', _) -> Ident.same id id')
+                  kept_attributes
               with
               | None -> vd
               | Some (_, attrs) ->

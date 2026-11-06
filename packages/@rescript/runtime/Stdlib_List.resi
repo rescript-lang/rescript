@@ -71,6 +71,7 @@ switch List.headOrThrow(list{}) {
 
 - Throws an Error if list is empty.
 */
+@throws(Not_found)
 let headOrThrow: list<'a> => 'a
 
 /**
@@ -105,6 +106,7 @@ switch List.tailOrThrow(list{}) {
 
 - Throws an Error if list is empty.
 */
+@throws(Not_found)
 let tailOrThrow: list<'a> => list<'a>
 
 /**
@@ -156,6 +158,7 @@ switch abc->List.getOrThrow(4) {
 
 - Throws an Error if `index` is larger than the length of list.
 */
+@throws(Not_found)
 let getOrThrow: (list<'a>, int) => 'a
 
 /**
