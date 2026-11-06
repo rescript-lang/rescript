@@ -56,7 +56,10 @@ type error = Not_a_typedtree of string
 open Tast_mapper
 
 let cenv =
-  {Tast_mapper.default with env = (fun _sub env -> Env.keep_only_summary env)}
+  {
+    Tast_mapper.default with
+    env = (fun _sub env -> Env.keep_only_local_constraints env);
+  }
 
 let clear_part = function
   | Partial_structure s -> Partial_structure (cenv.structure cenv s)
