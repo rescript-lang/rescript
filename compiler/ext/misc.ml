@@ -229,23 +229,31 @@ end)
 (* Color handling *)
 module Color = struct
   (* use ANSI color codes, see https://en.wikipedia.org/wiki/ANSI_escape_code *)
-  type color = Red | Yellow | Magenta | Cyan
+  (* The full ANSI palette, also the colors no message uses yet. *)
+  type color = Black | Red | Green | Yellow | Blue | Magenta | Cyan | White
+  [@@live]
 
   type style =
-    | FG of color
-    (* foreground *)
+    | FG of color (* foreground *)
+    | BG of color (* background *)
     | Bold
     | Reset
     | Dim
+  [@@live]
 
   let ansi_of_color = function
+    | Black -> "0"
     | Red -> "1"
+    | Green -> "2"
     | Yellow -> "3"
+    | Blue -> "4"
     | Magenta -> "5"
     | Cyan -> "6"
+    | White -> "7"
 
   let code_of_style = function
     | FG c -> "3" ^ ansi_of_color c
+    | BG c -> "4" ^ ansi_of_color c
     | Bold -> "1"
     | Reset -> "0"
     | Dim -> "2"

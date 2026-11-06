@@ -95,6 +95,18 @@ module String_map : Map.S with type key = string
 
 (* Color handling *)
 module Color : sig
+  (* The full ANSI palette, also the colors no message uses yet. *)
+  type color = Black | Red | Green | Yellow | Blue | Magenta | Cyan | White
+  [@@live]
+
+  type style =
+    | FG of color (* foreground *)
+    | BG of color (* background *)
+    | Bold
+    | Reset
+    | Dim
+  [@@live]
+
   type setting = Auto | Always | Never
 
   val setup : setting option -> unit
