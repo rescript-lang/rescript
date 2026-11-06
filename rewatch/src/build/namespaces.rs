@@ -1,5 +1,6 @@
 use crate::build::compile::get_runtime_path_args;
 use crate::build::packages;
+use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
 use crate::project_context::ProjectContext;
 use ahash::AHashSet;
@@ -59,7 +60,60 @@ pub fn compile_mlmap(
     namespace: &str,
     bsc_path: &Path,
 ) -> Result<()> {
-    let build_path_abs = package.get_build_path();
+    compile_mlmap_at(
+        project_context,
+        package,
+        namespace,
+        bsc_path,
+        &package.get_build_path(),
+    )?;
+
+    // Consumers must not import dev aliases when opening a dependency's namespace.
+    // Keep the full map in lib/bs for same-package compilation.
+    let public_path = package.get_ocaml_build_path();
+    std::fs::write(
+        public_path.join(format!("{namespace}.mlmap")),
+        public_mlmap_contents(package),
+    )?;
+    compile_mlmap_at(project_context, package, namespace, bsc_path, &public_path)
+}
+
+fn public_mlmap_contents(package: &packages::Package) -> String {
+    let mut modules = package
+        .source_files
+        .as_ref()
+        .unwrap()
+        .iter()
+        .filter(|(_, metadata)| !metadata.is_type_dev)
+        .map(|(path, _)| helpers::file_path_to_module_name(path, &packages::Namespace::NoNamespace))
+        .filter(|name| helpers::is_non_exotic_module_name(name))
+        .filter(|name| match &package.namespace {
+            packages::Namespace::NamespaceWithEntry { entry, .. } => name != entry,
+            _ => true,
+        })
+        .collect::<Vec<_>>();
+    modules.sort();
+    modules.dedup();
+    format!(
+        "randjbuildsystem\n{}",
+        modules.into_iter().map(|name| name + "\n").collect::<String>()
+    )
+}
+
+pub fn public_mlmap_is_current(package: &packages::Package, namespace: &str) -> bool {
+    let path = package.get_ocaml_build_path();
+    path.join(format!("{namespace}.cmi")).is_file()
+        && std::fs::read_to_string(path.join(format!("{namespace}.mlmap")))
+            .is_ok_and(|contents| contents == public_mlmap_contents(package))
+}
+
+fn compile_mlmap_at(
+    project_context: &ProjectContext,
+    package: &packages::Package,
+    namespace: &str,
+    bsc_path: &Path,
+    build_path_abs: &Path,
+) -> Result<()> {
     let mlmap_name = format!("{namespace}.mlmap");
     let mut args: Vec<String> = vec![];
     // include `-runtime-path` arg

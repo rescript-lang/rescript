@@ -126,8 +126,13 @@ let compiler_arguments_with_common ~(config : Config.t) ~common_args
         (fun spec -> ["-bs-package-output"; package_output config path spec])
         config.package_specs
   in
+  let local_namespace_args =
+    match config.namespace with
+    | Namespace_with_entry {entry; _} when entry = module_name -> []
+    | _ -> ["-I"; "."]
+  in
   namespace_args config module_name
-  @ interface_args @ common_args @ output_args
+  @ interface_args @ local_namespace_args @ common_args @ output_args
   @ [Source.ast_path path]
 
 let compiler_arguments ~project_root ~(config : Config.t) ~runtime

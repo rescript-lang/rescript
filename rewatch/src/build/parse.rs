@@ -252,12 +252,14 @@ pub fn generate_asts(
         if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
             let is_dirty = match &module.source_type {
                 SourceType::MlMap(_) => {
-                    if dirty_packages.contains(&package_name) {
-                        let package = build_state
-                            .build_state
-                            .packages
-                            .get(&package_name)
-                            .expect("Package not found");
+                    let package = build_state
+                        .build_state
+                        .packages
+                        .get(&package_name)
+                        .expect("Package not found");
+                    let public_namespace_changed =
+                        !namespaces::public_mlmap_is_current(package, &module_name);
+                    if dirty_packages.contains(&package_name) || public_namespace_changed {
                         // probably better to do this in a different function
                         // specific to compiling mlmaps
                         let compile_path = package.get_mlmap_compile_path();
@@ -273,32 +275,11 @@ pub fn generate_asts(
                         }
                         let mlmap_hash_after = helpers::compute_file_hash(Path::new(&compile_path));
 
-                        let suffix = package
-                            .namespace
-                            .to_suffix()
-                            .expect("namespace should be set for mlmap module");
-                        let base_build_path = package.get_build_path().join(&suffix);
-                        let base_ocaml_build_path = package.get_ocaml_build_path().join(&suffix);
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmi"),
-                            base_ocaml_build_path.with_extension("cmi"),
-                        );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmt"),
-                            base_ocaml_build_path.with_extension("cmt"),
-                        );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmj"),
-                            base_ocaml_build_path.with_extension("cmj"),
-                        );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("mlmap"),
-                            base_ocaml_build_path.with_extension("mlmap"),
-                        );
-                        match (mlmap_hash, mlmap_hash_after) {
-                            (Some(digest), Some(digest_after)) => !digest.eq(&digest_after),
-                            _ => true,
-                        }
+                        public_namespace_changed
+                            || match (mlmap_hash, mlmap_hash_after) {
+                                (Some(digest), Some(digest_after)) => !digest.eq(&digest_after),
+                                _ => true,
+                            }
                     } else {
                         false
                     }

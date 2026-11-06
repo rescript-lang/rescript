@@ -65,6 +65,7 @@ else
   exit 1
 fi
 
+bash ./dev-module-shadowing.sh &&
 # Individual test files
 # Comment out any test to skip it
 

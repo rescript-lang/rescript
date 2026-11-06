@@ -96,6 +96,24 @@ let tests =
         |> adjacent_positions "-I" |> position development |> Option.is_none)
         "source directory matching respects path-component boundaries";
       let config = Config.load_root root in
+      let namespace_includes module_name =
+        let config =
+          {
+            config with
+            namespace = Namespace_with_entry {name = "Ns"; entry = "Entry"};
+          }
+        in
+        Compiler_args.compiler_arguments_with_common ~config
+          ~common_args:["-I"; "../ocaml"] ~module_name
+          ~source_kind:Source.Implementation ~has_interface:false
+          ~path:"src/A.res"
+        |> adjacent_positions "-I" |> List.map fst
+      in
+      assert_equal ["."; "../ocaml"] (namespace_includes "A")
+        ~msg:"ordinary modules prefer the internal namespace";
+      assert_equal ["../ocaml"]
+        (namespace_includes "Entry")
+        ~msg:"namespace entries use the exported namespace";
       let gentype_config = {config with gentype_args = ["-bs-gentype"]} in
       let selected_regular = Filename.concat root "selected/regular" in
       check
