@@ -16,11 +16,8 @@ let rec has_optional_args (texpr : Types.type_expr) =
   | _ -> false
 
 let add_function_reference ~config ~cross_file ~(loc_from : Location.t)
-    ~(loc_to : Location.t) ~type_from ~type_to =
-  (* Keep this filter type-based rather than consulting the declaration table.
-     References can be collected before their target declaration is visited,
-     notably in [let rec ... and ...] groups. *)
-  if has_optional_args type_from && has_optional_args type_to then (
+    ~(loc_to : Location.t) =
+  if active () then (
     let pos_to = loc_to.loc_start in
     let pos_from = loc_from.loc_start in
     if config.Dce_config.cli.debug then

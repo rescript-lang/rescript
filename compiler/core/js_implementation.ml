@@ -56,8 +56,7 @@ let after_parsing_sig ppf outputprefix ast =
       ignore
         (Env.save_signature ~deprecated sg modulename (outputprefix ^ ".cmi"));
       Typemod.save_signature modulename tsg outputprefix
-        (Location.get_input_name ())
-        initial_env;
+        (Location.get_input_name ());
       process_with_gentype (outputprefix ^ ".cmti"))
 
 let interface ~parser ppf ?outputprefix fname =

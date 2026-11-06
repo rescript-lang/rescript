@@ -42,8 +42,7 @@ val type_open_ :
   Longident.t Asttypes.loc ->
   Path.t * Env.t
 
-val save_signature :
-  string -> Typedtree.signature -> string -> string -> Env.t -> unit
+val save_signature : string -> Typedtree.signature -> string -> string -> unit
 
 type error =
   | Cannot_apply of module_type
