@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/untagged_array_record_and_array.res[0m:[2m3:30-47[0m
+
+  1 [2m│[0m type pair = {@as("0") x?: int, @as("1") y?: int}
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m @unboxed type v = Pair(pair) [1;31m| List(array<int>)[0m
+  4 [2m│[0m 
+
+  This untagged variant definition is invalid: At most one case can be an array, a tuple or a record represented as an array.

@@ -1,1 +1,0 @@
-- Remove the error variant catalog `tests/ERROR_VARIANTS.md`; its untested variants are tracked in #8897.

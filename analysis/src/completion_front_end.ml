@@ -1302,6 +1302,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
         | Pexp_extension ({txt}, _) -> set_result (CextensionNode txt)
         | Pexp_raw {kind} ->
           set_result (CextensionNode (Ast_raw.extension_name kind))
+        | Pexp_todo _ -> set_result (CextensionNode Ast_todo.name)
         | Pexp_constant _ -> set_result Cnone
         | Pexp_ident lid ->
           let lid_path = flatten_lid_check_dot lid in

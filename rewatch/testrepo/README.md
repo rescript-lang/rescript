@@ -9,8 +9,8 @@ dependencies to the same version without replacing that coverage.
 
 These published packages are not the compiler and runtime under test. When the
 suite runs a native Rewatch executable, `tests/suite.sh` sets
-`RESCRIPT_BSC_EXE` and `RESCRIPT_RUNTIME` to the artifacts built from the
-current repository. The `rescript` packages installed here primarily provide a
+`RESCRIPT_RUNTIME` to the runtime built from the current repository, and the
+executable has the compiler built in. The `rescript` packages installed here primarily provide a
 realistic package-manager dependency tree; the version printed from
 `node_modules/.bin/rescript` during setup is informational.
 

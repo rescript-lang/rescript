@@ -1891,7 +1891,11 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
     save_pers_struct crc ps;
     cmi
   with exn ->
-    remove_file filename;
+    (* A build holds the new interface until the request succeeded: dropping
+       it leaves the previous one on disk. *)
+    if Build_file_store.enabled () then
+      Build_file_store.forget (Compiler_request_state.resolve_path filename)
+    else remove_file filename;
     raise exn
 
 let save_signature ?check_exists ~deprecated sg modname filename =

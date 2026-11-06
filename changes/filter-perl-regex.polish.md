@@ -1,0 +1,1 @@
+- `rescript --filter` accepts any Perl-style regular expression the build system can match, instead of only the subset that also meant the same in the Rust build system.

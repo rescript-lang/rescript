@@ -7,9 +7,8 @@
 ; cause no timestamp churn downstream.
 ;
 ; One rule per platform; %{system}/%{architecture} come from `ocamlc -config`
-; (note: x64 is "amd64" there). Every package receives the OCaml build system
-; as rescript.exe; Cargo separately promotes the Rust reference as
-; rescript-rust.exe. The browser profile is excluded because it builds a
+; (note: x64 is "amd64" there). Every package receives the build system as
+; rescript.exe. The browser profile is excluded because it builds a
 ; playground-flavoured compiler that must never overwrite the native binaries.
 
 (rule

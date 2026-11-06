@@ -198,4 +198,53 @@ describe(__MODULE__, () => {
 
     eq(__LOC__, [0, 2, 3], values.contents->List.reverse->List.toArray)
   })
+
+  // A condition that compiles to statements runs at the start of the JS loop
+  // body, and a continue must run it again
+  test("while condition with statements, and break and continue", () => {
+    let values = ref(list{})
+    let i = ref(0)
+
+    while {
+      let next = i.contents + 1
+      i := next
+      next < 6
+    } {
+      if i.contents == 2 {
+        continue
+      }
+
+      if i.contents == 5 {
+        break
+      }
+
+      values := list{i.contents, ...values.contents}
+    }
+
+    eq(__LOC__, [1, 3, 4], values.contents->List.reverse->List.toArray)
+  })
+
+  test("break in the condition of an inner while targets the outer loop", () => {
+    let values = ref(list{})
+    let i = ref(0)
+
+    while i.contents < 6 {
+      i := i.contents + 1
+      let j = ref(0)
+
+      while {
+        if i.contents == 4 {
+          break
+        }
+        j := j.contents + 1
+        j.contents < i.contents
+      } {
+        ()
+      }
+
+      values := list{j.contents, ...values.contents}
+    }
+
+    eq(__LOC__, [1, 2, 3], values.contents->List.reverse->List.toArray)
+  })
 })

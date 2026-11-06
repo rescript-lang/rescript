@@ -39,7 +39,8 @@ let make_context ~compiler_path ~compiler_identity ~runtime_path
 let for_package context config =
   {context with package_output_specs = package_output_specs config}
 
-let path root = File_util.path_of_parts root ["lib"; "bs"; "compiler-info.json"]
+let path root =
+  Filename.concat (Build_artifacts.artifact_dir root) "compiler-info.json"
 
 let package_output_spec_json spec =
   `Assoc
@@ -126,18 +127,20 @@ let config_with_package_output_specs (config : Config.t) specs =
   in
   {config with package_specs}
 
-let previous_build_exists root =
-  File_util.exists
-    (File_util.path_of_parts root ["lib"; "ocaml"; ".compiler.log"])
+(* A build of ReScript 12 or earlier left lib/bs or lib/ocaml, which the clean
+   of the next build with this layout removes, also when a build of this
+   version ran before it, such as on another branch. *)
+let legacy_build_exists root =
+  List.exists File_util.exists (Build_artifacts.legacy_artifact_dirs root)
 
 let needs_clean context (config : Config.t) =
-  let info_path = path config.root in
-  if File_util.exists info_path then not (matches context config)
-  else previous_build_exists config.root
+  legacy_build_exists config.root
+  ||
+  match read config with
+  | Some contents -> not (matches_json context config contents)
+  | None -> false
 
-let clean_package (config : Config.t) =
-  File_util.remove_tree (Build_artifacts.lib_path config.root "bs");
-  File_util.remove_tree (Build_artifacts.lib_path config.root "ocaml")
+let clean_package (config : Config.t) = Build_artifacts.clean config.root
 
 let write_package context (config : Config.t) =
   if not (matches context config) then

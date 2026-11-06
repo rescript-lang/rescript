@@ -431,6 +431,9 @@ and expression i ppf x =
       (Ast_raw.extension_name kind)
       fmt_location name_loc;
     raw_source i ppf source
+  | Pexp_todo {name_loc; message} ->
+    line i ppf "Pexp_todo %a\n" fmt_location name_loc;
+    option i expression ppf message
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg

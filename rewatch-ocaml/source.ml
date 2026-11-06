@@ -432,8 +432,10 @@ let discover_with_inventory ?(on_orphan = fun _ -> ()) ~on_missing
     gentype_dirs = scanned.gentype_dirs;
   }
 
+(* Module names are unique within a package, so the artifact directory is flat:
+   src/nested/A.res and its interface parse to A.ast and A.iast. *)
 let ast_path path =
-  Filename.remove_extension path
+  Filename.remove_extension (Filename.basename path)
   ^ if Filename.extension path = ".resi" then ".iast" else ".ast"
 
 let compiler_basename config module_name =

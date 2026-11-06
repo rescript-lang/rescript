@@ -1,1 +1,0 @@
-- OCaml rewatch: reuse one copy buffer per worker instead of allocating one per published file, which makes clean builds faster. https://github.com/rescript-lang/rescript/pull/8869

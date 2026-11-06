@@ -1,1 +1,0 @@
-- Reuse one object per depth for nested `None` (`Some(None)`, `Some(Some(None))`, …), so creating one no longer allocates and `Some(None) === Some(None)` holds.

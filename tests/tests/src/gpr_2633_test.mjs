@@ -6,7 +6,8 @@ function on1(foo, event) {
 }
 
 function on2(foo, h, event) {
-  foo.on(h(event).NAME, h(event).VAL);
+  let tmp = h(event);
+  foo.on(tmp.NAME, tmp.VAL);
 }
 
 export {

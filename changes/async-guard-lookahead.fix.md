@@ -1,1 +1,0 @@
-- Parse a switch guard that calls a function named `async`.

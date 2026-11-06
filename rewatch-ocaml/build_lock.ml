@@ -14,9 +14,9 @@ let malformed_error () =
     "Could not start Rescript build: Could not parse lockfile PID\n\
     \  (try removing it and running the command again)"
 
-(* A writer that cannot link creates the lock and then writes its PID, as Rust
-   rewatch always does, so an empty lock is usually still being written. One
-   that stays empty belongs to a writer that died in between. *)
+(* A writer that cannot link creates the lock and then writes its PID, so an
+   empty lock is usually still being written. One that stays empty belongs to
+   a writer that died in between. *)
 let being_written path =
   match Unix.stat path with
   | stats -> Unix.gettimeofday () -. stats.Unix.st_mtime < 5.0
@@ -63,6 +63,7 @@ let process_is_active ?poll value =
       with Process.Error _ | Unix.Unix_error _ | Sys_error _ -> None)
 
 let with_candidate ~lock_dir prefix pid action =
+  File_util.ensure_dir lock_dir;
   let path, output = Filename.open_temp_file ~temp_dir:lock_dir prefix ".tmp" in
   Fun.protect
     ~finally:(fun () -> File_util.remove_file_best_effort path)
@@ -124,7 +125,7 @@ let with_acquired ~candidate ~path ~pid action =
 
 let acquire ?poll ~name ~prefix ~attempts ~delay ~timeout ~on_live_owner root
     action =
-  let lock_dir = Filename.concat root "lib" in
+  let lock_dir = Build_artifacts.artifact_dir root in
   File_util.ensure_dir lock_dir;
   let path = Filename.concat lock_dir name in
   let pid = string_of_int (Platform.current_process_id ()) in

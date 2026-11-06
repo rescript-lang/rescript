@@ -211,7 +211,7 @@ let iter_expression f e =
     match e.pexp_desc with
     | Pexp_braces {expr = inner} -> expr inner
     | Pexp_extension _ (* we don't iterate under extension point *) | Pexp_raw _
-    | Pexp_ident _ | Pexp_constant _ ->
+    | Pexp_todo _ | Pexp_ident _ | Pexp_constant _ ->
       ()
     | Pexp_fun {params; body} ->
       List.iter (fun {p_default} -> may expr p_default) params;
@@ -2086,26 +2086,23 @@ let rec is_nonexpansive exp =
   | Texp_construct (_, _, el) -> List.for_all is_nonexpansive el
   | Texp_variant (_, arg) -> is_nonexpansive_opt arg
   | Texp_record {fields; extended_expression} -> (
-    Array.for_all
-      (fun (lbl, _, exp) -> lbl.lbl_mut = Immutable && is_nonexpansive exp)
-      fields
+    Array.for_all (fun (_, _, exp) -> is_nonexpansive exp) fields
+    && is_nonexpansive_opt extended_expression
     &&
-    match extended_expression with
-    | Some exp -> is_nonexpansive exp
-    | None -> (
-      (* The optional fields the literal leaves out are allocated too *)
-      match fields with
-      | [||] -> (
-        (* [{}] has no field to find the record's labels through *)
-        match extract_concrete_record exp.exp_env exp.exp_type with
-        | _, _, decls, _ ->
-          List.for_all
-            (fun (ld : Types.label_declaration) -> ld.ld_mutable = Immutable)
-            decls
-        | exception Not_found -> false)
-      | _ ->
-        let lbl, _, _ = fields.(0) in
-        Array.for_all (fun lbl -> lbl.lbl_mut = Immutable) lbl.lbl_all))
+    (* The literal allocates every field of the record: written, copied from
+       the spread, or left out *)
+    match fields with
+    | [||] -> (
+      (* [{}] has no field to find the record's labels through *)
+      match extract_concrete_record exp.exp_env exp.exp_type with
+      | _, _, decls, _ ->
+        List.for_all
+          (fun (ld : Types.label_declaration) -> ld.ld_mutable = Immutable)
+          decls
+      | exception Not_found -> false)
+    | _ ->
+      let lbl, _, _ = fields.(0) in
+      Array.for_all (fun lbl -> lbl.lbl_mut = Immutable) lbl.lbl_all)
   | Texp_field (exp, _, _) -> is_nonexpansive exp
   | Texp_array [] -> false
   | Texp_ifthenelse (_cond, ifso, ifnot) ->
@@ -2917,12 +2914,15 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     in
     (* JavaScript runs the finally block after the body or catch has already
        decided how the try is left, so a break or continue there would cancel
-       a pending exception or result. *)
+       a pending exception or result. A finally block that always throws ends
+       the try with no code after it, so it gets no nonreturning-statement
+       warning. *)
     let finally =
       Option.map
         (fun sfinally ->
           with_control_flow_boundary ~in_finally:true (fun () ->
-              type_statement ~context:None env sfinally))
+              type_statement ~nonreturning_warning:false ~context:None env
+                sfinally))
         sfinally
     in
     re
@@ -3069,12 +3069,18 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
         if fields = [] && repr_opt <> None then ([||], Record_regular)
         else raise (Error (loc, env, Empty_record_literal))
     in
-    let written = written_labels label_descriptions lbl_exp_list in
     let labels_missing =
-      Array.to_list label_descriptions
-      |> List.filter_map (fun lbl ->
-          if written.(lbl.lbl_pos) || label_is_optional lbl then None
-          else Some lbl.lbl_name)
+      (* Records whose labels are all optional, like the hundreds of host
+         element props in JsxDOM.domProps, can't miss a label: check that
+         first, without allocating for each label. Records with a required
+         label, like most component props, take the general path. *)
+      if Array.for_all label_is_optional label_descriptions then []
+      else
+        let written = written_labels label_descriptions lbl_exp_list in
+        Array.to_list label_descriptions
+        |> List.filter_map (fun lbl ->
+            if written.(lbl.lbl_pos) || label_is_optional lbl then None
+            else Some lbl.lbl_name)
     in
     if labels_missing <> [] then
       raise
@@ -3816,6 +3822,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     raise
       (Error_forward
          (Ast_raw.uninterpreted ~loc:name_loc (Ast_raw.extension_name kind)))
+  | Pexp_todo {name_loc} ->
+    (* The built-in PPX lowers %todo before type checking. *)
+    raise (Error_forward (Ast_raw.uninterpreted ~loc:name_loc Ast_todo.name))
   | Pexp_await _ -> (* should be handled earlier *) assert false
   | Pexp_jsx_element _ ->
     raise (Error (sexp.pexp_loc, Env.empty, Jsx_not_enabled))
@@ -4767,13 +4776,13 @@ and type_construct ~context env loc lid sargs ty_expected attrs =
 
 (* Typing of statements (expressions whose values are discarded) *)
 
-and type_statement ~context env sexp =
+and type_statement ?(nonreturning_warning = true) ~context env sexp =
   let loc = (final_subexpression sexp).pexp_loc in
   begin_def ();
   let exp = type_exp ~context env sexp in
   end_def ();
   let ty = expand_head env exp.exp_type and tv = newvar () in
-  if is_Tvar ty && ty.level > tv.level then
+  if nonreturning_warning && is_Tvar ty && ty.level > tv.level then
     Location.prerr_warning loc Warnings.Nonreturning_statement;
   let expected_ty = instance_def (Predef.type_unit ()) in
   let context = type_clash_context_in_statement sexp in

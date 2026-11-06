@@ -406,6 +406,10 @@ and expression_desc =
   | Pexp_raw of {kind: raw_kind; name_loc: Location.t; source: raw_source}
   (* %raw("...") and %ffi("..."): JavaScript source. [name_loc] is the
      location of [%raw] or [%ffi]. *)
+  | Pexp_todo of {name_loc: Location.t; message: expression option}
+  (* %todo and %todo("message"): code that is not written yet, which throws
+     when it runs. [name_loc] is the location of [%todo]. [message] is a
+     string literal or a template without interpolations, as written. *)
   (* . *)
   | Pexp_await of expression
   | Pexp_jsx_element of jsx_element
@@ -423,8 +427,9 @@ and expression_desc =
      produces [{source_segments = [{txt = "plain"; loc}]; values = []}], while
      [`hello ${name}!`] produces
      [{source_segments = [{txt = "hello "; loc}; {txt = "!"; loc}]; values =
-     [name]}]. Each segment retains its source location, and there is always one
-     more source segment than value. *)
+     [name]}]. Each segment's location covers its text only, without the
+     backquotes, [${] or [}] around it, and there is always one more source
+     segment than value. *)
   | Pexp_tagged_template of {
       tag: expression;
       raw_sources: string loc list;

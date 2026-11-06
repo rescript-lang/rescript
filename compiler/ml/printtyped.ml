@@ -127,6 +127,7 @@ let record_representation i ppf =
   let open Types in
   function
   | Record_regular -> line i ppf "Record_regular\n"
+  | Record_array -> line i ppf "Record_array\n"
   | Record_unboxed b -> line i ppf "Record_unboxed %b\n" b
   | Record_inlined {name} -> line i ppf "Record_inlined %s\n" name
   | Record_extension -> line i ppf "Record_extension\n"

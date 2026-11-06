@@ -69,7 +69,7 @@ for invalid_config in '{"name":' '{"name":"watch-recovery","jsx":{"version":3}}'
   if wait_for_pattern outputs.log "$previous_output" 5; then
     fail_test "Watcher compiled the source using stale configuration"
   fi
-  process_is_running "$(cat lib/watch.lock)" || fail_test "Watcher exited after the config error"
+  process_is_running "$(cat lib/rescript/watch.lock)" || fail_test "Watcher exited after the config error"
 
   node - "$iteration" <<'JS'
 const fs = require("fs");
@@ -85,7 +85,7 @@ JS
   if grep -Fq "$previous_output" outputs.log; then
     fail_test "Watcher emitted stale output before recovering"
   fi
-  wait_for_file_gone lib/build.lock 20 || fail_test "Recovery left the build lock behind"
+  wait_for_file_gone lib/rescript/build.lock 20 || fail_test "Recovery left the build lock behind"
   previous_output="Test.recovered$iteration.mjs"
 done
 

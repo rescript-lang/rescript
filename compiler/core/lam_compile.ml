@@ -238,6 +238,135 @@ let functions_before_values (group : (Ident.t * Lambda.t) list) =
         | _, _ -> 0)
       group
 
+(* Whether evaluating [e] later, after other code, gives the same value and
+   the same effects as evaluating it now: constants, functions, immutable
+   local variables and pure operations on them. [assignable] are the local
+   variables some [Lassign] assigns; the other code, or a closure it calls,
+   may assign them. JS globals ([@val]) and reads of the heap (fields, array
+   elements, lengths) may change as well. *)
+let rec delay_safe ~assignable (e : J.expression) =
+  match e.expression_desc with
+  | Undefined _ | Null | Bool _ | Number _ | Str _ | Template_literal _
+  | Json_literal _ | Fun _
+  | Var (Qualified _) ->
+    true
+  | Var (Id id) ->
+    (not (Ext_ident.is_js id)) && not (Set_ident.mem id assignable)
+  | Bin (Eq, _, _) -> false
+  | Bin (_, a, b) ->
+    Js_analyzer.no_side_effect_expression e
+    && delay_safe ~assignable a && delay_safe ~assignable b
+  | String_append (a, b) -> delay_safe ~assignable a && delay_safe ~assignable b
+  | Js_not a
+  | Js_bnot a
+  | Typeof a
+  | Is_null_or_undefined a
+  | Optional_block (a, _) ->
+    delay_safe ~assignable a
+  | Cond (a, b, c) ->
+    delay_safe ~assignable a && delay_safe ~assignable b
+    && delay_safe ~assignable c
+  | Interpolated_template {values} ->
+    Ext_list.for_all values (delay_safe ~assignable)
+  | Array xs | Caml_block (xs, _, _) ->
+    Ext_list.for_all xs (delay_safe ~assignable)
+  | Object entries ->
+    Ext_list.for_all entries (function
+      | J.Object_property (_, v) -> delay_safe ~assignable v
+      | Record_spread _ | Object_spread _ -> false)
+  | _ -> false
+
+(* Statements that evaluate [e] now, and the expression that stands for its
+   value afterwards. A sequence's leading expressions become statements of
+   their own, and the last one gets a temporary unless it is [delay_safe].
+   Building an array, block or object literal is pure, so a literal stays in
+   place and its elements are evaluated now instead. That also keeps the
+   literal visible to translations that look into their arguments, such as
+   the rows of a dict literal or a [@variadic] array. *)
+let rec evaluate_now ~assignable (e : J.expression) : J.block * J.expression =
+  match e.expression_desc with
+  | _ when delay_safe ~assignable e -> ([], e)
+  | Seq (a, b) ->
+    let rest, b = evaluate_now ~assignable b in
+    if Js_analyzer.no_side_effect_expression a then (rest, b)
+    else
+      ({J.statement_desc = Exp a; comment = None; source_loc = None} :: rest, b)
+  | Array xs ->
+    let held, xs = evaluate_all_now ~assignable xs in
+    (held, {e with expression_desc = Array xs})
+  | Caml_block (xs, mutable_flag, tag) ->
+    let held, xs = evaluate_all_now ~assignable xs in
+    (held, {e with expression_desc = Caml_block (xs, mutable_flag, tag)})
+  | Object entries
+    when Ext_list.for_all entries (function
+           | J.Object_property _ -> true
+           | Record_spread _ | Object_spread _ -> false) ->
+    let held, values =
+      evaluate_all_now ~assignable
+        (Ext_list.filter_map entries (function
+          | J.Object_property (_, v) -> Some v
+          | Record_spread _ | Object_spread _ -> None))
+    in
+    let entries =
+      List.map2
+        (fun entry v ->
+          match entry with
+          | J.Object_property (k, _) -> J.Object_property (k, v)
+          | Record_spread _ | Object_spread _ -> assert false)
+        entries values
+    in
+    (held, {e with expression_desc = Object entries})
+  | _ ->
+    let tmp = Ext_ident.create_tmp () in
+    ([S.define_variable ~kind:Strict tmp e], E.var tmp)
+
+(* [evaluate_now] on each of [xs], left to right. The elements left in place
+   are [delay_safe], so no other element's statements can change them. *)
+and evaluate_all_now ~assignable (xs : J.expression list) :
+    J.block * J.expression list =
+  let blocks, xs = Ext_list.split_map xs (evaluate_now ~assignable) in
+  (List.concat blocks, xs)
+
+(* Assembles compiled arguments for a call or a literal that evaluates them
+   left to right. Each argument comes with the statements that have to run
+   before its value is read. Putting all statements first and then the
+   values would move the statements of an argument in front of the values of
+   the arguments to its left, so when an argument has statements, every
+   argument to its left is evaluated before them with [evaluate_now].
+
+   With [~method_callee:true], the first argument is a JS method read
+   [obj.m] being called: the object is held and the property read stays in
+   the call, so the call still passes the object as [this]. *)
+let sequence_arguments ?(method_callee = false) ~assignable
+    (args : (J.block * J.expression) list) : J.block * J.expression list =
+  let later_statements =
+    match args with
+    | [] -> false
+    | _ :: rest -> Ext_list.exists_fst rest (fun block -> block <> [])
+  in
+  if not later_statements then (List.concat_map fst args, Ext_list.map args snd)
+  else
+    let last = List.length args - 1 in
+    let _, code, values =
+      Ext_list.fold_right args (last, [], [])
+        (fun (block, value) (i, code, values) ->
+          let held, value =
+            if code = [] then ([], value)
+            else
+              match value.expression_desc with
+              | Static_index (obj, name, pos) when method_callee && i = 0 ->
+                let held, obj = evaluate_now ~assignable obj in
+                ( held,
+                  {value with expression_desc = Static_index (obj, name, pos)}
+                )
+              | _ -> evaluate_now ~assignable value
+          in
+          ( i - 1,
+            Ext_list.append block (Ext_list.append held code),
+            value :: values ))
+    in
+    (code, values)
+
 let compile output_prefix =
   (* When compiling a read from another module, a nested source path like
      Other.A.B.make reaches this point as nested module-field reads:
@@ -315,26 +444,28 @@ let compile output_prefix =
     match ident_info.persistent_closed_lambda with
     | Some (Lfunction ({params; body; _} as lfunction))
       when Ext_list.same_length params ap_args
-           && Lam_analysis.lfunction_can_be_inlined lfunction ->
+           && Lambda.lfunction_can_be_inlined lfunction ->
       (* TODO: serialize it when exporting to save compile time *)
       let _, param_map =
         Lam_closure.is_closed_with_map Set_ident.empty params body
       in
-      compile_lambda lambda_cxt
-        (Lam_beta_reduce.propagate_beta_reduce_with_map lambda_cxt.meta
-           param_map params body ap_args)
-    | _ ->
-      let args_code, args =
-        let dummy = ([], []) in
-        if ap_args = [] then dummy
-        else
-          let arg_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
-          Ext_list.fold_right ap_args dummy (fun arg_lambda (args_code, args) ->
-              match compile_lambda arg_cxt arg_lambda with
-              | {block; value = Some b} ->
-                (Ext_list.append block args_code, b :: args)
-              | _ -> assert false)
+      let inlined =
+        Lam_beta_reduce.propagate_beta_reduce_with_map lambda_cxt.meta param_map
+          params body ap_args
       in
+      (* The inlined body comes from another module, so the variables it
+         assigns are not in [meta.assignable] yet. *)
+      let meta =
+        {
+          lambda_cxt.meta with
+          assignable =
+            Set_ident.union lambda_cxt.meta.assignable
+              (Lambda_traverse.assigned_variables inlined);
+        }
+      in
+      compile_lambda {lambda_cxt with meta} inlined
+    | _ ->
+      let args_code, args = compile_arguments lambda_cxt ap_args in
 
       let fn = E.ml_var_dot module_id ident_info.name in
       let expression =
@@ -1189,24 +1320,37 @@ let compile output_prefix =
   and compile_while (predicate : Lambda.t) (body : Lambda.t)
       (lambda_cxt : Lam_compile_context.t) =
     match
+      (* A condition that compiles to statements runs inside the loop (see
+         below), so a break or continue in it for an enclosing loop needs that
+         loop's label, as in a switch *)
       compile_lambda
-        {lambda_cxt with continuation = NeedValue Not_tail}
+        {
+          (Lam_compile_context.enter_switch lambda_cxt) with
+          continuation = NeedValue Not_tail;
+        }
         predicate
     with
     | {value = None} -> assert false
     | {block; value = Some e} ->
-      (* st = NeedValue -- this should be optimized and never happen *)
-      let e =
-        match block with
-        | [] -> e
-        | _ -> E.of_block block ~e
-      in
       let loop_cxt, loop_frame = Lam_compile_context.push_loop lambda_cxt in
       let body_block =
         Js_output.output_as_block
         @@ compile_lambda
              {loop_cxt with continuation = EffectCall Not_tail}
              body
+      in
+      (* A condition with statements becomes
+         [while (true) { block; if (!e) break; body }]. It is still evaluated
+         before each iteration, also after a continue, and its statements stay
+         in the enclosing function, where they may await, rather than in a
+         closure called for every iteration. *)
+      let e, body_block =
+        match block with
+        | [] -> (e, body_block)
+        | _ :: _ ->
+          ( E.true_,
+            Ext_list.append block (S.if_ (E.not e) [S.break_ ()] :: body_block)
+          )
       in
       (* The label stays absent for ordinary loops and is filled in lazily if a
          nested switch emits break/continue for this loop. *)
@@ -1256,7 +1400,7 @@ let compile output_prefix =
         match (b1, b2) with
         | _, [] -> Ext_list.append_one b1 (make_for (Some e1))
         | _, _
-          when Js_analyzer.no_side_effect_expression e1
+          when delay_safe ~assignable:lambda_cxt.meta.assignable e1
                (*
                      e1 > b2 > e2
                      re-order
@@ -1563,15 +1707,15 @@ let compile output_prefix =
          2. no need create names
       *)
       let ap_func = appinfo.ap_func in
-      let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
       let args_code, fn_code, args =
         match
-          Ext_list.fold_right (ap_func :: appinfo.ap_args) ([], [])
-            (fun x (args_code, fn_code) ->
-              match compile_lambda new_cxt x with
-              | {block; value = Some b} ->
-                (Ext_list.append block args_code, b :: fn_code)
-              | {value = None} -> assert false)
+          compile_arguments
+            ~method_callee:
+              (match ap_func with
+              | Lprim {primitive = Pjs_object_get _} -> true
+              | _ -> false)
+            lambda_cxt
+            (ap_func :: appinfo.ap_args)
         with
         | args_code, fn_code :: args -> (args_code, fn_code, args)
         | _, [] -> assert false
@@ -1631,19 +1775,26 @@ let compile output_prefix =
              (E.call
                 ~info:(call_info_of_apply lambda_cxt.meta appinfo)
                 fn_code args)))
+  (* Compiles the arguments of a call or a literal, which are evaluated left to
+     right; see [sequence_arguments]. [hold] may add statements to the
+     compiled arguments, such as the bindings of
+     [Lam_compile_external_call.hold_args]. *)
+  and compile_arguments ?method_callee ?(hold = Fun.id)
+      (lambda_cxt : Lam_compile_context.t) (args : Lambda.t list) :
+      J.block * J.expression list =
+    if args = [] then ([], [])
+    else
+      let arg_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+      sequence_arguments ?method_callee ~assignable:lambda_cxt.meta.assignable
+        (hold
+           (Ext_list.map args (fun arg ->
+                match compile_lambda arg_cxt arg with
+                | {block; value = Some value} -> (block, value)
+                | {value = None} -> assert false)))
   and compile_prim (prim_info : Lambda.prim_info)
       (lambda_cxt : Lam_compile_context.t) =
-    let compile_primitive_default primitive args loc =
-      let args_block, args_expr =
-        if args = [] then ([], [])
-        else
-          let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
-          Ext_list.split_map args (fun x ->
-              match compile_lambda new_cxt x with
-              | {block; value = Some b} -> (block, b)
-              | {value = None} -> assert false)
-      in
-      let args_code : J.block = List.concat args_block in
+    let compile_primitive_default ?hold primitive args loc =
+      let args_code, args_expr = compile_arguments ?hold lambda_cxt args in
       let exp =
         (* TODO: all can be done in [Lam_compile_primitive.translate] *)
         Lam_compile_primitive.translate output_prefix loc lambda_cxt primitive
@@ -1686,14 +1837,22 @@ let compile output_prefix =
       | {value = None} -> assert false)
     | {primitive = Psequand; args = [l; r]; _} -> compile_sequand l r lambda_cxt
     | {primitive = Psequor; args = [l; r]} -> compile_sequor l r lambda_cxt
-    | {primitive = Pdebugger; loc; _} ->
-      (* [%debugger] guarantees that the expression does not matter
-         TODO: make it even safer *)
+    | {primitive = Pdebugger; args; loc} ->
+      (* [debugger(arg)]: the argument is unit, but may have effects, such as
+         [debugger(Console.log("x"))], so it runs before the statement. A
+         literal [()] compiles to nothing. *)
+      let args_block =
+        Ext_list.flat_map args (fun arg ->
+            Js_output.output_as_block
+              (compile_lambda
+                 {lambda_cxt with continuation = EffectCall Not_tail}
+                 arg))
+      in
       let stmt =
         with_statement_source_loc (source_map_loc loc) (S.debugger_stmt ())
       in
-      Js_output.output_of_block_and_expression lambda_cxt.continuation [stmt]
-        E.unit
+      Js_output.output_of_block_and_expression lambda_cxt.continuation
+        (args_block @ [stmt]) E.unit
       (* TODO:
          check the arity of fn before wrapping it
          we need mark something that such eta-conversion can not be simplified in some cases
@@ -1717,28 +1876,12 @@ let compile output_prefix =
           ret)
     | {primitive = Pjs_object_set property; args = [obj; setter_val]} -> (
       (* property write: obj["height"] = v *)
-      let need_value_no_return_cxt =
-        {lambda_cxt with continuation = NeedValue Not_tail}
-      in
-      let obj_output = compile_lambda need_value_no_return_cxt obj in
-      let arg_output = compile_lambda need_value_no_return_cxt setter_val in
-      let cont obj_block arg_block obj_code =
+      match compile_arguments lambda_cxt [obj; setter_val] with
+      | args_code, [obj; value] ->
         Js_output.output_of_block_and_expression lambda_cxt.continuation
-          (match obj_code with
-          | None -> Ext_list.append obj_block arg_block
-          | Some obj_code -> Ext_list.append obj_block (obj_code :: arg_block))
-      in
-      match (obj_output, arg_output) with
-      | {value = None}, _ | _, {value = None} -> assert false
-      | ( {block = obj_block; value = Some obj},
-          {block = arg_block; value = Some value} ) -> (
-        match Js_ast_util.named_expression obj with
-        | None ->
-          cont obj_block arg_block None
-            (E.seq (E.assign (E.dot obj property) value) E.unit)
-        | Some (obj_code, obj) ->
-          cont obj_block arg_block (Some obj_code)
-            (E.seq (E.assign (E.dot (E.var obj) property) value) E.unit)))
+          args_code
+          (E.seq (E.assign (E.dot obj property) value) E.unit)
+      | _ -> assert false)
     | {primitive = Pjs_object_get _ | Pjs_object_set _} -> assert false
     | {primitive = Pjs_fn_method; args = args_lambda} -> (
       match args_lambda with
@@ -1763,21 +1906,21 @@ let compile output_prefix =
                       body))))
       | _ -> assert false)
     | {primitive = Pjs_object_create labels; args} ->
-      let args_block, args_expr =
-        if args = [] then ([], [])
-        else
-          let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
-          Ext_list.split_map args (fun x ->
-              match compile_lambda new_cxt x with
-              | {block; value = Some b} -> (block, b)
-              | {value = None} -> assert false)
+      let args_code, args_expr =
+        compile_arguments
+          ~hold:(Lam_compile_external_obj.hold_obj_args labels)
+          lambda_cxt args
       in
       let block, exp =
         Lam_compile_external_obj.assemble_obj_args labels args_expr
       in
       Js_output.output_of_block_and_expression lambda_cxt.continuation
-        (Ext_list.concat_append args_block block)
+        (Ext_list.append args_code block)
         exp
+    | {primitive = Pjs_call {arg_types} as primitive; args; loc} ->
+      compile_primitive_default
+        ~hold:(Lam_compile_external_call.hold_args arg_types)
+        primitive args loc
     | {primitive; args; loc} -> compile_primitive_default primitive args loc
   and collect_dup_overrides (copy_id : Ident.t) (lam : Lambda.t)
       (acc : (Lambda.set_field_dbg_info * Lambda.t) list) :

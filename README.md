@@ -17,9 +17,9 @@
 </p>
 
 <h3 align="center">
-  <a href="https://rescript-lang.org/docs/manual/latest/introduction">Introduction</a>
+  <a href="https://rescript-lang.org/docs/manual/introduction">Introduction</a>
   <span> · </span>
-  <a href="https://rescript-lang.org/docs/manual/latest/installation">Installation</a>
+  <a href="https://rescript-lang.org/docs/manual/installation">Installation</a>
   <span> · </span>
   <a href="https://rescript-lang.org/try">Try Online</a>
   <span> · </span>
@@ -49,7 +49,7 @@ ReScript is used by many companies to ship and maintain mission-critical product
 
 ## 🎉 Getting Started
 
-Follow the [Installation Guide](https://rescript-lang.org/docs/manual/latest/installation) to set up a new ReScript project or integrate ReScript into your existing JavaScript project.
+Follow the [Installation Guide](https://rescript-lang.org/docs/manual/installation) to set up a new ReScript project or integrate ReScript into your existing JavaScript project.
 
 For more information on building React apps with ReScript, see the [rescript-react documentation](https://rescript-lang.org/docs/react/latest/installation).
 
@@ -63,7 +63,7 @@ The source for the ReScript documentation and website is hosted in a [separate r
 
 ## 🚀 Upgrading
 
-See the [Upgrading Guide](https://rescript-lang.org/docs/manual/latest/installation) for instructions on upgrading to newer ReScript versions.
+See the [Upgrading Guide](https://rescript-lang.org/docs/manual/installation) for instructions on upgrading to newer ReScript versions.
 
 ## 👏 How to Contribute
 

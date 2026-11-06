@@ -327,7 +327,7 @@ let rec add_expr bv exp =
     let bv = open_module bv m.txt in
     add_expr bv e
   | Pexp_extension e -> handle_extension e
-  | Pexp_raw _ -> ()
+  | Pexp_raw _ | Pexp_todo _ -> ()
   | Pexp_await e -> add_expr bv e
   | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
     add_jsx_children bv children

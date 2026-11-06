@@ -64,16 +64,17 @@ let tests =
           "dev-dependencies": ["development"]
         }|};
       let regular =
-        File_util.path_of_parts root ["node_modules"; "regular"; "lib"; "ocaml"]
+        File_util.path_of_parts root
+          ["node_modules"; "regular"; "lib"; "rescript"]
       in
       let development =
         File_util.path_of_parts root
-          ["node_modules"; "development"; "lib"; "ocaml"]
+          ["node_modules"; "development"; "lib"; "rescript"]
       in
       let ordinary_includes = compiler_args source |> adjacent_positions "-I" in
       check
         (Option.is_some (position regular ordinary_includes))
-        "regular dependency includes do not require a prebuilt lib/ocaml";
+        "regular dependency includes do not require a prebuilt lib/rescript";
       check
         (Option.is_none (position development ordinary_includes))
         "ordinary sources exclude development dependencies";
@@ -125,7 +126,7 @@ let tests =
       check
         (compiler_args dev_source |> adjacent_positions "-I"
        |> position development |> Option.is_none)
-        "missing development dependencies are omitted like Rust";
+        "missing development dependencies are omitted";
       File_util.remove_tree
         (File_util.path_of_parts root ["node_modules"; "regular"]);
       let previous_runtime = Sys.getenv_opt "RESCRIPT_RUNTIME" in

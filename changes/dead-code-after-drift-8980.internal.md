@@ -1,1 +1,0 @@
-- Remove dead code, stale comments and unused test inputs left by recent changes, including the unused `cmt_interface_digest` field of `.cmt` files.

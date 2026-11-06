@@ -1,15 +1,12 @@
-# OCaml rewatch
+# Rewatch
 
-This directory contains the OCaml implementation of ReScript's build system and
-CLI (`rescript build`, `watch`, `clean`, `format`, `compiler-args`, and `lsp`). It
-ships as `rescript` in the `@rescript/<platform>` packages. The Rust
-implementation in [`../rewatch`](../rewatch) ships next to it as
-`rescript-rust`, and both are tested with the shared integration suite in
+This directory contains ReScript's build system and CLI (`rescript build`,
+`watch`, `clean`, `format`, `compiler-args` and `lsp`). It ships as `rescript` in the
+`@rescript/<platform>` packages and is tested with the integration suite in
 [`../rewatch/tests`](../rewatch/tests).
 
-The port follows Rust rewatch's architecture and algorithms, but it links the
-compiler in: parses and compiles run in-process on a pool of OCaml domains
-rather than as `bsc` subprocesses (see
+The compiler is linked in: parses and compiles run in-process on a pool of
+OCaml domains rather than as `bsc` subprocesses (see
 [In-process compilation](#in-process-compilation)).
 
 ## Building and running
@@ -30,15 +27,13 @@ export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
 _build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
 ```
 
-Builds and `rescript format` use the embedded compiler, so
-`RESCRIPT_BSC_EXE` only affects Rust rewatch (`rescript-rust`). The
-`bsc.exe` next to `rescript.exe` is still recorded in
-`lib/bs/compiler-info.json`, where editor tooling looks for the platform
-binaries.
+Builds and `rescript format` use the embedded compiler. The `bsc.exe` next to
+`rescript.exe` is still recorded in `lib/rescript/compiler-info.json`, where editor
+tooling looks for the platform binaries.
 
 Linux release builds use dune's `static` profile, so the published executable
 does not depend on the runner's libc. The version lives in
-`rewatch_version.ml` and is kept in sync with the compiler and Rust rewatch by
+`rewatch_version.ml` and is kept in sync with the compiler by
 `yarn constraints --fix`.
 
 ## Layout
@@ -62,13 +57,45 @@ Native filesystem notifications only wake the watcher. The snapshot taken
 afterwards decides what changed, so merged, reordered, or dropped events can't
 cause missed rebuilds.
 
+## Artifacts
+
+Each package keeps its artifacts flat in `lib/rescript`, keyed by the
+compiler's file name of each module (`X` or `X-Ns`): ASTs, `.cmi`, `.cmj`,
+`.cmt` and `.cmti` files, namespace maps, `.compiler.log`,
+`compiler-info.json`, `.sourcedirs.json` and, in the project that takes them,
+the build and watch locks. The compiler runs in that directory and writes
+there directly; dependencies are on its include path as their
+`lib/rescript`.
+
+- Freshness is timestamp-based: an AST newer than its source is current, a
+  `.cmt` records the last compile, and a `.cmi` the last change of an
+  interface.
+- ASTs, interfaces and typed trees are held in memory until their request
+  finished (`Build_file_store.set_held_writes`), so a failed request leaves
+  the previous AST and interface on disk. An interface is written only when
+  it changed, which keeps the modification time that dependents compare
+  with, and before the typed tree that marks the module compiled, so a build
+  killed in between compiles the module again. A failed compile publishes its
+  partial typed tree for editor tooling after dating its AST back.
+- Published files are renamed into place, so neither a reader nor a killed
+  build sees part of one. On Windows the rename fails while an editor has the
+  file open without delete sharing; the file is then written in place, and a
+  failed write removes its partial file.
+- To make the next build parse a source again, the build dates its AST back
+  instead of removing it: a later compile of the same build or watch session
+  may still read it.
+- Stale public JavaScript is removed only when an AST shows that the build
+  generated it for a source that is gone.
+- `lib/bs` and `lib/ocaml`, left by ReScript 12 and earlier, make the first
+  build clean the package and are removed with it.
+
 ## In-process compilation
 
 Independent parse and compile requests run on a bounded pool of OCaml domains.
 The pool has `min(8, max(1, CPUs - 1))` workers; set `REWATCH_COMPILER_DOMAINS`
 to choose another count: a positive integer, lowered to the machine's limit of
-`max(12, min(32, CPUs))`. The main domain schedules dependencies
-and publishes every artifact; workers only run compiler requests.
+`max(12, min(32, CPUs))`. The main domain schedules dependencies;
+workers run compiler requests and publish what they produce.
 
 The driver gives each request fresh compiler state (flags, warnings, caches,
 predefined types, identifier counters) and restores it on every exit, so
@@ -81,44 +108,32 @@ rewatch-only changes don't.
 External PPXs, `js-post-build` hooks, and `--after-build` remain subprocesses
 under the process owners described below.
 
-## Differences from Rust rewatch
+## Behavior notes
 
-These are intentional:
-
-- `rescript lsp --stdio` runs the `rescript_language_server`
-  library in-process through `Eio_main.run`. It needs no separate server binary
-  or project in the current directory. Stdio is reserved for the protocol,
-  and the server owns its LSP lifecycle. The Rust CLI does not expose this
-  command. `--stdio` is required; `--quiet` and `--verbose` are not supported
-  for this subcommand. `lsp_command_tests.ml` covers the embedded server.
-- `rescript.json` maps that the build system interprets reject duplicate keys
-  instead of using the last one.
-- A `namespace-entry` without a namespace is an error.
+- `rescript.json` maps that the build system interprets reject duplicate keys.
+  A `namespace-entry` without a namespace is an error.
 - Configuration errors use the compiler-style form `path: message`, and JSON
   syntax errors use `path:line:column: message`. Messages name the field and
-  the accepted values instead of the parser's internal types.
-- The CLI uses Cmdliner:
-  - help is rendered as a man page;
-  - `--no-timing` takes no value;
-  - help takes precedence over version, and `--version` also works after a
-    subcommand.
-- `--filter` supports the common subset of Rust's regular expression syntax and
-  rejects other constructs, such as `(?i)`, with an error. Non-ASCII names are
-  matched byte-wise.
+  the accepted values.
+- The CLI uses Cmdliner: help is rendered as a man page, `--no-timing` takes
+  no value, help takes precedence over version, and `--version` also works
+  after a subcommand.
+- `--filter` takes a Perl-style regular expression as the
+  [Re](https://github.com/ocaml/ocaml-re) library reads it. Constructs it
+  cannot match, such as backreferences, are rejected with an error. Non-ASCII
+  names are matched byte-wise.
 - A failing `--after-build` command fails the build. On Unix, hooks inherit
   redirected stdin but not an interactive terminal, because they run in their
   own process group.
 - `format -v` and `compiler-args -v` write their logs to stderr, so stdout
-  remains formatted source or JSON. Rust writes them to stdout.
+  remains formatted source or JSON.
 - While the root configuration is invalid, only configuration changes trigger
-  recovery attempts here. Rust also retries initialization on watched source edits.
-- Watch mode also notices a missing dependency being installed into an
-  existing `node_modules` of an ancestor directory, where the dependency
-  lookup finds it.
+  recovery attempts in watch mode.
+- Watch mode notices a missing dependency being installed into an existing
+  `node_modules` of an ancestor directory, where the dependency lookup finds
+  it.
 - A damaged published AST, such as one cut short by a killed build, makes its
-  module parse again. Rust reads whatever dependency lines it finds in it, and
-  panics if the file can't be read.
-- OpenTelemetry export is not implemented.
+  module parse again.
 
 ## Platforms
 
@@ -142,19 +157,20 @@ Windows CI.
 ```sh
 dune runtest tests/rewatch_ounit_tests                          # unit tests
 sh rewatch-ocaml/tests/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"   # focused end-to-end tests
-make test-rewatch                                               # shared suite in rewatch/tests
+make test-rewatch                                               # integration suite in rewatch/tests
 ```
 
-The scripts in `tests/check_*.sh` compare the OCaml and Rust executables on
-configuration acceptance, command validation, and verbose and interactive
-output. `tests/check_canonical_test_coverage.sh` ensures that every shared test
-script is run by `rewatch/tests/suite.sh`. Benchmarks and their equivalence
-checks are described in [`bench/README.md`](bench/README.md).
+The scripts in `tests/check_*.sh` check configuration acceptance, command
+validation, and verbose and interactive output, partly against snapshots in
+`tests/snapshots/`. Run them with `UPDATE_SNAPSHOTS=1` to rewrite the
+snapshots after an intended output change.
+`tests/check_canonical_test_coverage.sh` ensures that every integration test
+script is run by `rewatch/tests/suite.sh`.
 
 ## Packaging
 
-Each platform package contains `bin/rescript.exe` (this implementation) and
-`bin/rescript-rust.exe`, together with `THIRD_PARTY_NOTICES_REWATCH.md` and
-`RE_LICENSE.md` for the bundled OCaml libraries. After a build,
+Each platform package contains `bin/rescript.exe`, together with
+`THIRD_PARTY_NOTICES_REWATCH.md` and `RE_LICENSE.md` for the bundled OCaml
+libraries. After a build,
 `node scripts/updateArtifactList.js` must leave `packages/artifacts.json`
 unchanged.

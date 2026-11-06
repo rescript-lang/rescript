@@ -8,7 +8,5 @@ const { execBuildOrThrow, execClean } = setup(import.meta.dirname);
 
 await execBuildOrThrow();
 
-await fs.access(
-  path.join(import.meta.dirname, "lib", "bs", "src", "📕annotation", "a.js"),
-);
+await fs.access(path.join(import.meta.dirname, "src", "📕annotation", "a.js"));
 await execClean();

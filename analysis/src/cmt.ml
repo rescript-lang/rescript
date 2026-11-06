@@ -12,7 +12,7 @@ let full_for_incremental_cmt ~package ~module_name ~uri =
   if !Cfg.in_incremental_typechecking_mode then
     let path = Uri.to_path uri in
     let incremental_cmt_path =
-      package.root_path ^ "/lib/bs/___incremental" ^ "/" ^ module_name
+      package.root_path ^ "/lib/rescript/incremental" ^ "/" ^ module_name
       ^
       match Files.classify_source_file path with
       | Resi -> ".cmti"

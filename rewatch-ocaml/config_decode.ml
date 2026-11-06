@@ -75,8 +75,8 @@ let configuration_fields =
 
 let warning_fields = reject_all_duplicates ["number"; "error"]
 
-(* Like Rust rewatch, jsx.mode and jsx.v3-dependencies no longer have any
-   effect: they are accepted with any value and not reported as unknown. *)
+(* jsx.mode and jsx.v3-dependencies no longer have any effect: they are
+   accepted with any value and not reported as unknown. *)
 let jsx_fields =
   {
     known = ["version"; "module"; "preserve"; "mode"; "v3-dependencies"];
@@ -149,10 +149,11 @@ let namespace_from_package_name name =
   Buffer.contents buffer
 
 (* A string namespace combined with a namespace-entry is converted with the
-   Pascal case of Rust's convert_case crate (0.6), which rescript.json files
-   already depend on: "my_lib" names the namespace MyLib. Words split at
-   '-', '_' and ' ' (which are dropped), between a lower-case letter and an
-   upper-case letter or digit, between an upper-case letter and a digit,
+   Pascal case of the convert_case Rust crate (0.6) that the original build
+   system used, which rescript.json files already depend on: "my_lib" names
+   the namespace MyLib. Words split at '-', '_' and ' ' (which are dropped),
+   between a lower-case letter and an upper-case letter or digit, between an
+   upper-case letter and a digit,
    between a digit and a letter, and before the last capital of an acronym
    followed by a lower-case letter ("ABCdef" -> "AB", "Cdef"). Each word is
    then capitalized and the rest lower-cased. Characters that are neither

@@ -33,17 +33,17 @@ try {
   // e.g., /path/to/post-build/src/demo.js (Unix)
   // e.g., C:\path\to\post-build\src\demo.js (Windows)
   const srcSep = isWindows ? "\\src\\" : "/src/";
-  const libBsSep = isWindows ? "\\lib\\bs\\" : "/lib/bs/";
+  const artifactSep = isWindows ? "\\lib\\rescript\\" : "/lib/rescript/";
 
   for (const p of paths) {
     assert.ok(
       p.includes(srcSep) && p.endsWith(".js"),
       `Path should be in src/ directory: ${p}`,
     );
-    // Should NOT be in lib/bs/ when in-source is true
+    // Should NOT be in lib/rescript/ when in-source is true
     assert.ok(
-      !p.includes(libBsSep),
-      `Path should not be in lib/bs/ when in-source is true: ${p}`,
+      !p.includes(artifactSep),
+      `Path should not be in lib/rescript/ when in-source is true: ${p}`,
     );
   }
 } finally {

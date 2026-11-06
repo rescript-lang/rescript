@@ -25,8 +25,6 @@ concurrency:
 
 env:
   OCAMLRUNPARAM: b
-  RUST_BACKTRACE: "1"
-  RUSTFLAGS: "-Dwarnings"
 
 jobs:
   build-compiler:
@@ -42,7 +40,6 @@ jobs:
             upload_binaries: true
             upload_libs: true
             node-target: linux-x64
-            rust-target: x86_64-unknown-linux-musl
             dune-profile: static
           - os: ubuntu-26.04-arm # ARM
             ocaml_compiler: ocaml-variants.5.5.2+options,ocaml-option-static
@@ -52,29 +49,27 @@ jobs:
             generate_api_docs: true
             test_commit_records: true
             node-target: linux-arm64
-            rust-target: aarch64-unknown-linux-musl
             dune-profile: static
           - os: macos-26 # ARM
             ocaml_compiler: 5.5.2
             upload_binaries: true
             node-target: darwin-arm64
-            rust-target: aarch64-apple-darwin
             dune-profile: release
           - os: windows-2025
             ocaml_compiler: 5.5.2
             upload_binaries: true
             node-target: win32-x64
-            rust-target: x86_64-pc-windows-gnu
             exe-suffix: ".exe"
             dune-profile: release
 
-          # Disable for now. eio and eio_main require ocaml >= 5.2.0
           # Verify that the compiler still builds with the oldest OCaml version we support.
-          # - os: ubuntu-24.04
-          #   ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
-          #   node-target: linux-x64
-          #   rust-target: x86_64-unknown-linux-musl
-          #   dune-profile: static
+          # The build system's snapshot tests are skipped on this job; the
+          # first linux-x64 job runs them. OCaml 5.0 does not build with GCC 15
+          # (C23 by default), so this job stays on Ubuntu 24.04.
+          - os: ubuntu-24.04
+            ocaml_compiler: ocaml-variants.5.2.0+options,ocaml-option-static
+            node-target: linux-x64
+            dune-profile: static
 
     runs-on: ${{matrix.os}}
 
@@ -99,14 +94,6 @@ jobs:
       - name: Setup Linux dependencies
         if: runner.os == 'Linux'
         uses: ./.github/actions/setup-linux-dependencies
-
-      - name: Build rewatch
-        uses: ./.github/actions/build-rewatch
-        with:
-          cache-target: ${{ matrix.rust-target }}
-          rust-target: ${{ matrix.rust-target }}
-          exe-suffix: ${{ matrix.exe-suffix }}
-          run-quality-checks: "true"
 
       # The static OCaml switch uses musl-gcc. linux-libc-dev installs Linux
       # headers under /usr/include, but musl-gcc searches the musl include dir.
@@ -283,10 +270,7 @@ jobs:
         run: make -C tests/gentype_tests/typescript-react-example clean test
         shell: bash
 
-      - name: Run LSP tests
-        run: opam exec -- make test-lsp
-
-      - name: Run OCaml rewatch parity tests
+      - name: Run rewatch snapshot tests
         if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
         timeout-minutes: 20
         run: |
@@ -294,14 +278,12 @@ jobs:
           start_process_watchdog
           bash rewatch-ocaml/tests/check_canonical_test_coverage.sh
           bash rewatch-ocaml/tests/check_config_acceptance.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
           bash rewatch-ocaml/tests/check_command_validation.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
-      - name: Run OCaml rewatch interactive output tests
+      - name: Run rewatch interactive output tests
         # Terminal rendering depends on the host OS, not the CPU architecture.
         # Use the faster ARM runners for one Linux and one macOS check. Windows
         # does not provide a reliable native equivalent of the `script` PTY.
@@ -309,20 +291,18 @@ jobs:
         timeout-minutes: 15
         run: |
           bash rewatch-ocaml/tests/check_interactive_output.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
-      - name: Run OCaml rewatch verbose output tests
+      - name: Run rewatch verbose output tests
         if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
         timeout-minutes: 10
         run: |
           bash rewatch-ocaml/tests/check_verbose_output.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
-      - name: Run OCaml rewatch unit tests
+      - name: Run rewatch unit tests
         timeout-minutes: 10
         run: |
           opam exec -- dune build tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe
@@ -331,21 +311,14 @@ jobs:
           opam exec -- ./_build/default/tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe -runner sequential
         shell: bash
 
-      - name: Run OCaml rewatch focused integration tests
+      - name: Run rewatch focused integration tests
         timeout-minutes: 30
         run: |
           sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
-      - name: Run OCaml rewatch canonical tests
+      - name: Run rewatch canonical tests
         run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
-        shell: bash
-
-      # The Rust implementation is kept for comparison. One platform runs its
-      # shared suite; the parity steps exercise it on every platform.
-      - name: Run Rust rewatch reference tests
-        if: matrix.node-target == 'linux-arm64'
-        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript-rust.exe
         shell: bash
 
       - name: Build playground compiler
@@ -403,15 +376,16 @@ jobs:
           name: binaries-${{ matrix.node-target }}
           path: packages/@rescript/${{ matrix.node-target }}/bin
 
-      - name: "Upload artifacts: lib/ocaml"
+      - name: "Upload artifacts: lib/rescript"
         if: matrix.upload_libs
         uses: actions/upload-artifact@v7
         with:
-          name: lib-ocaml
+          name: lib-rescript
           path: |
-            packages/@rescript/runtime/lib/ocaml
-            !packages/@rescript/runtime/lib/ocaml/*.ast
-            !packages/@rescript/runtime/lib/ocaml/*.iast
+            packages/@rescript/runtime/lib/rescript
+            !packages/@rescript/runtime/lib/rescript/*.ast
+            !packages/@rescript/runtime/lib/rescript/*.iast
+            !packages/@rescript/runtime/lib/rescript/compiler-info.json
 
       - name: Select API docs website branch
         id: api-docs-plan
@@ -500,7 +474,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: "@(binaries-*|lib-ocaml)"
+          pattern: "@(binaries-*|lib-rescript)"
 
       - name: Move artifacts into packages
         run: .github/workflows/moveArtifacts.sh

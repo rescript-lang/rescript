@@ -1,1 +1,0 @@
-- Int range patterns such as `200 .. 299` are supported in `switch`, and their bounds may mix ints and chars.

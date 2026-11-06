@@ -91,7 +91,55 @@ let () =
   (* The printer writes the line breaks of a comment it reindents *)
   let formatted = format "let x = 1\n/* a\r\r\n b */\nlet y = 2\n" in
   assert (formatted = "let x = 1\n/* a\n b */\nlet y = 2\n");
-  assert (format (to_crlf formatted) = to_crlf formatted)
+  assert (format (to_crlf formatted) = to_crlf formatted);
+  (* The first line break outside literals and comments gives the line
+     endings, also with no line break or no final one, and after a regex, a
+     JSX closing tag or a division that holds what would otherwise start a
+     literal. The printer writes the line breaks of comments it reindents. *)
+  List.iter
+    (fun (source, expected) ->
+      assert (format source = expected);
+      assert (format expected = expected))
+    [
+      ("let a = 1", "let a = 1\n");
+      ("let a = \"x\r\ny\"", "let a = \"x\r\ny\"\n");
+      ("let a = 1 // c\r", "let a = 1 // c\n");
+      ("let a = \"x\r\ny\"\nlet b = 1", "let a = \"x\r\ny\"\n\nlet b = 1\n");
+      ("let a = \"x\ny\"\r\nlet b = 1", "let a = \"x\ny\"\r\n\r\nlet b = 1\r\n");
+      ("/* a\r\nb */\nlet b = 1\n", "/* a\n b */\nlet b = 1\n");
+      ("/* a\nb */\r\nlet b = 1\r\n", "/* a\r\n b */\r\nlet b = 1\r\n");
+      ( "let a = 1 /* a\r\nb */\nlet b = 1\n",
+        "let a = 1 /* a\n b */\n\nlet b = 1\n" );
+      ( "let t = `${f({a: 1},\r\n 2)}`\nlet x = 1\n",
+        "let t = `${f({a: 1}, 2)}`\r\nlet x = 1\r\n" );
+    ];
+  List.iter
+    (fun source -> assert (format source = source))
+    [
+      "let a = \"x\r\ny\"\n\nlet b = 1\n";
+      "let a = \"x\ny\"\r\n\r\nlet b = 1\r\n";
+      "let c = '\"'\n\nlet s = \"a\r\nb\"\n";
+      "let t = `a${b}c\r\nd`\n\nlet x = 1\n";
+      "let t = `a${b}c\nd`\r\n\r\nlet x = 1\r\n";
+      "let t = `${f({\n    \"a\": `${x}\r\n`,\n  })}\r\n`\n\nlet x = 1\n";
+      "let t = `${switch x {\n  | _ => 1\n  }}\r\n`\n\nlet x = 1\n";
+      "let r = /\"/\n\nlet s = \"a\r\nb\"\n";
+      "let r = (1, /\"/)\n\nlet s = \"a\r\nb\"\n";
+      "let x = a / f(\"/\")\r\nlet y = 2\r\n";
+      "let x = a->f / g(\"/\")\r\nlet y = 2\r\n";
+      "let e = (<a></a>, \"/\")\r\n\r\nlet s = \"a\nb\"\r\n";
+      "let e = <a>{/\"/->f}</a>\r\n\r\nlet s = \"a\nb\"\r\n";
+      "let t = `${/\"/->f}\r\n`\n\nlet x = 1\n";
+      "/** a\r\nb */\nlet x = 1\n";
+      "let e = (\r\n\
+      \  <a />,\r\n\
+      \  <a></a>,\r\n\
+      \  \"x/y\n\
+       z\",\r\n\
+       )\r\n\
+       \r\n\
+       let y = 2\r\n";
+    ]
 
 let () = print_endline "✅ multi printer api tests"
 
@@ -271,6 +319,64 @@ let () =
       "let before = 0\n@foo (/a/->ignore)";
     ];
   print_endline "✅ statement boundary formatting preserves attribute scope"
+
+(* A template segment's location covers its text, without the delimiters, and
+   the template's location covers the whole literal. *)
+let () =
+  let check source =
+    let result =
+      Res_driver.parse_implementation_from_source
+        ~display_filename:"templates.res" ~source
+    in
+    assert (not result.invalid);
+    let slice (loc : Location.t) =
+      String.sub source loc.loc_start.pos_cnum
+        (loc.loc_end.pos_cnum - loc.loc_start.pos_cnum)
+    in
+    let check_segments segments =
+      List.iter
+        (fun ({txt; loc} : string Location.loc) ->
+          if slice loc <> txt then (
+            Printf.printf "segment %S has location text %S in %S\n" txt
+              (slice loc) source;
+            assert false))
+        segments
+    in
+    let found = ref 0 in
+    let iterator =
+      {
+        Ast_iterator.default_iterator with
+        expr =
+          (fun iterator e ->
+            (match e.pexp_desc with
+            | Pexp_template {source_segments} ->
+              incr found;
+              check_segments source_segments;
+              let literal = slice e.pexp_loc in
+              assert (literal.[0] = '`');
+              assert (literal.[String.length literal - 1] = '`')
+            | Pexp_tagged_template {raw_sources} ->
+              incr found;
+              check_segments raw_sources
+            | _ -> ());
+            Ast_iterator.default_iterator.expr iterator e);
+      }
+    in
+    iterator.structure iterator result.parsetree;
+    assert (!found > 0)
+  in
+  List.iter check
+    [
+      "let a = `template`";
+      "let a = ``";
+      "let a = `a${b}c`";
+      "let a = `${b}${c}`";
+      "let a = `a\\`b\\${c}`";
+      "let a = `first\nsecond ${b}\nthird`";
+      "let a = `outer ${`inner ${b}`} end`";
+      "let a = sql`select ${x} from t`";
+    ];
+  print_endline "✅ template segment locations cover their text"
 
 (* PPX-generated ## accesses print their receiver before the operator. *)
 let () =
@@ -553,8 +659,6 @@ module Outcome_printer_tests = struct
   let signature_to_outcome structure =
     Lazy.force Res_outcome_printer.setup;
 
-    (Clflags.current ()).include_dirs :=
-      Filename.concat "lib" "ocaml" :: !((Clflags.current ()).include_dirs);
     Res_compmisc.init_path ();
     (Clflags.current ()).nopervasives := true;
     let env = Res_compmisc.initial_env () in

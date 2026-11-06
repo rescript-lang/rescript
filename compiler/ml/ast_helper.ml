@@ -197,6 +197,8 @@ module Exp = struct
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
   let raw ?loc ?attrs ~name_loc kind source =
     mk ?loc ?attrs (Pexp_raw {kind; name_loc; source})
+  let todo ?loc ?attrs ~name_loc message =
+    mk ?loc ?attrs (Pexp_todo {name_loc; message})
   let regexp ?loc ?attrs pattern flags =
     mk ?loc ?attrs (Pexp_regexp {pattern; flags})
   let template ?loc ?attrs source_segments values =

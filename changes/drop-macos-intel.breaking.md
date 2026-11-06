@@ -1,1 +1,0 @@
-- Drop support for macOS on Intel (darwin-x64). Intel Mac users can stay on ReScript 12.

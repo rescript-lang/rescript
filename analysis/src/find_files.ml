@@ -131,20 +131,27 @@ let get_public config =
         |> List.filter_map Yojson_helpers.string_opt
         |> String_set.of_list))
 
-let collect_files directory =
-  let all_files = Files.read_directory directory in
+(* Pairs the compiled files in [compiled_directory] with the sources of the same
+   name in [source_directory], as the runtime ships them. *)
+let collect_files ~compiled_directory ~source_directory =
   let compileds =
-    all_files |> List.filter is_compiled_file |> filter_duplicates
+    Files.read_directory compiled_directory
+    |> List.filter is_compiled_file
+    |> filter_duplicates
   in
-  let sources = all_files |> List.filter is_source_file |> filter_duplicates in
+  let sources =
+    Files.read_directory source_directory
+    |> List.filter is_source_file |> filter_duplicates
+  in
   compileds
   |> Utils.filter_map (fun path ->
       let mod_name = get_name path in
-      let cmt = directory /+ path in
+      let cmt = compiled_directory /+ path in
       let res_opt =
         Utils.find
           (fun name ->
-            if get_name name = mod_name then Some (directory /+ name) else None)
+            if get_name name = mod_name then Some (source_directory /+ name)
+            else None)
           sources
       in
       match res_opt with
@@ -155,7 +162,7 @@ let collect_files directory =
    .sourcedirs.json when available. If a package is not listed there, analysis
    falls back to walking up node_modules from the project root. *)
 let read_sourcedirs_package_roots base =
-  let source_dirs_file = base /+ "lib" /+ "bs" /+ ".sourcedirs.json" in
+  let source_dirs_file = base /+ "lib" /+ "rescript" /+ ".sourcedirs.json" in
   let read_package_entry = function
     | `List [`String name; `String path] ->
       let path = if Filename.is_relative path then base /+ path else path in
@@ -180,7 +187,8 @@ let find_package_root ~base ~sourcedirs_package_roots name =
   | _ -> Module_resolution.resolve_node_module_path ~start_path:base name
 
 (* returns a list of (absolute path to cmt(i), relative path from base to source file) *)
-let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
+let find_project_files ~public ~namespace ~path ~source_directories
+    ~artifact_dir =
   let dirs =
     source_directories |> List.map (Filename.concat path) |> String_set.of_list
   in
@@ -210,11 +218,12 @@ let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
           let module_name = get_name file in
           let resi = Hashtbl.find_opt interfaces module_name in
           Hashtbl.remove interfaces module_name;
-          let base = compiled_base_name ~namespace (Files.relpath path file) in
+          (* Compiled files are flat in the artifact directory. *)
+          let base = compiled_base_name ~namespace (Filename.basename file) in
           match resi with
           | Some resi ->
-            let cmti = (lib_bs /+ base) ^ ".cmti" in
-            let cmt = (lib_bs /+ base) ^ ".cmt" in
+            let cmti = (artifact_dir /+ base) ^ ".cmti" in
+            let cmt = (artifact_dir /+ base) ^ ".cmt" in
             if Files.exists cmti then
               if Files.exists cmt then
                 (* Log.log("Intf and impl " ++ cmti ++ " " ++ cmt) *)
@@ -224,13 +233,14 @@ let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
               else None
             else (
               (* Log.log("Just intf " ++ cmti) *)
-              Log.log ("Bad source file (no cmt/cmti/cmi) " ^ (lib_bs /+ base));
+              Log.log
+                ("Bad source file (no cmt/cmti/cmi) " ^ (artifact_dir /+ base));
               None)
           | None ->
-            let cmt = (lib_bs /+ base) ^ ".cmt" in
+            let cmt = (artifact_dir /+ base) ^ ".cmt" in
             if Files.exists cmt then Some (module_name, Impl {cmt; res = file})
             else (
-              Log.log ("Bad source file (no cmt/cmi) " ^ (lib_bs /+ base));
+              Log.log ("Bad source file (no cmt/cmi) " ^ (artifact_dir /+ base));
               None))
         else None)
   in
@@ -253,7 +263,7 @@ let find_project_files ~public ~namespace ~path ~source_directories ~lib_bs =
   | None -> result
   | Some namespace ->
     let module_name = name_space_to_name namespace in
-    let cmt = (lib_bs /+ namespace) ^ ".cmt" in
+    let cmt = (artifact_dir /+ namespace) ^ ".cmt" in
     Log.log ("adding namespace " ^ namespace ^ " : " ^ module_name ^ " : " ^ cmt);
     (module_name, Namespace {cmt}) :: result
 
@@ -303,20 +313,13 @@ let find_dependency_files base config =
                     get_source_directories ~include_dev:false ~base_dir:path
                       inner
                   in
-                  match Build_system.get_lib_bs path with
+                  match Build_system.get_artifact_dir path with
                   | None -> None
-                  | Some lib_bs ->
-                    let compiled_directories =
-                      source_directories |> List.map (Filename.concat lib_bs)
-                    in
-                    let compiled_directories =
-                      match namespace with
-                      | None -> compiled_directories
-                      | Some _ -> lib_bs :: compiled_directories
-                    in
+                  | Some artifact_dir ->
+                    let compiled_directories = [artifact_dir] in
                     let project_files =
                       find_project_files ~public:(get_public inner) ~namespace
-                        ~path ~source_directories ~lib_bs
+                        ~path ~source_directories ~artifact_dir
                     in
                     Some (compiled_directories, project_files))
                 | None -> None
@@ -334,12 +337,16 @@ let find_dependency_files base config =
           Log.log ("Skipping nonexistent dependency: " ^ name);
           ([], []))
   in
-  match Build_system.get_stdlib base with
-  | None -> None
-  | Some stdlib_directory ->
+  match (Build_system.get_stdlib base, Build_system.get_runtime_dir base) with
+  | None, _ | _, None -> None
+  | Some stdlib_directory, Some runtime_dir ->
     let compiled_directories, project_files =
       let files, directories = List.split dep_files in
       (List.concat files, List.concat directories)
     in
-    let all_files = project_files @ collect_files stdlib_directory in
+    let all_files =
+      project_files
+      @ collect_files ~compiled_directory:stdlib_directory
+          ~source_directory:runtime_dir
+    in
     Some (compiled_directories, all_files)

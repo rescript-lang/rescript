@@ -10,7 +10,7 @@ depends: [
   "dune" {>= "3.17"}
   "ocaml" {>= "5.0.0"}
   "odoc" {with-doc}
-  "lsp" {>= "1.23.0"}
+  "lsp" {>= "1.23.0" & < "1.28.0"}
   "yojson" {= "3.0.0"}
 ]
 build: [

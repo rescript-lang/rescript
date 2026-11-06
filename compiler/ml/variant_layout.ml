@@ -50,6 +50,7 @@ let payload_kind ~env (t : Types.type_expr) : block_type option =
     | Tconstr (path, _, _) -> (
       match Env.find_type path env with
       | {type_kind = Type_record (_, Record_unboxed _)} -> None
+      | {type_kind = Type_record (_, Record_array)} -> Some (InstanceType Array)
       | {type_kind = Type_record _} -> Some ObjectType
       | _ -> None
       | exception Not_found -> None)

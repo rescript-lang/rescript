@@ -17,15 +17,27 @@ let chop_extension_safe (dir, s) =
 
 let dump (dir, s) = Node_filename.concat dir s
 
-let to_cmt ~(config : Config.t) ~output_file_relative (dir, s) =
-  let open Filename in
-  concat
-    (output_file_relative |> dirname)
-    ((dir, s) |> chop_extension_safe |> dump)
-  ^ (match config.namespace with
-    | None -> ""
-    | Some name -> "-" ^ name)
-  ^ ".cmt"
+(* The compiled files of a package are flat in its artifact directory, the
+   compiler's working directory, so a module of the same package is found by
+   its file name there. Such a module's import path is relative, or, from an
+   output file at the project root, starts with one of its source
+   directories. A module of another package has no .cmt there. *)
+let to_cmt ~(config : Config.t) (dir, s) =
+  let path = (dir, s) |> chop_extension_safe |> dump in
+  let is_local =
+    String.starts_with ~prefix:"./" path
+    || String.starts_with ~prefix:"../" path
+    || config.sources
+       |> List.exists (fun source ->
+           String.starts_with ~prefix:(source ^ "/") path)
+  in
+  if not is_local then ""
+  else
+    Filename.basename path
+    ^ (match config.namespace with
+      | None -> ""
+      | Some name -> "-" ^ name)
+    ^ ".cmt"
 
 (* Import paths are emitted inside single-quoted JavaScript/TypeScript string
    literals and also repeated in line comments. The AST stores their semantic

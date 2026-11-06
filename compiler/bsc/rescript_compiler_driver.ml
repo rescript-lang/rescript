@@ -569,12 +569,28 @@ let start_request () =
   Predef.reset_for_request ();
   Env.reset_initial_for_request ()
 
+(* Interfaces that this domain keeps for later requests must not keep this
+   request's memoized abbreviations, so they are reset while the request's
+   memo list is still current. A failed request may also have stopped with
+   some of their types marked, so the domain drops them. *)
+let leave_cached_interfaces_clean action =
+  match action () with
+  | result ->
+    Btype.cleanup_abbrev ();
+    if result.exit_code <> 0 then Bs_cmi_load.discard_cached_cmis ();
+    result
+  | exception exn ->
+    Btype.cleanup_abbrev ();
+    Bs_cmi_load.discard_cached_cmis ();
+    raise exn
+
 let with_fresh_request_states ~cwd action =
   Predef.with_fresh (fun () ->
       Env.with_fresh_initial (fun () ->
           Ident.with_fresh (fun () ->
               Request_local.with_fresh (fun () ->
-                  Compiler_request_state.with_fresh ~cwd action))))
+                  Compiler_request_state.with_fresh ~cwd (fun () ->
+                      leave_cached_interfaces_clean action)))))
 
 let run_argv ?run_external ~capture ~cwd argv =
   with_fresh_request_states ~cwd (fun () ->

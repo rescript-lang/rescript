@@ -1,1 +1,0 @@
-- Keep a line comment in the operand of `switch`, `if`, `try` or a loop in the operand instead of moving it into the block when formatting.

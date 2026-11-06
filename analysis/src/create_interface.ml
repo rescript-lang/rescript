@@ -5,8 +5,10 @@ module Source_file_extractor = struct
     go 0
 
   (* For each line from [line_start] to [line_end], whether it begins inside
-     a string or template literal that starts on an earlier line. Such lines
-     are part of the literal's value, so reindenting them would change it. *)
+     a string or template literal, or a comment, that starts on an earlier
+     line. Such lines are part of the literal's value, or of the comment's
+     text (a doc comment is the string payload of @res.doc), so reindenting
+     them would change it. *)
   let literal_lines lines ~line_start ~col_start ~line_end =
     let first = lines.(line_start) in
     let col_start = max 0 (min col_start (String.length first)) in
@@ -47,7 +49,7 @@ module Source_file_extractor = struct
     let rec go () =
       match Res_scanner.scan scanner with
       | _, _, Res_token.Eof -> ()
-      | start_pos, end_pos, String _ ->
+      | start_pos, end_pos, (String _ | Comment _) ->
         mark start_pos end_pos;
         go ()
       | start_pos, _, Backtick ->
@@ -60,8 +62,8 @@ module Source_file_extractor = struct
 
   (* The source text from [pos_start] to [pos_end], indented by [indent]:
      the lines after the first keep their indentation relative to the line
-     the text starts on, except lines inside a string or template literal,
-     which are copied verbatim. *)
+     the text starts on, except lines inside a string or template literal or
+     a comment, which are copied verbatim. *)
   let extract lines ~indent ~pos_start ~pos_end =
     let line_start, col_start = pos_start in
     let line_end, col_end = pos_end in
@@ -94,74 +96,6 @@ module Source_file_extractor = struct
         else res := reindent n line :: !res
       done;
       !res
-end
-
-module Attributes_utils : sig
-  type t
-
-  val make : string list -> t
-
-  val contains : string -> t -> bool
-
-  val to_string : t -> string
-end = struct
-  type attribute = {line: int; offset: int; name: string}
-  type t = attribute list
-  type parse_state = Search | Collect of int
-
-  let make lines =
-    let make_attr line_idx attr_offset_start attr_offset_end line =
-      {
-        line = line_idx;
-        offset = attr_offset_start;
-        name =
-          String.sub line attr_offset_start (attr_offset_end - attr_offset_start);
-      }
-    in
-    let res = ref [] in
-    lines
-    |> List.iteri (fun line_idx line ->
-        let state = ref Search in
-        for i = 0 to String.length line - 1 do
-          let ch = line.[i] in
-          match (!state, ch) with
-          | Search, '@' -> state := Collect i
-          | Collect attr_offset, ' ' ->
-            res := make_attr line_idx attr_offset i line :: !res;
-            state := Search
-          | Search, _ | Collect _, _ -> ()
-        done;
-
-        match !state with
-        | Collect attr_offset ->
-          res :=
-            make_attr line_idx attr_offset (String.length line) line :: !res
-        | _ -> ());
-    !res |> List.rev
-
-  let contains attribute_for_search t =
-    t |> List.exists (fun {name} -> name = attribute_for_search)
-
-  let to_string t =
-    match t with
-    | [] -> ""
-    | {line} :: _ ->
-      let prev_line = ref line in
-      let buffer = ref "" in
-      let res = ref [] in
-      t
-      |> List.iter (fun attr ->
-          let {line; offset; name} = attr in
-
-          if line <> !prev_line then (
-            res := !buffer :: !res;
-            buffer := "";
-            prev_line := line);
-
-          let indent = String.make (offset - String.length !buffer) ' ' in
-          buffer := !buffer ^ indent ^ name);
-      res := !buffer :: !res;
-      !res |> List.rev |> String.concat "\n"
 end
 
 let loc_within ~(outer : Location.t) (loc : Location.t) =
@@ -216,7 +150,55 @@ let attributes_start ~extractor (type_decl : Types.type_declaration) pos_start =
            min pos_start (line, col))
        pos_start
 
-let print_signature ~path ~extractor ~signature =
+(* The attributes of a [let] binding that an interface keeps in front of the
+   values it binds: doc comments, [@deprecated], which warns at uses from
+   other modules, and the annotations that genType and reanalyze read from
+   an interface, among them [@throws], which reanalyze reads at calls from
+   other modules. Other attributes, such as [@warning] or [@inline], are about
+   the implementation. *)
+let interface_attribute (({txt}, _) : Parsetree.attribute) =
+  match txt with
+  | "res.doc" | "deprecated" | "throws" | "live" | "dead" | "genType"
+  | "gentype" ->
+    true
+  | _ ->
+    String.starts_with ~prefix:"genType." txt
+    || String.starts_with ~prefix:"gentype." txt
+
+type binding = {
+  pattern: Location.t;
+  attributes: Parsetree.attributes;  (** The interface attributes *)
+  inline: bool;
+}
+
+(* The [let] bindings in the source that have interface attributes or an
+   [@inline] attribute. *)
+let bindings ~source =
+  let {Res_driver.parsetree = structure} =
+    Res_driver.parsing_engine.parse_implementation_from_source ~source
+  in
+  let bindings = ref [] in
+  let iterator =
+    {
+      Ast_iterator.default_iterator with
+      value_binding =
+        (fun iterator (vb : Parsetree.value_binding) ->
+          let attributes = List.filter interface_attribute vb.pvb_attributes in
+          let inline =
+            List.exists
+              (fun (({txt}, _) : Parsetree.attribute) -> txt = "inline")
+              vb.pvb_attributes
+          in
+          if attributes <> [] || inline then
+            bindings :=
+              {pattern = vb.pvb_pat.ppat_loc; attributes; inline} :: !bindings;
+          Ast_iterator.default_iterator.value_binding iterator vb);
+    }
+  in
+  iterator.structure iterator structure;
+  !bindings
+
+let print_signature ~path ~source ~extractor ~signature =
   Printtyp.reset_names ();
   let functors = functor_locs signature in
   let sig_item_to_string (item : Outcometree.out_sig_item) =
@@ -224,15 +206,31 @@ let print_signature ~path ~extractor ~signature =
     |> Res_doc.to_string ~width:Res_printer.default_print_width
   in
 
-  let gen_sig_str_for_inline_attr lines attributes id vd =
-    let divider = if List.length lines > 1 then "\n" else " " in
-
-    let sig_str =
-      sig_item_to_string
-        (Printtyp.tree_of_value_description id {vd with val_kind = Val_reg})
-    in
-
-    (attributes |> Attributes_utils.to_string) ^ divider ^ sig_str ^ "\n"
+  let bindings = bindings ~source in
+  (* The binding of a value in this file. A value's location is the variable
+     in the binding's pattern, or for an [@inline] constant the whole
+     binding. *)
+  let binding_of (val_loc : Location.t) =
+    if Filename.basename val_loc.loc_start.pos_fname <> Filename.basename path
+    then None
+    else
+      List.find_opt
+        (fun {pattern} ->
+          loc_within ~outer:pattern val_loc || loc_within ~outer:val_loc pattern)
+        bindings
+  in
+  (* The interface attributes of the binding of a value, one per line. *)
+  let value_attributes ~indent val_loc =
+    match binding_of val_loc with
+    | None -> ""
+    | Some {attributes} ->
+      attributes
+      |> List.map (fun attr ->
+          indent
+          ^ Res_doc.to_string ~width:Res_printer.default_print_width
+              (Res_printer.print_attribute attr (Res_comments_table.make ()))
+          ^ "\n")
+      |> String.concat ""
   in
 
   let buf = Buffer.create 10 in
@@ -314,6 +312,7 @@ let print_signature ~path ~extractor ~signature =
           (Printtyp.tree_of_value_description make_id
              {make_value_desc with val_type = fun_type})
       in
+      Buffer.add_string buf (value_attributes ~indent make_value_desc.val_loc);
       Buffer.add_string buf (indent ^ "@react.component\n");
       Buffer.add_string buf (indent ^ new_item_str ^ "\n");
       process_signature ~scope ~indent rest
@@ -346,26 +345,30 @@ let print_signature ~path ~extractor ~signature =
       process_signature ~scope ~indent rest
     | Sig_value (id, ({val_kind = Val_prim prim; val_loc} as vd)) :: items
       when prim.prim_kind <> Primitive.Kind_intrinsic ->
-      (* Rescript primitive name, e.g. @val external ... *)
-      let lines =
-        let pos_start, pos_end = Loc.range val_loc in
-        extractor |> Source_file_extractor.extract ~indent ~pos_start ~pos_end
-      in
-      let attributes = Attributes_utils.make lines in
-
-      if Attributes_utils.contains "@inline" attributes then
-        (* Generate type signature for @inline declaration *)
+      (match binding_of val_loc with
+      | Some {inline = true} ->
+        (* A [let] binding an [@inline] constant, which is a primitive *)
+        Buffer.add_string buf (value_attributes ~indent val_loc);
         Buffer.add_string buf
-          (gen_sig_str_for_inline_attr lines attributes id vd)
-      else
-        (* Copy the external declaration verbatim from the implementation file *)
-        Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n");
-
+          (indent ^ "@inline "
+          ^ sig_item_to_string
+              (Printtyp.tree_of_value_description id
+                 {vd with val_kind = Val_reg})
+          ^ "\n")
+      | _ ->
+        (* Copy the external declaration verbatim from the implementation
+           file *)
+        let lines =
+          let pos_start, pos_end = Loc.range val_loc in
+          extractor |> Source_file_extractor.extract ~indent ~pos_start ~pos_end
+        in
+        Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n"));
       process_signature ~scope ~indent items
     | Sig_value (id, vd) :: items ->
       let new_item_str =
         sig_item_to_string (Printtyp.tree_of_value_description id vd)
       in
+      Buffer.add_string buf (value_attributes ~indent vd.val_loc);
       Buffer.add_string buf (indent ^ new_item_str ^ "\n");
       process_signature ~scope ~indent items
     | Sig_type (id, type_decl, rec_status) :: items ->
@@ -441,5 +444,5 @@ let command ~path ~source ~cmi_file =
   match Shared.try_read_cmi cmi_file with
   | Some cmi_info ->
     let extractor = source |> String.split_on_char '\n' |> Array.of_list in
-    Ok (print_signature ~path ~extractor ~signature:cmi_info.cmi_sign)
+    Ok (print_signature ~path ~source ~extractor ~signature:cmi_info.cmi_sign)
   | None -> Error ("Failed to read cmi file " ^ cmi_file)

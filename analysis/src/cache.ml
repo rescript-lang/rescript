@@ -23,8 +23,8 @@ let read_cache filename =
 
 let delete_cache filename = try Sys.remove filename with _ -> ()
 
-let target_file_from_lib_bs lib_bs =
-  Filename.concat lib_bs ".project-files-cache"
+let target_file_from_artifact_dir artifact_dir =
+  Filename.concat artifact_dir ".project-files-cache"
 
 let cache_project (package : package) =
   let cached =
@@ -34,9 +34,9 @@ let cache_project (package : package) =
       paths_for_module = package.paths_for_module;
     }
   in
-  match Build_system.get_lib_bs package.root_path with
+  match Build_system.get_artifact_dir package.root_path with
   | None -> print_endline "\"ERR\""
-  | Some lib_bs ->
-    let target_file = target_file_from_lib_bs lib_bs in
+  | Some artifact_dir ->
+    let target_file = target_file_from_artifact_dir artifact_dir in
     write_cache target_file cached;
     print_endline "\"OK\""

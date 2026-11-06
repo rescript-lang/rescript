@@ -1,76 +1,52 @@
 #!/bin/bash
+# Runs `rescript compiler-args` on every rescript.json in
+# config_acceptance_cases.tsv. Each case must be accepted or rejected as the
+# table says. The compiler and parser arguments of the accepted cases are
+# compared with snapshots/config_acceptance/arguments.txt.
 set -eu
+. "$(dirname "$0")/test_helpers.sh"
 
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
-rust=${1:-$root/rewatch/target/debug/rescript}
-ocaml=${2:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
+rescript=${1:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
 cases=$root/rewatch-ocaml/tests/config_acceptance_cases.tsv
 
-rust=$(realpath "$rust")
-ocaml=$(realpath "$ocaml")
+rescript=$(realpath "$rescript")
 mkdir -p "$root/tmp"
 work=$(mktemp -d "$root/tmp/rewatch-config-acceptance-XXXXXX")
 trap 'rm -rf "$work"' EXIT
-mkdir -p "$work/src" "$work/node_modules/dep/lib/ocaml" "$work/node_modules/ppx"
-printf 'let value = 1\n' >"$work/src/A.res"
+mkdir -p "$work/project/src" "$work/project/node_modules/dep/lib/rescript" \
+  "$work/project/node_modules/ppx"
+project=$work/project
+printf 'let value = 1\n' >"$project/src/A.res"
 
-default_bsc=$root/_build/default/compiler/bsc/rescript_compiler_main.exe
 default_runtime=$root/packages/@rescript/runtime
-case $(uname -s) in
-  MINGW*|MSYS*)
-    default_bsc=$(cygpath -w "$default_bsc")
-    default_runtime=$(cygpath -w "$default_runtime")
-    ;;
-esac
-export RESCRIPT_BSC_EXE=${RESCRIPT_BSC_EXE:-$default_bsc}
+if $windows_posix_shell; then
+  default_runtime=$(cygpath -w "$default_runtime")
+fi
 export RESCRIPT_RUNTIME=${RESCRIPT_RUNTIME:-$default_runtime}
 
 checked=0
-divergences=0
 diagnostic_checks=0
+: >"$work/arguments.txt"
 while IFS=$'\t' read -r area name expected json; do
   if [[ -z "$area" || "$area" == \#* ]]; then
     continue
   fi
-  printf '%s\n' "$json" >"$work/rescript.json"
+  printf '%s\n' "$json" >"$project/rescript.json"
   set +e
-  "$rust" compiler-args "$work/src/A.res" >"$work/rust.out" 2>"$work/rust.err"
-  rust_status=$?
-  "$ocaml" compiler-args "$work/src/A.res" >"$work/ocaml.out" 2>"$work/ocaml.err"
-  ocaml_status=$?
+  "$rescript" compiler-args "$project/src/A.res" >"$work/out" 2>"$work/err"
+  status=$?
   set -e
 
-  if [[ "$rust_status" -eq 0 ]]; then
-    rust_actual=accept
-  elif [[ "$rust_status" -eq 101 ]]; then
-    rust_actual=panic
+  if [[ "$status" -eq 0 ]]; then
+    actual=accept
   else
-    rust_actual=reject
+    actual=reject
   fi
-  if [[ "$ocaml_status" -eq 0 ]]; then
-    ocaml_actual=accept
-  else
-    ocaml_actual=reject
-  fi
-  rust_expected=${expected%%/*}
-  if [[ "$expected" == */* ]]; then
-    ocaml_expected=${expected#*/}
-    compare_arguments=false
-    divergences=$((divergences + 1))
-  else
-    ocaml_expected=$expected
-    compare_arguments=true
-  fi
-  if [[ "$rust_actual" != "$rust_expected" || "$ocaml_actual" != "$ocaml_expected" ]]; then
-    printf 'Config case %s/%s: expected Rust=%s/OCaml=%s, got Rust=%s/OCaml=%s\n' \
-      "$area" "$name" "$rust_expected" "$ocaml_expected" \
-      "$rust_status" "$ocaml_status" >&2
-    printf '%s\n' '--- Rust output ---' >&2
-    cat "$work/rust.out" >&2
-    cat "$work/rust.err" >&2
-    printf '%s\n' '--- OCaml output ---' >&2
-    cat "$work/ocaml.out" >&2
-    cat "$work/ocaml.err" >&2
+  if [[ "$actual" != "$expected" ]]; then
+    printf 'Config case %s/%s: expected %s, got status %s\n' \
+      "$area" "$name" "$expected" "$status" >&2
+    cat "$work/out" "$work/err" >&2
     exit 1
   fi
   diagnostic_fragment=
@@ -78,35 +54,34 @@ while IFS=$'\t' read -r area name expected json; do
     jsx) diagnostic_fragment=jsx ;;
     source-map) diagnostic_fragment=sourceMap ;;
   esac
-  if [[ -n "$diagnostic_fragment" && "$rust_expected" != accept ]]; then
-    if ! grep -Fi "$diagnostic_fragment" "$work/rust.err" >/dev/null ||
-      ! grep -Fi "$diagnostic_fragment" "$work/ocaml.err" >/dev/null; then
+  if [[ -n "$diagnostic_fragment" && "$expected" != accept ]]; then
+    if ! grep -Fi "$diagnostic_fragment" "$work/err" >/dev/null; then
       printf 'Config case %s/%s lost the %s diagnostic context\n' \
         "$area" "$name" "$diagnostic_fragment" >&2
-      printf '%s\n' '--- Rust output ---' >&2
-      cat "$work/rust.out" "$work/rust.err" >&2
-      printf '%s\n' '--- OCaml output ---' >&2
-      cat "$work/ocaml.out" "$work/ocaml.err" >&2
+      cat "$work/out" "$work/err" >&2
       exit 1
     fi
     diagnostic_checks=$((diagnostic_checks + 1))
   fi
-  if [[ "$compare_arguments" == true && "$rust_expected" == accept ]] &&
-    ! node -e '
+  if [[ "$expected" == accept ]]; then
+    # One line per argument list, so native Windows paths are not JSON-escaped
+    # and check_snapshot can replace them.
+    node -e '
       const fs = require("fs");
-      const assert = require("assert");
-      assert.deepStrictEqual(
-        JSON.parse(fs.readFileSync(process.argv[1], "utf8")),
-        JSON.parse(fs.readFileSync(process.argv[2], "utf8")),
+      const [file, label] = process.argv.slice(1);
+      const args = JSON.parse(fs.readFileSync(file, "utf8"));
+      fs.appendFileSync(
+        process.argv[3],
+        `${label}\n  compiler: ${args.compiler_args.join(" ")}\n` +
+          `  parser: ${args.parser_args.join(" ")}\n`,
       );
-    ' "$work/rust.out" "$work/ocaml.out"; then
-    printf 'Config case %s/%s produced different compiler arguments\n' \
-      "$area" "$name" >&2
-    diff -u "$work/rust.out" "$work/ocaml.out" >&2 || true
-    exit 1
+    ' "$work/out" "$area/$name" "$work/arguments.txt"
   fi
   checked=$((checked + 1))
 done <"$cases"
 
-printf 'Configuration cases: %d (%d documented divergences, %d JSX/source-map diagnostic checks); Rust/OCaml expectations and parity arguments matched\n' \
-  "$checked" "$divergences" "$diagnostic_checks"
+check_snapshot config_acceptance/arguments.txt "$work/arguments.txt" \
+  "PROJECT=$project" "RUNTIME=$RESCRIPT_RUNTIME"
+
+printf 'Configuration cases: %d (%d JSX/source-map diagnostic checks); expectations and arguments matched\n' \
+  "$checked" "$diagnostic_checks"

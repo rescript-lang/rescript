@@ -1,1 +1,0 @@
-- Run the TypeScript type check of the JS sources in CI. https://github.com/rescript-lang/rescript/pull/8836

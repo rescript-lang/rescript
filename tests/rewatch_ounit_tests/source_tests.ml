@@ -106,7 +106,7 @@ let tests =
         "source filters do not match directory components";
       check
         (names (discover config ~filter:"Nested|Other" ()) = ["Nested"])
-        "source filters support Rust-style alternation";
+        "source filters support alternation";
       check
         (names (discover config ~filter:"(?:Nested|Other)\\.res$" ())
         = ["Nested"])

@@ -88,6 +88,10 @@ type subtype_context =
       issues: Record_coercion.record_field_subtype_violation list;
     }
   | Coercion_into_private_type of {typename: Path.t}
+  | Record_array_mismatch of {
+      array_record_name: Path.t;
+      object_record_name: Path.t;
+    }
 
 exception Subtype of type_pairs * type_pairs * subtype_context option
 
@@ -901,20 +905,33 @@ let instance_list env schl =
       let env = gadt_env env in
       List.map (fun t -> copy ?env t) schl)
 
-let reified_var_counter_key = Request_local.new_key (fun () -> ref Vars.empty)
+(* The next index for each base name, and the names already given *)
+let reified_var_counter_key =
+  Request_local.new_key (fun () -> ref (Vars.empty, Misc.String_set.empty))
 let reified_var_counter () = Domain.DLS.get reified_var_counter_key
-let reset_reified_var_counter () = reified_var_counter () := Vars.empty
+let reset_reified_var_counter () =
+  reified_var_counter () := (Vars.empty, Misc.String_set.empty)
 
 (* names given to new type constructors.
    Used for existential types and
-   local constraints *)
+   local constraints. A numbered name can equal a base name ending in
+   digits, as [$a1] for the second ['a] and the first ['a1], so names
+   already given are skipped. *)
 let get_new_abstract_name s =
-  let index =
-    try Vars.find s !(reified_var_counter ()) + 1 with Not_found -> 0
+  let counters, used = !(reified_var_counter ()) in
+  let name index =
+    if index = 0 && s <> "" && s.[String.length s - 1] <> '$' then s
+    else Printf.sprintf "%s%d" s index
   in
-  reified_var_counter () := Vars.add s index !(reified_var_counter ());
-  if index = 0 && s <> "" && s.[String.length s - 1] <> '$' then s
-  else Printf.sprintf "%s%d" s index
+  let rec first_free index =
+    if Misc.String_set.mem (name index) used then first_free (index + 1)
+    else index
+  in
+  let index = first_free (try Vars.find s counters + 1 with Not_found -> 0) in
+  let name = name index in
+  reified_var_counter () :=
+    (Vars.add s index counters, Misc.String_set.add name used);
+  name
 
 let new_declaration newtype manifest =
   {
@@ -3531,6 +3548,13 @@ let coerces_into_private_type env t1 t2 =
     | None -> true)
   | Some _ | None -> false
 
+(* Whether a variant constructor coerces to the same-named constructor of the
+   target variant, and if not, whether the error can say why *)
+type constructor_coercion =
+  | Coerces
+  | Fails_with of subtype_context
+  | Fails_unexplained
+
 let rec subtype_rec env trace t1 t2 cstrs =
   let t1 = repr t1 in
   let t2 = repr t2 in
@@ -3691,6 +3715,12 @@ let rec subtype_rec env trace t1 t2 cstrs =
         match
           (extract_concrete_typedecl env t1, extract_concrete_typedecl env t2)
         with
+        | (_, p1, _), (_, p2, _)
+          when Variant_coercion.is_bool_or_unit p1
+               || Variant_coercion.is_bool_or_unit p2 ->
+          (* No other type coerces to or from [bool] or [unit], and the
+             variant errors below would describe them as variants *)
+          (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs
         | ( ( p1,
               _,
               {
@@ -3759,7 +3789,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
               c2
               |> List.iteri (fun position (c : Types.constructor_declaration) ->
                   Hashtbl.add constructor_map (Ident.name c.cd_id) (c, position));
-              let field_subtype_violations =
+              let constructor_coercions =
                 c1
                 |> List.mapi
                      (fun position1 (c : Types.constructor_declaration) ->
@@ -3784,18 +3814,30 @@ let rec subtype_rec env trace t1 t2 cstrs =
                            | [] -> (
                              try
                                let lst = subtype_list env trace tl1 tl2 cstrs in
-                               if List.length lst = List.length cstrs then None
-                               else
-                                 Some
-                                   [ (* TODO(subtype-errors) Variant constructor inline record mismatch *) ]
+                               if List.length lst = List.length cstrs then
+                                 Coerces
+                               else Fails_unexplained
+                               (* TODO(subtype-errors) Variant constructor inline record field type mismatch *)
                              with _ ->
-                               Some
-                                 [ (* TODO(subtype-errors) Variant constructor inline record mismatch *) ]
+                               Fails_unexplained
+                               (* TODO(subtype-errors) Variant constructor inline record field type mismatch *)
                              )
-                           | violations -> Some violations
+                           | violations ->
+                             (* The inline record types are named like the
+                                compiler prints them, e.g. [v1.A]. *)
+                             let inline_record_name p =
+                               Path.Pdot (p, Ident.name c.cd_id, Path.nopos)
+                             in
+                             Fails_with
+                               (Record_fields_mismatch
+                                  {
+                                    left_record_name = inline_record_name p1;
+                                    right_record_name = inline_record_name p2;
+                                    issues = violations;
+                                  })
                          else
-                           Some
-                             [ (* TODO(subtype-errors) Variant constructor representation mismatch*) ]
+                           Fails_unexplained
+                           (* TODO(subtype-errors) Variant constructor representation mismatch*)
                        | ( {Types.cd_args = Cstr_tuple tl1},
                            Some ({Types.cd_args = Cstr_tuple tl2}, position2) )
                          ->
@@ -3806,27 +3848,42 @@ let rec subtype_rec env trace t1 t2 cstrs =
                          then
                            try
                              let lst = subtype_list env trace tl1 tl2 cstrs in
-                             if List.length lst = List.length cstrs then None
-                             else
-                               Some
-                                 [ (* TODO(subtype-errors) Variant constructor tuple mismatch *) ]
-                           with _ ->
-                             Some
-                               [ (* TODO(subtype-errors) Variant constructor tuple mismatch *) ]
+                             if List.length lst = List.length cstrs then Coerces
+                             else Fails_unexplained
+                             (* TODO(subtype-errors) Variant constructor tuple mismatch *)
+                           with _ -> Fails_unexplained
+                           (* TODO(subtype-errors) Variant constructor tuple mismatch *)
                          else
-                           Some
-                             [ (* TODO(subtype-errors) Variant constructor tuple mismatch *) ]
-                       | _ ->
-                         Some [ (* TODO(subtype-errors) Variant other issue *) ])
-                |> List.filter_map Fun.id
+                           Fails_unexplained
+                           (* TODO(subtype-errors) Variant constructor tuple mismatch *)
+                       | _ -> Fails_unexplained
+                       (* TODO(subtype-errors) Variant other issue *))
               in
-              if field_subtype_violations = [] then cstrs
-              else (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
+              if
+                List.for_all
+                  (function
+                    | Coerces -> true
+                    | Fails_with _ | Fails_unexplained -> false)
+                  constructor_coercions
+              then cstrs
+              else
+                (* Report the first failure the error can explain *)
+                let context =
+                  List.find_map
+                    (function
+                      | Fails_with context -> Some context
+                      | Coerces | Fails_unexplained -> None)
+                    constructor_coercions
+                in
+                (trace, t1, t2, !(current_univar_pairs ()), context) :: cstrs)
         | ( (p1, _, {type_kind = Type_record (fields1, repr1)}),
             (p2, _, {type_kind = Type_record (fields2, repr2)}) ) ->
           let same_repr =
             match (repr1, repr2) with
-            | Record_regular, Record_regular ->
+            (* Not between [Record_array] and [Record_regular]: an object is
+               no array, and an array coerced to an object record would
+               still pass for the array case of an untagged variant *)
+            | Record_regular, Record_regular | Record_array, Record_array ->
               true (* handled in the fields checks *)
             | Record_unboxed b1, Record_unboxed b2 -> b1 = b2
             | Record_inlined _, Record_inlined _ -> repr1 = repr2
@@ -3856,7 +3913,16 @@ let rec subtype_rec env trace t1 t2 cstrs =
               t1,
               t2,
               !(current_univar_pairs ()),
-              None (* TODO(subtype-errors) Record representation *) )
+              match (repr1, repr2) with
+              | Record_regular, Record_array ->
+                Some
+                  (Record_array_mismatch
+                     {array_record_name = p2; object_record_name = p1})
+              | Record_array, Record_regular ->
+                Some
+                  (Record_array_mismatch
+                     {array_record_name = p1; object_record_name = p2})
+              | _ -> None (* TODO(subtype-errors) Record representation *) )
             :: cstrs
         | (p1, _, {type_kind = tk1}), (p2, _, {type_kind = tk2}) ->
           ( trace,
@@ -3887,7 +3953,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
           (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
       | Tvariant {row_closed = true; row_fields}, Tconstr (_, [], _)
         when extract_concrete_typedecl_opt env t2
-             |> Variant_coercion.type_is_variant -> (
+             |> Variant_coercion.can_try_coerce_polyvariant_to_variant -> (
         (* TODO(subtype-errors) Polyvariant to variant *)
         match extract_concrete_typedecl env t2 with
         | ( _,

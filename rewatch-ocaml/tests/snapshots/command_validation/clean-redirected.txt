@@ -1,0 +1,4 @@
+status: 0
+--- stdout
+Cleaning command-validation
+--- stderr

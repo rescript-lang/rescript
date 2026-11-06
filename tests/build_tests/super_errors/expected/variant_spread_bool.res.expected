@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_spread_bool.res[0m:[2m2:8-11[0m
+
+  1 [2m│[0m type t =
+  [1;31m2[0m [2m│[0m   | ...[1;31mbool[0m
+  3 [2m│[0m   | Other
+  4 [2m│[0m 
+
+  This type is not a valid type to spread. It's only possible to spread other variants.

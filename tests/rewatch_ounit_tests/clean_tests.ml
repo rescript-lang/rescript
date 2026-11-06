@@ -62,6 +62,7 @@ let tests =
       write_file duplicate_output_b "generated duplicate two\n";
       write_file duplicate_in_source_a "generated duplicate one\n";
       write_file duplicate_in_source_b "generated duplicate two\n";
+      write_file (Filename.concat root "lib/rescript/A.cmj") "temporary\n";
       write_file (Filename.concat root "lib/bs/compiler-state") "temporary\n";
       write_file (Filename.concat root "lib/ocaml/A.cmj") "temporary\n";
       Clean.run ~poll:(fun () -> ()) ~verbosity:(-1) ~folder:root ~prod:false;
@@ -95,8 +96,11 @@ let tests =
         (not (Sys.file_exists duplicate_in_source_b))
         "invalid-graph clean removes the second in-source output";
       check
+        (Sys.readdir (Filename.concat root "lib/rescript") = [||])
+        "clean empties the artifact directory, releasing its lock";
+      check
         (not (Sys.file_exists (Filename.concat root "lib/bs")))
-        "clean removes compiler working artifacts";
+        "clean removes the working artifacts of earlier versions";
       check
         (not (Sys.file_exists (Filename.concat root "lib/ocaml")))
-        "clean removes published compiler artifacts")
+        "clean removes the published artifacts of earlier versions")

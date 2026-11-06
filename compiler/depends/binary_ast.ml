@@ -28,18 +28,41 @@ type 'a kind = 'a Ml_binary.kind =
   | Ml : Parsetree.structure kind
   | Mli : Parsetree.signature kind
 
-let read_ast_exn (type t) ~fname (_ : t kind) : t =
-  let ic = open_in_bin (Compiler_request_state.resolve_path fname) in
-  Fun.protect
-    ~finally:(fun () -> close_in_noerr ic)
-    (fun () ->
-      let dep_size = input_binary_int ic in
-      seek_in ic (pos_in ic + dep_size);
-      let sourcefile = input_line ic in
-      Location.set_input_name sourcefile;
-      input_value ic)
-
 let magic_sep_char = '\n'
+
+type header = {source_start: int; source_end: int}
+
+let read_header ?length contents =
+  let length = Option.value length ~default:(String.length contents) in
+  if length < 4 then None
+  else
+    let source_start = 4 + Int32.to_int (String.get_int32_be contents 0) in
+    if source_start < 4 || source_start > length then None
+    else
+      let rec source_end index =
+        if index >= length then None
+        else if contents.[index] = magic_sep_char then
+          Some {source_start; source_end = index}
+        else source_end (index + 1)
+      in
+      source_end source_start
+
+let header_dependencies contents header =
+  String.sub contents 4 (header.source_start - 4)
+  |> String.split_on_char magic_sep_char
+  |> List.filter (fun name -> name <> "")
+
+let header_source contents header =
+  String.sub contents header.source_start
+    (header.source_end - header.source_start)
+
+let read_ast_exn (type t) ~fname (_ : t kind) : t =
+  let contents = Ext_io.load_file fname in
+  match read_header contents with
+  | Some header ->
+    Location.set_input_name (header_source contents header);
+    Ext_io.unmarshal contents (header.source_end + 1)
+  | None -> raise End_of_file
 
 (*
    Reasons that we don't [output_value] the set:
@@ -57,13 +80,15 @@ let write_ast (type t) ~(sourcefile : string) ~output (kind : t kind) (pt : t) :
         (* filter *predef* *)
         Ext_buffer.add_string_char buf s magic_sep_char)
     output_set;
-  let oc = open_out_bin (Compiler_request_state.resolve_path output) in
-  Fun.protect
-    ~finally:(fun () -> close_out_noerr oc)
-    (fun () ->
-      output_binary_int oc (Ext_buffer.length buf);
-      Ext_buffer.output_buffer oc buf;
-      output_string oc sourcefile;
-      output_char oc '\n';
-      output_value oc pt;
-      close_out oc)
+  let length = Bytes.create 4 in
+  Bytes.set_int32_be length 0 (Int32.of_int (Ext_buffer.length buf));
+  Build_file_store.write
+    (Compiler_request_state.resolve_path output)
+    (String.concat ""
+       [
+         Bytes.unsafe_to_string length;
+         Ext_buffer.contents buf;
+         sourcefile;
+         "\n";
+         Marshal.to_string pt [];
+       ])

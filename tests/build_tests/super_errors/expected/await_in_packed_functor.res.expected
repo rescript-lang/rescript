@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/await_in_packed_functor.res[0m:[2m14:19-36[0m
+
+  12 [2m┆[0m module(
+  13 [2m┆[0m   (Source: Source) => {
+  [1;31m14[0m [2m┆[0m     let value = [1;31mawait Source.value[0m
+  15 [2m┆[0m   }
+  16 [2m┆[0m )
+
+  Await on expression not in an async context

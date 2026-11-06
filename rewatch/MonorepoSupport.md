@@ -3,10 +3,9 @@
 This document describes **how `rewatch` infers monorepo structure**, **what invariants are required**, and **how build scope changes** depending on where you invoke the build.
 
 All statements are derived from:
-- `rewatch/src/project_context.rs` – monorepo context detection
-- `rewatch/src/build/packages.rs` – package discovery and traversal
-- `rewatch/src/helpers.rs` – path resolution utilities
-- `rewatch/src/build/{parse.rs,deps.rs,compile.rs}` – build phases
+- `rewatch-ocaml/project_context.ml` – monorepo context detection, locality and dependency lookup
+- `rewatch-ocaml/package_resolution.ml`, `package_traversal.ml`, `package_graph.ml` – package discovery and traversal
+- `rewatch-ocaml/package_parse.ml`, `module_graph.ml`, `package_compilation.ml` – build phases
 
 ---
 
@@ -55,21 +54,19 @@ A resolved dependency path is considered "local" if both conditions are met:
 
 This is why workspace symlinks work: `node_modules/<name>` → real path in repo.
 
-```rust
-// From helpers.rs
-pub fn is_local_package(workspace_path: &Path, canonical_package_path: &Path) -> bool {
-    canonical_package_path.starts_with(workspace_path)
-        && !canonical_package_path
-            .components()
-            .any(|c| c.as_os_str() == "node_modules")
-}
+```ocaml
+(* From project_context.ml *)
+let is_local_dependency_canonical ~workspace path =
+  ...
+  path_is_within_canonical ~root:workspace path
+  && not (contains_component path "node_modules")
 ```
 
 ---
 
 ## Dependency Resolution
 
-All dependencies are resolved via `try_package_path`, which probes in order:
+All dependencies are resolved via `Project_context.dependency_candidates_in`, which probes in order:
 
 | Priority | Path Probed | When Used |
 |----------|-------------|-----------|
@@ -127,21 +124,21 @@ Even when building from a leaf package, some settings are inherited from the **r
 
 ### Directory Structure
 
-Each package compiles into:
+Each package compiles into one flat directory, keyed by the compiler's file
+name of each module (`X` or `X-Ns`):
 ```
 <package>/
 ├── lib/
-│   ├── bs/         # Build working directory (AST files, intermediate outputs)
-│   └── ocaml/      # Published artifacts (.cmi, .cmj, .cmt, .cmti)
+│   └── rescript/   # ASTs, .cmi, .cmj, .cmt, .cmti, namespace maps, build state
 ```
 
 ### Compilation Process
 
 For package `A` depending on package `B`:
 
-1. **bsc runs with CWD** = `<A>/lib/bs`
-2. **Include path** = `-I <B>/lib/ocaml` for each declared dependency
-3. **Own artifacts** = `-I ../ocaml` (relative path to own lib/ocaml)
+1. **bsc runs with CWD** = `<A>/lib/rescript`
+2. **Include path** = `-I <B>/lib/rescript` for each declared dependency
+3. **Own artifacts** = `-I .`
 
 ### Dependency Filtering
 
@@ -199,18 +196,18 @@ function BUILD(entryFolder):
   for package in packages:
     scan sources (type:dev only included if package.is_local_dep)
     compute module names (apply namespace suffix rules)
-    ensure lib/bs + lib/ocaml exist
+    ensure lib/rescript exists
     enforce global unique module names
   
   # Step 4: Build loop
-  1. Parse dirty sources: bsc -bs-ast, cwd=<pkg>/lib/bs
+  1. Parse dirty sources: bsc -bs-ast, cwd=<pkg>/lib/rescript
   2. Compute module deps from AST; filter by declared package deps
   3. Compile in dependency-order waves:
-     - bsc cwd=<pkg>/lib/bs
-     - include: -I ../ocaml -I <dep>/lib/ocaml for each declared dep
+     - bsc cwd=<pkg>/lib/rescript
+     - include: -I . -I <dep>/lib/rescript for each declared dep
      - runtime: -runtime-path <@rescript/runtime resolved>
      - package specs: from rootConfig
-  4. Copy artifacts to <pkg>/lib/ocaml
+  4. Write each changed .cmi to <pkg>/lib/rescript once its compile succeeded
 ```
 
 ---

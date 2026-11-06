@@ -40,9 +40,12 @@ let get_runtime_dir root_path =
         None))
   | true -> Some root_path
 
-let get_lib_bs path = Files.if_exists (path /+ "lib" /+ "bs")
+(* A package's compiled files, flat in lib/rescript. *)
+let get_artifact_dir path = Files.if_exists (path /+ "lib" /+ "rescript")
 
+(* The runtime's compiled files. Its sources are at the root of the runtime
+   package, see [get_runtime_dir]. *)
 let get_stdlib base =
   match get_runtime_dir base with
   | None -> None
-  | Some runtime_dir -> Some (runtime_dir /+ "lib" /+ "ocaml")
+  | Some runtime_dir -> Some (runtime_dir /+ "lib" /+ "rescript")

@@ -1424,6 +1424,12 @@ let make_constr_matching p def ctx = function
         | Ordinary_constructor _
           when cstr.cstr_args <> []
                && Datarepr.constructor_has_optional_shape cstr ->
+          (* The payload is unwrapped unless its type rules out the object
+             that represents [Some] of undefined. The patterns can't rule it
+             out: a switch on the payload gets a case for each constructor,
+             from the default rows of the match for those the patterns don't
+             name, and takes its last case without a test, so the object can
+             reach any arm. *)
           let from_option =
             match p.pat_desc with
             | Tpat_construct (_, _, [{pat_type; pat_env}])
@@ -1450,53 +1456,9 @@ let make_constr_matching p def ctx = function
       pat = normalize_pat p;
     }
 
-(* Whether the payload pattern [p] of [Some] can't match the object that
-   represents [Some] of a value like [None] or undefined (see
-   [Primitive_option.some]): it doesn't bind the payload itself, and tests it
-   with a literal comparison or with a type test that an object fails. An
-   untagged case binds its argument only once its type test has passed. *)
-let rec rejects_nested_some p =
-  match p.pat_desc with
-  | Tpat_any | Tpat_constant _ | Tpat_interval _ -> true
-  | Tpat_or (p1, p2, _) -> rejects_nested_some p1 && rejects_nested_some p2
-  | Tpat_construct (_, cstr, _) -> (
-    match cstr.cstr_kind with
-    | Ordinary_constructor representation
-      when not (Datarepr.constructor_has_optional_shape cstr) -> (
-      match Variant_runtime.representation representation with
-      | Constant {literal} -> literal <> Variant_runtime.Undefined
-      | Block (Untagged {block_type = ObjectType | UnknownType}) -> false
-      | Block (Untagged _) -> true
-      | Block (Tagged _) -> false)
-    | Ordinary_constructor _ | Extension_constructor _ -> false)
-  | _ -> false
-
-(* A [Some] payload whose patterns all reject the representation of a nested
-   [Some] is matched as it is, without checking for that representation *)
-let skip_nested_some_check (cell : cell) =
-  match cell.pm.args with
-  | (Lprim {primitive = Pval_from_option; args = [arg]; loc}, str) :: argl
-    when List.for_all
-           (function
-             | p :: _, _ -> rejects_nested_some p
-             | [], _ -> false)
-           cell.pm.cases ->
-    {
-      cell with
-      pm =
-        {
-          cell.pm with
-          args =
-            (prim ~primitive:Pval_from_option_not_nest ~args:[arg] loc, str)
-            :: argl;
-        };
-    }
-  | _ -> cell
-
 let divide_constructor ctx pm =
   divide make_constr_matching Types.same_constructor get_key_constr
     get_args_constr ctx pm
-  |> List.map (fun (cstr, cell) -> (cstr, skip_nested_some_check cell))
 
 (* Matching against a variant *)
 
@@ -1656,7 +1618,7 @@ let make_record_matching loc all_labels def = function
         let lbl = all_labels.(pos) in
         let access =
           match lbl.lbl_repres with
-          | Record_regular ->
+          | Record_regular | Record_array ->
             prim
               ~primitive:
                 (Pfield (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))

@@ -1,0 +1,17 @@
+status: 0
+--- stdout
+Cleaned 0/0
+Parsed 2 source files
+Compiled 2 modules
+--- stderr
+
+  [1;33mWarning number 32[0m
+  [36m<ROOT>/src/WarningA.res[0m:[2m1:5-15[0m
+
+  [1;33m1[0m [2m│[0m let [1;33munusedValue[0m = 42
+  2 [2m│[0m let visible = 1
+  3 [2m│[0m 
+
+  unused value unusedValue.
+
+

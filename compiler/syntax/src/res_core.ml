@@ -2108,7 +2108,12 @@ and parse_atomic_expr p =
       let loc = mk_loc start_pos (Parser.position p) in
       match (Ast_raw.kind_of_name name, Ast_raw.of_payload payload) with
       | Some kind, Some source -> Ast_helper.Exp.raw ~loc ~name_loc kind source
-      | _ -> Ast_helper.Exp.extension ~loc extension)
+      | _ -> (
+        match
+          if name = Ast_todo.name then Ast_todo.of_payload payload else None
+        with
+        | Some message -> Ast_helper.Exp.todo ~loc ~name_loc message
+        | None -> Ast_helper.Exp.extension ~loc extension))
     | Underscore as token ->
       (* This case is for error recovery. Not sure if it's the correct place *)
       Parser.err p (Diagnostics.lident token);
@@ -2414,10 +2419,13 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
   loop a
 
 and parse_template_expr ?prefix p =
+  let template_start = Parser.start_pos p in
   let parse_parts p =
     let rec aux acc =
-      let start_pos = Parser.start_pos p in
       Parser.next_template_literal_token p;
+      (* A segment is its text: it starts after the backquote or [}] before
+         it and ends before the [${] or backquote after it. *)
+      let start_pos = Parser.start_pos p in
       match Parser.peek p with
       | TemplateTail (txt, last_pos) ->
         Parser.next p;
@@ -2437,11 +2445,7 @@ and parse_template_expr ?prefix p =
   let parts = parse_parts p in
   let sources = List.map (fun (txt, loc, _) -> {Location.txt; loc}) parts in
   let values = Ext_list.filter_map parts (fun (_, _, value) -> value) in
-  let template_loc =
-    let _, first_loc, _ = List.hd parts in
-    let _, last_loc, _ = Ext_list.last parts in
-    mk_loc first_loc.loc_start last_loc.loc_end
-  in
+  let template_loc = mk_loc template_start (Parser.position p) in
   let gen_tagged_template (lident_loc : Longident.t Location.loc) =
     let ident = Ast_helper.Exp.ident ~attrs:[] ~loc:lident_loc.loc lident_loc in
     let loc = mk_loc lident_loc.loc.loc_start (Parser.position p) in
@@ -5263,12 +5267,26 @@ and parse_constr_decl_args p =
   in
   (constr_args, res)
 
-(* Helper to check if current token is a bar or doc comment followed by a bar *)
+(* Helper to check if current token is a bar or a run of doc comments followed
+   by a bar *)
 and is_bar_or_doc_comment_then_bar p =
   match Parser.peek p with
   | Bar -> true
-  | DocComment _ -> Parser.peek2 p = Bar
+  | DocComment _ ->
+    Parser.lookahead p (fun state ->
+        skip_doc_comments state;
+        Parser.peek state = Bar)
   | _ -> false
+
+(* The doc comments before the `|` of a constructor or tag. The printer puts
+   every doc comment of a constructor on its own line before the `|`. *)
+and parse_doc_comments p =
+  match Parser.peek p with
+  | DocComment (loc, s) ->
+    Parser.next p;
+    let doc_comment = doc_comment_to_attribute loc s in
+    doc_comment :: parse_doc_comments p
+  | _ -> []
 
 (* constr-decl ::=
  *  | constr-name
@@ -5277,13 +5295,7 @@ and is_bar_or_doc_comment_then_bar p =
  *  | attrs constr-name const-args *)
 and parse_type_constructor_declaration_with_bar p =
   if is_bar_or_doc_comment_then_bar p then (
-    let doc_comment_attrs =
-      match Parser.peek p with
-      | DocComment (loc, s) ->
-        Parser.next p;
-        [doc_comment_to_attribute loc s]
-      | _ -> []
-    in
+    let doc_comment_attrs = parse_doc_comments p in
     let start_pos = Parser.start_pos p in
     Parser.next p;
     let constr = parse_type_constructor_declaration ~start_pos p in
@@ -5322,13 +5334,7 @@ and parse_type_constructor_declarations ?first p =
   let first_constr_decl =
     match first with
     | None ->
-      let doc_comment_attrs =
-        match Parser.peek p with
-        | DocComment (loc, s) ->
-          Parser.next p;
-          [doc_comment_to_attribute loc s]
-        | _ -> []
-      in
+      let doc_comment_attrs = parse_doc_comments p in
       let start_pos = Parser.start_pos p in
       ignore (Parser.optional p Token.Bar);
       let constr = parse_type_constructor_declaration ~start_pos p in
@@ -5907,13 +5913,7 @@ and parse_tag_spec_full p =
 and parse_tag_specs p =
   match Parser.peek p with
   | (Bar | DocComment _) when is_bar_or_doc_comment_then_bar p ->
-    let doc_comment_attrs =
-      match Parser.peek p with
-      | DocComment (loc, s) ->
-        Parser.next p;
-        [doc_comment_to_attribute loc s]
-      | _ -> []
-    in
+    let doc_comment_attrs = parse_doc_comments p in
     Parser.expect Bar p;
     let tag = parse_tag_spec p in
     let tag_with_doc =
@@ -5946,13 +5946,7 @@ and parse_tag_spec p =
 and parse_tag_spec_first p =
   match Parser.peek p with
   | (Bar | DocComment _) when is_bar_or_doc_comment_then_bar p ->
-    let doc_comment_attrs =
-      match Parser.peek p with
-      | DocComment (loc, s) ->
-        Parser.next p;
-        [doc_comment_to_attribute loc s]
-      | _ -> []
-    in
+    let doc_comment_attrs = parse_doc_comments p in
     Parser.expect Bar p;
     let tag = parse_tag_spec p in
     (match tag with
@@ -7446,11 +7440,17 @@ and parse_extension ?(module_language = false) p =
   else Parser.expect Percent p;
   let attr_id = parse_attribute_id ~start_pos p in
   let payload = parse_payload p in
-  if attr_id.txt = "re" then
+  (match attr_id.txt with
+  | "re" ->
     Parser.err ~start_pos:attr_id.loc.loc_start ~end_pos:attr_id.loc.loc_end p
       (Diagnostics.message
          "The %re extension has been removed. Use a regexp literal such as \
-          /abc/i.");
+          /abc/i.")
+  | "debugger" ->
+    Parser.err ~start_pos:attr_id.loc.loc_start ~end_pos:attr_id.loc.loc_end p
+      (Diagnostics.message
+         "The %debugger extension has been removed. Use debugger() instead.")
+  | _ -> ());
   (attr_id, payload)
 
 (* module signature on the file level *)

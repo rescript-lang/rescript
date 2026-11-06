@@ -22,18 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let handle_debugger loc (payload : Ast_payload.t) =
-  match payload with
-  | PStr [] ->
-    Ast_external_mk.local_external_apply loc ~pval_prim:(Prim_name "%debugger")
-      ~pval_type:
-        (Ast_helper.Typ.arrow
-           [Parg_type {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
-           (Ast_literal.type_unit ()))
-      [Ast_literal.val_unit ~loc ()]
-  | _ ->
-    Location.raise_errorf ~loc "%%debugger extension doesn't accept arguments"
-
 let raw_type () =
   Ast_helper.Typ.arrow
     [Parg_type {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]

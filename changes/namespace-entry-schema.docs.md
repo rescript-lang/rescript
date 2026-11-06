@@ -1,1 +1,0 @@
-- State in the `rescript.json` schema that `namespace-entry` requires `namespace`, as `rescript` rejects it otherwise.

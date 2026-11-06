@@ -1028,15 +1028,19 @@ let all_labels
     lbl.lbl_all
 
 (* Each label of the record with the expression the literal writes for it, if
-   any, in position order. *)
+   any, in position order. A list rather than an array: [Array.map] over more
+   than 256 labels (JSX props) forces a minor collection, which stops every
+   domain. *)
 let fields_by_position fields =
-  let written = Array.map (fun _ -> None) (all_labels fields) in
+  let lbl_all = all_labels fields in
+  let written = Array.make (Array.length lbl_all) None in
   Array.iter (fun (lbl, _, exp) -> written.(lbl.lbl_pos) <- Some exp) fields;
-  Array.mapi (fun i lbl -> (lbl, written.(i))) (all_labels fields)
+  List.init (Array.length lbl_all) (fun i -> (lbl_all.(i), written.(i)))
 
 (* How [transl_record] builds a record: by copying the fields of [init] one
    by one (or with no [init] at all), or by taking a shallow copy of [init]
-   and setting the other fields. JSX props follow the same rule.
+   and setting the other fields. JSX props follow the same rule. A shallow
+   copy is an object spread, so an array record always copies its fields.
    TODO: More strategies
    3 + 2 * List.length lbl_expr_list >= size (density) *)
 let record_copies_fields
@@ -1044,10 +1048,13 @@ let record_copies_fields
     ~(init : expression option) =
   match init with
   | None -> true
-  | Some _ ->
+  | Some _ -> (
     let lbl_all = all_labels fields in
-    Array.length lbl_all < 20
-    && not (Array.exists (fun lbl -> lbl.lbl_optional) lbl_all)
+    match lbl_all.(0).lbl_repres with
+    | Record_array -> true
+    | Record_regular | Record_unboxed _ | Record_inlined _ | Record_extension ->
+      Array.length lbl_all < 20
+      && not (Array.exists (fun lbl -> lbl.lbl_optional) lbl_all))
 
 let jsx_props_of ~multi (props : expression) =
   match props.exp_desc with
@@ -1071,16 +1078,7 @@ let jsx_props_of ~multi (props : expression) =
     let record children =
       Some (Jsx_props_record {fields; init; copy_fields; children})
     in
-    let is_array =
-      Lambda.record_fields_are_array
-        (Array.map
-           (fun (lbl : label_description) ->
-             (lbl.lbl_runtime_name, lbl.lbl_optional))
-           (all_labels fields))
-    in
     match children with
-    (* a record with the runtime names "0", "1", ... is an array *)
-    | _ when is_array -> None
     | None -> record None
     (* children printed as JSX children must be the [children] prop *)
     | Some (lbl, _) when lbl.lbl_runtime_name <> "children" -> None
@@ -1088,6 +1086,8 @@ let jsx_props_of ~multi (props : expression) =
       match jsx_children ~multi lbl child with
       | Some children -> record (Some children)
       | None -> None))
+  (* props that are a JavaScript array: an ordinary call *)
+  | Texp_record {representation = Record_array} -> None
   | _ -> Some (Jsx_props_spread props)
 
 (* [None] when the call doesn't have the shape the PPX produces; it then
@@ -1418,7 +1418,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_field (arg, _, lbl) -> (
     let targ = transl_exp arg in
     match lbl.lbl_repres with
-    | Record_regular ->
+    | Record_regular | Record_array ->
       prim
         ~primitive:
           (Pfield (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))
@@ -1438,7 +1438,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
   | Texp_setfield (arg, _, lbl, newval) ->
     let access =
       match lbl.lbl_repres with
-      | Record_regular ->
+      | Record_regular | Record_array ->
         Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl.lbl_runtime_name)
       | Record_inlined _ ->
         Psetfield
@@ -1716,7 +1716,7 @@ and transl_jsx_element loc
         match init with
         | Some _ when copy_fields ->
           (* the props the literal leaves out are copied from [init] *)
-          fields_by_position fields |> Array.to_list
+          fields_by_position fields
           |> List.filter_map (fun ((lbl : label_description), value) ->
               match value with
               | Some value -> written lbl value
@@ -1772,9 +1772,14 @@ and transl_record loc env fields repres opt_init_expr =
      it is optional. *)
   let lbl_all = all_labels fields in
   let field_shape () =
-    lbl_all
-    |> Array.map (fun (lbl : Types.label_description) ->
-        (lbl.lbl_runtime_name, lbl.lbl_optional))
+    (* Filled in place: [Array.map] over more than 256 labels would force a
+       minor collection. *)
+    let shape = Array.make (Array.length lbl_all) ("", false) in
+    Array.iteri
+      (fun i (lbl : Types.label_description) ->
+        shape.(i) <- (lbl.lbl_runtime_name, lbl.lbl_optional))
+      lbl_all;
+    shape
   in
   let field_names () =
     lbl_all
@@ -1786,8 +1791,8 @@ and transl_record loc env fields repres opt_init_expr =
       (* Allocate new record with given fields (and remaining fields
          taken from init_expr if any *)
       let init_id = Ident.create "init" in
-      let lv =
-        Array.mapi
+      let ll =
+        List.mapi
           (fun i (lbl, value) ->
             match (value, opt_init_expr) with
             | Some expr, _ -> transl_exp expr
@@ -1796,7 +1801,7 @@ and transl_record loc env fields repres opt_init_expr =
             | None, Some _ ->
               let access =
                 match repres with
-                | Record_regular ->
+                | Record_regular | Record_array ->
                   Pfield (i, Lambda.fld_record lbl.lbl_runtime_name)
                 | Record_inlined _ ->
                   Pfield (i, Lambda.fld_record_inline lbl.lbl_runtime_name)
@@ -1808,7 +1813,6 @@ and transl_record loc env fields repres opt_init_expr =
               prim ~primitive:access ~args:[var init_id] loc)
           (fields_by_position fields)
       in
-      let ll = Array.to_list lv in
       let mut =
         if Array.exists (fun lbl -> lbl.lbl_mut = Mutable) lbl_all then Mutable
         else Immutable
@@ -1818,8 +1822,12 @@ and transl_record loc env fields repres opt_init_expr =
           if mut = Mutable then raise Not_constant;
           let cl = List.map extract_constant ll in
           match repres with
-          | Record_regular ->
-            const (Const_block (Lambda.blk_record (field_shape ()) mut, cl))
+          | Record_regular | Record_array ->
+            const
+              (Const_block
+                 ( Lambda.blk_record (field_shape ()) mut
+                     ~array:(repres = Record_array),
+                   cl ))
           | Record_inlined {name; representation} ->
             let runtime =
               match Variant_runtime.representation representation with
@@ -1843,9 +1851,12 @@ and transl_record loc env fields repres opt_init_expr =
           | Record_extension -> raise Not_constant
         with Not_constant -> (
           match repres with
-          | Record_regular ->
+          | Record_regular | Record_array ->
             prim
-              ~primitive:(Pmakeblock (Lambda.blk_record (field_shape ()) mut))
+              ~primitive:
+                (Pmakeblock
+                   (Lambda.blk_record (field_shape ()) mut
+                      ~array:(repres = Record_array)))
               ~args:ll loc
           | Record_inlined {name; representation} ->
             let runtime =
@@ -1896,6 +1907,8 @@ and transl_record loc env fields repres opt_init_expr =
             Psetfield
               (lbl.lbl_pos, Lambda.fld_record_inline_set lbl.lbl_runtime_name)
           | Record_unboxed _ -> assert false
+          (* [record_copies_fields] holds for an array record *)
+          | Record_array -> assert false
           | Record_extension ->
             Psetfield
               ( lbl.lbl_pos + 1,

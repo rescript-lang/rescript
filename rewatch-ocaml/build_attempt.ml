@@ -27,7 +27,6 @@ type pending_work = {
 
 type finalization_state = {
   mutable actions: (unit -> unit) list;
-  mutable artifacts: string list;
   initialized_logs: (string, unit) Hashtbl.t;
   mutable artifacts_cleaned: bool;
   mutable logs_finalized: bool;
@@ -80,7 +79,6 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
     finalization =
       {
         actions = [];
-        artifacts = [];
         initialized_logs = Hashtbl.create 16;
         artifacts_cleaned = false;
         logs_finalized = false;
@@ -106,9 +104,6 @@ let create_retained ~session ~process_poll ~progress ~verbosity =
 
 let register_cleanup attempt action =
   attempt.finalization.actions <- action :: attempt.finalization.actions
-
-let defer_artifact_cleanup attempt paths =
-  attempt.finalization.artifacts <- paths @ attempt.finalization.artifacts
 
 let set_cleanup_result attempt root (result : Build_artifacts.cleanup_result) =
   Hashtbl.replace attempt.package_removed_modules root result.removed_modules;
@@ -153,11 +148,7 @@ let run_all actions =
 let cleanup_artifacts attempt =
   if not attempt.finalization.artifacts_cleaned then (
     attempt.finalization.artifacts_cleaned <- true;
-    run_all
-      (attempt.finalization.actions
-      @ List.map
-          (fun path () -> File_util.remove_file path)
-          attempt.finalization.artifacts))
+    run_all attempt.finalization.actions)
 
 let finalize_logs attempt =
   if not attempt.finalization.logs_finalized then (

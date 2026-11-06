@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/dynamic_import_in_functor.res[0m:[2m6:14-23[0m
+
+  4 [2m│[0m 
+  5 [2m│[0m module Make = (Source: Source) => {
+  [1;31m6[0m [2m│[0m   module L = [1;31mawait List[0m
+  7 [2m│[0m   let length = L.length(Source.values)
+  8 [2m│[0m }
+
+  Await on expression not in an async context

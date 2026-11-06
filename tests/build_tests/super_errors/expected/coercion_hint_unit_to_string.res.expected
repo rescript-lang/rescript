@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/coercion_hint_unit_to_string.res[0m:[2m2:17-19[0m
+
+  1 [2m│[0m let u = (): unit => ()
+  [1;31m2[0m [2m│[0m let s: string = [1;31mu()[0m
+  3 [2m│[0m 
+
+  This has type: [1;31munit[0m
+  But it's expected to have type: [1;33mstring[0m

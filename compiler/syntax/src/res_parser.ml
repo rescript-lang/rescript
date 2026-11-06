@@ -19,6 +19,9 @@ type token_cache = {
   mutable available: bool;
   mutable comments: Comment.t list;
   mutable diagnostics: Diagnostics.t list;
+  (* The offset of the first LF between the previous token and this one,
+     outside comments, or -1 *)
+  mutable line_break: int;
 }
 
 (* The logical cursor is the consumed source position, independent of cached
@@ -36,6 +39,7 @@ type t = {
   mutable comments: Comment.t list;
   mutable regions: region_status list;
   mutable warnings: (Location.t * Warnings.t) list;
+  mutable line_break: int;
 }
 
 let make_token_cache scanner end_pos =
@@ -46,6 +50,7 @@ let make_token_cache scanner end_pos =
       available = false;
       comments = [];
       diagnostics = [];
+      line_break = -1;
     }
   in
   scanner.err <-
@@ -63,7 +68,7 @@ let comment_text_for_attribute cache comment =
       (Diagnostics.message "Invalid code point");
     (loc, String_literal.replace_invalid_utf8 txt))
 
-let rec read cache =
+let rec read_token cache =
   let ((start_pos, end_pos, token) as scanned) = Scanner.scan cache.scanner in
   match token with
   | Comment c when not (Comment.is_doc_comment c || Comment.is_module_comment c)
@@ -76,7 +81,7 @@ let rec read cache =
       | _ -> false);
     cache.comments <- c :: cache.comments;
     cache.scanned <- scanned;
-    read cache
+    read_token cache
   | _ ->
     let scanned =
       match token with
@@ -92,6 +97,14 @@ let rec read cache =
     cache.scanned <- scanned;
     cache.available <- true;
     scanned
+
+(* Read the next token with the comments before it *)
+let read cache =
+  let scanner = cache.scanner in
+  scanner.line_break <- -1;
+  let scanned = read_token cache in
+  cache.line_break <- scanner.line_break;
+  scanned
 
 let[@inline] current p =
   let cache = p.current in
@@ -151,6 +164,7 @@ let next p =
   let cache = p.current in
   assert (token <> Token.Eof);
   if cache.comments <> [] || cache.diagnostics <> [] then commit_effects p cache;
+  if p.line_break < 0 then p.line_break <- cache.line_break;
   p.cursor <- end_pos;
   cache.available <- false;
   if p.spare.available then (
@@ -186,7 +200,9 @@ let end_region p =
 let warn p loc warning = p.warnings <- (loc, warning) :: p.warnings
 
 let finish p =
-  if peek p = Token.Eof then commit_effects p p.current;
+  if peek p = Token.Eof then (
+    commit_effects p p.current;
+    if p.line_break < 0 then p.line_break <- p.current.line_break);
   List.iter
     (fun (loc, warning) -> Location.prerr_warning loc warning)
     (List.rev p.warnings);
@@ -214,6 +230,7 @@ let next_template_literal_token p =
      lookahead: it may already have interpreted the text as code. *)
   p.spare.available <- false;
   next_unsafe p;
+  cache.line_break <- -1;
   cache.scanned <- Scanner.scan_template_literal_token cache.scanner;
   cache.available <- true
 
@@ -244,6 +261,7 @@ let make source filename =
     comments = [];
     regions = [Report];
     warnings = [];
+    line_break = -1;
   }
 
 let leave_breadcrumb p circumstance =
@@ -278,6 +296,8 @@ let with_checkpoint p ~commit callback =
   let line_offset = scanner.line_offset in
   let lnum = scanner.lnum in
   let available = cache.available in
+  let cache_line_break = cache.line_break in
+  let line_break = p.line_break in
   let pending_comments = cache.comments in
   let pending_diagnostics = cache.diagnostics in
   let position = p.cursor in
@@ -304,6 +324,8 @@ let with_checkpoint p ~commit callback =
     scanner.lnum <- lnum;
     cache.scanned <- scanned;
     cache.available <- available;
+    cache.line_break <- cache_line_break;
+    p.line_break <- line_break;
     if cache.comments != pending_comments then
       cache.comments <- pending_comments;
     if cache.diagnostics != pending_diagnostics then
@@ -320,6 +342,11 @@ let with_checkpoint p ~commit callback =
   match result with
   | Ok value -> value
   | Error (exn, backtrace) -> Printexc.raise_with_backtrace exn backtrace
+
+let newline p =
+  let index = p.line_break in
+  if index > 0 && String.unsafe_get p.source (index - 1) = '\r' then "\r\n"
+  else "\n"
 
 let lookahead p callback = with_checkpoint p ~commit:(fun _ -> false) callback
 let try_parse p callback = with_checkpoint p ~commit:Option.is_some callback

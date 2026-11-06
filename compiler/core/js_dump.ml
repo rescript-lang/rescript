@@ -222,8 +222,9 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Caml_block
       ( _,
         _,
-        ( Blk_record _ | Blk_module _ | Blk_poly_var | Blk_extension
-        | Blk_record_ext _ | Blk_record_inlined _ | Blk_constructor _ ) )
+        ( Blk_record {array = false}
+        | Blk_module _ | Blk_poly_var | Blk_extension | Blk_record_ext _
+        | Blk_record_inlined _ | Blk_constructor _ ) )
   | Object _ ->
     true
   | Json_literal _ -> true
@@ -394,8 +395,11 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
             Only for a ReScript callee of exactly this arity: [Call_na] is an
             FFI name, where the wrapper truncates extra arguments the JS callee
             would otherwise see, defers the name's resolution to call time, and
-            keeps it from capturing a local of the same name. *)
-         (not is_method) && params_match_call l ls v -> (
+            keeps it from capturing a local of the same name. Never for an
+            async function or one with a directive, which must stay a
+            function, see [Lambda.lfunction_can_be_inlined]. *)
+         (not is_method) && (not async) && directive = None
+         && params_match_call l ls v -> (
     match fn_state with
     | Name_top i | Name_non_top i ->
       let cxt = pp_var_assign cxt f i in
@@ -857,9 +861,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
             (Ext_list.map_combine fields el (fun x ->
                  Js_op.Lit (Ext_ident.convert x)))))
   (*name convention of Record is slight different from modules*)
-  | Caml_block (el, _, Blk_record {fields}) ->
-    if Lambda.record_fields_are_array fields then
-      expression_desc cxt ~level f (Array el)
+  | Caml_block (el, _, Blk_record {fields; array}) ->
+    if array then expression_desc cxt ~level f (Array el)
     else
       let fields =
         Ext_list.array_list_filter_map fields el (fun (f, opt) x ->

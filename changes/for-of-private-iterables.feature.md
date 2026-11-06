@@ -1,1 +1,0 @@
-- `for..of` and `for await..of` accept generators and other iterator types directly, without `asIterable`.

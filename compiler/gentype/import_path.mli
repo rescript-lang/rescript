@@ -9,4 +9,7 @@ val dump : t -> string
 val emit : t -> string
 val from_module : dir:string -> import_extension:string -> Module_name.t -> t
 val from_string_unsafe : string -> t
-val to_cmt : config:Config.t -> output_file_relative:string -> t -> string
+
+val to_cmt : config:Config.t -> t -> string
+(** The .cmt of an imported module of the same package, relative to the
+    compiler's working directory, or "" for a module of another package. *)

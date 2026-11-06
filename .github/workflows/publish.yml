@@ -112,7 +112,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: "@(binaries-*|lib-ocaml)"
+          pattern: "@(binaries-*|lib-rescript)"
 
       - name: Move artifacts into packages
         run: .github/workflows/moveArtifacts.sh
@@ -178,6 +178,14 @@ jobs:
           fi
         shell: bash
         working-directory: rescript-lang.org
+
+      # The website is checked out inside this repository, so its Yarn also
+      # reads this repository's .yarnrc.yml and rejects the settings it does
+      # not know yet. The steps that need this config are done.
+      - name: Hide the compiler's Yarn config from the website
+        if: steps.api-docs-diff.outputs.changed == 'true'
+        run: mv .yarnrc.yml "$RUNNER_TEMP/rescript.yarnrc.yml"
+        shell: bash
 
       - name: Use Node.js for website
         if: steps.api-docs-diff.outputs.changed == 'true'

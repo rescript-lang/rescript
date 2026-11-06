@@ -1,19 +1,16 @@
-# OCaml rewatch agent instructions
+# Rewatch agent instructions
 
 Read these alongside the [root instructions](../AGENTS.md) and the
-[OCaml rewatch guide](README.md). Paths and commands are relative to the
+[Rewatch guide](README.md). Paths and commands are relative to the
 repository root.
 
-## Compatibility with Rust rewatch
+## Observable behavior
 
-- Both implementations ship and run the same `rewatch/tests` suite. A change in
-  observable behavior (output, exit status, generated files, configuration
-  handling) must either be made in [`rewatch`](../rewatch) too, or be added to
-  the intentional differences in the README and covered by a test.
-- Don't edit the shared tests or their snapshots to make this implementation
-  pass. Fix the implementation, or document the difference.
-- When master changes Rust rewatch, check whether the same change is needed
-  here.
+- A change in observable behavior (output, exit status, generated files,
+  configuration handling) needs a test, and a changelog fragment when users
+  can notice it.
+- Only update the snapshots in `rewatch/tests` and `rewatch-ocaml/tests` for an
+  intended output change, never just to make a failing test pass.
 
 ## Platforms
 
@@ -38,6 +35,7 @@ repository root.
 - Unit tests: `dune runtest tests/rewatch_ounit_tests`.
 - Focused end-to-end tests:
   `sh rewatch-ocaml/tests/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"`.
-- Shared suite: `make test-rewatch`. Run it for any change to build behavior.
-- Add a test for every bug fix. Prefer the shared suite when Rust behaves the
-  same. Poll for observable conditions instead of sleeping.
+- Integration suite: `make test-rewatch`. Run it for any change to build
+  behavior.
+- Add a test for every bug fix. Prefer the integration suite in
+  `rewatch/tests`. Poll for observable conditions instead of sleeping.

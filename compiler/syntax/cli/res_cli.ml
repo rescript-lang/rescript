@@ -70,17 +70,17 @@ module Cli_arg_processor = struct
     in
     let source = lazy (Ext_io.load_file filename) in
     let load_source () = Lazy.force source in
+    (* The engine for the newline of the parsed source *)
     let print_engine =
       match target with
-      | "ml" -> Res_driver_ml_printer.print_engine
-      | "ast" -> Res_ast_debugger.print_engine
-      | "comments" -> Res_ast_debugger.comments_print_engine
-      | "tokens" -> Res_token_debugger.token_print_engine
+      | "ml" -> Fun.const Res_driver_ml_printer.print_engine
+      | "ast" -> Fun.const Res_ast_debugger.print_engine
+      | "comments" -> Fun.const Res_ast_debugger.comments_print_engine
+      | "tokens" -> Fun.const Res_token_debugger.token_print_engine
       | "res" ->
         (* Keep the line endings of a CRLF file, like bsc -format *)
-        Res_driver.print_engine
-          ~newline:(Res_line_endings.newline (load_source ()))
-      | "doc" -> Res_ast_debugger.doc_print_engine
+        fun newline -> Res_driver.print_engine ~newline
+      | "doc" -> Fun.const Res_ast_debugger.doc_print_engine
       | target ->
         print_endline
           ("-print needs to be either ml, ast, comments, tokens, doc or res. \
@@ -93,7 +93,7 @@ module Cli_arg_processor = struct
 
     (* Special case for tokens - bypass parsing entirely *)
     if target = "tokens" then
-      print_engine.print_implementation ~width ~filename ~comments:[] []
+      (print_engine "\n").print_implementation ~width ~filename ~comments:[] []
     else if process_interface then
       let parse_result =
         Res_driver.parse_interface_from_source ~display_filename:filename
@@ -103,7 +103,7 @@ module Cli_arg_processor = struct
         Res_diagnostics.print_report parse_result.diagnostics
           parse_result.source;
         if recover then
-          print_engine.print_interface ~width ~filename
+          (print_engine parse_result.newline).print_interface ~width ~filename
             ~comments:parse_result.comments parse_result.parsetree
         else exit 1)
       else
@@ -120,7 +120,7 @@ module Cli_arg_processor = struct
         let parsetree =
           Jsx_ppx.rewrite_signature ~jsx_version ~jsx_module parsetree
         in
-        print_engine.print_interface ~width ~filename
+        (print_engine parse_result.newline).print_interface ~width ~filename
           ~comments:parse_result.comments parsetree
     else
       let parse_result =
@@ -131,8 +131,8 @@ module Cli_arg_processor = struct
         Res_diagnostics.print_report parse_result.diagnostics
           parse_result.source;
         if recover then
-          print_engine.print_implementation ~width ~filename
-            ~comments:parse_result.comments parse_result.parsetree
+          (print_engine parse_result.newline).print_implementation ~width
+            ~filename ~comments:parse_result.comments parse_result.parsetree
         else exit 1)
       else
         let parsetree =
@@ -148,8 +148,8 @@ module Cli_arg_processor = struct
         let parsetree =
           Jsx_ppx.rewrite_implementation ~jsx_version ~jsx_module parsetree
         in
-        print_engine.print_implementation ~width ~filename
-          ~comments:parse_result.comments parsetree
+        (print_engine parse_result.newline).print_implementation ~width
+          ~filename ~comments:parse_result.comments parsetree
   [@@raises exit]
 end
 

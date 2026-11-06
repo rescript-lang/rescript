@@ -6,6 +6,7 @@ let () =
     >::: [
            Build_attempt_tests.tests;
            Build_artifacts_tests.tests;
+           Build_file_tests.tests;
            Build_state_tests.tests;
            Clean_tests.tests;
            Cli_tests.tests;

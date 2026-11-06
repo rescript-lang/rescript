@@ -15,10 +15,13 @@ let ast_header path =
   with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
 
 let cleanup_extensions =
-  [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"; ".res"; ".resi"; ".mlmap"]
+  [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"; ".mlmap"]
 
+(* Compiler artifacts, and files a build killed while it published one left
+   behind. *)
 let is_managed_basename basename =
   List.exists (Filename.check_suffix basename) cleanup_extensions
+  || String.starts_with ~prefix:File_util.atomic_write_prefix basename
 
 let state_extension = function
   | ".ast" | ".iast" | ".cmi" | ".cmt" -> true
@@ -31,23 +34,28 @@ let read_directory directory =
   in
   let files =
     names
-    |> List.filter (fun name ->
-        List.mem (Filename.extension name) cleanup_extensions)
+    |> List.filter is_managed_basename
     |> List.map (Filename.concat directory)
   in
-  let state_entries =
-    names
-    |> List.filter_map (fun name ->
-        if not (state_extension (Filename.extension name)) then None
-        else
-          let path = Filename.concat directory name in
-          try
-            let metadata = Unix.stat path in
-            if metadata.Unix.st_kind = Unix.S_DIR then None
-            else Some ({path; modified = metadata.Unix.st_mtime}, name)
-          with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None)
+  let state_names =
+    List.filter (fun name -> state_extension (Filename.extension name)) names
   in
-  (files, state_entries)
+  (files, state_names)
+
+(* Runs on any domain: one [stat] per artifact, and a header read per AST. *)
+let read_state_entry directory name =
+  let path = Filename.concat directory name in
+  try
+    let metadata = Unix.stat path in
+    if metadata.Unix.st_kind = Unix.S_DIR then None
+    else
+      let header =
+        match Filename.extension name with
+        | ".ast" | ".iast" -> ast_header path
+        | _ -> None
+      in
+      Some (({path; modified = metadata.Unix.st_mtime}, name), header)
+  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
 
 let module_key name =
   name |> Filename.remove_extension |> String.capitalize_ascii
@@ -71,23 +79,41 @@ let create directories =
       cmt_by_module = Hashtbl.create 64;
     }
   in
+  let directories =
+    directories
+    |> List.sort_uniq String.compare
+    |> List.map (fun directory -> (directory, read_directory directory))
+  in
+  (* A large project has thousands of artifacts, and reading them one after
+     another was most of a small rebuild. *)
+  let state_entries =
+    directories
+    |> List.concat_map (fun (directory, (_, state_names)) ->
+        List.map (fun name -> (directory, name)) state_names)
+    |> Parallel.map (fun (directory, name) -> read_state_entry directory name)
+    |> Array.of_list
+  in
+  (* The entries keep the order of the names, so each directory's follow the
+     previous directory's. *)
+  let next_entry = ref 0 in
   directories
-  |> List.sort_uniq String.compare
-  |> List.iter (fun directory ->
-      let files, state_entries = read_directory directory in
+  |> List.iter (fun (directory, (files, state_names)) ->
+      let count = List.length state_names in
+      let state_entries =
+        Array.sub state_entries !next_entry count
+        |> Array.to_list |> List.filter_map Fun.id
+      in
+      next_entry := !next_entry + count;
       Hashtbl.replace state.files_by_directory directory files;
       let ast_sources =
         state_entries
-        |> List.filter_map (fun (entry, name) ->
-            match Filename.extension name with
-            | ".ast" | ".iast" -> (
-              match ast_header entry.path with
-              | Some header ->
-                Option.map
-                  (fun source -> (entry, source, header.dependencies))
-                  header.Ast_header.source
-              | None -> None)
-            | _ -> None)
+        |> List.filter_map (fun ((entry, _), header) ->
+            match header with
+            | Some header ->
+              Option.map
+                (fun source -> (entry, source, header.Ast_header.dependencies))
+                header.Ast_header.source
+            | None -> None)
       in
       Hashtbl.replace state.ast_sources_by_directory directory
         (List.map
@@ -99,7 +125,9 @@ let create directories =
           Hashtbl.replace state.ast_dependencies entry.path dependencies;
           Hashtbl.replace state.ast_by_source (source_key source) entry)
         ast_sources;
-      List.iter (add_module_artifact state) state_entries);
+      List.iter
+        (fun (entry, _) -> add_module_artifact state entry)
+        state_entries);
   state
 
 let files state directory =

@@ -10,12 +10,12 @@ type item =
 let crash = () => JsError.throwWithMessage("source map test")
 
 let debugStatement = () => {
-  %debugger
+  debugger()
   add(1, 2)
 }
 
 let debugValue = () => {
-  let v = %debugger
+  let v = debugger()
   ignore(v)
   add(3, 4)
 }

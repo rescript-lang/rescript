@@ -1,0 +1,19 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/external_strings_printed_as_written.res[0m:[2m5:5-8:1[0m
+
+  3 [2m│[0m   @module("ünïcode") @scope("ëxtra")
+  4 [2m│[0m   external f: int => int = "f"
+  [1;31m5[0m [2m│[0m } = [1;31m{[0m
+  [1;31m6[0m [2m│[0m [1;31m  @module("ünïcode") @scope("ëxtra")[0m
+  [1;31m7[0m [2m│[0m [1;31m  external f: string => int = "f"[0m
+  [1;31m8[0m [2m│[0m [1;31m}[0m
+  9 [2m│[0m 
+
+  Signature mismatch:
+  
+  Actual declaration ([36m/.../fixtures/external_strings_printed_as_written.res[0m:[2m6:3-7:33[0m):
+    @val @module("ünïcode") @scope("ëxtra") external f: string => int = "f"
+  
+  Expected declaration ([36m/.../fixtures/external_strings_printed_as_written.res[0m:[2m3:3-4:30[0m):
+    @val @module("ünïcode") @scope("ëxtra") external f: int => int = "f"

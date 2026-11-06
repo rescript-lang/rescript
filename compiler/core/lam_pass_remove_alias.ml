@@ -54,6 +54,11 @@ let is_const_some (cst : Lambda.structured_constant) : bool =
 let max_inline_depth = 4
 
 let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
+  (* Inlining keeps the reads of assigned variables in order (see
+     [Lam_beta_reduce]). Only [Lam_pass_sroa], which runs later, makes
+     [Lassign]s now, so this is usually empty; computing it here keeps the
+     inlining sound if that changes. *)
+  let meta = {meta with assignable = Lambda_traverse.assigned_variables lam} in
   let inline_depth = ref 0 in
   let rec simpl (lam : Lambda.t) : Lambda.t =
     match lam with
@@ -161,7 +166,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
                    | Some v -> v <> Parameter
                    | None -> true)
                  | _ -> true)
-             && Lam_analysis.lfunction_can_be_inlined lfunction ->
+             && Lambda.lfunction_can_be_inlined lfunction ->
         simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
       | _ ->
         let fn = simpl l1 in
@@ -190,7 +195,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
                    ( Lfunction ({params; body; attr = {is_a_functor}} as m),
                      rec_flag );
              })
-        when Lam_analysis.lfunction_can_be_inlined m ->
+        when Lambda.lfunction_can_be_inlined m ->
         if Ext_list.same_length ap_args params then
           if is_a_functor (* && (Set_ident.mem meta.export_idents v) && false *)
           then
@@ -240,7 +245,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when Ext_list.same_length params args
-           && Lam_analysis.lfunction_can_be_inlined lfunction ->
+           && Lambda.lfunction_can_be_inlined lfunction ->
       simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
     | Lstringswitch (l, sw, d) -> (
       let known_constant =

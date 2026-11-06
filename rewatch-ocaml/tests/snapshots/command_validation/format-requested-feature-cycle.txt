@@ -1,0 +1,3 @@
+status: 1
+--- stderr
+Invalid features for package 'dep': Cycle detected in `features` map: a -> b -> a

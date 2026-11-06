@@ -6,15 +6,12 @@
 
 const fs = require("node:fs/promises");
 const { defineConfig } = require("@yarnpkg/types");
-const { exec } = require("node:child_process");
-const util = require("node:util");
-const execPromise = util.promisify(exec);
 
 /**
  * @param {Yarn.Constraints.Context} ctx
  */
 async function enforceCompilerMeta({ Yarn }) {
-  const EXPECTED_VERSION = "13.0.0-alpha.7";
+  const EXPECTED_VERSION = "13.0.0-alpha.8";
 
   for (const workspace of Yarn.workspaces()) {
     const { ident } = workspace.pkg;
@@ -73,31 +70,6 @@ async function enforceCompilerMeta({ Yarn }) {
   const { compilerVersionFile } = await import("#dev/paths");
   await enforceMlVersionFile(compilerVersionFile);
   await enforceMlVersionFile("rewatch-ocaml/rewatch_version.ml");
-
-  const rewatchCargoFile = "rewatch/Cargo.toml";
-  const rewatchCargoContent = await fs.readFile(rewatchCargoFile, "utf8");
-  const rewatchVersionPattern = /^version = "(?<version>[^"]+)"$/m;
-
-  if (process.argv.includes("--fix")) {
-    await fs.writeFile(
-      rewatchCargoFile,
-      rewatchCargoContent.replace(
-        rewatchVersionPattern,
-        `version = "${EXPECTED_VERSION}"`,
-      ),
-    );
-    await execPromise("cargo check", { cwd: "rewatch" });
-  } else {
-    const rewatchVersionMatch = rewatchCargoContent.match(
-      rewatchVersionPattern,
-    );
-    const foundRewatchVersion = rewatchVersionMatch?.groups?.version;
-    if (foundRewatchVersion !== EXPECTED_VERSION) {
-      Yarn.workspace().error(
-        `rewatch/Cargo.toml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundRewatchVersion}.`,
-      );
-    }
-  }
 }
 
 module.exports = defineConfig({

@@ -1,1 +1,0 @@
-- Speed up `rescript` builds by compiling modules inside the build system on several CPU cores, instead of starting `bsc` for every file. https://github.com/rescript-lang/rescript/pull/8781

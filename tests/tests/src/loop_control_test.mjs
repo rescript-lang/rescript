@@ -226,6 +226,52 @@ Mocha.describe("Loop_control_test", () => {
       3
     ], Stdlib_List.toArray(Stdlib_List.reverse(values)));
   });
+  Mocha.test("while condition with statements, and break and continue", () => {
+    let values = /* [] */0;
+    let i = 0;
+    while (true) {
+      let next = i + 1 | 0;
+      i = next;
+      if (next >= 6) {
+        break;
+      }
+      if (i === 2) {
+        continue;
+      }
+      if (i === 5) {
+        break;
+      }
+      values = {hd: i, tl: values};
+    };
+    Test_utils.eq("File \"loop_control_test.res\", line 224, characters 7-14", [
+      1,
+      3,
+      4
+    ], Stdlib_List.toArray(Stdlib_List.reverse(values)));
+  });
+  Mocha.test("break in the condition of an inner while targets the outer loop", () => {
+    let values = /* [] */0;
+    let i = 0;
+    loop_3: while (i < 6) {
+      i = i + 1 | 0;
+      let j = 0;
+      while (true) {
+        if (i === 4) {
+          break loop_3;
+        }
+        j = j + 1 | 0;
+        if (j >= i) {
+          break;
+        }
+      };
+      values = {hd: j, tl: values};
+    };
+    Test_utils.eq("File \"loop_control_test.res\", line 248, characters 7-14", [
+      1,
+      2,
+      3
+    ], Stdlib_List.toArray(Stdlib_List.reverse(values)));
+  });
 });
 
 /*  Not a pure module */

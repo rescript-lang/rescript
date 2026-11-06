@@ -64,7 +64,7 @@ Options:
 
   createInterface: print to stdout the interface file for src/MyFile.res
 
-    ./rescript-editor-analysis.exe createInterface src/MyFile.res lib/bs/src/MyFile.cmi
+    ./rescript-editor-analysis.exe createInterface src/MyFile.res lib/rescript/MyFile.cmi
 
   format: print to stdout the formatted version of the provided file
 
@@ -127,10 +127,10 @@ let main () =
     let uri = Uri.from_path root_path in
     match Packages.find_root ~uri (Hashtbl.create 0) with
     | Some (`Bs root_path) -> (
-      match Build_system.get_lib_bs root_path with
+      match Build_system.get_artifact_dir root_path with
       | None -> print_endline "\"ERR\""
-      | Some lib_bs ->
-        Cache.delete_cache (Cache.target_file_from_lib_bs lib_bs);
+      | Some artifact_dir ->
+        Cache.delete_cache (Cache.target_file_from_artifact_dir artifact_dir);
         print_endline "\"OK\"")
     | _ -> print_endline "\"ERR: Did not find root \"")
   | [_; "completion"; path; line; col; current_file] ->

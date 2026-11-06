@@ -309,6 +309,60 @@ let failed_decoding_closes_files_tests _context =
         done;
         assert_equal ~printer:string_of_int before (open_files ()))
 
+(* An AST's header reads the same from a prefix of the file that holds it as
+   from the whole file, and a file without one fails to load like one cut
+   short by a killed build. *)
+let ast_header_tests _context =
+  with_temp_dir "rewatch-driver-ast-header-" (fun root ->
+      let block = "\nBelt\nJs\n" in
+      let length = Bytes.create 4 in
+      Bytes.set_int32_be length 0 (Int32.of_int (String.length block));
+      let header = Bytes.to_string length ^ block ^ "/src/A.res\n" in
+      let contents = header ^ Marshal.to_string ([] : Parsetree.structure) [] in
+      (match Binary_ast.read_header contents with
+      | Some found ->
+        assert_equal ["Belt"; "Js"]
+          (Binary_ast.header_dependencies contents found);
+        assert_equal "/src/A.res" (Binary_ast.header_source contents found);
+        for length = 0 to String.length contents do
+          assert_equal
+            ~msg:(Printf.sprintf "the first %d bytes" length)
+            (if length < String.length header then None else Some found)
+            (Binary_ast.read_header ~length contents)
+        done
+      | None -> assert_failure "a whole AST has a header");
+      let read_ast path =
+        Compiler_request_state.with_fresh ~cwd:root (fun () ->
+            let ast : Parsetree.structure =
+              Binary_ast.read_ast_exn ~fname:path Binary_ast.Ml
+            in
+            (ast, Location.get_input_name ()))
+      in
+      let ast = Filename.concat root "A.ast" in
+      write_file ast contents;
+      assert_equal ([], "/src/A.res") (read_ast ast);
+      List.iter
+        (fun (name, damaged) ->
+          let path = Filename.concat root name in
+          write_file path damaged;
+          assert_raises ~msg:name End_of_file (fun () -> read_ast path))
+        [
+          ("Short.ast", "\x00\x00");
+          ("Negative.ast", "\xff\xff\xff\xff\nA\n/a.res\n");
+          ("Huge.ast", "\x3f\xff\xff\xffshort");
+          ("Unterminated.ast", String.sub header 0 (String.length header - 1));
+          ("HeaderOnly.ast", header);
+          ("Truncated.ast", String.sub contents 0 (String.length contents - 1));
+        ];
+      let cmj = Filename.concat root "A.cmj" in
+      let value = Marshal.to_string "a marshalled value" [] in
+      write_file cmj
+        (String.make Ext_digest.length '0'
+        ^ String.sub value 0 (String.length value - 1));
+      assert_raises ~msg:"a truncated .cmj" End_of_file (fun () ->
+          Compiler_request_state.with_fresh ~cwd:root (fun () ->
+              Js_cmj_format.from_file cmj)))
+
 (* Writers of compiler artifacts close their file when writing fails, as on a
    full disk. *)
 let failed_writing_closes_files_tests _context =
@@ -1612,7 +1666,7 @@ let concurrent_request_isolation_tests _context =
 let concurrent_async_context_tests _context =
   with_temp_dir "rewatch-driver-async-domains-" (fun root ->
       let runtime = Runtime_package.get_path () in
-      let runtime_ocaml = Filename.concat runtime "lib/ocaml" in
+      let runtime_artifacts = Filename.concat runtime "lib/rescript" in
       let async_source =
         "external get: unit => promise<int> = \"get\"\n"
         ^ (List.init 80 (fun index ->
@@ -1646,7 +1700,7 @@ let concurrent_async_context_tests _context =
               List.iter
                 (fun input ->
                   let _, result =
-                    run directory ~extra:["-I"; runtime_ocaml] input
+                    run directory ~extra:["-I"; runtime_artifacts] input
                   in
                   if result.exit_code <> 0 then
                     assert_failure (Printf.sprintf "%s: %s" input result.stderr))
@@ -1665,6 +1719,7 @@ let suites =
          "captured_line_endings" >:: captured_line_endings_tests;
          "captured_binary_output" >:: captured_binary_output_tests;
          "failed_decoding_closes_files" >:: failed_decoding_closes_files_tests;
+         "ast_header" >:: ast_header_tests;
          "gentype_source_lookup" >:: gentype_source_lookup_tests;
          "standalone_output" >:: standalone_output_tests;
          "ctype_level_isolation" >:: ctype_level_isolation_tests;

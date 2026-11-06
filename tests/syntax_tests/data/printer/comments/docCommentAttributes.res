@@ -31,3 +31,17 @@ type t = | @a /** Doc comment */ A | B
 type r = {@a /** Doc comment */ x: int}
 type p = [@a /** Doc comment */ #A | #B]
 type q = @a /** Doc comment */ int
+
+// Several doc comments on a constructor, a variant spread and a tag
+type base = A
+type t = | /** a */ /** b */ ...base | C
+type t = | C | /** a */ /** b */ ...base
+type t = /** a */ /** b */ ...base | C
+type t = | /** a */ /** b */ @attr ...base | C
+type t = | C | /** a */ /** b */ @attr ...base
+type t = | C | @attr /** a */ /** b */ ...base
+type t = | /** a */ /** b */ /** c */ A | C
+type t = | C | /** a */ /** b */ A
+type t = private | C | /** a */ /** b */ A
+type p = [ | /** a */ /** b */ #A | #C]
+type p = [ | #C | /** a */ /** b */ #A]

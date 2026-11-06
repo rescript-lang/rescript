@@ -186,7 +186,7 @@ let make_structure_item ~ns cunit : Parsetree.structure_item =
        (Mod.ident {txt = Lident (Ext_namespace_encode.make ~ns cunit); loc}))
 
 (** decoding [.mlmap]
-    keep in sync with [gen_mlmap] in rewatch/src/build/namespaces.rs
+    keep in sync with [namespace_task] in rewatch-ocaml/compiler_process.ml
 *)
 let implementation_map ppf sourcefile =
   let () = (Js_config.current ()).cmj_only := true in

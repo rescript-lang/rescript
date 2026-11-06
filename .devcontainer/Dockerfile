@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/rust:2-1-trixie
+FROM mcr.microsoft.com/devcontainers/base:2-trixie
 LABEL org.opencontainers.image.authors="Christoph Knittel <ck@cca.io>"
 LABEL org.opencontainers.image.description="Docker image for ReScript development."
 

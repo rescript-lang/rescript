@@ -366,10 +366,11 @@ let dummy_obj ?comment (info : Lambda.tag_info) : t =
      for other it is [[]]
   *)
   match info with
-  | Blk_record _ | Blk_module _ | Blk_constructor _ | Blk_record_inlined _
-  | Blk_poly_var | Blk_extension | Blk_record_ext _ ->
+  | Blk_record {array = false}
+  | Blk_module _ | Blk_constructor _ | Blk_record_inlined _ | Blk_poly_var
+  | Blk_extension | Blk_record_ext _ ->
     {comment; source_loc = None; expression_desc = Object []}
-  | Blk_tuple | Blk_module_export _ ->
+  | Blk_record {array = true} | Blk_tuple | Blk_module_export _ ->
     {comment; source_loc = None; expression_desc = Array []}
 
 (* TODO: complete

@@ -808,6 +808,11 @@ module E = struct
       in
       let expression =
         match parts with
+        | [only] ->
+          (* The constant stands for the whole template, so it takes the
+             template's location, which includes the closing backquote.
+             [Ast_mapper_from0] derives the segment's location from it. *)
+          {only with pexp_loc = loc}
         | first :: rest -> List.fold_left concat first rest
         | [] -> assert false
       in
@@ -873,6 +878,9 @@ module E = struct
     | Pexp_raw {kind; name_loc; source} ->
       extension ~loc ~attrs
         (raw_extension sub ~name:(Ast_raw.extension_name kind) ~name_loc source)
+    | Pexp_todo {name_loc; message} ->
+      extension ~loc ~attrs
+        (sub.extension sub (Ast_todo.to_extension ~name_loc message))
     | Pexp_await e ->
       (* Single v0 attribute slot for two nodes: the await node's own
          attributes go in front of the [res.await] marker, the inner

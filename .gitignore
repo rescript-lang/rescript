@@ -49,7 +49,7 @@ node_modules
 _coverage/
 bisect*.coverage
 
-lib/ocaml
+lib/rescript
 tests/build_tests/*/lib/
 #ignore temporary directory
 *.goog.js
@@ -70,9 +70,6 @@ packages/dev-playground/lib/
 packages/dev-playground/src/*.res.mjs
 packages/dev-playground/public/playground-bundles/*
 !packages/dev-playground/public/playground-bundles/.gitignore
-
-rewatch/target/
-rewatch/rewatch
 
 tests/tools_tests/**/*.res.js
 tests/tools_tests/lib

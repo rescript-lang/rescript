@@ -3636,6 +3636,10 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
            ~name:(Ast_raw.extension_name kind)
            ~name_loc source)
         cmt_tbl
+    | Pexp_todo {name_loc; message} ->
+      print_extension ~state ~at_module_lvl:false
+        (Ast_todo.to_extension ~name_loc message)
+        cmt_tbl
     | Pexp_regexp {pattern; flags} -> Doc.text ("/" ^ pattern ^ "/" ^ flags)
     | Pexp_template {source_segments; values} ->
       print_template_literal ~state ~source_segments ~values cmt_tbl
@@ -6477,6 +6481,7 @@ let print_type_params params = print_type_params ~state:(State.init ()) params
 let print_typ_expr t = print_typ_expr ~state:(State.init ()) t
 let print_expression e = print_expression ~state:(State.init ()) e
 let print_pattern p = print_pattern ~state:(State.init ()) p
+let print_attribute a t = fst (print_attribute ~state:(State.init ()) a t)
 
 let implementation_doc (s : Parsetree.structure) ~comments =
   let cmt_tbl = Comment_table.make () in

@@ -281,12 +281,12 @@ let compiler_job_tests =
       write_file path {|{"name":"compiler-jobs","gentypeconfig":{}}|};
       let config = Config.load path in
       let source = Filename.concat root "src/A.res" in
-      let build_dir = Filename.concat config.root "lib/bs" in
-      File_util.ensure_dir build_dir;
+      let artifact_dir = Filename.concat config.root "lib/rescript" in
+      File_util.ensure_dir artifact_dir;
       File_util.ensure_dir (Filename.dirname source);
       write_file source "let value = 1\n";
       let parse_job =
-        Compiler_process.parse_request ~build_dir ~config "src/A.res"
+        Compiler_process.parse_request ~artifact_dir ~config "src/A.res"
       in
       let module_ =
         Source.
@@ -298,7 +298,7 @@ let compiler_job_tests =
           }
       in
       let compile_job =
-        Compiler_process.compile_request ~build_dir ~config
+        Compiler_process.compile_request ~artifact_dir ~config
           ~common_args:
             (Compiler_args.compiler_common_arguments ~project_root:config.root
                ~config ~runtime:"runtime" ~dependency_dirs:[] ~watch:false
@@ -312,7 +312,7 @@ let compiler_job_tests =
       in
       check
         (parse_job.Compiler_process.cwd = compile_job.Compiler_process.cwd
-        && parse_job.cwd = build_dir)
+        && parse_job.cwd = artifact_dir)
         "parser and compiler jobs derive the same canonical working directory";
       check
         (argument_after "-bs-project-root" compile_job.args = Some config.root)
@@ -359,7 +359,7 @@ let compiler_argument_tests =
             "-open";
             "Belt";
           ])
-        "parser arguments follow Rust phase ordering";
+        "parser arguments follow phase ordering";
       check
         (Compiler_args.compiler_flags ~watch:false config
         = [
@@ -375,7 +375,7 @@ let compiler_argument_tests =
             "-enable-experimental";
             "LetUnwrap";
           ])
-        "compiler arguments follow Rust phase ordering";
+        "compiler arguments follow phase ordering";
       check
         (Compiler_args.parser_flags
            ~ppx_flags:[["./ppx/local.js"; "--flag"]; ["../shared-ppx"]]
@@ -846,8 +846,8 @@ let build_schema () =
   in
   find (Sys.getcwd ())
 
-(* Like Rust rewatch's test, the schema documents every field that takes
-   effect, except the deprecated aliases. *)
+(* The schema documents every field that takes effect, except the deprecated
+   aliases. *)
 let build_schema_tests _context =
   let open Yojson.Safe.Util in
   let schema = build_schema () in

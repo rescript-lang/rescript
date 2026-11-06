@@ -88,15 +88,6 @@ let run_namespace_jobs (attempt : Build_attempt.t) =
         jobs results);
   List.length jobs
 
-let write_build_ninja (attempt : Build_attempt.t) =
-  (* This empty file is a cache-invalidation marker consumed by editor tooling,
-     not a serialized build plan. Only commands that reconstruct the project
-     graph call this function. *)
-  Build_session.iter_package_plans attempt.session (fun _ package ->
-      let path = Filename.concat package.Package_plan.build_dir "build.ninja" in
-      let channel = open_out_bin path in
-      close_out channel)
-
 let incremental_sources (previous : retained_build) changes =
   (* Reusing the graph is safe only for modifications of already-known source
      paths. Additions, removals, and unknown paths can change module identity or
@@ -165,9 +156,10 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
   let results =
     sources
     |> List.map (fun source ->
-        Compiler_process.parse_request ~build_dir:source.package.build_dir
-          ~config:source.package.compile_config source.source.relative_path)
-    |> Compiler_process.run_requests ?poll:attempt.process_poll
+        ( source.package.artifact_dir,
+          source.package.compile_config,
+          source.source.relative_path ))
+    |> Compiler_process.run_parses ?poll:attempt.process_poll
          ~on_complete:parse_completed
   in
   let affected_modules = Hashtbl.create (List.length sources) in
@@ -195,7 +187,7 @@ let prepare_incremental previous changes (attempt : Build_attempt.t)
       if not changed_parse_failed then
         let raw_dependencies =
           Module_graph.raw_dependencies
-            ~build_dir:package.Package_plan.build_dir
+            ~artifact_dir:package.Package_plan.artifact_dir
             ~parse_failed:(fun _ -> false)
             module_
         in
@@ -251,11 +243,6 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   let one_shot = kind = Build_report.One_shot in
   let watch = not one_shot in
   let is_rebuild = kind = Build_report.Incremental_watch in
-  let should_write_build_ninja =
-    match kind with
-    | Build_report.One_shot | Build_report.Full_watch -> true
-    | Build_report.Initial_watch | Build_report.Incremental_watch -> false
-  in
   let root = Project_context.canonical_project_root folder in
   let root_config =
     match reused_build request with
@@ -297,9 +284,6 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   (* Each build reaches this at most once: the failure reports end by raising
      Reported_failure, and a parse failure is raised before any other outcome
      writes the marker. *)
-  let write_build_ninja () =
-    if should_write_build_ninja then write_build_ninja attempt
-  in
   let phase_seconds seconds = if no_timing then 0. else seconds in
   let parse_step = Build_report.parse_step report in
   let compile_step = Build_report.compile_step report in
@@ -311,7 +295,6 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     prerr_string output;
     prerr_newline ();
     Build_attempt.cleanup_artifacts attempt;
-    write_build_ninja ();
     raise
       (Reported_failure
          ("Incremental build failed. Error: \027[2K\r  Failed to Compile. "
@@ -321,7 +304,6 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     Build_attempt.finalize_logs attempt;
     Build_report.report_parse_failure report ~output;
     Build_attempt.cleanup_artifacts attempt;
-    write_build_ninja ();
     raise
       (Reported_failure
          "Incremental build failed. Error: \027[2K\r  Could not parse Source \
@@ -446,16 +428,8 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
       let diagnostics =
         Build_report.print_success_details report ~compile_seconds
       in
-      let context = prepared.compiler_context in
-      Build_session.publish_compiler_info attempt.session (fun package ->
-          let package_context =
-            Compiler_info.for_package context
-              package.Package_plan.compile_config
-          in
-          Compiler_info.write_package package_context package.config);
       if one_shot then Build_report.report_completion report diagnostics;
       Build_attempt.cleanup_artifacts attempt;
-      write_build_ninja ();
       release_build_lock ();
       Option.iter
         (fun command -> After_build.run ?poll:process_poll ~root command)
@@ -465,8 +439,10 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   Build_lock.with_build ~poll build_lock_root
     (fun ~release:release_build_lock ->
       Build_attempt.protect attempt (fun () ->
-          try execute ~release_build_lock
-          with Parse_failure output -> report_parse_failure output));
+          Build_file_store.set_held_writes Compiler_process.is_held;
+          Build_file_store.with_build (fun () ->
+              try execute ~release_build_lock
+              with Parse_failure output -> report_parse_failure output)));
   {root_config; build_lock_root; session = attempt.session}
 
 let run ~poll ~verbosity ~folder ~prod ~features ~warn_error ~after_build
@@ -486,12 +462,11 @@ let remove_compile_warning_freshness warning_state =
           Filename.chop_suffix entry.path "i"
         else entry.path
       in
+      let artifact_dir = Build_artifacts.artifact_dir entry.package_root in
       [implementation; implementation ^ "i"]
       |> List.iter (fun source ->
-          File_util.remove_file
-            (Build_artifacts.published_ast_path
-               ~ocaml_dir:(Build_artifacts.lib_path entry.package_root "ocaml")
-               source)))
+          Build_artifacts.invalidate_ast
+            (Build_artifacts.ast_path ~artifact_dir source)))
 
 let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
     ~clear_screen =

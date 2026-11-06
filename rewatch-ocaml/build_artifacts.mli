@@ -8,26 +8,36 @@ type cleanup_result = {
     one unit so an earlier deletion cannot erase evidence needed for a later
     ownership decision. *)
 
-val lib_path : string -> string -> string
+val artifact_dir : string -> string
+(** [lib/rescript] below a package root. *)
+
+val legacy_artifact_dirs : string -> string list
+(** [lib/bs] and [lib/ocaml] below a package root, from ReScript 12 and
+    earlier. *)
+
+val clean : string -> unit
+(** Removes the artifacts below a package root, except locks, and the legacy
+    artifact directories. *)
+
 val relative_output_directory : string -> Config.package_spec -> string
-val published_ast_path : ocaml_dir:string -> string -> string
+
+val ast_path : artifact_dir:string -> string -> string
+(** The AST of a package-relative source path. *)
+
+val invalidate_ast : string -> unit
+(** Makes the next build parse the source of an AST again, without removing
+    the AST. *)
 
 val generated_js_path : Config.t -> string -> Config.package_spec -> string
-
-val generated_build_js_path :
-  build_dir:string -> Config.t -> string -> Config.package_spec -> string
 
 val remove_public_outputs : Config.t -> string list -> unit
 
 val cleanup_stale :
-  ocaml_files:string list ->
+  artifact_files:string list ->
   ast_sources:Compile_assets.ast_source list ->
-  source_files:string list ->
   present_source_files:string list ->
   on_removed_module:(string -> unit) ->
-  on_deferred_artifact:(string -> unit) ->
   root:string ->
-  is_local:bool ->
   Config.t ->
   Source.module_ list ->
   cleanup_result

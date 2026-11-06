@@ -442,6 +442,10 @@ module E = struct
         ~name_loc:(sub.location sub name_loc)
         kind
         (map_raw_source sub source)
+    | Pexp_todo {name_loc; message} ->
+      todo ~loc ~attrs
+        ~name_loc:(sub.location sub name_loc)
+        (Option.map (sub.expr sub) message)
     | Pexp_await e -> await ~loc ~attrs (sub.expr sub e)
     | Pexp_jsx_element
         (Jsx_fragment

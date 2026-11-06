@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_coercion_array_to_object.res[0m:[2m11:43-51[0m
+
+   9 [2m│[0m   }
+  10 [2m│[0m 
+  [1;31m11[0m [2m│[0m let fromPair = (r: pair) => classify(Tail([1;31mr :> tail[0m))
+  12 [2m│[0m 
+
+  Type pair is not a subtype of tail 
+
+  The record [1;33mpair[0m is represented as a JavaScript array (its fields have the runtime names "0", "1", ...) and [1;33mtail[0m as an object, so neither can be coerced to the other.

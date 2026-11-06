@@ -23,41 +23,43 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 open Ast_helper
 
+(* [%todo]: warns, and throws at runtime with the location and message. [loc]
+   is the location of [%todo], [expr_loc] that of the whole expression. *)
+let todo ~loc ~expr_loc (message : string option) =
+  Location.prerr_warning expr_loc (Bs_todo message);
+  (* Like [__LOC__]: the file's base name, so the generated code does not
+     depend on where it was built, and columns rather than offsets. *)
+  let file, line, start_col = Location.get_pos_info loc.Location.loc_start in
+  let end_col = loc.loc_end.pos_cnum - loc.loc_start.pos_cnum + start_col in
+  let pretext =
+    Printf.sprintf "%s:%d:%d-%d" (Filename.basename file) line start_col end_col
+  in
+  Exp.apply ~loc
+    (* The compilation unit, not [JsError]: a user module of that name would
+       shadow the [Stdlib] alias. *)
+    (Exp.ident ~loc
+       {txt = Ldot (Lident "Stdlib_JsError", "throwWithMessage"); loc})
+    [
+      ( Nolabel,
+        Exp.constant ~loc
+          (Ast_helper.Const.string
+             (pretext
+             ^
+             match message with
+             | None -> " - Todo"
+             | Some msg -> " - Todo: " ^ msg)) );
+    ]
+
 let handle_extension e (_self : Ast_mapper.mapper)
     (({txt; loc}, payload) : Parsetree.extension) =
   match txt with
   | "todo" ->
-    let todo_message =
-      match Ast_payload.semantic_string_of_payload payload with
-      | Some s -> Some s
-      | None -> None
-    in
-    Location.prerr_warning e.Parsetree.pexp_loc (Bs_todo todo_message);
-    let pretext =
-      loc.loc_start.pos_fname ^ ":"
-      ^ string_of_int loc.loc_start.pos_lnum
-      ^ ":"
-      ^ string_of_int loc.loc_start.pos_cnum
-      ^ "-"
-      ^ string_of_int loc.loc_end.pos_cnum
-    in
-
-    Exp.apply ~loc
-      (Exp.ident ~loc {txt = Longident.parse "JsError.throwWithMessage"; loc})
-      [
-        ( Nolabel,
-          Exp.constant ~loc
-            (Ast_helper.Const.string
-               (pretext
-               ^
-               match todo_message with
-               | None -> " - Todo"
-               | Some msg -> " - Todo: " ^ msg)) );
-      ]
+    (* A payload the parser did not turn into [Pexp_todo], or one from a v0
+       PPX. A payload other than a string gives no message. *)
+    todo ~loc ~expr_loc:e.Parsetree.pexp_loc
+      (Ast_payload.semantic_string_of_payload payload)
   | "ffi" -> Ast_exp_handle_external.handle_ffi ~loc ~payload
   | "raw" -> Ast_exp_handle_external.handle_raw loc payload
-  | "debugger" ->
-    {e with pexp_desc = Ast_exp_handle_external.handle_debugger loc payload}
   | _ -> e
 (* For an unknown extension, we don't really need to process further*)
 (* Exp.extension ~loc ~attrs:e.pexp_attributes (

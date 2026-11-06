@@ -120,8 +120,7 @@ let discover ~(root_config : Config.t) ~(workspace_config : Config.t) ~prod
         Config.with_root_options config workspace_config
         |> Compiler_args.with_local_warning_policy ~is_local
       in
-      let build_dir = Build_artifacts.lib_path root "bs" in
-      let ocaml_dir = Build_artifacts.lib_path root "ocaml" in
+      let artifact_dir = Build_artifacts.artifact_dir root in
       let source_mtimes =
         Hashtbl.create (List.length discovery.source_mtimes)
       in
@@ -136,8 +135,7 @@ let discover ~(root_config : Config.t) ~(workspace_config : Config.t) ~prod
             is_local;
             config;
             compile_config;
-            build_dir;
-            ocaml_dir;
+            artifact_dir;
             dependencies;
             gentype_dependency_args =
               Compiler_args.gentype_dependency_args_from_paths compile_config

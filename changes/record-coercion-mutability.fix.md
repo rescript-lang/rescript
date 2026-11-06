@@ -1,1 +1,0 @@
-- Record coercion no longer turns an immutable field into a mutable one, and requires a field that is mutable in both records to have the same type in both.

@@ -39,9 +39,8 @@ let tests =
   "compiler_scheduler_tests" >:: fun _context ->
   with_single_domain (fun () ->
       with_temp_dir (fun root ->
-          let ocaml_dir = Build_artifacts.lib_path root "ocaml" in
-          File_util.ensure_dir ocaml_dir;
-          File_util.ensure_dir (Build_artifacts.lib_path root "bs");
+          let artifact_dir = Build_artifacts.artifact_dir root in
+          File_util.ensure_dir artifact_dir;
           Compiler_log.initialize root;
           let a_source = source "A" in
           let b_source = source "B" in
@@ -58,15 +57,15 @@ let tests =
           let c_state = Build_state.find_exn build_state "C" in
           a_state.compile_dirty <- true;
           c_state.compile_dirty <- true;
-          let a_cmi = Filename.concat ocaml_dir "A.cmi" in
-          let b_cmi = Filename.concat ocaml_dir "B.cmi" in
-          let c_cmi = Filename.concat ocaml_dir "C.cmi" in
-          let a_ast = Filename.concat ocaml_dir "A.ast" in
+          let a_cmi = Filename.concat artifact_dir "A.cmi" in
+          let b_cmi = Filename.concat artifact_dir "B.cmi" in
+          let c_cmi = Filename.concat artifact_dir "C.cmi" in
+          let a_ast = Filename.concat artifact_dir "A.ast" in
           write_file a_cmi "old interface";
           write_file b_cmi "dependent interface";
           Test_support.write_ast_header a_ast ~dependencies:[]
             ~source:"src/A.res";
-          let compile_assets = Compile_assets.create [ocaml_dir] in
+          let compile_assets = Compile_assets.create [artifact_dir] in
           let fail_a_publication = ref true in
           let b_compilations = ref 0 in
           let c_compilations = ref 0 in
@@ -144,9 +143,9 @@ let tests =
           in
           check first_failed "a later publication failure is reported normally";
           check
-            (not (Sys.file_exists a_ast))
+            (Sys.file_exists a_ast && (Unix.stat a_ast).st_mtime < 2.)
             "failed completion invalidates durable freshness for a later \
-             process";
+             process, keeping the AST that this process may still compile";
           check b_state.compile_dirty
             "a published CMI change survives a later publication failure";
           check (!b_compilations = 0)
@@ -171,8 +170,12 @@ let tests =
             Build_state.find_exn interrupted_state "Interrupted"
           in
           interrupted_module.compile_dirty <- true;
-          let interrupted_ast = Filename.concat ocaml_dir "Interrupted.ast" in
-          let interrupted_cmi = Filename.concat ocaml_dir "Interrupted.cmi" in
+          let interrupted_ast =
+            Filename.concat artifact_dir "Interrupted.ast"
+          in
+          let interrupted_cmi =
+            Filename.concat artifact_dir "Interrupted.cmi"
+          in
           let interrupted_hook_root = Filename.concat root "interrupted-hook" in
           Unix.mkdir interrupted_hook_root 0o755;
           Test_support.write_ast_header interrupted_ast ~dependencies:[]
@@ -215,7 +218,7 @@ let tests =
                               "child-started")
                        then raise Exit))
                 ~warning_state:(Warning_state.create ())
-                ~compile_assets:(Compile_assets.create [ocaml_dir])
+                ~compile_assets:(Compile_assets.create [artifact_dir])
                 ~build_state:interrupted_state
                 ~candidates:[interrupted_candidate]
                 ~mark_compiled:(fun () -> ())
@@ -227,7 +230,7 @@ let tests =
           in
           check hook_interrupted "a running post-build hook can be interrupted";
           check
-            (not (Sys.file_exists interrupted_ast))
+            ((Unix.stat interrupted_ast).st_mtime < 2.)
             "interrupted post-build invalidates persistent compiler freshness";
           let marker = Failure "copy after CMI failed" in
           match

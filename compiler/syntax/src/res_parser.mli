@@ -20,6 +20,9 @@ type t = {
   mutable comments: Comment.t list;
   mutable regions: region_status list;
   mutable warnings: (Location.t * Warnings.t) list;
+  mutable line_break: int;
+      (* The offset of the first LF between two consumed tokens, outside
+         literals and comments, or -1 *)
 }
 
 val make : string -> string -> t
@@ -39,6 +42,10 @@ val optional : t -> Token.t -> bool
 val next : t -> unit
 val next_unsafe : t -> unit
 val finish : t -> unit
+
+(* The newline of the source: CRLF when its first line break between tokens is
+   CRLF, LF otherwise. Complete after [finish]. *)
+val newline : t -> string
 
 val peek_binary_operator : t -> Token.t
 val peek_slash : t -> bool

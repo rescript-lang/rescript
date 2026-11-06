@@ -5,8 +5,7 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
   let config = package.compile_config in
   let build_state = prepared.build_state in
   let compile_assets = prepared.compile_assets in
-  let build_dir = package.build_dir in
-  let ocaml_dir = package.ocaml_dir in
+  let artifact_dir = package.artifact_dir in
   let dirty_parse_paths =
     package.modules
     |> List.concat_map (fun (module_ : Source.module_) ->
@@ -52,10 +51,8 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
     List.map2
       (fun path result -> (path, Build_attempt.preliminary_parse result))
       parse_paths_to_run
-      (List.map
-         (fun path -> Compiler_process.parse_request ~build_dir ~config path)
-         parse_paths_to_run
-      |> Compiler_process.run_requests ?poll:attempt.process_poll)
+      (List.map (fun path -> (artifact_dir, config, path)) parse_paths_to_run
+      |> Compiler_process.run_parses ?poll:attempt.process_poll)
     @ (dirty_parse_paths
       |> List.filter_map (fun path ->
           Hashtbl.find_opt attempt.preliminary_parses
@@ -66,7 +63,7 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
     (fun (path, result) ->
       let absolute_path = Filename.concat root path in
       let pending_path = Platform.normalize_path_for_comparison absolute_path in
-      let publish_successful_parse stderr =
+      let publish_successful_parse ~publish stderr =
         let stderr =
           if is_local then stderr
           else Compiler_process.retain_critical_external_warnings stderr
@@ -76,24 +73,17 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           Compiler_log.append root stderr;
           attempt.parse_messages <-
             Build_attempt.Parse_warning stderr :: attempt.parse_messages);
-        let ast = Source.ast_path path in
+        let ast = Build_artifacts.ast_path ~artifact_dir path in
         if is_local && stderr <> "" then
           Build_attempt.register_cleanup attempt (fun () ->
-              let path = Filename.concat ocaml_dir (Filename.basename ast) in
-              File_util.remove_file path;
+              Build_artifacts.invalidate_ast ast;
               Compile_assets.refresh_ast compile_assets ~source:absolute_path
-                ~path);
-        let published_ast =
-          Build_artifacts.published_ast_path ~ocaml_dir path
-        in
-        File_util.copy_existing_file
-          (Filename.concat build_dir ast)
-          published_ast;
+                ~path:ast);
+        (* A parse in this build that printed nothing published its AST on
+           its worker. *)
+        if publish then Compiler_process.publish_parse ~artifact_dir path;
         Compile_assets.refresh_ast compile_assets ~source:absolute_path
-          ~path:published_ast;
-        File_util.copy_existing_file
-          (Filename.concat config.root path)
-          (Filename.concat ocaml_dir (Filename.basename path));
+          ~path:ast;
         if is_local && stderr <> "" then
           Build_session.mark_parse_pending attempt.session pending_path
         else Build_session.clear_parse_pending attempt.session pending_path
@@ -108,7 +98,8 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         attempt.parse_messages <-
           Build_attempt.Parse_error output :: attempt.parse_messages
       | Build_attempt.Parsed_successfully {stderr} ->
-        publish_successful_parse stderr
-      | Build_attempt.Use_existing_ast -> publish_successful_parse "")
+        publish_successful_parse ~publish:(stderr <> "") stderr
+      | Build_attempt.Use_existing_ast ->
+        publish_successful_parse ~publish:false "")
     parsed;
   dirty_modules

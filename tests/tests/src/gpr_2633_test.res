@@ -12,5 +12,5 @@ external on: (
 
 let on1 = (foo, event) => on(foo, event)
 
-/* FIXME */
+// h(event) is evaluated once
 let on2 = (foo, h, event) => on(foo, h(event))

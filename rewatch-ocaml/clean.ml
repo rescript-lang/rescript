@@ -80,8 +80,8 @@ let run ~poll ~verbosity ~folder ~prod =
         (Output.cleaned_command_message ~color:colors ~step ~target
            ~seconds:(Unix.gettimeofday () -. started_at))
   in
-  Build_lock.with_build ~poll (Project_context.workspace_lock_root root)
-    (fun ~release:_ ->
+  let lock_root = Project_context.workspace_lock_root root in
+  Build_lock.with_build ~poll lock_root (fun ~release:_ ->
       poll ();
       let root_config = Config.load_root root in
       let workspace_config = Project_context.workspace_config_for root_config in

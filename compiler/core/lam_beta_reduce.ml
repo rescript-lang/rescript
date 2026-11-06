@@ -49,16 +49,86 @@ let param_table params new_params =
   List.iter2 (Hash_ident.add tbl) params new_params;
   tbl
 
+(* Whether [body] reads [param] only before it runs code with side effects.
+   A read in code that may run later, such as a function or a loop, does not
+   count as before. *)
+let read_before_effects param (body : Lambda.t) =
+  let exception Read_after_effects in
+  let effects = ref false in
+  let rec walk (lam : Lambda.t) =
+    match lam with
+    | Lvar v ->
+      if !effects && Ident.same v param then raise_notrace Read_after_effects
+    | Lconst _ | Lglobal_module _ -> ()
+    | Lprim {args} ->
+      List.iter walk args;
+      if not (Lam_analysis.no_side_effects lam) then effects := true
+    | Lapply {ap_func; ap_args} ->
+      walk ap_func;
+      List.iter walk ap_args;
+      effects := true
+    | Llet (_, _, arg, body) ->
+      walk arg;
+      walk body
+    | Lsequence (a, b) ->
+      walk a;
+      walk b
+    | Lifthenelse (cond, then_, else_) ->
+      walk cond;
+      let before = !effects in
+      walk then_;
+      let after_then = !effects in
+      effects := before;
+      walk else_;
+      effects := !effects || after_then
+    | Lfunction _ | Lletrec _ | Lswitch _ | Lstringswitch _ | Lstaticraise _
+    | Lstaticcatch _ | Ltrywith _ | Ltryfinally _ | Lwhile _ | Lfor _
+    | Lfor_of _ | Lfor_await_of _ | Lassign _ | Lbreak | Lcontinue ->
+      if Lam_hit.hit_variable param lam then raise_notrace Read_after_effects;
+      if not (Lam_analysis.no_side_effects lam) then effects := true
+  in
+  match walk body with
+  | () -> true
+  | exception Read_after_effects -> false
+
+(* The arguments of a call run left to right, then the body. Putting the
+   argument for [param] where [body] reads it instead moves it after the
+   arguments to its right and the code of [body] before the read. That changes
+   nothing when it reads no state that may change. One that only reads may
+   still move when no argument to its right has side effects
+   ([effects_after]) and [body] reads it before any. *)
+let can_move ~assignable ~effects_after param body (arg : Lambda.t) =
+  Lam_analysis.delay_safe ~assignable arg
+  || Lam_analysis.no_side_effects arg
+     && (not effects_after)
+     && read_before_effects param body
+
+(* For each argument, whether an argument to its right has side effects *)
+let effects_after args =
+  snd
+    (List.fold_right
+       (fun arg (effects, acc) ->
+         (effects || not (Lam_analysis.no_side_effects arg), effects :: acc))
+       args (false, []))
+
 let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
     (body : Lambda.t) (args : Lambda.t list) =
-  match Lam_beta_reduce_util.simple_beta_reduce params body args with
+  let assignable = meta.assignable in
+  match
+    Lam_beta_reduce_util.simple_beta_reduce ~assignable params body args
+  with
   | Some x -> x
   | None ->
     let rest_bindings, rev_new_params =
-      Ext_list.fold_left2 params args ([], [])
-        (fun old_param arg (rest_bindings, acc) ->
+      Ext_list.fold_left2 params
+        (List.combine args (effects_after args))
+        ([], [])
+        (fun old_param (arg, effects_after) (rest_bindings, acc) ->
           match arg with
-          | Lconst _ | Lvar _ -> (rest_bindings, arg :: acc)
+          | Lconst _ -> (rest_bindings, arg :: acc)
+          | Lvar _ when can_move ~assignable ~effects_after old_param body arg
+            ->
+            (rest_bindings, arg :: acc)
           | _ ->
             let p = Ident.rename old_param in
             ((p, arg) :: rest_bindings, Lambda.var p :: acc))
@@ -84,29 +154,36 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
 
 let propagate_beta_reduce_with_map (meta : Lam_stats.t)
     (map : Lam_var_stats.stats Map_ident.t) params body args =
-  match Lam_beta_reduce_util.simple_beta_reduce params body args with
+  let assignable = meta.assignable in
+  match
+    Lam_beta_reduce_util.simple_beta_reduce ~assignable params body args
+  with
   | Some x -> x
   | None ->
     let rest_bindings, rev_new_params =
-      Ext_list.fold_left2 params args ([], [])
-        (fun old_param arg (rest_bindings, acc) ->
-          match arg with
-          | Lconst _ | Lvar _ -> (rest_bindings, arg :: acc)
-          | Lglobal_module _ ->
+      Ext_list.fold_left2 params
+        (List.combine args (effects_after args))
+        ([], [])
+        (fun old_param (arg, effects_after) (rest_bindings, acc) ->
+          let bind () =
             let p = Ident.rename old_param in
             ((p, arg) :: rest_bindings, Lambda.var p :: acc)
+          in
+          match arg with
+          | Lconst _ -> (rest_bindings, arg :: acc)
+          | Lvar _ ->
+            if can_move ~assignable ~effects_after old_param body arg then
+              (rest_bindings, arg :: acc)
+            else bind ()
+          | Lglobal_module _ -> bind ()
           | _ ->
-            if Lam_analysis.no_side_effects arg then
-              match Map_ident.find old_param map with
-              | stat ->
-                if Lam_var_stats.top_and_used_zero_or_one stat then
-                  (rest_bindings, arg :: acc)
-                else
-                  let p = Ident.rename old_param in
-                  ((p, arg) :: rest_bindings, Lambda.var p :: acc)
-            else
-              let p = Ident.rename old_param in
-              ((p, arg) :: rest_bindings, Lambda.var p :: acc))
+            if
+              Lam_analysis.no_side_effects arg
+              && Lam_var_stats.top_and_used_zero_or_one
+                   (Map_ident.find old_param map)
+              && can_move ~assignable ~effects_after old_param body arg
+            then (rest_bindings, arg :: acc)
+            else bind ())
     in
     let new_body =
       Lam_bounded_vars.rewrite
@@ -126,9 +203,13 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
         | _ -> ());
         Lam_util.refine_let ~kind:Strict param arg l)
 
-let no_names_beta_reduce params body args =
-  match Lam_beta_reduce_util.simple_beta_reduce params body args with
+let no_names_beta_reduce ~assignable params body args =
+  match
+    Lam_beta_reduce_util.simple_beta_reduce ~assignable params body args
+  with
   | Some x -> x
   | None ->
-    Ext_list.fold_left2 params args body (fun param arg l ->
+    (* Fold right, so that the first parameter's binding is outermost and the
+       arguments evaluate in call order *)
+    Ext_list.fold_right2 params args body (fun param arg l ->
         Lam_util.refine_let ~kind:Strict param arg l)

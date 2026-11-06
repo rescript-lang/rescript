@@ -1,5 +1,11 @@
-bs/
 *.ast
 *.iast
-rescript.lock
+*.lock
 .compiler.log
+.sourcedirs.json
+.project-files-cache
+compiler-info.json
+rescript/incremental/
+*.tmp
+*.takeover
+*.debug-ir

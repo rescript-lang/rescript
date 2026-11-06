@@ -10,12 +10,13 @@ val append_file : string -> string -> unit
 val directory_entries : string -> string list
 
 val write_file_atomic : ?ensure_parent:bool -> string -> string -> unit
-val copy_existing_file : string -> string -> unit
-val copy_optional_existing_file : string -> string -> unit
+(** Writes a file next to its destination and renames it into place. *)
+
+val atomic_write_prefix : string
+(** The name prefix of the files {!write_file_atomic} renames into place; one
+    left over is from a process killed while writing. *)
 
 val exists : string -> bool
-val files_equal : string -> string -> bool
-val copy_file_if_different : string -> string -> bool
 val modification_time : string -> float option
 val remove_file : string -> unit
 val remove_tree : string -> unit

@@ -31,6 +31,9 @@ type tag_info =
   | Blk_record of {
       fields: (string * bool (* optional *)) array;
       mutable_flag: Asttypes.mutable_flag;
+      array: bool;
+          (* [Record_array]: the fields are the elements of a JavaScript
+             array *)
     }
   | Blk_module of string list
   | Blk_module_export of Ident.t list
@@ -59,14 +62,16 @@ let mutable_flag_of_tag_info (tag : tag_info) =
   | Blk_module_export _ | Blk_extension ->
     Immutable
 
-let blk_record fields mutable_flag = Blk_record {fields; mutable_flag}
+let blk_record fields mutable_flag ~array =
+  Blk_record {fields; mutable_flag; array}
 let blk_record_ext fields mutable_flag = Blk_record_ext {fields; mutable_flag}
 
 let blk_record_inlined fields name num_nonconst ~runtime mutable_flag =
   Blk_record_inlined {fields; name; num_nonconst; mutable_flag; runtime}
 
 let ref_tag_info : tag_info =
-  Blk_record {fields = [|("contents", false)|]; mutable_flag = Mutable}
+  Blk_record
+    {fields = [|("contents", false)|]; mutable_flag = Mutable; array = false}
 
 type field_dbg_info =
   | Fld_record of {name: string}
@@ -727,6 +732,49 @@ let rec is_eta_conversion_exn params inner_args outer_args : t list =
   | [], [], [] -> []
   | _, _, _ -> raise_notrace Not_simple_form
 
+let may_skip_operands (primitive : primitive) =
+  match primitive with
+  | Psequand | Psequor -> true
+  | Pdebugger | Ptypeof | Psome | Psome_not_nest | Pmakeblock _ | Pfield _
+  | Psetfield _ | Pduprecord | Precord_rest _ | Pjs_call _ | Pjsx _
+  | Pjs_object_create _ | Pjs_object_get _ | Pjs_object_set _ | Praise
+  | Pobjcomp _ | Pobjorder | Pobjmin | Pobjmax | Pobjtag | Pobjsize | Pnot
+  | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax | Pnegint | Paddint | Psubint
+  | Pmulint | Pdivint | Pmodint | Ppowint | Pandint | Porint | Pxorint | Pnotint
+  | Plslint | Plsrint | Pasrint | Pintcomp _ | Pintorder | Pintmin | Pintmax
+  | Pintoffloat | Pfloatofint | Pnegfloat | Pmodfloat | Paddfloat | Psubfloat
+  | Pmulfloat | Pdivfloat | Ppowfloat | Pfloatcomp _ | Pfloatorder | Pfloatmin
+  | Pfloatmax | Pnegbigint | Paddbigint | Psubbigint | Ppowbigint | Pmulbigint
+  | Pdivbigint | Pmodbigint | Pandbigint | Porbigint | Pxorbigint | Pnotbigint
+  | Plslbigint | Pasrbigint | Pbigintcomp _ | Pbigintorder | Pbigintmin
+  | Pbigintmax | Pstringlength | Pstringrefu | Pstringrefs | Pstringcomp _
+  | Pstringorder | Pstringmin | Pstringmax | Pstringadd | Pmakearray
+  | Parraylength | Parrayrefu | Parraysetu | Parrayrefs | Pmakelist | Pmakedict
+  | Pdict_has | Pawait | Pimport _ | Pinit_mod | Pupdate_mod | Phash
+  | Phash_mixint | Phash_mixstring | Phash_finalmix | Pis_null_undefined
+  | Pcreate_extension _ | Pjscomp _ | Pnull_to_opt | Pnull_undefined_to_opt
+  | Pis_null | Pis_undefined | Pis_not_none | Pval_from_option
+  | Pval_from_option_not_nest | Pis_poly_var_block | Praw_js_code _
+  | Pjs_fn_method | Ptagged_template _ | Ptemplate _ | Pdict_spread
+  | Parray_spread | Plist_spread ->
+    false
+
+(* Whether [primitive] on [args], the arguments of a call, evaluates them as
+   the call does. [&&] and [||] may skip their right operand, so the argument
+   for it must be one whose evaluation does nothing. *)
+let evaluates_args_as_call (primitive : primitive) (args : t list) =
+  (not (may_skip_operands primitive))
+  ||
+  match args with
+  | [] -> true
+  | _ :: rest ->
+    List.for_all
+      (fun (arg : t) ->
+        match arg with
+        | Lconst _ | Lvar _ -> true
+        | _ -> false)
+      rest
+
 let rec eq_approx (l1 : t) (l2 : t) =
   match l1 with
   | Lglobal_module i1 -> (
@@ -801,16 +849,6 @@ and eq_option l1 l2 =
 
 and eq_approx_list ls ls1 = Ext_list.for_all2_no_exn ls ls1 eq_approx
 
-let record_fields_are_array fields =
-  let len = Array.length fields in
-  let rec loop i =
-    if i = len then true
-    else
-      let name, _optional = fields.(i) in
-      string_of_int i = name && loop (i + 1)
-  in
-  len <> 0 && loop 0
-
 (* The JavaScript value a constant is emitted as by [Lam_compile_const] and
    [Js_dump], not its source constructor. A constant of another
    representation keeps the dispatch at run time. *)
@@ -828,8 +866,8 @@ let untagged_value (c : structured_constant) : Untagged_dispatch.value option =
   | Const_bigint (sign, digits) ->
     Some (Literal (BigInt (Bigint_utils.to_string sign digits)))
   | Const_block (Blk_tuple, _) -> Some Array
-  | Const_block (Blk_record {fields}, _) ->
-    if record_fields_are_array fields then Some Array else Some Object
+  | Const_block (Blk_record {array}, _) ->
+    if array then Some Array else Some Object
   | Const_block
       ( ( Blk_constructor _ | Blk_record_inlined _ | Blk_poly_var
         | Blk_record_ext _ | Blk_module _ | Blk_module_export _ | Blk_extension
@@ -1088,8 +1126,13 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
     *)
     | _ -> default ())
 
+let lfunction_can_be_inlined (lfunction : lfunction) =
+  (not lfunction.attr.async) && lfunction.attr.directive = None
+
 let rec apply fn args (ap_loc : Location.t) : t =
   match fn with
+  | Lfunction lfunction when not (lfunction_can_be_inlined lfunction) ->
+    Lapply {ap_func = fn; ap_args = args; ap_loc}
   | Lfunction
       {
         params;
@@ -1099,10 +1142,10 @@ let rec apply fn args (ap_loc : Location.t) : t =
               primitive =
                 ( Pnull_to_opt | Pnull_undefined_to_opt | Pis_null
                 | Pis_null_undefined | Ptypeof ) as wrap;
-              args =
-                [Lprim ({primitive = _; args = inner_args} as primitive_call)];
+              args = [Lprim ({primitive; args = inner_args} as primitive_call)];
             };
-      } -> (
+      }
+    when evaluates_args_as_call primitive args -> (
     match is_eta_conversion_exn params inner_args args with
     | args ->
       prim ~primitive:wrap
@@ -1111,10 +1154,8 @@ let rec apply fn args (ap_loc : Location.t) : t =
     | exception Not_simple_form -> Lapply {ap_func = fn; ap_args = args; ap_loc}
     )
   | Lfunction
-      {
-        params;
-        body = Lprim ({primitive = _; args = inner_args} as primitive_call);
-      } -> (
+      {params; body = Lprim ({primitive; args = inner_args} as primitive_call)}
+    when evaluates_args_as_call primitive args -> (
     match is_eta_conversion_exn params inner_args args with
     | args -> prim ~primitive:primitive_call.primitive ~args ap_loc
     | exception _ -> Lapply {ap_func = fn; ap_args = args; ap_loc})
@@ -1123,9 +1164,10 @@ let rec apply fn args (ap_loc : Location.t) : t =
         params;
         body =
           Lsequence
-            ( Lprim ({primitive = _; args = inner_args} as primitive_call),
+            ( Lprim ({primitive; args = inner_args} as primitive_call),
               (Lconst _ as const) );
-      } -> (
+      }
+    when evaluates_args_as_call primitive args -> (
     match is_eta_conversion_exn params inner_args args with
     | args -> seq (prim ~primitive:primitive_call.primitive ~args ap_loc) const
     | exception _ ->

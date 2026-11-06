@@ -18,8 +18,7 @@ let rec prepare_tree ~seen ~(package : Package_plan.t) ~prepared ~watch
           prepare_tree ~seen ~package:dependency_package ~prepared ~watch
             ~attempt)
     package.dependencies;
-  File_util.ensure_dir package.build_dir;
-  File_util.ensure_dir package.ocaml_dir;
+  File_util.ensure_dir package.artifact_dir;
   Compiler_log.initialize root;
   Build_attempt.mark_log_initialized attempt root;
   let prepared_package =

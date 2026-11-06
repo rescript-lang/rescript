@@ -1,1 +1,0 @@
-- Editor "create interface" keeps the attributes and doc comments written in front of a type declaration, such as `@tag` and `@unboxed`.

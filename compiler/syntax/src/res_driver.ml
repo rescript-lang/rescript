@@ -5,6 +5,7 @@ type ('ast, 'diagnostics) parse_result = {
   diagnostics: 'diagnostics;
   invalid: bool;
   comments: Res_comment.t list;
+  newline: string;
 }
 
 type 'diagnostics parsing_engine = {
@@ -60,6 +61,7 @@ let parsing_engine =
           diagnostics;
           invalid;
           comments = List.rev engine.comments;
+          newline = Res_parser.newline engine;
         });
     parse_implementation_from_source =
       (fun ~source ->
@@ -77,6 +79,7 @@ let parsing_engine =
           diagnostics;
           invalid;
           comments = List.rev engine.comments;
+          newline = Res_parser.newline engine;
         });
     parse_interface =
       (fun ~filename ->
@@ -94,6 +97,7 @@ let parsing_engine =
           diagnostics;
           invalid;
           comments = List.rev engine.comments;
+          newline = Res_parser.newline engine;
         });
     parse_interface_from_source =
       (fun ~source ->
@@ -111,6 +115,7 @@ let parsing_engine =
           diagnostics;
           invalid;
           comments = List.rev engine.comments;
+          newline = Res_parser.newline engine;
         });
     string_of_diagnostics =
       (fun ~source ~filename:_ diagnostics ->
@@ -132,6 +137,7 @@ let parse_implementation_from_source ~display_filename ~source =
     diagnostics;
     invalid;
     comments = List.rev engine.comments;
+    newline = Res_parser.newline engine;
   }
 
 let parse_interface_from_source ~display_filename ~source =
@@ -149,6 +155,7 @@ let parse_interface_from_source ~display_filename ~source =
     diagnostics;
     invalid;
     comments = List.rev engine.comments;
+    newline = Res_parser.newline engine;
   }
 
 let print_engine ~newline =

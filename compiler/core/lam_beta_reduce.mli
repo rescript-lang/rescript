@@ -24,13 +24,19 @@
 
 (** Beta reduction of lambda IR *)
 
-val no_names_beta_reduce : Ident.t list -> Lambda.t -> Lambda.t list -> Lambda.t
+val no_names_beta_reduce :
+  assignable:Set_ident.t ->
+  Ident.t list ->
+  Lambda.t ->
+  Lambda.t list ->
+  Lambda.t
 (* Compile-time beta-reduction of functions immediately applied:
       Lapply(Lfunction(Curried, params, body), args, loc) ->
-        let paramN = argN in ... let param1 = arg1 in body
+        let param1 = arg1 in ... let paramN = argN in body
       Lapply(Lfunction(Tupled, params, body), [Lprim(Pmakeblock(args))], loc) ->
-        let paramN = argN in ... let param1 = arg1 in body
-   Assumes |args| = |params|.
+        let param1 = arg1 in ... let paramN = argN in body
+   Assumes |args| = |params|. [assignable] are the variables some [Lassign]
+   assigns.
 
    This function is used while counting used vars, no new names
    are generated to make this more complex

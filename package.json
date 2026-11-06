@@ -1,6 +1,6 @@
 {
   "name": "rescript",
-  "version": "13.0.0-alpha.7",
+  "version": "13.0.0-alpha.8",
   "description": "ReScript toolchain",
   "type": "module",
   "keywords": [
@@ -45,7 +45,6 @@
   "bin": {
     "bsc": "cli/bsc.js",
     "rescript": "cli/rescript.js",
-    "rescript-rust": "cli/rescript-rust.js",
     "rescript-tools": "cli/rescript-tools.js"
   },
   "scripts": {

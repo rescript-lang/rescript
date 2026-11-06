@@ -16,6 +16,10 @@ val print_expression : Parsetree.expression -> Res_comments_table.t -> Res_doc.t
 val print_pattern : Parsetree.pattern -> Res_comments_table.t -> Res_doc.t
 [@@live]
 
+(* An attribute, or a doc comment for [res.doc], as written in front of an
+   item. *)
+val print_attribute : Parsetree.attribute -> Res_comments_table.t -> Res_doc.t
+
 val print_structure : Parsetree.structure -> Res_comments_table.t -> Res_doc.t
 [@@live]
 

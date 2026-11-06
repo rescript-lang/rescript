@@ -40,9 +40,9 @@ let number: int = Provider.value
 EOF
 
 cd "$fixture" || exit 1
-RAYON_NUM_THREADS=1 "$REWATCH_EXECUTABLE" watch > rewatch.log 2>&1 &
+REWATCH_COMPILER_DOMAINS=1 "$REWATCH_EXECUTABLE" watch > rewatch.log 2>&1 &
 watch_pid=$!
-compiler_log=lib/bs/.compiler.log
+compiler_log=lib/rescript/.compiler.log
 
 wait_for_changed_compiler_log() {
   local baseline="$1"; local timeout
@@ -83,8 +83,8 @@ cp "$compiler_log" failed.compiler.log
 # Keep timestamp-based freshness from masking a lost dirty bit. Both watcher
 # implementations must remember that Consumer was blocked by Provider's failed
 # implementation when the next rebuild reconstructs the build state.
-test -f lib/ocaml/Consumer.cmt
-node -e 'const fs = require("fs"); const future = new Date(Date.now() + 60000); fs.utimesSync("lib/ocaml/Consumer.cmt", future, future)'
+test -f lib/rescript/Consumer.cmt
+node -e 'const fs = require("fs"); const future = new Date(Date.now() + 60000); fs.utimesSync("lib/rescript/Consumer.cmt", future, future)'
 
 # An atomic replacement makes the watcher reinitialize its build state. The
 # blocked dependent must remain dirty through that full rebuild as well.

@@ -1,0 +1,13 @@
+{
+  "version": "5",
+  "bsc_path": "/home/pedro/Desktop/projects/rescript-compiler/packages/@rescript/linux-x64/bin/bsc.exe",
+  "bsc_hash": "9b98163196438c1e7020038cd546e7e8",
+  "rescript_config_hash": "8cc6b69d45dfeb12b3df22f0d1c8af15",
+  "source_map_args": [],
+  "inherited_compiler_args": [ "-enable-experimental", "LetUnwrap" ],
+  "package_output_specs": [
+    { "module": "commonjs", "in_source": false, "suffix": ".cjs" },
+    { "module": "esmodule", "in_source": false, "suffix": ".mjs" }
+  ],
+  "runtime_path": "/home/pedro/Desktop/projects/rescript-compiler/packages/@rescript/runtime"
+}

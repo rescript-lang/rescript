@@ -47,8 +47,6 @@
    And if it is inlined some where
 *)
 
-let () = Ast_derive_projector.init ()
-
 let succeed attr attrs =
   match attrs with
   | [_] -> ()
@@ -115,10 +113,7 @@ let local_module_type_decl ~await_context
           (Mtd.mk ~loc {txt = name; loc} ~typ:(Mty.typeof_ ~loc me)));
     ])
 
-let expr_mapper ~async_context ~in_function_def (self : mapper)
-    (e : Parsetree.expression) =
-  let old_in_function_def = !in_function_def in
-  in_function_def := false;
+let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
   match e.pexp_desc with
   (* Its output should not be rewritten anymore *)
   | Pexp_regexp {pattern; flags} ->
@@ -144,6 +139,9 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
     Ast_exp_extension.handle_extension e self extension
   | Pexp_raw {kind; name_loc; source} ->
     Ast_exp_handle_external.handle_raw_node ~loc:name_loc kind source
+  | Pexp_todo {name_loc; message} ->
+    Ast_exp_extension.todo ~loc:name_loc ~expr_loc:e.pexp_loc
+      (Option.bind message Ast_payload.semantic_string_of_expression)
   | Pexp_constant (Pconst_integer (s, Some 'l')) ->
     {e with pexp_desc = Pexp_constant (Pconst_integer (s, None))}
   (* End rewriting *)
@@ -167,8 +165,10 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_fun {newtypes; params; body; async} -> (
     match Ast_attributes.process_attributes_rev e.pexp_attributes with
     | Nothing, _ ->
-      (* Handle @async x => y => ... is in async context *)
-      async_context := (old_in_function_def && !async_context) || async;
+      (* A [Pexp_fun] holds all parameters of one function, so a [Pexp_fun]
+         in its body is another function: in [async x => y => await y], the
+         inner function is not async and compiles to a plain arrow. *)
+      async_context := async;
       let attrs = self.attributes self e.pexp_attributes in
       let params =
         Ext_list.map params (fun (p : Parsetree.fun_param) ->
@@ -178,13 +178,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
               p_pat = self.pat self p.p_pat;
             })
       in
-      let saved_in_function_def = !in_function_def in
-      in_function_def := true;
-      (* Keep reporting the body as part of a function definition so nested
-         functions propagate async context exactly like the legacy curried
-         mapper did (GH #7974). *)
       let body = self.expr self body in
-      in_function_def := saved_in_function_def;
       let newtypes =
         Ext_list.map newtypes (fun (name, nt_attrs) ->
             (name, self.attributes self nt_attrs))
@@ -431,28 +425,27 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
     | Some (_, _, Some _) | None -> default_expr_mapper self e)
   | _ -> default_expr_mapper self e
 
-let expr_mapper ~async_context ~in_function_def (self : mapper)
-    (e : Parsetree.expression) =
+let check_await ~async_context ~loc =
+  if !async_context = false then
+    Location.raise_errorf ~loc "Await on expression not in an async context"
+
+let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
   let async_saved = !async_context in
-  let result = expr_mapper ~async_context ~in_function_def self e in
+  let result = expr_mapper ~async_context self e in
   async_context := async_saved;
-  let check_await () =
-    if !async_context = false then
-      Location.raise_errorf ~loc:e.pexp_loc
-        "Await on expression not in an async context"
-  in
+  let loc = e.pexp_loc in
   match e.pexp_desc with
   | Pexp_letmodule (_, me, _)
     when Option.is_some (Ast_await.awaited_module_path me) ->
-    check_await ();
+    check_await ~async_context ~loc;
     result
   | _ -> (
     match result.pexp_desc with
     | Pexp_await e ->
-      check_await ();
+      check_await ~async_context ~loc;
       Ast_await.create_await_expression e
     | Pexp_for_await_of _ ->
-      check_await ();
+      check_await ~async_context ~loc;
       result
     | _ -> result)
 
@@ -689,7 +682,6 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
 
 type mapper_context = {
   async_context: bool ref;
-  in_function_def: bool ref;
   await_context: (string, string) Hashtbl.t ref;
 }
 
@@ -698,11 +690,7 @@ type mapper_context = {
    function body must not change whether an await is accepted here. *)
 let mapper_context_key =
   Request_local.new_key (fun () ->
-      {
-        async_context = ref true;
-        in_function_def = ref false;
-        await_context = ref (Hashtbl.create 10);
-      })
+      {async_context = ref true; await_context = ref (Hashtbl.create 10)})
 
 let mapper_context () = Domain.DLS.get mapper_context_key
 
@@ -780,7 +768,14 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
       aux [] stru
     (* Dynamic import of module transformation: module M = await List *)
     | Pstr_module mb -> (
-      match Ast_await.awaited_module_path mb.pmb_expr with
+      let awaited = Ast_await.awaited_module_path mb.pmb_expr in
+      (* This structure may be a functor body or a module in a function, so
+         check the context, as [expr_mapper] does for [module M = await List]
+         in an expression *)
+      if Option.is_some awaited then
+        check_await ~async_context:(mapper_context ()).async_context
+          ~loc:mb.pmb_expr.pmod_loc;
+      match awaited with
       | Some (module_lid, imported, None) ->
         let item = self.structure_item self item in
         let safe_module_type_lid : Ast_helper.lid =
@@ -885,19 +880,39 @@ let structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t) =
    checker sees the same module expressions as without it: it treats some
    shapes specially, e.g. a module path in [module type of] or [()] as the
    argument of a generative functor. *)
-let module_expr_mapper (self : mapper) (me : Parsetree.module_expr) =
+let module_expr_mapper ~async_context (self : mapper)
+    (me : Parsetree.module_expr) =
   let _, me = Ast_await.remove_awaits false me in
-  default_mapper.module_expr self me
+  match me.pmod_desc with
+  | Pmod_functor (arg, arg_ty, body) ->
+    (* A functor compiles to a JS function that is not async, so its body is
+       not in an async context, whatever the context around the functor, such
+       as the top level of a file or an async function. This holds also where
+       the optimizer inlines an application of the functor into an async
+       function. The parameter's module type is not evaluated and keeps the
+       context. *)
+    let loc = self.location self me.pmod_loc in
+    let attrs = self.attributes self me.pmod_attributes in
+    let arg = {arg with loc = self.location self arg.loc} in
+    let arg_ty = Option.map (self.module_type self) arg_ty in
+    let async_saved = !async_context in
+    async_context := false;
+    let body = self.module_expr self body in
+    async_context := async_saved;
+    Ast_helper.Mod.functor_ ~loc ~attrs arg arg_ty body
+  | _ -> default_mapper.module_expr self me
 
 let mapper : mapper =
   {
     default_mapper with
-    module_expr = module_expr_mapper;
+    module_expr =
+      (fun self module_expr ->
+        let context = mapper_context () in
+        module_expr_mapper ~async_context:context.async_context self module_expr);
     expr =
       (fun self expression ->
         let context = mapper_context () in
-        expr_mapper ~async_context:context.async_context
-          ~in_function_def:context.in_function_def self expression);
+        expr_mapper ~async_context:context.async_context self expression);
     pat = pat_mapper;
     typ = typ_mapper;
     signature_item = signature_item_mapper;

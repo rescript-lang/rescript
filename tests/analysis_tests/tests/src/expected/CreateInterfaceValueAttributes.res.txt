@@ -1,0 +1,72 @@
+Create Interface src/CreateInterfaceValueAttributes.res
+/** Doc of f. */
+@deprecated("use g")
+let f: int => int
+let g: int => int
+@genType
+@genType.as("renamed")
+let exported: int
+@live
+let kept: int
+/** Finds a positive number. */
+@throws(Not_found)
+let find: int => int
+/** Recursive.
+  Second line. */
+let even: int => bool
+/** Odd. */
+@deprecated
+let odd: int => bool
+let first: int
+let second: string
+/** Destructured. */
+@deprecated("pair")
+let left: int
+/** Destructured. */
+@deprecated("pair")
+let right: int
+/** Record. */
+let contents: int
+let onExpression: 'a => 'a
+@inline let inlined: int
+/** Inlined doc. */
+@deprecated("use inlined")
+@inline let inlinedDeprecated: int
+/** Annotated. */
+let annotated: int => int
+let unused: 'a => int
+/** Several in one let. */
+let a: int
+/** Second binding. */
+let b: int
+module Nested: {
+  /** Nested doc. */
+  @deprecated("nested")
+  let n: int
+  module Deeper: {
+    /** Deeper doc.
+```rescript
+let d = "d"
+```
+    */
+    let d: string
+  }
+}
+module Make: (
+  X: {
+  },
+) =>
+{
+  /** In a functor. */
+  let v: int
+}
+module Applied: {
+  /** In a functor. */
+  let v: int
+}
+module Comp: {
+  /** A component. */
+  @react.component
+  let make: (~name: string) => React.element
+}
+

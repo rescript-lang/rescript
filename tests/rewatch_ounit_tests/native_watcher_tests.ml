@@ -20,13 +20,13 @@ let tests =
   let replaced_nested = root ^ "-replaced-nested" in
   let source_lib = Filename.concat source "lib" in
   let artifact_lib = Filename.concat root "lib" in
-  let artifact_bs = Filename.concat artifact_lib "bs" in
+  let artifact_dir = Filename.concat artifact_lib "rescript" in
   Fun.protect
     (fun () ->
       Unix.mkdir source 0o700;
       Unix.mkdir source_lib 0o700;
       Unix.mkdir artifact_lib 0o700;
-      Unix.mkdir artifact_bs 0o700;
+      Unix.mkdir artifact_dir 0o700;
       let paths = [Native_watcher.{directory = root; recursive = true}] in
       let identity_failure _ = Error "injected identity failure" in
       (match
@@ -96,7 +96,7 @@ let tests =
           (fun () ->
             check
               (Native_watcher.For_test.handle_count watcher = 4)
-              "valid lib source directories are watched but lib/bs is not";
+              "valid lib source directories are watched but lib/rescript is not";
             Native_watcher.For_test.queue_change watcher;
             Native_watcher.For_test.queue_error watcher "injected failure";
             (match
@@ -182,7 +182,7 @@ let tests =
     ~finally:(fun () ->
       (try Unix.rmdir nested with Unix.Unix_error _ -> ());
       (try Unix.rmdir replaced_nested with Unix.Unix_error _ -> ());
-      (try Unix.rmdir artifact_bs with Unix.Unix_error _ -> ());
+      (try Unix.rmdir artifact_dir with Unix.Unix_error _ -> ());
       (try Unix.rmdir artifact_lib with Unix.Unix_error _ -> ());
       (try Unix.rmdir source_lib with Unix.Unix_error _ -> ());
       (try Unix.rmdir source with Unix.Unix_error _ -> ());

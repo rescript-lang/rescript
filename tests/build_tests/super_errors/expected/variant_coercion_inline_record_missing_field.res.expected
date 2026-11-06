@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_coercion_inline_record_missing_field.res[0m:[2m4:24-30[0m
+
+  2 [2m│[0m type v2 = A({x: float, y: int})
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m let toV2 = (a: v1) => ([1;31ma :> v2[0m)
+  5 [2m│[0m 
+
+  Type v1 is not a subtype of v2 
+
+  The record [1;33mv1.A[0m cannot be coerced to the record [1;33mv2.A[0m because:
+  - The field [1;33my[0m is missing in record [1;33mv1.A[0m, but present in record [1;33mv2.A[0m

@@ -1,1 +1,0 @@
-- Report a spread of the wrong collection type, such as a list spread into an array, as a mismatch of the spread instead of an array item.

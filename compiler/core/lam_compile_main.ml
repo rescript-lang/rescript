@@ -215,6 +215,14 @@ let is_awaited_unit (lam : Lambda.t) =
     true
   | _ -> false
 
+(* See [Lam_stats.assignable]. *)
+let assigned_variables (group : Lam_group.t) =
+  match group with
+  | Single (_, _, lam) | Nop lam -> Lambda_traverse.assigned_variables lam
+  | Recursive bindings ->
+    Ext_list.fold_left bindings Set_ident.empty (fun acc (_, lam) ->
+        Set_ident.union acc (Lambda_traverse.assigned_variables lam))
+
 (* See [Lam_stats.awaited_units]. *)
 let awaited_units (groups : Lam_group.t list) =
   let units = ref Set_ident.empty in
@@ -360,6 +368,9 @@ let compile ?on_optimized_lambda (output_prefix : string)
     {
       meta with
       awaited_units = awaited_units groups;
+      assignable =
+        Ext_list.fold_left groups Set_ident.empty (fun acc group ->
+            Set_ident.union acc (assigned_variables group));
       exports = meta.exports @ flat_exports;
       export_idents =
         Ext_list.fold_left flat_exports meta.export_idents (fun acc id ->
@@ -442,8 +453,24 @@ let remove_stale_source_map ?(remove_stale_map = true) target_file =
   if remove_stale_map && not !((Clflags.current ()).dont_write_files) then
     Misc.remove_file (target_file ^ ".map")
 
+(* Where a program is printed: the request's stdout, or a buffer that becomes
+   the output file. *)
+type sink = {printer: Ext_pp.t; add_string: string -> unit}
+
+let channel_sink ~track_positions channel =
+  {
+    printer = Ext_pp.from_channel ~track_positions channel;
+    add_string = output_string channel;
+  }
+
+let buffer_sink ~track_positions buffer =
+  {
+    printer = Ext_pp.from_buffer ~track_positions buffer;
+    add_string = Buffer.add_string buffer;
+  }
+
 let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
-    ~output_prefix module_system lambda_output chan =
+    ~output_prefix module_system lambda_output sink =
   let builder =
     Js_source_map.make ~generated_file:target_file
       ~source_root:!((Js_config.current ()).source_map_root)
@@ -451,17 +478,17 @@ let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
   in
   Js_source_map.with_builder builder (fun () ->
       Js_dump_program.pp_deps_program ~output_prefix module_system lambda_output
-        (Ext_pp.from_channel ~track_positions:true chan));
+        sink.printer);
   match !((Js_config.current ()).source_map) with
   | Linked ->
     let json = Js_source_map.json builder in
-    output_string chan
+    sink.add_string
       (Js_source_map.linked_comment ~map_file:(target_file ^ ".map"));
     Ext_io.write_file (target_file ^ ".map") json
   | Hidden ->
     Ext_io.write_file (target_file ^ ".map") (Js_source_map.json builder)
   | Inline ->
-    output_string chan
+    sink.add_string
       (Js_source_map.inline_comment ~json:(Js_source_map.json builder));
     remove_stale_source_map ~remove_stale_map target_file
   | No_source_map -> ()
@@ -479,7 +506,8 @@ let lambda_as_module (lambda_output : J.deps_program) (output_prefix : string) :
       in
       dump_deps_program_with_source_map ~remove_stale_map:false ~target_file
         ~output_prefix Commonjs lambda_output
-        (Compiler_request_output.stdout_channel ())
+        (channel_sink ~track_positions:true
+           (Compiler_request_output.stdout_channel ()))
     | _ ->
       Js_dump_program.dump_deps_program ~output_prefix Commonjs lambda_output
         (Compiler_request_output.stdout_channel ())
@@ -494,18 +522,19 @@ let lambda_as_module (lambda_output : J.deps_program) (output_prefix : string) :
           Ext_path.package_dir () // path
           // basename (* #913 only generate little-case js file *)
         in
-        let output_chan chan =
-          match !((Js_config.current ()).source_map) with
+        if not !((Clflags.current ()).dont_write_files) then (
+          let buffer = Buffer.create 4096 in
+          (match !((Js_config.current ()).source_map) with
           | No_source_map ->
-            Js_dump_program.dump_deps_program ~output_prefix module_system
-              lambda_output chan;
+            Js_dump_program.pp_deps_program ~output_prefix module_system
+              lambda_output
+              (Ext_pp.from_buffer buffer);
             remove_stale_source_map target_file
           | Linked | Inline | Hidden ->
             dump_deps_program_with_source_map ~target_file ~output_prefix
-              module_system lambda_output chan
-        in
-        if not !((Clflags.current ()).dont_write_files) then
-          Ext_pervasives.with_file_as_chan target_file output_chan)
+              module_system lambda_output
+              (buffer_sink ~track_positions:true buffer));
+          Build_file_store.write target_file (Buffer.contents buffer)))
 
 (* We can use {!Env.current_unit = "Pervasives"} to tell if it is some specific module,
     We need handle some definitions in standard libraries in a special way, most are io specific,
