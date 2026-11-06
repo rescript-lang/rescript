@@ -66,11 +66,7 @@ let type_string ?loc () =
   | Some loc ->
     Ast_helper.Typ.mk ~loc (Ptyp_constr ({txt = Lid.type_string; loc}, []))
 
-let type_bool ?loc () =
-  match loc with
-  | None -> No_loc.type_bool
-  | Some loc ->
-    Ast_helper.Typ.mk ~loc (Ptyp_constr ({txt = Lid.type_bool; loc}, []))
+let type_bool () = No_loc.type_bool
 
 let type_int ?loc () =
   match loc with

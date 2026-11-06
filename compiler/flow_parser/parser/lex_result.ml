@@ -22,10 +22,3 @@ let comments result = result.lex_comments
 
 let errors result = result.lex_errors
 
-let debug_string_of_lex_result lex_result =
-  Printf.sprintf
-    "{\n  lex_token = %s\n  lex_value = %S\n  lex_errors = (length = %d)\n  lex_comments = (length = %d)\n}"
-    (Token.token_to_string lex_result.lex_token)
-    (Token.value_of_token lex_result.lex_token)
-    (List.length lex_result.lex_errors)
-    (List.length lex_result.lex_comments)

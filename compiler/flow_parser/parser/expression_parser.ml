@@ -892,8 +892,9 @@ module Expression
         )
       | _ -> left
 
-  and call ?(allow_optional_chain = true) env start_loc left =
-    as_expression env (call_cover ~allow_optional_chain env start_loc (Cover_expr left))
+  and call env start_loc left =
+    as_expression env
+      (call_cover ~allow_optional_chain:true env start_loc (Cover_expr left))
 
   and new_expression env =
     with_loc
@@ -1131,7 +1132,7 @@ module Expression
         start_loc
         (Cover_expr (loc, member))
     in
-    fun ?(allow_optional_chain = true) ?(in_optional_chain = false) env start_loc left ->
+    fun ~allow_optional_chain ?(in_optional_chain = false) env start_loc left ->
       let default_optional =
         if in_optional_chain then
           Some Expression.OptionalMember.NonOptional
@@ -1234,7 +1235,7 @@ module Expression
         )
     | _ -> left
 
-  and member ?(allow_optional_chain = true) env start_loc left =
+  and member ~allow_optional_chain env start_loc left =
     as_expression env (member_cover ~allow_optional_chain env start_loc (Cover_expr left))
 
   and _function env =
@@ -1501,14 +1502,7 @@ module Expression
     let case env =
       let leading = Peek.comments env in
       let case_match_root_loc = Peek.loc env |> Loc.start_loc in
-      let invalid_prefix_case =
-        if Peek.token env = T_CASE then (
-          let loc = Peek.loc env in
-          Eat.token env;
-          Some loc
-        ) else
-          None
-      in
+      if Peek.token env = T_CASE then Eat.token env;
       let pattern = Parse.match_pattern env in
       let guard =
         if Eat.maybe env T_IF then (
@@ -1519,40 +1513,20 @@ module Expression
         ) else
           None
       in
-      let invalid_infix_colon =
-        if Peek.token env = T_COLON then (
-          let loc = Peek.loc env in
-          Eat.token env;
-          Some loc
-        ) else (
-          Expect.token env T_ARROW;
-          None
-        )
-      in
+      if Peek.token env = T_COLON then
+        Eat.token env
+      else
+        Expect.token env T_ARROW;
       let body = assignment env in
-      let invalid_suffix_semicolon =
-        match Peek.token env with
-        | T_EOF
-        | T_RCURLY ->
-          None
-        | T_SEMICOLON ->
-          let loc = Peek.loc env in
-          Eat.token env;
-          Some loc
-        | _ ->
-          Expect.token env T_COMMA;
-          None
-      in
+      (match Peek.token env with
+      | T_EOF
+      | T_RCURLY ->
+        ()
+      | T_SEMICOLON -> Eat.token env
+      | _ -> Expect.token env T_COMMA);
       let trailing = Eat.trailing_comments env in
       let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
-      let invalid_syntax =
-        {
-          Match.Case.InvalidSyntax.invalid_prefix_case;
-          invalid_infix_colon;
-          invalid_suffix_semicolon;
-        }
-      in
-      { Match.Case.pattern; body; guard; comments; invalid_syntax; case_match_root_loc }
+      { Match.Case.pattern; body; guard; comments; case_match_root_loc }
     in
     let rec case_list env acc =
       match Peek.token env with
@@ -1585,15 +1559,14 @@ module Expression
       match Peek.token env with
       | T_RCURLY ->
         Eat.rescan_as_template_from env prev_lex_env;
-        let (loc, part, is_tail) =
+        let (loc, is_tail) =
           match Peek.token env with
-          | T_TEMPLATE_PART (loc, cooked, raw, _, tail) ->
-            let open Ast.Expression.TemplateLiteral in
+          | T_TEMPLATE_PART (loc, _, _, _, tail) ->
             Eat.token env;
-            (loc, { Element.value = { Element.cooked; raw }; tail }, tail)
+            (loc, tail)
           | _ -> assert false
         in
-        let quasis = (loc, part) :: quasis in
+        let quasis = loc :: quasis in
         if is_tail then
           (loc, List.rev quasis, List.rev expressions)
         else
@@ -1601,35 +1574,16 @@ module Expression
       | _ ->
         (* Malformed template *)
         error_unexpected ~expected:"a template literal part" env;
-        let imaginary_quasi =
-          ( fst expr,
-            {
-              Expression.TemplateLiteral.Element.value =
-                { Expression.TemplateLiteral.Element.raw = ""; cooked = "" };
-              tail = true;
-            }
-          )
-        in
-        (fst expr, List.rev (imaginary_quasi :: quasis), List.rev expressions)
+        (fst expr, List.rev (fst expr :: quasis), List.rev expressions)
     in
-    fun env ((start_loc, cooked, raw, _, is_tail) as part) ->
+    fun env ((start_loc, _, _, _, is_tail) as part) ->
       let leading = Peek.comments env in
       Expect.token env (T_TEMPLATE_PART part);
       let (end_loc, quasis, expressions) =
-        let head =
-          ( start_loc,
-            {
-              Ast.Expression.TemplateLiteral.Element.value =
-                { Ast.Expression.TemplateLiteral.Element.cooked; raw };
-              tail = is_tail;
-            }
-          )
-        in
-
         if is_tail then
-          (start_loc, [head], [])
+          (start_loc, [start_loc], [])
         else
-          template_parts env [head] []
+          template_parts env [start_loc] []
       in
       let trailing = Eat.trailing_comments env in
       let loc = Loc.btwn start_loc end_loc in
@@ -1676,7 +1630,7 @@ module Expression
     in
     add_comments ret ~leading ~trailing
 
-  and add_comments ?(leading = []) ?(trailing = []) (loc, expression) =
+  and add_comments ~leading ?(trailing = []) (loc, expression) =
     let merge_comments inner =
       Flow_ast_utils.merge_comments
         ~inner
