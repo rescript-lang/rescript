@@ -500,7 +500,7 @@ run_multiple_parse_errors_case() {
     exit 1
   fi
   error="$work/rescript.err"
-  if [ "$(grep -cF 'Error in multiple-parse-errors:' "$error")" -ne 2 ] || \
+  if [ "$(grep -cF 'Syntax error!' "$error")" -ne 2 ] || \
     ! grep -E '[/\\]src[/\\]A\.res' "$error" >/dev/null || \
     ! grep -E '[/\\]src[/\\]B\.res' "$error" >/dev/null; then
     echo "rescript did not retain every independent parse error" >&2
@@ -942,7 +942,7 @@ if ! grep -Fx 'root dependencies: a' "$work/rescript.err.plain" >/dev/null || \
   exit 1
 fi
 run_case build-source-path-is-file accept build "$work/source-path-file"
-if ! grep -F 'Could not read folder: "src"' "$work/rescript.err" >/dev/null; then
+if ! grep -F 'warning: source folder "src" of package source-path-file' "$work/rescript.err" >/dev/null; then
   echo "Non-directory source diagnostic is missing" >&2
   dump_output
   exit 1
@@ -963,7 +963,7 @@ run_case --cwd "$work/format-source-selection" \
   format-scans-graph-with-effective-features reject format --check
 normalize_project_path "$work/rescript.err" "$work/rescript.err.norm" \
   "$work/format-source-selection"
-missing_folder='Could not read folder: "missing". Specified in dependency: installed'
+missing_folder='warning: source folder "missing" of package installed'
 base_file='[format check] packages/local/base/Base.res'
 native_file='[format check] packages/local/native/Native.res'
 other_file='<ROOT>/packages/local/other/Other.res'
@@ -1028,7 +1028,7 @@ run_case build-malformed-dependency reject build "$work/malformed-dependency"
 require_error_contains build-malformed-dependency \
   "Could not build package tree for 'bad-config' at path '$work/malformed-dependency'. Error:"
 run_case build-duplicate-dependency accept build "$work/duplicate-dependency"
-duplicate_warning='Duplicated package: shared ./node_modules/shared (chosen) vs ./node_modules/a/node_modules/shared in ./node_modules/a'
+duplicate_warning='warning: duplicated package: shared ./node_modules/shared (chosen) vs ./node_modules/a/node_modules/shared in ./node_modules/a'
 normalize_project_path "$work/rescript.err" "$work/rescript.err.norm" \
   "$work/duplicate-dependency"
 if ! grep -F "$duplicate_warning" "$work/rescript.err.norm" >/dev/null; then
@@ -1277,7 +1277,7 @@ rm "$quiet_watch_project/lib/rescript/watch.lock"
 wait_for_exit "$quiet_watch_pid"
 wait "$quiet_watch_pid"
 if [ -s "$work/quiet-watch.out" ] || \
-  grep -F "Incremental build failed" "$work/quiet-watch.err" >/dev/null; then
+  grep -F "Build failed" "$work/quiet-watch.err" >/dev/null; then
   echo "quiet-watch: quiet watch emitted progress or a duplicate failure summary" >&2
   cat "$work/quiet-watch.out" "$work/quiet-watch.err" >&2
   exit 1
@@ -1286,7 +1286,7 @@ fi
 # rebuild reports the parse error again. Compare the distinct reports only.
 node -e '
   const fs = require("fs");
-  const blocks = fs.readFileSync(process.argv[1], "utf8").split(/^(?=Error in )/m);
+  const blocks = fs.readFileSync(process.argv[1], "utf8").split(/^(?=  Syntax error!)/m);
   const distinct = blocks.filter((block, i) => block !== blocks[i - 1]);
   fs.writeFileSync(process.argv[2], distinct.join(""));
 ' "$work/quiet-watch.err" "$work/quiet-watch.err.distinct"

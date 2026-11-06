@@ -136,9 +136,9 @@ if ! grep -E '^\[2/3\] 🧱 Parsing\.\.\. .+ [0-9]+/1' \
 fi
 
 cat >"$work/expected" <<'EOF'
-[1/3] 🧹 Cleaned 0/0
-[2/3] 🧱 Parsed 1 source files
-[3/3] 🤺 Compiled 1 modules
+[1/3] 🧹 Cleaned 0 stale modules
+[2/3] 🧱 Parsed 1 source file
+[3/3] 🤺 Compiled 1 module
 ✅ Finished compilation
 EOF
 
@@ -336,9 +336,9 @@ echo "Checking interactive watch rebuilds..."
 capture_watch_rebuild
 
 cat >"$work/expected-watch-initial" <<'EOF'
-[1/3] 🧹 Cleaned 0/0 in <TIME>
-[2/3] 🧱 Parsed 1 source files in <TIME>
-[3/3] 🤺 Compiled 1 modules in <TIME>
+[1/3] 🧹 Cleaned 0 stale modules in <TIME>
+[2/3] 🧱 Parsed 1 source file in <TIME>
+[3/3] 🤺 Compiled 1 module in <TIME>
 ✅ Finished initial compilation in <TIME>
 EOF
 
@@ -349,8 +349,8 @@ if ! cmp -s "$work/expected-watch-initial" "$work/watch-initial.phases"; then
 fi
 
 cat >"$work/expected-watch" <<'EOF'
-[1/2] 🧱 Parsed 1 source files in <TIME>
-[2/2] 🤺 Compiled 1 modules in <TIME>
+[1/2] 🧱 Parsed 1 source file in <TIME>
+[2/2] 🤺 Compiled 1 module in <TIME>
 ✅ Finished incremental compilation in <TIME>
 EOF
 
@@ -386,8 +386,8 @@ capture_initial_failure_recovery
 
 cat >"$work/expected-initial-failure-recovery" <<'EOF'
 Change detected. Rebuilding...
-[1/2] 🧱 Parsed 1 source files in <TIME>
-[2/2] 🤺 Compiled 1 modules in <TIME>
+[1/2] 🧱 Parsed 1 source file in <TIME>
+[2/2] 🤺 Compiled 1 module in <TIME>
 ✅ Finished incremental compilation in <TIME>
 EOF
 

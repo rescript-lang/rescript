@@ -123,7 +123,9 @@ let run ~poll ~verbosity ~folder ~prod =
             else None)
         |> String.concat ", "
       in
-      let generated_files = suffixes ^ " files" in
+      let generated_files =
+        if suffixes = "" then "generated files" else suffixes ^ " files"
+      in
       let generated_started = Unix.gettimeofday () in
       print_cleaning ~step:"2/2" generated_files;
       remove_generated_outputs cleanup;

@@ -1,13 +1,13 @@
 status: 0
 --- stdout
-Cleaned 0/0
-Parsed 1 source files
-Compiled 1 modules
+Cleaned 0 stale modules
+Parsed 1 source file
+Compiled 1 module
+Finished compilation
 --- stderr
-
 Package 'config-diagnostics' uses deprecated config (support will be removed in a future version):
   - field 'bsc-flags' — use 'compiler-flags' instead
 
-The field 'ignored-dirs' found in the package config of 'config-diagnostics' is not supported by ReScript 12's new build system.
+The field 'ignored-dirs' found in the package config of 'config-diagnostics' is not supported by the ReScript build system.
 
 Unknown field 'future-field' found in the package config of 'config-diagnostics'. This option will be ignored.

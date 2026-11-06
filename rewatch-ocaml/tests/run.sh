@@ -1502,7 +1502,7 @@ printf 'let other =\n' >"$initial_failure_freshness/src/B.res"
 initial_failure_freshness_pid=$!
 background_pids="$background_pids $initial_failure_freshness_pid"
 if ! wait_for_text "$initial_failure_freshness/watch.log" \
-  'Error in initial-failure-freshness'; then
+  'This let-binding misses an expression'; then
   cat "$initial_failure_freshness/watch.log" >&2
   exit 1
 fi
@@ -2316,7 +2316,7 @@ mv "$source_map/rescript.next" "$source_map/rescript.json"
 "$port" build "$source_map" >"$source_map/changed.log"
 grep 'Cleaned previous build due to compiler update' \
   "$source_map/changed.log" >/dev/null
-grep 'Compiled 1 modules' "$source_map/changed.log" >/dev/null
+grep -x 'Compiled 1 module' "$source_map/changed.log" >/dev/null
 
 sed 's/"sources":"src"/"sources":"src","dependencies":["consumer"]/' \
   "$monorepo/packages/dep/rescript.json" > "$monorepo/packages/dep/rescript.next"

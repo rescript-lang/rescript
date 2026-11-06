@@ -163,7 +163,10 @@ let format_files ?poll ~check files =
     prerr_endline (format_check_summary (List.length !unformatted));
   List.iter
     (fun (path, message) ->
-      prerr_endline (formatting_error (display path) message))
+      prerr_endline
+        (Output.compiler_output
+           ~color:(Output.colors_enabled ~interactive:(Unix.isatty Unix.stderr))
+           (formatting_error (display path) message)))
     (List.sort compare !failures);
   match (!failures, !unformatted) with
   | [], [] -> ()

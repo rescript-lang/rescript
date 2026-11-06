@@ -292,22 +292,17 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     if attempt.freshness_mode = Build_attempt.Initialize_freshness then
       Source_dirs.write_build ~root_config attempt.session;
     Build_report.report_failure report ~compile_seconds;
-    prerr_string output;
+    prerr_string (Output.compiler_output ~color:colors output);
     prerr_newline ();
     Build_attempt.cleanup_artifacts attempt;
-    raise
-      (Reported_failure
-         ("Incremental build failed. Error: \027[2K\r  Failed to Compile. "
-        ^ "See Errors Above"))
+    raise (Reported_failure "Build failed: see the errors above.")
   in
   let report_parse_failure output =
     Build_attempt.finalize_logs attempt;
     Build_report.report_parse_failure report ~output;
     Build_attempt.cleanup_artifacts attempt;
     raise
-      (Reported_failure
-         "Incremental build failed. Error: \027[2K\r  Could not parse Source \
-          Files")
+      (Reported_failure "Build failed: could not parse the source files above.")
   in
   let format_cycle cycle (by_key : (string, Module_graph.cycle_node) Hashtbl.t)
       =
@@ -352,8 +347,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
                     (Output.compiler_cleanup_message ~color:colors ~step:"1/3");
                 print_endline
                   (Output.cleanup_message ~color:colors ~step:"1/3"
-                     ~cleaned:attempt.cleaned ~total:attempt.previous_asts
-                     ~seconds:(phase_seconds seconds))))
+                     ~cleaned:attempt.cleaned ~seconds:(phase_seconds seconds))))
         in
         (preparation.prepared, preparation.cycle)
     in

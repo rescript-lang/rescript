@@ -32,7 +32,7 @@ const stderr = rawStderr.replaceAll("\\", "/");
 // c reaches a and b through node_modules symlinks and counts once; z has two
 // copies, node_modules/z and a/node_modules/z, the one duplicate to report.
 const expectedWarning =
-  "Duplicated package: z ./node_modules/z (chosen) vs ./a/node_modules/z in ./a";
+  "warning: duplicated package: z ./node_modules/z (chosen) vs ./a/node_modules/z in ./a";
 
 if (!stderr.includes(expectedWarning)) {
   assert.fail(
