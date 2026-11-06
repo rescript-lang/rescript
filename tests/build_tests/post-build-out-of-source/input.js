@@ -32,15 +32,18 @@ try {
   // e.g., /path/to/post-build-out-of-source/lib/es6/src/demo.mjs (Unix)
   // e.g., C:\path\to\post-build-out-of-source\lib\es6\src\demo.mjs (Windows)
   const libEs6Sep = isWindows ? "\\lib\\es6\\" : "/lib/es6/";
-  const libBsSep = isWindows ? "\\lib\\bs\\" : "/lib/bs/";
+  const artifactSep = isWindows ? "\\lib\\rescript\\" : "/lib/rescript/";
 
   for (const p of paths) {
     assert.ok(
       p.includes(libEs6Sep) && p.endsWith(".mjs"),
       `Path should be in lib/es6/ directory with .mjs suffix: ${p}`,
     );
-    // Should NOT be in lib/bs/ when in-source is false
-    assert.ok(!p.includes(libBsSep), `Path should not be in lib/bs/: ${p}`);
+    // Should NOT be in lib/rescript/ when in-source is false
+    assert.ok(
+      !p.includes(artifactSep),
+      `Path should not be in lib/rescript/: ${p}`,
+    );
   }
 } finally {
   // Clean up log file

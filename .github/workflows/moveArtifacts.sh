@@ -26,7 +26,7 @@ check_statically_linked() {
 }
 
 # rescript
-mv lib-ocaml packages/@rescript/runtime/lib/ocaml
+mv lib-rescript packages/@rescript/runtime/lib/rescript
 
 # @rescript/{target}
 chmod +x binaries-*/*.exe

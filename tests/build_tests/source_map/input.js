@@ -214,10 +214,6 @@ async function removeGeneratedMapFiles() {
     await fs.rm(path.join(import.meta.dirname, "src", `${filename}.map`), {
       force: true,
     });
-    await fs.rm(
-      path.join(import.meta.dirname, "lib", "bs", "src", `${filename}.map`),
-      { force: true },
-    );
   }
 }
 
@@ -382,7 +378,7 @@ async function assertLinkedOutput() {
   await execBuildOrThrow();
 
   for (const filename of outputFilenames) {
-    const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
+    const jsPath = path.join(import.meta.dirname, "src", filename);
     const mapPath = `${jsPath}.map`;
 
     const js = await fs.readFile(jsPath, "utf8");
@@ -416,7 +412,7 @@ async function assertNodeStackTraceUsesSourceMap() {
   await fs.writeFile(
     stackTraceScriptPath,
     `
-    const Demo = require("./lib/bs/src/Demo.cjs");
+    const Demo = require("./src/Demo.cjs");
     Demo.unicodeCrash();
   `,
   );
@@ -447,7 +443,7 @@ async function assertHiddenOutput() {
   await execBuildOrThrow();
 
   for (const filename of outputFilenames) {
-    const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
+    const jsPath = path.join(import.meta.dirname, "src", filename);
     const mapPath = `${jsPath}.map`;
 
     const js = await fs.readFile(jsPath, "utf8");
@@ -472,7 +468,7 @@ async function assertDefaultOutput() {
 
   const output = new Map();
   for (const filename of outputFilenames) {
-    const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
+    const jsPath = path.join(import.meta.dirname, "src", filename);
     const mapPath = `${jsPath}.map`;
     const js = await fs.readFile(jsPath, "utf8");
 
@@ -498,7 +494,7 @@ async function assertDisabledOutput(defaultOutput) {
   await execBuildOrThrow();
 
   for (const filename of outputFilenames) {
-    const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
+    const jsPath = path.join(import.meta.dirname, "src", filename);
     const mapPath = `${jsPath}.map`;
 
     const js = await fs.readFile(jsPath, "utf8");
@@ -528,7 +524,7 @@ async function assertInlineOutput() {
   await execBuildOrThrow();
 
   for (const filename of outputFilenames) {
-    const jsPath = path.join(import.meta.dirname, "lib", "bs", "src", filename);
+    const jsPath = path.join(import.meta.dirname, "src", filename);
     const mapPath = `${jsPath}.map`;
 
     const js = await fs.readFile(jsPath, "utf8");

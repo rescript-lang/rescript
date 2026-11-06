@@ -49,7 +49,7 @@ node_modules
 _coverage/
 bisect*.coverage
 
-lib/ocaml
+lib/rescript
 tests/build_tests/*/lib/
 #ignore temporary directory
 *.goog.js

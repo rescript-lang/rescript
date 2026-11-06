@@ -5,7 +5,7 @@
 /*
  * You need to build cmij files with the same rescript version as the compiler bundle.
  *
- * This script extracts the cmi / cmj files of packages/@rescript/runtime/lib/ocaml
+ * This script extracts the cmi / cmj files of packages/@rescript/runtime/lib/rescript
  * and of every dependency listed in the playground package's rescript.json,
  * creates a cmij.js file for each library and puts them in the playground's
  * packages directory.
@@ -44,10 +44,10 @@ for (const pkgName of packages) {
  * @param {string} pkgName
  */
 function buildCmij(pkgDir, pkgName) {
-  const libOcamlFolder = path.join(
+  const artifactFolder = path.join(
     pkgDir,
     "lib",
-    "ocaml",
+    "rescript",
   );
 
   const outputFolder = path.join(playgroundPackagesDir, pkgName);
@@ -55,10 +55,10 @@ function buildCmij(pkgDir, pkgName) {
 
   const cmijFile = path.join(outputFolder, "cmij.js");
   const files = fs
-    .readdirSync(libOcamlFolder)
+    .readdirSync(artifactFolder)
     .filter(isCmij)
     .map(basename => {
-      const bytes = fs.readFileSync(path.join(libOcamlFolder, basename));
+      const bytes = fs.readFileSync(path.join(artifactFolder, basename));
       return `  a("/static/${basename}", "${jsBytesLiteral(bytes)}");\n`;
     });
 

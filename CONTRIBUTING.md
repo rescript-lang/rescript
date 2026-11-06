@@ -262,7 +262,7 @@ To view the typed tree of the file run:
 ### Project
 
 ```sh
-make artifacts # Build compiler and standard library and populate lib/ocaml
+make artifacts # Build compiler and standard library and populate lib/rescript
 npm link
 cd myProject
 npm install

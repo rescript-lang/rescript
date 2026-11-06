@@ -112,7 +112,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: "@(binaries-*|lib-ocaml)"
+          pattern: "@(binaries-*|lib-rescript)"
 
       - name: Move artifacts into packages
         run: .github/workflows/moveArtifacts.sh

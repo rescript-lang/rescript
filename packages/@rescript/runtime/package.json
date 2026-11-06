@@ -33,7 +33,9 @@
     "provenance": true
   },
   "files": [
-    "lib"
+    "lib",
+    "*.res",
+    "*.resi"
   ],
   "exports": {
     "./lib/es6/*": "./lib/es6/*",
