@@ -411,6 +411,10 @@ end
 
 (** Module expressions *)
 module Mod : sig
+  val mk : ?loc:loc -> ?attrs:attrs -> module_expr_desc -> module_expr
+  [@@live]
+  (** The builder the others specialize, as in every module of this file. *)
+
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> module_expr
   val structure : ?loc:loc -> ?attrs:attrs -> structure -> module_expr
   val functor_ :

@@ -65,9 +65,15 @@ module type IteratorArgument = sig
   val enter_expression : expression -> unit
 end
 
+(* The iterator's whole interface, also the entry points no pass uses yet. *)
 module Make_iterator : functor (_ : IteratorArgument) -> sig
+  val iter_structure : structure -> unit [@@live]
+  val iter_signature : signature -> unit [@@live]
   val iter_structure_item : structure_item -> unit
+  val iter_signature_item : signature_item -> unit [@@live]
   val iter_expression : expression -> unit
+  val iter_module_type : module_type -> unit [@@live]
+  val iter_pattern : pattern -> unit [@@live]
 end
 
 module Default_iterator_argument : IteratorArgumentDefaults
