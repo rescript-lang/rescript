@@ -823,6 +823,25 @@ if [ "$(classify "$rescript_status")" != reject ] || \
   dump_output
   exit 1
 fi
+checked=$((checked + 1))
+# Clean refuses while a watcher of the project runs, which would otherwise
+# keep reading the removed artifacts.
+run_rescript clean "$owner_dir"
+if [ "$(classify "$rescript_status")" != reject ] || \
+  ! grep -F 'Could not clean while rescript watch' "$work/rescript.err" \
+    >/dev/null || \
+  [ ! -f "$owner_dir/lib/rescript/A.cmt" ]; then
+  echo "clean-during-watch: clean did not refuse while a watcher runs" >&2
+  dump_output
+  exit 1
+fi
+printf 'let value = 2\n' >"$owner_dir/src/A.res"
+wait_for_text "$owner_dir/watch.out" "Finished incremental compilation"
+if grep -F 'No such file' "$owner_dir/watch.out" "$owner_dir/watch.err" >/dev/null; then
+  echo "clean-during-watch: the watcher lost its artifacts" >&2
+  cat "$owner_dir/watch.out" "$owner_dir/watch.err" >&2
+  exit 1
+fi
 kill -TERM "$watch_lock_owner_pid"
 wait "$watch_lock_owner_pid" 2>/dev/null || true
 checked=$((checked + 1))
