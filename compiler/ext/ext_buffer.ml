@@ -108,8 +108,6 @@ let add_string_char b s c =
    really_input ic b.buffer b.position len;
    b.position <- b.position + len *)
 
-let output_buffer oc b = output oc b.buffer 0 b.position
-
 (**
    It could be one byte, two bytes, three bytes and four bytes 
    TODO: inline for better performance

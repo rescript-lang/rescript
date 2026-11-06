@@ -43,15 +43,8 @@ type cmt_infos = {
   cmt_annots: binary_annots;
   cmt_value_dependencies:
     (Types.value_description * Types.value_description) list;
-  cmt_comments: (string * Location.t) list;
   cmt_args: string array;
-  cmt_sourcefile: string option;
-  cmt_builddir: string;
-  cmt_loadpath: string list;
   cmt_source_digest: Digest.t option;
-  cmt_initial_env: Env.t;
-  cmt_imports: (string * Digest.t option) list;
-  cmt_use_summaries: bool;
   cmt_extra_info: Cmt_utils.cmt_extra_info;
 }
 
@@ -74,11 +67,9 @@ val save_cmt :
   binary_annots ->
   string option ->
   (* source file *)
-  Env.t ->
-  (* initial env *)
   unit
-(** [save_cmt filename modname binary_annots sourcefile initial_env]
-    writes a cmt(i) file.  *)
+(** [save_cmt filename modname binary_annots sourcefile] writes a cmt(i)
+    file. *)
 
 (* Miscellaneous functions *)
 

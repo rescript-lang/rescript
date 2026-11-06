@@ -50,7 +50,7 @@ let create = Ident.create
 (* FIXME: no need for `$' operator *)
 let create_tmp ?(name = Literals.tmp) () = create name
 
-let[@inline] convert ?(op = false) (c : char) : string =
+let[@inline] convert ~op (c : char) : string =
   match c with
   | '*' -> "$star"
   | '\'' -> "$p"

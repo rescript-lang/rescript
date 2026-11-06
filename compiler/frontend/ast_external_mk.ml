@@ -22,10 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let local_external_apply loc ?(pval_attributes = [])
-    ~(pval_prim : Parsetree.primitive_repr) ~(pval_type : Parsetree.core_type)
-    ?(local_module_name = "J") ?(local_fun_name = "unsafe_expr")
-    (args : Parsetree.expression list) : Parsetree.expression_desc =
+let local_external_apply loc ~(pval_prim : Parsetree.primitive_repr)
+    ~(pval_type : Parsetree.core_type) (args : Parsetree.expression list) :
+    Parsetree.expression_desc =
+  let local_module_name = "J" and local_fun_name = "unsafe_expr" in
   Pexp_letmodule
     ( {txt = local_module_name; loc},
       Ast_helper.Mod.structure ~loc
@@ -37,7 +37,7 @@ let local_external_apply loc ?(pval_attributes = [])
               pval_loc = loc;
               pval_prim = Some pval_prim;
               pval_jsx_component = None;
-              pval_attributes;
+              pval_attributes = [];
             };
         ],
       Ast_helper.Exp.apply ~loc

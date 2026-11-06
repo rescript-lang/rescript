@@ -16,7 +16,6 @@ type file_data = {
   decls: Declarations.builder;
   refs: References.builder;
   cross_file: Cross_file_items.builder;
-  file_deps: File_deps.builder;
 }
 (** Result of processing a cmt file - annotations, declarations, references, cross-file items, and file dependencies *)
 

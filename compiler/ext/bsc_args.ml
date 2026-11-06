@@ -24,13 +24,11 @@
 
 type string_action =
   | String_call of (string -> unit)
-  | String_set of string ref
   | String_optional_set of string option ref
   | String_list_add of string list ref
 
 type unit_action =
   | Unit_call of (unit -> unit)
-  | Unit_lazy of unit lazy_t
   | Unit_set of bool ref
   | Unit_clear of bool ref
 
@@ -96,8 +94,9 @@ let stop_raise ~usage ~(error : error) (speclist : t) =
   usage_b b ~usage speclist;
   bad_arg (Ext_buffer.contents b)
 
-let parse_exn ~usage ~argv ?(start = 1) ?(finish = Array.length argv)
-    (speclist : t) (anonfun : rev_args:string list -> unit) =
+let parse_exn ~usage ~argv ?(start = 1) (speclist : t)
+    (anonfun : rev_args:string list -> unit) =
+  let finish = Array.length argv in
   let current = ref start in
   let rev_list = ref [] in
   while !current < finish do
@@ -112,8 +111,7 @@ let parse_exn ~usage ~argv ?(start = 1) ?(finish = Array.length argv)
           match r with
           | Unit_set r -> r := true
           | Unit_clear r -> r := false
-          | Unit_call f -> f ()
-          | Unit_lazy f -> Lazy.force f)
+          | Unit_call f -> f ())
         | String f -> (
           if !current >= finish then
             stop_raise ~usage ~error:(Missing s) speclist
@@ -122,7 +120,6 @@ let parse_exn ~usage ~argv ?(start = 1) ?(finish = Array.length argv)
             incr current;
             match f with
             | String_call f -> f arg
-            | String_set u -> u := arg
             | String_optional_set s -> s := Some arg
             | String_list_add s -> s := arg :: !s))
       | None -> stop_raise ~usage ~error:(Unknown s) speclist

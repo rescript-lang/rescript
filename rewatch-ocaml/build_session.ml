@@ -106,7 +106,6 @@ let add_package_plan session package =
 
 let find_package_plan session root = Hashtbl.find_opt session.package_plans root
 
-let iter_package_plans session f = Hashtbl.iter f session.package_plans
 let package_plan_values session = Hashtbl.to_seq_values session.package_plans
 
 let add_source_reference session normalized_path source =

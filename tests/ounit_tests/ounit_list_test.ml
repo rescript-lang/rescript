@@ -1,6 +1,5 @@
 let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
-let ( =~ ) = OUnit.assert_equal
 let printer_int_list xs =
   Format.asprintf "%a"
     (Format.pp_print_list Format.pp_print_int ~pp_sep:Format.pp_print_space)

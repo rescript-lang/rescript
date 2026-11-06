@@ -281,7 +281,7 @@ let field_expr expr =
     | _ when Parsetree_viewer.expr_is_await expr -> Parenthesized
     | _ -> Nothing)
 
-let ternary_operand ?(is_condition = false) expr =
+let ternary_operand ~is_condition expr =
   let opt_braces, _ = Parsetree_viewer.process_braces expr in
   match opt_braces with
   | Some braces_loc -> Braced braces_loc

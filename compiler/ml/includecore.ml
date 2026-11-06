@@ -176,7 +176,6 @@ type type_mismatch =
   | Field_type of Ident.t
   | Field_mutable of Ident.t
   | Field_optional of Ident.t
-  | Field_arity of Ident.t
   | Field_renamed of string * string
   | Field_runtime_name of Ident.t * string * string
   | Field_missing of bool * Ident.t
@@ -221,7 +220,6 @@ let rec report_type_mismatch0 ?(lead_in = true) first second decl ppf err =
     pr "The mutability of field %s is different" (Ident.name s)
   | Field_optional s ->
     pr "The optional attribute of field %s is different" (Ident.name s)
-  | Field_arity s -> pr "The arities for field %s differ" (Ident.name s)
   | Field_renamed (name1, name2) ->
     pr "The field %s is named %s in %s %s" name1 name2 second decl
   | Field_runtime_name (s, name1, name2) ->

@@ -113,19 +113,6 @@ let create_hashtable init =
   Array.iter (fun (key, data) -> Hashtbl.add tbl key data) init;
   tbl
 
-(* File copy *)
-
-let output_to_bin_file_directly filename fn =
-  let filename = Compiler_request_state.resolve_path filename in
-  let oc = open_out_bin filename in
-  match fn filename oc with
-  | v ->
-    close_out oc;
-    v
-  | exception e ->
-    close_out oc;
-    raise e
-
 (* Integer operations *)
 
 module Int_literal_converter = struct
@@ -242,7 +229,9 @@ end)
 (* Color handling *)
 module Color = struct
   (* use ANSI color codes, see https://en.wikipedia.org/wiki/ANSI_escape_code *)
+  (* The full ANSI palette, also the colors no message uses yet. *)
   type color = Black | Red | Green | Yellow | Blue | Magenta | Cyan | White
+  [@@live]
 
   type style =
     | FG of color (* foreground *)
@@ -250,6 +239,7 @@ module Color = struct
     | Bold
     | Reset
     | Dim
+  [@@live]
 
   let ansi_of_color = function
     | Black -> "0"

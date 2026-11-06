@@ -538,10 +538,10 @@ let run_tasks ?(max_jobs = default_max_jobs) ?poll ?(on_complete = fun _ -> ())
         None);
   Array.to_list results |> List.map Option.get
 
-let run_one ?poll ?stdout_chunk ?stderr_chunk ?stdin ?env ~cwd program args =
+let run_one ?poll ?stdout_chunk ?stderr_chunk ?stdin ~cwd program args =
   with_completion_notifier ~poll (fun ~poll notifier ->
       let child =
-        Child.launch ?stdout_chunk ?stderr_chunk ?stdin ?env ~notifier
+        Child.launch ?stdout_chunk ?stderr_chunk ?stdin ~notifier
           {program; args; cwd}
       in
       let completion_received = ref false in

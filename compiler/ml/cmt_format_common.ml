@@ -40,15 +40,8 @@ type cmt_infos = {
   cmt_annots: binary_annots;
   cmt_value_dependencies:
     (Types.value_description * Types.value_description) list;
-  cmt_comments: (string * Location.t) list;
   cmt_args: string array;
-  cmt_sourcefile: string option;
-  cmt_builddir: string;
-  cmt_loadpath: string list;
   cmt_source_digest: Digest.t option;
-  cmt_initial_env: Env.t;
-  cmt_imports: (string * Digest.t option) list;
-  cmt_use_summaries: bool;
   cmt_extra_info: Cmt_utils.cmt_extra_info;
 }
 
@@ -161,13 +154,14 @@ let add_saved_type b =
 let get_saved_types () = (current_accumulators ()).saved_types
 let set_saved_types l = (current_accumulators ()).saved_types <- l
 
-let record_deprecated_used ?deprecated_context ?migration_template
-    ?migration_in_pipe_chain_template source_loc deprecated_text =
+(* Live: called through a forward reference ({!Cmt_utils.record_deprecated_used}) with optional
+   arguments that reanalyze cannot trace. *)
+let[@live] record_deprecated_used ?deprecated_context ?migration_template
+    ?migration_in_pipe_chain_template source_loc =
   let state = current_accumulators () in
   state.deprecated_used <-
     {
       Cmt_utils.source_loc;
-      deprecated_text;
       migration_template;
       migration_in_pipe_chain_template;
       context = deprecated_context;

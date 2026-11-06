@@ -25,17 +25,6 @@ module Module_path = struct
       | NotVisible -> current
     in
     loop module_path [tip_name]
-
-  let to_path_with_prefix module_path prefix : path =
-    let rec loop module_path current =
-      match module_path with
-      | File _ -> current
-      | IncludedModule (_, inner) -> loop inner current
-      | ExportedModule {name; module_path = inner} ->
-        loop inner (name :: current)
-      | NotVisible -> current
-    in
-    prefix :: loop module_path []
 end
 
 type field = {
@@ -275,21 +264,6 @@ module File = struct
     module_name: string;
     structure: Module.structure;
   }
-
-  let create module_name uri =
-    {
-      uri;
-      stamps = Stamps.init ();
-      module_name;
-      structure =
-        {
-          name = module_name;
-          docstring = [];
-          exported = Exported.init ();
-          items = [];
-          deprecated = None;
-        };
-    }
 end
 
 module Query_env : sig
@@ -307,8 +281,6 @@ module Query_env : sig
      The result is A.B.C.D if D is inside C.
      Or A.B.D or A.D or D if it's in one of its parents. *)
   val path_from_env : t -> path -> bool * path
-
-  val to_string : t -> string
 end = struct
   type t = {
     file: File.t;
@@ -316,9 +288,6 @@ end = struct
     path_rev: path;
     parent: t option;
   }
-
-  let to_string {file; path_rev} =
-    file.module_name :: List.rev path_rev |> String.concat "."
 
   let from_file (file : File.t) =
     {file; exported = file.structure.exported; path_rev = []; parent = None}
@@ -529,12 +498,10 @@ and package = {
   suffix: string;
   root_path: file_path;
   project_files: File_set.t;
-  dependencies: string list;
   dependencies_files: File_set.t;
   paths_for_module: (file, paths) Hashtbl.t;
   namespace: string option;
   opens: path list;
-  rescript_version: int * int;
   autocomplete: file list Misc.String_map.t;
 }
 
@@ -866,16 +833,14 @@ module Completion = struct
     docstring: string list;
     kind: kind;
     detail: string option;
-    type_arg_context: type_arg_context option;
-    data: (string * string) list option;
     additional_text_edits: Lsp.Types.TextEdit.t list option;
     synthetic: bool;
         (** Whether this item is an made up, synthetic item or not. *)
   }
 
-  let create ?(synthetic = false) ?additional_text_edits ?data ?type_arg_context
+  let create ?(synthetic = false) ?additional_text_edits
       ?(includes_snippets = false) ?insert_text ~kind ~env ?sort_text
-      ?deprecated ?filter_text ?detail ?(docstring = []) name =
+      ?deprecated ?detail ?(docstring = []) name =
     {
       name;
       env;
@@ -887,10 +852,8 @@ module Completion = struct
       insert_text_format =
         (if includes_snippets then Some Lsp.Types.InsertTextFormat.Snippet
          else None);
-      filter_text;
+      filter_text = None;
       detail;
-      type_arg_context;
-      data;
       additional_text_edits;
       synthetic;
     }
