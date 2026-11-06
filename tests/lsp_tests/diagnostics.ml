@@ -13,13 +13,14 @@ let notify_log ~root client =
           ~changes:
             [
               FileEvent.create ~type_:FileChangeType.Changed
-                ~uri:(Uri.of_path (root /+ "lib" /+ "bs" /+ ".compiler.log"));
+                ~uri:
+                  (Uri.of_path (root /+ "lib" /+ "rescript" /+ ".compiler.log"));
             ]))
 
 (* Write each build phase explicitly so a partial compiler log is observable
    deterministically, without racing a real compiler watcher. *)
 let write_log ~root client content =
-  Test.write_file (root /+ "lib" /+ "bs" /+ ".compiler.log") content;
+  Test.write_file (root /+ "lib" /+ "rescript" /+ ".compiler.log") content;
   notify_log ~root client
 
 let publications client =

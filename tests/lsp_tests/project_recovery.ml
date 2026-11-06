@@ -8,7 +8,9 @@ let notify_log ~root ~type_ client =
           ~changes:
             [
               FileEvent.create ~type_
-                ~uri:(Uri.of_path (Filename.concat root "lib/bs/.compiler.log"));
+                ~uri:
+                  (Uri.of_path
+                     (Filename.concat root "lib/rescript/.compiler.log"));
             ]))
 
 let test_recovery type_ =

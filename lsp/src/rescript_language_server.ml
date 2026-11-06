@@ -633,10 +633,11 @@ let on_notification notification (server : State.t Server.t) =
           FileSystemWatcher.create
             ~kind
               (* NOTE: Clients dont send notification `workspace/didChangeWatchedFiles`
-                    when pattern is a relative path `lib/bs/.compiler.log` of full path
-                    `{workspace_root}/lib/bs/.compiler.log`. The glob should start with `**`
+                    when pattern is a relative path `lib/rescript/.compiler.log` of full path
+                    `{workspace_root}/lib/rescript/.compiler.log`. The glob should start with `**`
                   *)
-            ~globPattern:(`Pattern ("**/lib/bs/" ^ Constants.compiler_log))
+            ~globPattern:
+              (`Pattern ("**/" ^ Constants.compiler_log_partial_path))
             ())
     in
 

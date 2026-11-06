@@ -93,8 +93,13 @@ let%expect_test "uses the dependency's in-source output setting" =
   [%expect
     {| { "uri": "file:///workspace/node_modules/child-package/src/Child.mjs" } |}]
 
-let%expect_test "uses the dependency's namespace when creating an interface" =
+let%expect_test
+    "creates a nested dependency's interface from a flat namespaced artifact" =
   with_dependency ~in_source:false (fun ~root ~root_doc:_ ~doc client ->
+      assert (
+        Sys.file_exists
+          (root /+ "node_modules" /+ "child-package" /+ "lib" /+ "rescript"
+         /+ "Child-ChildPackage.cmi"));
       Create_interface.create_and_print ~root ~doc client);
   [%expect
     {|
