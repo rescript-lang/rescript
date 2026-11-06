@@ -1,0 +1,1 @@
+- Check in CI that reanalyze reports no dead code in the OCaml sources.
