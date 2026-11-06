@@ -663,12 +663,14 @@ run_case --cwd "$format_broken" format-continues-after-syntax-error reject \
 printf '%s\n' '[format check] src/A.res' '[format check] src/B.res' \
   '[format check] src/C.res' '[format check] src/D.res' \
   >"$work/format-broken.expected"
-grep -F '[format check]' "$work/rescript.err" >"$work/format-broken.listed"
+# Windows prints the relative paths with backslashes.
+tr '\\' '/' <"$work/rescript.err" >"$work/format-broken.err"
+grep -F '[format check]' "$work/format-broken.err" >"$work/format-broken.listed"
 if ! cmp -s "$work/format-broken.expected" "$work/format-broken.listed" || \
-  ! grep -F 'Error formatting src/Broken.res:' "$work/rescript.err" \
+  ! grep -F 'Error formatting src/Broken.res:' "$work/format-broken.err" \
     >/dev/null || \
-  ! grep -F 'The 4 files listed above need formatting' "$work/rescript.err" \
-    >/dev/null; then
+  ! grep -F 'The 4 files listed above need formatting' \
+    "$work/format-broken.err" >/dev/null; then
   echo "format-continues-after-syntax-error: not every file was reported in order" >&2
   dump_output
   exit 1
