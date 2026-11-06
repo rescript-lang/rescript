@@ -15,6 +15,9 @@ let collect_cmt_file_paths ~cmt_root : string list =
       let skip_dir =
         let base = Filename.basename dir in
         base = "node_modules" || base = "_esy"
+        (* The editor's copies of compiled files. *)
+        || base = "incremental"
+           && Filename.basename (Filename.dirname dir) = "rescript"
       in
       if (not skip_dir) && Sys.file_exists abs_dir then
         if Sys.is_directory abs_dir then

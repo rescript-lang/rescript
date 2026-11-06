@@ -37,10 +37,10 @@ let new_bs_package ~root_path =
   let rescript_json = Filename.concat root_path "rescript.json" in
 
   let parse_raw raw =
-    let lib_bs =
+    let artifact_dir =
       match !Cfg.is_doc_gen_from_compiler with
       | true -> Build_system.get_stdlib root_path
-      | false -> Build_system.get_lib_bs root_path
+      | false -> Build_system.get_artifact_dir root_path
     in
     match Yojson_helpers.from_string_opt raw with
     | Some config -> (
@@ -82,10 +82,12 @@ let new_bs_package ~root_path =
           | _ -> Misc.String_map.empty)
         | None -> Misc.String_map.empty
       in
-      match lib_bs with
+      match artifact_dir with
       | None -> None
-      | Some lib_bs ->
-        let cached = Cache.read_cache (Cache.target_file_from_lib_bs lib_bs) in
+      | Some artifact_dir ->
+        let cached =
+          Cache.read_cache (Cache.target_file_from_artifact_dir artifact_dir)
+        in
         let project_files, dependencies_files, paths_for_module =
           match cached with
           | Some cached ->
@@ -106,7 +108,7 @@ let new_bs_package ~root_path =
             let project_files_and_paths =
               Find_files.find_project_files
                 ~public:(Find_files.get_public config)
-                ~namespace ~path:root_path ~source_directories ~lib_bs
+                ~namespace ~path:root_path ~source_directories ~artifact_dir
             in
             let paths_for_module =
               make_paths_for_module ~project_files_and_paths
@@ -125,7 +127,7 @@ let new_bs_package ~root_path =
              match namespace with
              | None -> []
              | Some namespace ->
-               let cmt = Filename.concat lib_bs namespace ^ ".cmt" in
+               let cmt = Filename.concat artifact_dir namespace ^ ".cmt" in
                Hashtbl.replace paths_for_module namespace (Namespace {cmt});
                let path = [Find_files.name_space_to_name namespace] in
                [path]

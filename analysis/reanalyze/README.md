@@ -17,7 +17,7 @@ Dead code analysis and other experimental analyses for ReScript.
 rescript-tools reanalyze -config
 
 # Run DCE analysis on specific CMT directory
-rescript-tools reanalyze -dce-cmt path/to/lib/bs
+rescript-tools reanalyze -dce-cmt path/to/lib/rescript
 
 # Run all analyses
 rescript-tools reanalyze -all

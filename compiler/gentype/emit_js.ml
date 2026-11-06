@@ -435,9 +435,7 @@ let rec read_cmt_files_recursively ~config ~env
     | exception Not_found -> env
   in
   let cmt_file =
-    import_path
-    |> Import_path.to_cmt ~config ~output_file_relative
-    |> Paths.get_cmt_file
+    import_path |> Import_path.to_cmt ~config |> Paths.get_cmt_file
   in
   match as_type_name with
   | Some as_type when cmt_file <> "" -> (

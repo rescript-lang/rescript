@@ -8,6 +8,7 @@
   addDeclaration_ VariantCase R2 AutoAnnotate.res:14:2 path:+AutoAnnotate.annotatedVariant
   addDeclaration_ VariantCase R4 AutoAnnotate.res:15:2 path:+AutoAnnotate.annotatedVariant
   Scanning BootloaderResource.cmt Source:BootloaderResource.res
+  Implementation 0
   Scanning BucklescriptAnnotations.cmt Source:BucklescriptAnnotations.res
   addDeclaration_ Value +bar BucklescriptAnnotations.res:22:4 path:+BucklescriptAnnotations
   addDeclaration_ Value +f BucklescriptAnnotations.res:23:6 path:+BucklescriptAnnotations
@@ -2007,7 +2008,6 @@
   add_value_reference VariantsWithPayload.res:93:4 --> VariantsWithPayload.res:93:23
   addDeclaration_ VariantCase R VariantsWithPayload.res:96:22 path:+VariantsWithPayload.variant1Object
   add_value_reference VariantsWithPayload.res:99:4 --> VariantsWithPayload.res:99:26
-  Implementation 0
 
   Warning Dead Module
   AutoAnnotate.res:0:1

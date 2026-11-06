@@ -4,10 +4,10 @@ build:
 	yarn build
 
 	# Simulate editor-written incremental CMTs
-	mkdir -p lib/bs/___incremental
-	cp lib/bs/src/MyModule1-MyNamespace.cmt lib/bs/___incremental/MyModule1-MyNamespace.cmt
-	cp lib/bs/src/MyModule2-MyNamespace.cmt lib/bs/___incremental/MyModule2-MyNamespace.cmt
-	cp lib/bs/MyNamespace.cmt lib/bs/___incremental/MyNamespace.cmt
+	mkdir -p lib/rescript/incremental
+	cp lib/rescript/MyModule1-MyNamespace.cmt lib/rescript/incremental/MyModule1-MyNamespace.cmt
+	cp lib/rescript/MyModule2-MyNamespace.cmt lib/rescript/incremental/MyModule2-MyNamespace.cmt
+	cp lib/rescript/MyNamespace.cmt lib/rescript/incremental/MyNamespace.cmt
 
 test: build
 	bash ./test.sh

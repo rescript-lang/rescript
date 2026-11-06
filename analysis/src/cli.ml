@@ -322,7 +322,7 @@ let test ~state ~path =
               let ( ++ ) = concat in
               let name = chop_extension (basename path) ^ ".cmi" in
               let dir = dirname path in
-              dir ++ parent_dir_name ++ "lib" ++ "bs" ++ "src" ++ name
+              dir ++ parent_dir_name ++ "lib" ++ "rescript" ++ name
             in
             create_interface ~path ~cmi_file
           | "ref" ->
