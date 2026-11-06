@@ -1,20 +1,20 @@
 status: 1
 --- stdout
-Cleaned 0/0
-Parsed 1 source files
+Cleaned 0 stale modules
+Parsed 1 source file
 --- stderr
-Compiled 1 modules
+Compiled 1 module
 
-  [1;31mWe've found a bug for you![0m
-  [36m<ROOT>/src/Broken.res[0m:[2m1:21-22[0m
+  We've found a bug for you!
+  <ROOT>/src/Broken.res:1:21-22
 
-  [1;31m1[0m [2m│[0m let value: string = [1;31m42[0m
-  2 [2m│[0m 
+  1 │ let value: string = 42
+  2 │ 
 
-  This has type: [1;31mint[0m
-  But it's expected to have type: [1;33mstring[0m
+  This has type: int
+  But it's expected to have type: string
   
-  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mInt.toString[0m.
+  You can convert int to string with Int.toString.
 
 
-Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
+Build failed: see the errors above.

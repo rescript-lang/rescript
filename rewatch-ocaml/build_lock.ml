@@ -11,7 +11,7 @@ let valid_owner value =
 
 let malformed_error () =
   Project_context.Error
-    "Could not start Rescript build: Could not parse lockfile PID\n\
+    "Could not start ReScript build: Could not parse lockfile PID\n\
     \  (try removing it and running the command again)"
 
 (* A writer that cannot link creates the lock and then writes its PID, so an

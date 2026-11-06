@@ -411,7 +411,7 @@ let load path =
       |> List.map (fun field ->
           Printf.sprintf
             "The field '%s' found in the package config of '%s' is not \
-             supported by ReScript 12's new build system."
+             supported by the ReScript build system."
             field name))
     @ (unknown_fields fields
       |> List.map (fun field ->

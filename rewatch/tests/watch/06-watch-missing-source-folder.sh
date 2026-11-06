@@ -42,7 +42,7 @@ fi
 success "Initial build completed"
 
 # Check that the error about the missing folder was logged
-if grep -q 'Could not read folder.*nonexistent-folder' rewatch.log; then
+if grep -q 'source folder "nonexistent-folder"' rewatch.log; then
   success "Missing source folder error was reported"
 else
   error "Missing source folder error was NOT reported"

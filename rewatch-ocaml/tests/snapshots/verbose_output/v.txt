@@ -1,12 +1,12 @@
-DEBUG:	Building source file-tree for package: verbose-output
-DEBUG:	Compiling file: A
-DEBUG:	Compiling file: Authored
-DEBUG:	Compiling file: B
-DEBUG:	Compiling file: WithInterface
-DEBUG:	Compiling interface file: WithInterface
-DEBUG:	Created project context for "verbose-output" at "<PROJECT>/rescript.json"
-DEBUG:	Generating AST for module: A
-DEBUG:	Generating AST for module: Authored
-DEBUG:	Generating AST for module: B
-DEBUG:	Generating AST for module: WithInterface
-DEBUG:	Parsing package: verbose-output
+debug: Building source file-tree for package: verbose-output
+debug: Compiling file: A
+debug: Compiling file: Authored
+debug: Compiling file: B
+debug: Compiling file: WithInterface
+debug: Compiling interface file: WithInterface
+debug: Created project context for "verbose-output" at "<PROJECT>/rescript.json"
+debug: Generating AST for module: A
+debug: Generating AST for module: Authored
+debug: Generating AST for module: B
+debug: Generating AST for module: WithInterface
+debug: Parsing package: verbose-output
