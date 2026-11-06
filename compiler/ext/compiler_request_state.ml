@@ -3,7 +3,6 @@ type t = {
   cwd: string;
   mutable input_name: string;
   mutable command_runner: string -> int;
-  mutable cmt_args: string array;
   mutable lambda_raise_count: int;
   mutable lambda_negative_raise_count: int;
   mutable builtin_ppx_local_module_counter: int;
@@ -22,7 +21,6 @@ let create ~active cwd =
     cwd;
     input_name = "_none_";
     command_runner = Sys.command;
-    cmt_args = Sys.argv;
     lambda_raise_count = 0;
     lambda_negative_raise_count = 0;
     builtin_ppx_local_module_counter = 0;

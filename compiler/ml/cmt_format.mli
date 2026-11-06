@@ -51,18 +51,15 @@ type cmt_infos = {
   cmt_modname: string;
   cmt_annots: binary_annots;
   cmt_value_dependencies: value_dependency list;
-  cmt_args: string array;
   cmt_source_digest: Digest.t option;
+      (** Digest of the source file, which [rescript-tools migrate] compares
+          to tell whether the .cmt is current. *)
   cmt_extra_info: Cmt_utils.cmt_extra_info;
 }
 
 type error = Not_a_typedtree of string
 
 exception Error of error
-
-val set_args : string array -> unit
-(** Set the logical compiler arguments recorded in subsequently written CMT
-    files. Long-lived compiler hosts set this at each request boundary. *)
 
 val read_cmt : string -> cmt_infos
 val read_cmi : string -> Cmi_format.cmi_infos

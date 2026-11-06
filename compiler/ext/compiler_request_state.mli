@@ -3,7 +3,6 @@ type t = {
   cwd: string;
   mutable input_name: string;
   mutable command_runner: string -> int;
-  mutable cmt_args: string array;
   mutable lambda_raise_count: int;
   mutable lambda_negative_raise_count: int;
   mutable builtin_ppx_local_module_counter: int;

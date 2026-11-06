@@ -15,8 +15,6 @@
 
 open Cmt_format_common
 
-let set_args value = (Compiler_request_state.current ()).cmt_args <- value
-
 let read_source_file path =
   let path = Compiler_request_state.resolve_path path in
   match Build_file_store.read path with
@@ -32,7 +30,6 @@ let save_cmt filename modname binary_annots sourcefile =
         cmt_modname = modname;
         cmt_annots = clear_env binary_annots;
         cmt_value_dependencies = value_dependencies ();
-        cmt_args = (Compiler_request_state.current ()).cmt_args;
         cmt_source_digest =
           Misc.may_map
             (fun path -> Digest.string (read_source_file path))
