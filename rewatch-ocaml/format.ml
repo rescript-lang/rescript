@@ -112,24 +112,28 @@ let files_in_scope ~verbosity =
   |> List.concat_map package_sources
   |> List.sort_uniq String.compare
 
+(* The compiler's diagnostics start and end with blank lines. *)
 let formatting_error target stderr =
-  Printf.sprintf "Error formatting %s: %s" target stderr
+  Printf.sprintf "Error formatting %s:\n%s" target (String.trim stderr)
 
 let format_request path =
   Compiler_process.{args = ["-format"; path]; cwd = Sys.getcwd ()}
-
-let formatted ?poll ~target path =
-  let result = Compiler_process.run ?poll (format_request path) in
-  if not (Process.succeeded result) then
-    raise (Error (formatting_error target result.stderr));
-  result.stdout
 
 let format_check_summary = function
   | 1 -> "The file listed above needs formatting"
   | count -> Printf.sprintf "The %d files listed above need formatting" count
 
+(* Every file is formatted, also after one fails, and the results are
+   reported in path order once all are done, relative to the current
+   directory. *)
 let format_files ?poll ~check files =
-  let incorrect = ref 0 in
+  let files = List.sort_uniq String.compare files in
+  let display path =
+    if Filename.is_relative path then path
+    else Project_context.relative_or_absolute ~root:(Sys.getcwd ()) path
+  in
+  let unformatted = ref [] in
+  let failures = ref [] in
   let works =
     files
     |> List.mapi (fun index path ->
@@ -139,22 +143,32 @@ let format_files ?poll ~check files =
   let next path = function
     | None -> Some (Compiler_process.task (format_request path))
     | Some result ->
-      if not (Process.succeeded result) then
-        raise (Error (formatting_error path result.stderr));
-      let original = read_file path in
-      if original <> result.stdout then
-        if check then (
-          incr incorrect;
-          prerr_endline ("[format check] " ^ path))
-        else write_file path result.stdout;
+      (if not (Process.succeeded result) then
+         failures := (path, result.stderr) :: !failures
+       else
+         try
+           if read_file path <> result.stdout then
+             if check then unformatted := path :: !unformatted
+             else write_file path result.stdout
+         with Error message -> failures := (path, message) :: !failures);
       None
   in
   Process.run_dependency_graph
     ~max_jobs:(Compiler_execution_mode.configured_count ())
     ?poll works ~next;
-  if !incorrect > 0 then (
-    prerr_endline (format_check_summary !incorrect);
-    raise (Error "Formatting check failed"))
+  List.iter
+    (fun path -> prerr_endline ("[format check] " ^ display path))
+    (List.sort String.compare !unformatted);
+  if !unformatted <> [] then
+    prerr_endline (format_check_summary (List.length !unformatted));
+  List.iter
+    (fun (path, message) ->
+      prerr_endline (formatting_error (display path) message))
+    (List.sort compare !failures);
+  match (!failures, !unformatted) with
+  | [], [] -> ()
+  | _ :: _, _ -> raise (Error "Formatting failed")
+  | [], _ :: _ -> raise (Error "Formatting check failed")
 
 type stdin_read_result = Stdin_contents of string | Stdin_error of exn
 
@@ -203,9 +217,34 @@ let format_stdin ?poll extension =
     (fun () ->
       let contents = read_stdin_interruptibly ?poll () in
       File_util.write_file path contents;
-      print_string (formatted ?poll ~target:"stdin" path))
+      let result = Compiler_process.run ?poll (format_request path) in
+      if not (Process.succeeded result) then
+        (* Diagnostics name the temporary file the input went through. *)
+        raise
+          (Error
+             (formatting_error "<stdin>"
+                (Str.global_replace (Str.regexp_string path) "<stdin>"
+                   result.stderr)));
+      print_string result.stdout)
+
+(* Explicit arguments are checked before any is formatted, so a typo does not
+   reach the compiler as an I/O error. *)
+let check_argument path =
+  if not (Sys.file_exists path) then
+    raise (Error (Printf.sprintf "%s: No such file" path))
+  else if Sys.is_directory path then
+    raise
+      (Error
+         (Printf.sprintf
+            "%s is a directory; give .res or .resi files, or no arguments to \
+             format the project"
+            path))
+  else if
+    not (Filename.check_suffix path ".res" || Filename.check_suffix path ".resi")
+  then raise (Error (Printf.sprintf "%s is not a .res or .resi file" path))
 
 let run_files ?poll ~verbosity ~check paths =
+  List.iter check_argument paths;
   let files = if paths = [] then files_in_scope ~verbosity else paths in
   List.iter
     (fun file -> Output.trace ~channel:stderr ~verbosity ("Formatting " ^ file))
