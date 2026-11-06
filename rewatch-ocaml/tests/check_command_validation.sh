@@ -38,8 +38,9 @@ terminate_and_wait() {
   wait "$pid"
   local status=$?
   set -e
-  if [ "$status" -ne 0 ] && \
-    { ! $windows_posix_shell || [ "$status" -ne 143 ]; }; then
+  # A watcher stopped by SIGTERM exits with 143, as the help says.
+  if [ "$status" -ne 143 ] && \
+    { ! $windows_posix_shell || [ "$status" -ne 0 ]; }; then
     printf '%s exited with status %s after shutdown\n' "$label" "$status" >&2
     return 1
   fi
@@ -596,7 +597,11 @@ if ! grep -F '.\" Pipe this output to groff' \
 fi
 checked=$((checked + 1))
 run_case implicit-conflicting-verbosity exit2 -v -q
+require_error_contains implicit-conflicting-verbosity 'Usage: rescript build'
 run_case build-conflicting-verbosity exit2 build --verbose --quiet
+run_case unknown-command reject bogus-command
+require_error_contains unknown-command \
+  "Project folder 'bogus-command' does not exist. Run 'rescript --help' for the available commands."
 run_case filter-perl-quoting accept build --filter '\QA.res\E' "$project"
 run_case filter-invalid exit2 build --filter '(' "$project"
 require_error_contains filter-invalid 'invalid regular expression'
@@ -604,7 +609,8 @@ run_case filter-backreference exit2 build --filter '(A)\1' "$project"
 require_error_contains filter-backreference 'unsupported regular expression'
 run_case build-no-timing-preserves-folder accept build --no-timing "$project"
 run_case compiler-args-source accept compiler-args "$project/src/A.res"
-run_case compiler-args-extension reject compiler-args "$project/src/A.txt"
+run_case compiler-args-extension exit2 compiler-args "$project/src/A.txt"
+require_error_contains compiler-args-extension 'rescript: PATH argument:'
 run_case compiler-args-missing reject compiler-args "$project/src/Missing.res"
 run_case compiler-args-no-project reject compiler-args "$work/orphan/A.res"
 
@@ -720,9 +726,10 @@ if ! grep -F -- '--after-build command cannot be empty' \
   dump_output
   exit 1
 fi
+# The shell reports the missing program; the build fails with its status.
 run_case after-build-missing-program reject build --after-build \
   rewatch-command-that-does-not-exist "$project"
-if ! grep -F 'Could not run --after-build command' \
+if ! grep -F -- '--after-build command failed' \
     "$work/rescript.err" >/dev/null || \
   ! grep -F 'rewatch-command-that-does-not-exist' \
     "$work/rescript.err" >/dev/null; then
@@ -765,7 +772,7 @@ set +e
 wait "$signal_lock_watch_pid"
 signal_lock_status=$?
 set -e
-if ! $windows_posix_shell && [ "$signal_lock_status" -ne 0 ]; then
+if ! $windows_posix_shell && [ "$signal_lock_status" -ne 143 ]; then
   echo "Signal during build-lock wait exited with $signal_lock_status" >&2
   exit 1
 fi
@@ -970,7 +977,7 @@ run_case build-malformed-package-json reject build \
   "$work/malformed-package-json"
 require_error_contains build-malformed-package-json \
   'Could not initialize build: Could not parse package.json:'
-run_case build-mismatched-dependency-name exit2 build \
+run_case build-mismatched-dependency-name reject build \
   "$work/mismatched-dependency"
 strip_ansi "$work/rescript.err" >"$work/rescript.err.plain"
 if ! grep -F \
@@ -980,13 +987,13 @@ if ! grep -F \
   dump_output
   exit 1
 fi
-run_case build-missing-dependency exit2 build "$work/missing-dependency"
+run_case build-missing-dependency reject build "$work/missing-dependency"
 require_error_contains build-missing-dependency \
-  "Could not build package tree reading dependency 'absent' at path '$work/missing-dependency'. Error:"
-run_case build-configless-dependency exit2 build "$work/configless-dependency"
+  "Could not resolve dependency absent of the package at '$work/missing-dependency'. Is it installed?"
+run_case build-configless-dependency reject build "$work/configless-dependency"
 require_error_contains build-configless-dependency \
   "Could not build package tree for 'no-config' at path '$work/configless-dependency'. Error:"
-run_case build-malformed-dependency exit2 build "$work/malformed-dependency"
+run_case build-malformed-dependency reject build "$work/malformed-dependency"
 require_error_contains build-malformed-dependency \
   "Could not build package tree for 'bad-config' at path '$work/malformed-dependency'. Error:"
 run_case build-duplicate-dependency accept build "$work/duplicate-dependency"
@@ -1258,9 +1265,9 @@ if ! check_snapshot command_validation/quiet-watch.txt \
 fi
 checked=$((checked + 1))
 
-run_case clean-missing-dependency exit2 clean "$work/missing-dependency"
-run_case clean-configless-dependency exit2 clean "$work/configless-dependency"
-run_case clean-malformed-dependency exit2 clean "$work/malformed-dependency"
+run_case clean-missing-dependency accept clean "$work/missing-dependency"
+run_case clean-configless-dependency accept clean "$work/configless-dependency"
+run_case clean-malformed-dependency accept clean "$work/malformed-dependency"
 run_rescript clean "$work/clean-duplicate"
 if [ "$rescript_status" -ne 0 ] || \
   [ -e "$work/clean-duplicate/src/one/A.js" ] || \
@@ -1298,11 +1305,11 @@ printf '{"name":"missing-dependency","sources":["src"],"dependencies":["absent"]
   >"$work/missing-dependency/rescript.json"
 checked=$((checked + 1))
 run_case --cwd "$work/missing-dependency" \
-  format-missing-dependency exit2 format
+  format-missing-dependency reject format
 run_case --cwd "$work/configless-dependency" \
-  format-configless-dependency exit2 format
+  format-configless-dependency reject format
 run_case --cwd "$work/malformed-dependency" \
-  format-malformed-dependency exit2 format
+  format-malformed-dependency reject format
 if [ -e "$work/missing-dependency/lib/rescript/build.lock" ] || \
   [ -e "$work/missing-dependency/lib/rescript/watch.lock" ]; then
   echo "Dependency failures left a build or watch lock behind" >&2

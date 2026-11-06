@@ -13,14 +13,17 @@ type fallback = {
 
 let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock =
-  let stop_requested = Atomic.make false in
-  let stop () =
+  (* The exit status of the signal that requested the stop, or 0. *)
+  let stop_requested = Atomic.make 0 in
+  let stop signal =
     (* Signal handlers only request termination because libuv may invoke them
        while a callback is being drained or a watch handle is being refreshed.
        Raising through that callback would be treated as an uncaught libuv
        exception and could bypass lock and handle cleanup. The build poll and
        watch-loop timer observe this flag, so shutdown remains prompt. *)
-    Atomic.set stop_requested true
+    ignore
+      (Atomic.compare_and_set stop_requested 0
+         (Termination_signals.exit_code signal))
   in
   let digest_cache = Watch_snapshot.create_digest_cache () in
   let watch_paths (scope : Watch_scope.t) symlink_paths =
@@ -66,7 +69,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     loop 8 symlink_paths
   in
   let keep_running () =
-    (not (Atomic.get stop_requested)) && Build_lock.is_owned watch_lock
+    Atomic.get stop_requested = 0 && Build_lock.is_owned watch_lock
   in
   let next_lock_check = ref 0. in
   (* Lock removal is the test suite's portable shutdown protocol and must also
@@ -74,7 +77,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
      ownership checks so the scheduler's frequent responsiveness ticks do not
      turn one source edit into a stream of identical filesystem reads. *)
   let poll () =
-    if Atomic.get stop_requested then raise Stop;
+    if Atomic.get stop_requested <> 0 then raise Stop;
     let now = Unix.gettimeofday () in
     if now >= !next_lock_check then (
       next_lock_check := now +. 0.1;
@@ -263,7 +266,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
   let report_exit () =
     if show_progress then
       print_endline
-        (if Atomic.get stop_requested then "\nExiting..."
+        (if Atomic.get stop_requested <> 0 then "\nExiting..."
          else "\nExiting... (lockfile removed)")
   in
   let watch () =
@@ -298,14 +301,20 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
             polling_loop fallback.scope fallback.snapshot)
           fallback)
   in
-  Termination_signals.with_handlers
-    (fun _ -> stop ())
-    (fun () ->
+  (* A signal ends the watcher with its exit status, as it ends a build. *)
+  let stopped () =
+    match Atomic.get stop_requested with
+    | 0 -> raise Stop
+    | exit_code -> raise (Process.Interrupted exit_code)
+  in
+  Termination_signals.with_handlers stop (fun () ->
       match watch () with
-      | () -> report_exit ()
+      | () ->
+        report_exit ();
+        if Atomic.get stop_requested <> 0 then stopped ()
       | exception Stop ->
         report_exit ();
-        raise Stop)
+        stopped ())
 
 let run_with_native_create ~native_create ~report_native_fallback ~root ~prod
     ~features ~filter ~clear_screen ~show_progress ~verbosity ~build =
