@@ -1770,7 +1770,7 @@ let bigint_mod ~checked (e0 : t) (e1 : t) =
 (* TODO -- alpha conversion
     remember to add parens..
 *)
-let of_block ?e block : t =
+let of_block block : t =
   let return_unit = false in
   (* This case is not hit that much*)
   call ~info:Js_call_info.ml_full_call
@@ -1782,18 +1782,7 @@ let of_block ?e block : t =
           {
             is_method = false;
             params = [];
-            body =
-              (match e with
-              | None -> block
-              | Some e ->
-                Ext_list.append block
-                  [
-                    {
-                      J.statement_desc = Return e;
-                      comment = None;
-                      source_loc = None;
-                    };
-                  ]);
+            body = block;
             env = Js_fun_env.make 0;
             return_unit;
             async = false;

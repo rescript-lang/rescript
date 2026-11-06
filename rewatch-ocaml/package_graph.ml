@@ -145,7 +145,6 @@ let discover ~(root_config : Config.t) ~(workspace_config : Config.t) ~prod
                    dependencies);
             modules;
             source_mtimes;
-            source_files = discovery.inventory_files;
             present_source_files = discovery.present_files;
           }
       in

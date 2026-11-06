@@ -20,7 +20,6 @@ type t = {
   gentype_dependency_args: string list;
   modules: Source.module_ list;
   source_mtimes: (string, float) Hashtbl.t;
-  source_files: string list;
   present_source_files: string list;
 }
 

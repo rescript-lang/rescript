@@ -29,12 +29,6 @@ type cmi_infos = {
   cmi_flags: pers_flags list;
 }
 
-let input_cmi ic =
-  let name, sign = input_value ic in
-  let crcs = input_value ic in
-  let flags = input_value ic in
-  {cmi_name = name; cmi_sign = sign; cmi_crcs = crcs; cmi_flags = flags}
-
 (* Earlier compilers wrote OCaml-style magic numbers *)
 let legacy_magic_prefix = "Caml1999I"
 

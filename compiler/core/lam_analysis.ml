@@ -174,8 +174,8 @@ let rec delay_safe ~assignable (lam : Lambda.t) : bool =
     | Pasrbigint | Pbigintcomp _ | Pbigintorder | Pbigintmin | Pbigintmax
     | Phash_mixint | Phash_mixstring | Phash_finalmix | Pis_null_undefined
     | Pjscomp _ | Pnull_to_opt | Pnull_undefined_to_opt | Pis_null
-    | Pis_undefined | Pis_not_none | Pval_from_option
-    | Pval_from_option_not_nest | Pis_poly_var_block ->
+    | Pis_not_none | Pval_from_option | Pval_from_option_not_nest
+    | Pis_poly_var_block ->
       true
     (* reads of the heap, and primitives with side effects *)
     | Pfield (_, (Fld_record _ | Fld_record_inline _ | Fld_record_extension _))
