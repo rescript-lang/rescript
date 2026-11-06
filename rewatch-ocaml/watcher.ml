@@ -309,7 +309,11 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
 
 let run_with_native_create ~native_create ~report_native_fallback ~root ~prod
     ~features ~filter ~clear_screen ~show_progress ~verbosity ~build =
-  Build_lock.with_watch root (fun watch_lock ->
+  Build_lock.with_watch root
+    ~running:
+      (Printf.sprintf
+         "Could not start Rescript build: A ReScript build is already running. \
+          The process ID (PID) is %s") (fun watch_lock ->
       ignore (Config.load_root root);
       run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock)

@@ -1,0 +1,1 @@
+- `rescript clean` refuses while `rescript watch` runs for the same project, instead of removing the artifacts the watcher keeps reading.
