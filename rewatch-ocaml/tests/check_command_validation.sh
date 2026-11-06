@@ -648,6 +648,35 @@ run_case format-directory reject format "$project/src"
 check_output_snapshot format-directory
 run_case format-unsupported-extension reject format "$project/src/A.txt"
 check_output_snapshot format-unsupported-extension
+# A syntax error does not stop the run: every other file is checked and
+# listed in path order, then the run fails.
+format_broken="$work/format-broken"
+mkdir -p "$format_broken/src"
+printf '{"name":"format-broken","sources":["src"]}\n' \
+  >"$format_broken/rescript.json"
+for name in D B C A; do
+  printf 'let   value =    1\n' >"$format_broken/src/$name.res"
+done
+printf 'let value =\n' >"$format_broken/src/Broken.res"
+run_case --cwd "$format_broken" format-continues-after-syntax-error reject \
+  format --check
+printf '%s\n' '[format check] src/A.res' '[format check] src/B.res' \
+  '[format check] src/C.res' '[format check] src/D.res' \
+  >"$work/format-broken.expected"
+grep -F '[format check]' "$work/rescript.err" >"$work/format-broken.listed"
+if ! cmp -s "$work/format-broken.expected" "$work/format-broken.listed" || \
+  ! grep -F 'Error formatting src/Broken.res:' "$work/rescript.err" \
+    >/dev/null || \
+  ! grep -F 'The 4 files listed above need formatting' "$work/rescript.err" \
+    >/dev/null; then
+  echo "format-continues-after-syntax-error: not every file was reported in order" >&2
+  dump_output
+  exit 1
+fi
+run_case --cwd "$format_broken" format-duplicate-arguments reject \
+  format --check src/A.res src/A.res
+require_error_contains format-duplicate-arguments \
+  'The file listed above needs formatting'
 run_case --cwd "$work/empty" format-no-config reject format
 require_error_contains format-no-config \
   "Could not read rescript.json at $work/empty:"
@@ -677,7 +706,7 @@ if [ "$rescript_status" -eq 0 ] || [ -s "$work/rescript.out" ]; then
   echo "format-invalid-stdin: expected the formatter to reject" >&2
   exit 1
 fi
-require_error_contains format-invalid-stdin 'Error formatting stdin:'
+require_error_contains format-invalid-stdin 'Error formatting <stdin>:'
 require_error_contains format-invalid-stdin \
   'This let-binding misses an expression'
 checked=$((checked + 1))
@@ -933,8 +962,8 @@ run_case --cwd "$work/format-source-selection" \
 normalize_project_path "$work/rescript.err" "$work/rescript.err.norm" \
   "$work/format-source-selection"
 missing_folder='Could not read folder: "missing". Specified in dependency: installed'
-base_file='[format check] <ROOT>/packages/local/base/Base.res'
-native_file='[format check] <ROOT>/packages/local/native/Native.res'
+base_file='[format check] packages/local/base/Base.res'
+native_file='[format check] packages/local/native/Native.res'
 other_file='<ROOT>/packages/local/other/Other.res'
 if ! grep -F "$missing_folder" "$work/rescript.err.norm" >/dev/null || \
   ! grep -F "$base_file" "$work/rescript.err.norm" >/dev/null || \

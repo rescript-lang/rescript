@@ -1,10 +1,4 @@
 status: 1
 --- stdout
 --- stderr
-Error formatting <WORK>/project/src/Missing.res: 
-  [1;31mWe've found a bug for you![0m
-  [36m_none_[0m
-
-  I/O error: <WORK>/project/src/Missing.res: No such file or directory
-
-
+<WORK>/project/src/Missing.res: No such file
