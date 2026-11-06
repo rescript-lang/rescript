@@ -54,6 +54,9 @@ type t = {
   no_stdlib: bool ref;
   no_export: bool ref;
   as_pp: bool ref;
+  emit_ts: bool ref;
+      (** Print TypeScript: annotate top-level functions from the typed tree
+          and emit the module's type declarations. *)
   self_stack: string Stack.t;
 }
 

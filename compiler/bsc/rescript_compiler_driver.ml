@@ -408,6 +408,11 @@ let command_line_flags () : (string * Bsc_args.spec * string) array =
     ( "-e",
       string_call (fun s -> eval s ~suffix:Literals.suffix_res),
       "(experimental) set the string to be evaluated in ReScript syntax" );
+    ( "-bs-emit-ts",
+      set (Js_config.current ()).emit_ts,
+      "*internal* (experimental) Emit TypeScript: annotate top-level \
+       functions, emit the module's type declarations, and write each output \
+       with its suffix's .js replaced by .ts" );
     ( "-bs-cmi-only",
       set (Js_config.current ()).cmi_only,
       "*internal* Stop after generating cmi file" );
