@@ -275,6 +275,15 @@ jobs:
         if: matrix.build_playground
         run: opam exec -- make playground
 
+      # Runs after the playground build, whose browser-profile tree it
+      # analyzes together with the native one.
+      - name: Check for dead code
+        if: matrix.build_playground
+        run: |
+          opam pin add --yes --no-action reanalyze git+https://github.com/rescript-lang/reanalyze.git#v2.27.0
+          opam install --yes reanalyze
+          opam exec -- make dead-code
+
       - name: Test playground compiler
         if: matrix.build_playground
         run: yarn workspace playground test

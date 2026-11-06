@@ -4,8 +4,8 @@
 # anything.
 #
 # Usage: REANALYZE=/path/to/reanalyze.exe ./scripts/dead_code.sh
-# (defaults to reanalyze.exe on PATH; needs a reanalyze that analyzes several
-# build trees together, rescript-lang/reanalyze#224)
+# (defaults to reanalyze.exe on PATH; needs reanalyze 2.27.0 or later, which
+# analyzes several build trees together: opam install reanalyze)
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
