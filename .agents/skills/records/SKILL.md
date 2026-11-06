@@ -222,6 +222,11 @@ node scripts/commitRecords.js --out page.html [--pr <number>] [--title <text>] \
   describe it as a whole, while a `Breaking:` section describes its
   commit; it notes breaking commits without a breaking entry, and the
   other way round.
+- The viewer draws records in the browser from GitHub's API, with the same
+  renderer: `https://cdn.rescript-lang.org/semantic-diff/view/index.html`
+  with `?pr=<number>`, `?range=<base>...<tip>` or `?commit=<sha>[,<sha>]`,
+  at most 250 commits (`scripts/recordViewer.js`,
+  `.github/workflows/semantic_diff_viewer.yml`).
 - In prose, `#1234` and full pull request and issue URLs link as `#1234`,
   and the 9-character short sha of a commit on the page links to its card.
 
