@@ -23,8 +23,7 @@
       "extensions": [
         "ocamllabs.ocaml-platform",
         "chenglou92.rescript-vscode",
-        "biomejs.biome",
-        "rust-lang.rust-analyzer"
+        "biomejs.biome"
       ]
     }
   },

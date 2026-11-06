@@ -6,7 +6,7 @@
 # Runs until the file named by WATCHDOG_RUNNING is removed. Writes its report
 # to the file named by WATCHDOG_REPORT.
 
-$names = 'rescript', 'rescript-rust', 'bsc'
+$names = 'rescript', 'bsc'
 $perProcessLimit = 3GB
 $countLimit = 64
 $minimumFree = 1.5GB

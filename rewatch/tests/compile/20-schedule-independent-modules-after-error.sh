@@ -35,7 +35,7 @@ let hello = () => Console.log("hello")
 EOF
 
 cd "$fixture"
-if ! RAYON_NUM_THREADS=1 RUST_BACKTRACE=1 "$REWATCH_EXECUTABLE" build > /dev/null 2>&1; then
+if ! REWATCH_COMPILER_DOMAINS=1 "$REWATCH_EXECUTABLE" build > /dev/null 2>&1; then
   error "Initial fixture build failed"
   exit 1
 fi
@@ -57,7 +57,7 @@ let hello = () => {
 }
 EOF
 
-compiler_output=$(RAYON_NUM_THREADS=1 RUST_BACKTRACE=1 "$REWATCH_EXECUTABLE" build 2>&1)
+compiler_output=$(REWATCH_COMPILER_DOMAINS=1 "$REWATCH_EXECUTABLE" build 2>&1)
 build_status=$?
 
 if [ $build_status -eq 0 ]; then
@@ -78,7 +78,7 @@ if [ -f src/Blocked.mjs ]; then
 fi
 
 printf 'let value = "recovered"\n' > src/Failing.res
-if ! compiler_output=$(RAYON_NUM_THREADS=1 RUST_BACKTRACE=1 "$REWATCH_EXECUTABLE" build 2>&1); then
+if ! compiler_output=$(REWATCH_COMPILER_DOMAINS=1 "$REWATCH_EXECUTABLE" build 2>&1); then
   error "Build did not recover after fixing the failed dependency"
   printf "%s\n" "$compiler_output" >&2
   exit 1

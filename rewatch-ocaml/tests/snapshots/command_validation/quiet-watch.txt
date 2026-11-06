@@ -1,0 +1,11 @@
+Error in quiet-watch:
+
+  [1;31mSyntax error![0m
+  [36m<ROOT>/src/A.res[0m:[2m1:12-2:0[0m
+
+  [1;31m1[0m [2m│[0m let value =
+  [1;31m2[0m [2m│[0m 
+
+  This let-binding misses an expression
+
+

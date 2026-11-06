@@ -35,9 +35,8 @@ val write_ast : sourcefile:string -> output:string -> 'a kind -> 'a -> unit
       (predefined names excluded), each followed by a newline;
     - [sourcefile] and a newline;
     - the marshalled [ast].
-    [read_ast_exn] skips the dependency block; OCaml rewatch reads it with
-    {!read_header}, and Rust rewatch in [get_dep_modules]
-    (rewatch/src/build/deps.rs). *)
+    [read_ast_exn] skips the dependency block; rewatch reads it with
+    {!read_header}. *)
 
 type header = {source_start: int; source_end: int}
 (** Where the parts of an AST's header end: the dependency block takes the

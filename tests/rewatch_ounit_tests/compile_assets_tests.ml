@@ -93,7 +93,7 @@ let tests =
       check
         (Build_freshness.source_is_not_older_than_ast state ~root ~source_mtimes
            source_path)
-        "equal source and AST timestamps follow Rust and require parsing";
+        "equal source and AST timestamps require parsing";
       Hashtbl.replace source_mtimes source_path (ast_modified -. 1.);
       check
         (not

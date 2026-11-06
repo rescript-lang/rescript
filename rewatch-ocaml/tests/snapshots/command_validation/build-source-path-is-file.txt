@@ -1,0 +1,4 @@
+status: 0
+--- stderr
+ERROR:
+Could not read folder: "src". Specified in dependency: source-path-file, located "<WORK>/source-path-file"...

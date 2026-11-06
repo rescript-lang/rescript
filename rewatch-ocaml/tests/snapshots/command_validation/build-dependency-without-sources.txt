@@ -1,0 +1,4 @@
+status: 0
+--- stderr
+WARN:
+Package 'dep' has not defined any sources, but is not the root package. This is likely a mistake. It is located: <WORK>/dependency-without-sources/node_modules/dep

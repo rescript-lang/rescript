@@ -33,10 +33,3 @@ else
   exit 1
 fi
 
-echo "Checking Rust code formatting..."
-if cargo fmt --check --manifest-path rewatch/Cargo.toml; then
-  printf "${successGreen}✅ Rust code formatting ok.${reset}\n"
-else
-  printf "${warningYellow}⚠️ Rust code formatting issues found.${reset}\n"
-  exit 1
-fi

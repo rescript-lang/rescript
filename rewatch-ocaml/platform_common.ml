@@ -1,6 +1,6 @@
-(* Like Rust's std::process::Command, the current directory is not searched: a
-   project file named like a tool (cmd.exe, node) must not run in its place. A
-   program in the current directory needs an explicit path. *)
+(* The current directory is not searched: a project file named like a tool
+   (cmd.exe, node) must not run in its place. A program in the current
+   directory needs an explicit path. *)
 let resolve_program ~path_separator ~executable_extensions ~normalize_directory
     ~executable_is_usable ~cwd program =
   if (not (Filename.is_implicit program)) || Filename.dirname program <> "."
@@ -27,10 +27,10 @@ let resolve_program ~path_separator ~executable_extensions ~normalize_directory
 
 (* A lock records the PID of the rescript process that owns it. A PID that has
    since been reused by an unrelated process must not keep the lock alive, so
-   only the names of the build-system executables count: the packaged OCaml
-   and Rust implementations and the dune development executable. Linux
-   truncates process names to 15 bytes, so a truncated name also matches. *)
-let lock_owner_names = ["rescript"; "rescript-rust"; "rescript_ocaml"]
+   only the names of the build-system executables count: the packaged
+   executable and the dune development executable. Linux truncates process
+   names to 15 bytes, so a truncated name also matches. *)
+let lock_owner_names = ["rescript"; "rescript_ocaml"]
 
 let is_lock_owner_name name =
   let name = String.lowercase_ascii name in

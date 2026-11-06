@@ -16,7 +16,4 @@ find packages tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "synta
 echo Formatting JS code...
 yarn format
 
-echo Formatting Rust code...
-cargo fmt --manifest-path rewatch/Cargo.toml
-
 echo Done.

@@ -359,7 +359,7 @@ let compiler_argument_tests =
             "-open";
             "Belt";
           ])
-        "parser arguments follow Rust phase ordering";
+        "parser arguments follow phase ordering";
       check
         (Compiler_args.compiler_flags ~watch:false config
         = [
@@ -375,7 +375,7 @@ let compiler_argument_tests =
             "-enable-experimental";
             "LetUnwrap";
           ])
-        "compiler arguments follow Rust phase ordering";
+        "compiler arguments follow phase ordering";
       check
         (Compiler_args.parser_flags
            ~ppx_flags:[["./ppx/local.js"; "--flag"]; ["../shared-ppx"]]
@@ -846,8 +846,8 @@ let build_schema () =
   in
   find (Sys.getcwd ())
 
-(* Like Rust rewatch's test, the schema documents every field that takes
-   effect, except the deprecated aliases. *)
+(* The schema documents every field that takes effect, except the deprecated
+   aliases. *)
 let build_schema_tests _context =
   let open Yojson.Safe.Util in
   let schema = build_schema () in

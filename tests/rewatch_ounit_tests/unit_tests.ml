@@ -106,7 +106,7 @@ let test_executable () = Unix.realpath Sys.executable_name
 let process_job args =
   {Process.program = test_executable (); args; cwd = Sys.getcwd ()}
 
-(* Like the compiler and Rust rewatch: the whole stem is the module name, and
+(* Like the compiler: the whole stem is the module name, and
    only an ASCII first letter is capitalized. *)
 let module_name_tests _context =
   [
@@ -569,13 +569,7 @@ let platform_tests _context =
       check
         (Platform_common.is_lock_owner_name name)
         (name ^ " can own a build lock"))
-    [
-      "rescript";
-      "RESCRIPT.EXE";
-      "rescript-rust.exe";
-      "rescript_ocaml.exe";
-      "rescript-rust.e";
-    ];
+    ["rescript"; "RESCRIPT.EXE"; "rescript_ocaml.exe"; "rescript_ocaml."];
   List.iter
     (fun name ->
       check
@@ -873,7 +867,7 @@ let graph_and_diagnostic_tests _context =
   check (not (Build_lock.valid_owner "-1")) "a negative lock owner is malformed";
   check
     (not (Build_lock.valid_owner "4294967296"))
-    "a lock owner outside the Rust u32 range is malformed";
+    "a lock owner outside the u32 range is malformed";
   check
     (not (Build_lock.valid_owner "123\n"))
     "trailing data in a lock owner is malformed"

@@ -125,7 +125,7 @@ let tests =
       check
         (compiler_args dev_source |> adjacent_positions "-I"
        |> position development |> Option.is_none)
-        "missing development dependencies are omitted like Rust";
+        "missing development dependencies are omitted";
       File_util.remove_tree
         (File_util.path_of_parts root ["node_modules"; "regular"]);
       let previous_runtime = Sys.getenv_opt "RESCRIPT_RUNTIME" in

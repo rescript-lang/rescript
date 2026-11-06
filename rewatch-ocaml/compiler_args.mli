@@ -4,7 +4,7 @@ val filter_ppx_flags :
 val source_map_args : Config.t -> watch:bool -> string list
 
 val parser_flags : ?ppx_flags:string list list -> Config.t -> string list
-(** The flags of a parse, in the order Rust rewatch passes them. *)
+(** The flags of a parse, in the order they are passed to the parser. *)
 
 val compiler_flags : watch:bool -> Config.t -> string list
 (** The configured flags of a compile, including source maps and genType. *)
