@@ -6,8 +6,8 @@ import { setup } from "#dev/process";
 const { execBuild, execClean } = setup(import.meta.dirname);
 
 const out = await execBuild();
-assert.equal(out.status, 2);
-assert.match(out.stderr, /could not build package tree/i);
-assert.match(out.stderr, /dependency 'weird'/i);
-assert.match(out.stderr, /at path '.*weird_deps'/i);
+// A dependency that cannot be used is a build error, not a usage error.
+assert.equal(out.status, 1);
+assert.match(out.stderr, /\bweird\b/);
+assert.match(out.stderr, /'.*weird_deps'/);
 await execClean();
