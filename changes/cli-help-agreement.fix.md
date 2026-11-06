@@ -1,0 +1,5 @@
+- `rescript watch` interrupted by a signal exits with 128 plus the signal number, as its help says, instead of 0.
+- `--no-timing` leaves the durations out of the progress lines instead of printing `0.00s`.
+- A missing or invalid dependency exits with status 1 instead of the usage-error status 2, names the package that requires it, and no longer stops `rescript clean`, which skips it.
+- A missing project folder, such as a mistyped command, is reported as such instead of as a lock file error.
+- Usage errors such as `-v -q` and `compiler-args` with a non-source file print the usage line and exit with status 2; the help documents `-h` and `-V`.

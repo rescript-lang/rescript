@@ -76,7 +76,8 @@ let prepare report ~success ~compile_seconds =
 let report_completion report diagnostics =
   if report.interactive && report.show_progress then
     let seconds =
-      if report.no_timing then 0. else Unix.gettimeofday () -. report.started_at
+      if report.no_timing then None
+      else Some (Unix.gettimeofday () -. report.started_at)
     in
     Printf.printf "\n%s\n%!"
       (Output.finished_compilation_message ~label:(output_kind report)
@@ -105,7 +106,8 @@ let report_parse_failure report ~output =
        (Output.parsing_failed_message ~color:report.colors
           ~step:(parse_step report)
           ~seconds:
-            (if report.no_timing then 0. else report.attempt.parse_seconds))
+            (if report.no_timing then None
+             else Some report.attempt.parse_seconds))
    else if report.show_progress then
      match report.kind with
      | One_shot | Initial_watch | Full_watch ->

@@ -18,10 +18,18 @@ let prepare ~(root_config : Config.t) ~(workspace_config : Config.t) ~resolution
       Package_diagnostics.report_missing_sources
         ~is_root:(root = root_config.root) config;
       let dependencies = Package_traversal.requests ~prod ~is_local config in
+      (* A dependency that cannot be resolved, such as one not installed yet,
+         holds nothing this build wrote, so the other packages are still
+         cleaned. *)
       let resolved_dependencies =
-        List.map
+        List.filter_map
           (fun request ->
-            Package_traversal.resolve resolution ~package_root:root request)
+            try
+              Some
+                (Package_traversal.resolve resolution ~package_root:root request)
+            with Project_context.Package_error message ->
+              prerr_endline ("Skipping a dependency: " ^ message);
+              None)
           dependencies
       in
       List.iter
@@ -78,7 +86,7 @@ let run ~poll ~verbosity ~folder ~prod =
     if interactive && show_progress then
       print_endline
         (Output.cleaned_command_message ~color:colors ~step ~target
-           ~seconds:(Unix.gettimeofday () -. started_at))
+           ~seconds:(Some (Unix.gettimeofday () -. started_at)))
   in
   (* A watcher of this project would keep reading the artifacts removed
      here. *)

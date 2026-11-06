@@ -117,7 +117,7 @@ echo "Checking interactive build output..."
 run_in_terminal "$work/build.tty" build "$(command_path "$work/project")" --no-timing
 tr '\r' '\n' <"$work/build.tty" \
   | normalize_output \
-  | grep -E '^\[[123]/3\] .* (Cleaned|Parsed|Compiled) |^✅ Finished compilation in ' \
+  | grep -E '^\[[123]/3\] .* (Cleaned|Parsed|Compiled) |^✅ Finished compilation' \
   >"$work/build.phases"
 
 if ! grep -F $'\033[1m\033[2m[2/3]\033[0m' "$work/build.tty" >/dev/null; then
@@ -136,10 +136,10 @@ if ! grep -E '^\[2/3\] 🧱 Parsing\.\.\. .+ [0-9]+/1' \
 fi
 
 cat >"$work/expected" <<'EOF'
-[1/3] 🧹 Cleaned 0/0 in 0.00s
-[2/3] 🧱 Parsed 1 source files in 0.00s
-[3/3] 🤺 Compiled 1 modules in 0.00s
-✅ Finished compilation in 0.00s
+[1/3] 🧹 Cleaned 0/0
+[2/3] 🧱 Parsed 1 source files
+[3/3] 🤺 Compiled 1 modules
+✅ Finished compilation
 EOF
 
 if ! cmp -s "$work/expected" "$work/build.phases"; then
@@ -154,12 +154,11 @@ run_in_terminal "$work/after-build.tty" \
   "$(command_path "$work/after-build")" --no-timing
 tr '\r' '\n' <"$work/after-build.tty" \
   | normalize_output \
-  | grep -E '^(✅ Finished compilation in |AFTER_BUILD_MARKER$)' \
-  | sed -E 's/in [0-9]+\.[0-9]+s$/in 0.00s/' \
+  | grep -E '^(✅ Finished compilation|AFTER_BUILD_MARKER)$' \
   >"$work/after-build.order"
 
 cat >"$work/expected-after-build-order" <<'EOF'
-✅ Finished compilation in 0.00s
+✅ Finished compilation
 AFTER_BUILD_MARKER
 EOF
 

@@ -152,9 +152,14 @@ let colors_enabled ~interactive =
   colors_enabled_with ~getenv:Sys.getenv_opt
     ~win32:Platform.terminal_supports_color_without_term ~interactive
 
+(* The duration of a step, left out under --no-timing. *)
+let duration = function
+  | Some seconds -> Printf.sprintf " in %.2fs" seconds
+  | None -> ""
+
 let cleanup_message ~color ~step ~cleaned ~total ~seconds =
-  Printf.sprintf "%s%s %sCleaned %d/%d in %.2fs" line_clear
-    (format_step ~color step) Platform.clean_symbol cleaned total seconds
+  Printf.sprintf "%s%s %sCleaned %d/%d%s" line_clear (format_step ~color step)
+    Platform.clean_symbol cleaned total (duration seconds)
 
 let compiler_cleanup_message ~color ~step =
   Printf.sprintf "%s%s %sCleaned previous build due to compiler update"
@@ -165,24 +170,24 @@ let cleaning_command_message ~color ~step target =
     Platform.clean_symbol target
 
 let cleaned_command_message ~color ~step ~target ~seconds =
-  Printf.sprintf "%s%s %sCleaned %s in %.2fs" line_clear
-    (format_step ~color step) Platform.clean_symbol target seconds
+  Printf.sprintf "%s%s %sCleaned %s%s" line_clear (format_step ~color step)
+    Platform.clean_symbol target (duration seconds)
 
 let parsing_message ~color ~step ~count ~seconds =
-  Printf.sprintf "%s%s %sParsed %d source files in %.2fs" line_clear
-    (format_step ~color step) Platform.parse_symbol count seconds
+  Printf.sprintf "%s%s %sParsed %d source files%s" line_clear
+    (format_step ~color step) Platform.parse_symbol count (duration seconds)
 
 let parsing_failed_message ~color ~step ~seconds =
-  Printf.sprintf "%s%s %sError parsing source files in %.2fs" line_clear
-    (format_step ~color step) Platform.error_symbol seconds
+  Printf.sprintf "%s%s %sError parsing source files%s" line_clear
+    (format_step ~color step) Platform.error_symbol (duration seconds)
 
 let compiling_message ~color ~step ~count ~seconds =
-  Printf.sprintf "%s%s %sCompiled %d modules in %.2fs" line_clear
-    (format_step ~color step) Platform.build_symbol count seconds
+  Printf.sprintf "%s%s %sCompiled %d modules%s" line_clear
+    (format_step ~color step) Platform.build_symbol count (duration seconds)
 
 let compilation_failed_message ~color ~step ~count ~seconds =
-  Printf.sprintf "%s%s %sCompiled %d modules in %.2fs" line_clear
-    (format_step ~color step) Platform.error_symbol count seconds
+  Printf.sprintf "%s%s %sCompiled %d modules%s" line_clear
+    (format_step ~color step) Platform.error_symbol count (duration seconds)
 
 type compilation_label = Standard | Initial | Incremental
 
@@ -197,8 +202,8 @@ let finished_compilation_message ~label ~warnings ~seconds =
     | Incremental -> "incremental "
   in
   let warning_suffix = if warnings then " with warnings" else "" in
-  Printf.sprintf "%s%sFinished %scompilation%s in %.2fs" line_clear status kind
-    warning_suffix seconds
+  Printf.sprintf "%s%sFinished %scompilation%s%s" line_clear status kind
+    warning_suffix (duration seconds)
 
 let should_clear_screen ~clear_screen ~show_progress ~interactive =
   clear_screen && show_progress && interactive

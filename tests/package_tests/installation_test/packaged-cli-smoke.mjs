@@ -80,7 +80,13 @@ try {
   }
   const { code, signal } = await waitForExit(watcherExit);
   assert.equal(signal, null, `watcher was killed: ${watchOutput}`);
-  assert.equal(code, 0, `watcher exited with code ${code}: ${watchOutput}`);
+  // SIGINT ends the watcher with 128 + 2; a removed lock with 0.
+  const expectedCode = process.platform === "win32" ? 0 : 130;
+  assert.equal(
+    code,
+    expectedCode,
+    `watcher exited with code ${code}: ${watchOutput}`,
+  );
   assert.match(
     watchOutput,
     /Exiting\.\.\./,
