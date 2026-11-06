@@ -307,7 +307,7 @@ val in_ : t -> t -> t
 
 val dummy_obj : Lambda.tag_info -> t
 
-val of_block : ?e:J.expression -> J.statement list -> t
+val of_block : J.statement list -> t
 (** convert a block to expresion by using IIFE *)
 
 val raw_js_code : Js_raw_info.code_info -> string -> t

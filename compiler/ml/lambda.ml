@@ -740,10 +740,9 @@ let may_skip_operands (primitive : primitive) =
   | Pdict_has | Pawait | Pimport _ | Pinit_mod | Pupdate_mod | Phash
   | Phash_mixint | Phash_mixstring | Phash_finalmix | Pis_null_undefined
   | Pcreate_extension _ | Pjscomp _ | Pnull_to_opt | Pnull_undefined_to_opt
-  | Pis_null | Pis_undefined | Pis_not_none | Pval_from_option
-  | Pval_from_option_not_nest | Pis_poly_var_block | Praw_js_code _
-  | Pjs_fn_method | Ptagged_template _ | Ptemplate _ | Pdict_spread
-  | Parray_spread | Plist_spread ->
+  | Pis_null | Pis_not_none | Pval_from_option | Pval_from_option_not_nest
+  | Pis_poly_var_block | Praw_js_code _ | Pjs_fn_method | Ptagged_template _
+  | Ptemplate _ | Pdict_spread | Parray_spread | Plist_spread ->
     false
 
 (* Whether [primitive] on [args], the arguments of a call, evaluates them as

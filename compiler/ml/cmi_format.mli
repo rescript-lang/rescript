@@ -25,7 +25,6 @@ type cmi_infos = {
 val create_cmi : ?check_exists:unit -> string -> cmi_infos -> Digest.t
 
 (* read the cmi information (the magic is supposed to have already been read) *)
-val input_cmi : in_channel -> cmi_infos
 
 (* read a cmi from a filename, checking the magic *)
 val read_cmi : string -> cmi_infos
