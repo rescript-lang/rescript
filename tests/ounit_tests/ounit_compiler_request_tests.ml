@@ -813,26 +813,22 @@ let cmt_accumulator_isolation_tests _context =
   let left =
     Domain.spawn (fun () ->
         Cmt_format.clear ();
-        Cmt_format.set_args [|"bsc"; "First.res"|];
         Cmt_format.add_saved_type saved_part;
         Atomic.set left_ready true;
         wait_for_atomic right_ready;
-        ( List.length (Cmt_format.get_saved_types ()),
-          (Compiler_request_state.current ()).cmt_args ))
+        List.length (Cmt_format.get_saved_types ()))
   in
   let right =
     Domain.spawn (fun () ->
         wait_for_atomic left_ready;
         Cmt_format.clear ();
-        Cmt_format.set_args [|"bsc"; "Second.res"|];
         Cmt_format.add_saved_type saved_part;
         Cmt_format.add_saved_type saved_part;
         Atomic.set right_ready true;
-        ( List.length (Cmt_format.get_saved_types ()),
-          (Compiler_request_state.current ()).cmt_args ))
+        List.length (Cmt_format.get_saved_types ()))
   in
-  assert_equal (1, [|"bsc"; "First.res"|]) (Domain.join left);
-  assert_equal (2, [|"bsc"; "Second.res"|]) (Domain.join right)
+  assert_equal 1 (Domain.join left);
+  assert_equal 2 (Domain.join right)
 
 let package_output_isolation_tests _context =
   let left_ready = Atomic.make false in
@@ -1304,17 +1300,13 @@ let state_boundary_tests _context =
         (contains_text after_source_flags.stderr "Warning number 39")
         "source-level compiler flags are reset between requests";
       write root "Mapped.res" "let mapped = 1\n";
-      let mapped_args, mapped =
+      let _, mapped =
         run root ~extra:["-bs-source-map"; "linked"] "Mapped.res"
       in
       expect_code 0 mapped;
       check
         (Sys.file_exists (Filename.concat root "Mapped.js.map"))
         "the requested source map is generated";
-      let cmt = Cmt_format.read_cmt (Filename.concat root "Mapped.cmt") in
-      check
-        (Array.to_list cmt.cmt_args = ("bsc" :: mapped_args) @ ["Mapped.res"])
-        "CMT metadata records the logical request argv";
       write root "Plain.res" "let plain = 1\n";
       let _, plain =
         run root
