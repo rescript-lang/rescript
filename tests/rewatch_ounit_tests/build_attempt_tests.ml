@@ -71,14 +71,14 @@ let pending_work_is_drained_once _context =
 let log_finalization_runs_once _context =
   Test_support.with_temp_dir "rewatch-attempt-log" (fun root ->
       let attempt = create_full () in
-      File_util.ensure_dir (Build_artifacts.lib_path root "ocaml");
+      File_util.ensure_dir (Build_artifacts.artifact_dir root);
       Compiler_log.initialize root;
       Build_attempt.mark_log_initialized attempt root;
       Build_attempt.finalize_logs attempt;
       Build_attempt.finalize_logs attempt;
       let contents =
         File_util.read_file
-          (Filename.concat (Build_artifacts.lib_path root "bs") ".compiler.log")
+          (Filename.concat (Build_artifacts.artifact_dir root) ".compiler.log")
       in
       let done_lines =
         contents |> String.split_on_char '\n'

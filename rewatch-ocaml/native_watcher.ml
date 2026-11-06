@@ -25,7 +25,7 @@ let error_message error =
 
 let is_compiler_artifact_directory path =
   let name = Filename.basename path in
-  (name = "bs" || name = "ocaml")
+  (name = "rescript" || name = "bs" || name = "ocaml")
   && Filename.basename (Filename.dirname path) = "lib"
 
 let directories_under paths =

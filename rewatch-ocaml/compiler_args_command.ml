@@ -93,7 +93,7 @@ let run ~verbosity path =
           Package_resolution.dependency_path resolution
             ~package_root:config.root dependency.name
         with
-        | Some directory -> Some (Build_artifacts.lib_path directory "ocaml")
+        | Some directory -> Some (Build_artifacts.artifact_dir directory)
         | None when not required -> None
         | None ->
           error

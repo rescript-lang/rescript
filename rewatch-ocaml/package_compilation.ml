@@ -6,8 +6,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
   let config = package.compile_config in
   let build_state = prepared.build_state in
   let compile_assets = prepared.compile_assets in
-  let build_dir = package.build_dir in
-  let ocaml_dir = package.ocaml_dir in
+  let artifact_dir = package.artifact_dir in
   let modules = package.modules in
   let module_is_dirty module_ (state : Build_state.module_) =
     let global_key = Source.compiler_basename config module_.Source.name in
@@ -75,13 +74,19 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
         config.package_specs
     in
     let compile_process module_ ~source_kind path =
-      Compiler_process.compile_request ~build_dir ~config
-        ~common_args:
-          (if module_.Source.is_dev then
-             prepared_package.development_common_args
-           else prepared_package.regular_common_args)
-        module_ ~source_kind path
-      |> Compiler_process.task
+      let task =
+        Compiler_process.compile_request ~artifact_dir ~config
+          ~common_args:
+            (if module_.Source.is_dev then
+               prepared_package.development_common_args
+             else prepared_package.regular_common_args)
+          module_ ~source_kind path
+        |> Compiler_process.task
+      in
+      Process.map_result task (fun result ->
+          if not (Process.succeeded result) then
+            Compiler_process.discard_compile ~artifact_dir ~config path;
+          result)
     in
     let record_published_outputs ~source_kind path =
       match source_kind with
@@ -104,7 +109,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           if Hashtbl.mem attempt.blocked_modules key then None
           else
             let cmi_path =
-              Filename.concat ocaml_dir
+              Filename.concat artifact_dir
                 (Source.compiler_asset_basename config
                    module_.Source.implementation
                 ^ ".cmi")
@@ -121,8 +126,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
                 ~compile:(fun ~source_kind path ->
                   compile_process module_ ~source_kind path)
                 ~publish:(fun ~source_kind path result ->
-                  Compiler_process.publish ~build_dir ~ocaml_dir ~is_local
-                    ~config
+                  Compiler_process.publish ~artifact_dir ~is_local ~config
                     ~has_interface:(Option.is_some module_.Source.interface)
                     ~source_kind path result)
                 ~record_published_outputs
@@ -133,7 +137,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
                   :: Option.to_list module_.Source.interface
                   |> List.iter (fun path ->
                       Hashtbl.replace compile_warning_paths
-                        (Build_artifacts.published_ast_path ~ocaml_dir path)
+                        (Build_artifacts.ast_path ~artifact_dir path)
                         ()))
             in
             Some (Compiler_scheduler.candidate ~key ~state ~warning_paths ~make))
@@ -156,15 +160,14 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           || attempt.freshness_mode = Build_attempt.Initialize_freshness
         then
           Compiler_process.namespace_task
-            ~runtime:prepared.compiler_context.runtime_path ~build_dir
-            ~ocaml_dir
+            ~runtime:prepared.compiler_context.runtime_path ~artifact_dir
             ~entry:(Config.namespace_entry config.namespace)
             ~package_dirty ~force:namespace_state.compile_dirty compiler_name
             modules
           |> Option.iter (fun namespace_task ->
               namespace_state.compile_dirty <- true;
               let cmi_path =
-                Filename.concat ocaml_dir (compiler_name ^ ".cmi")
+                Filename.concat artifact_dir (compiler_name ^ ".cmi")
               in
               let finish result =
                 if not (Process.succeeded result) then
@@ -178,7 +181,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
                     Build_state.record_published_cmi build_state ~compile_assets
                       namespace_state ~path:cmi_path cmi_change;
                     let cmt_path =
-                      Filename.concat ocaml_dir (compiler_name ^ ".cmt")
+                      Filename.concat artifact_dir (compiler_name ^ ".cmt")
                     in
                     Build_state.record_successful_compile ~compile_assets
                       namespace_state ~cmt_path
@@ -194,5 +197,5 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
     Build_attempt.register_cleanup attempt (fun () ->
         if not watch then
           Hashtbl.iter
-            (fun path () -> File_util.remove_file path)
+            (fun path () -> Build_artifacts.invalidate_ast path)
             compile_warning_paths))

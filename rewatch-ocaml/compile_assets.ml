@@ -15,10 +15,13 @@ let ast_header path =
   with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
 
 let cleanup_extensions =
-  [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"; ".res"; ".resi"; ".mlmap"]
+  [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"; ".mlmap"]
 
+(* Compiler artifacts, and files a build killed while it published one left
+   behind. *)
 let is_managed_basename basename =
   List.exists (Filename.check_suffix basename) cleanup_extensions
+  || String.starts_with ~prefix:File_util.atomic_write_prefix basename
 
 let state_extension = function
   | ".ast" | ".iast" | ".cmi" | ".cmt" -> true
@@ -31,8 +34,7 @@ let read_directory directory =
   in
   let files =
     names
-    |> List.filter (fun name ->
-        List.mem (Filename.extension name) cleanup_extensions)
+    |> List.filter is_managed_basename
     |> List.map (Filename.concat directory)
   in
   let state_names =

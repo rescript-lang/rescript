@@ -1,21 +1,22 @@
-type scan = {build_root: string; scan_dirs: string list}
-
-(* Every scan includes its build root (also_scan_build_root). *)
-let scan_json scan =
+(* A package's artifact directory is flat, so its scan is the build root
+   alone: no subdirectories, and also_scan_build_root. *)
+let scan_json build_root =
   `Assoc
     [
       ("also_scan_build_root", `Bool true);
-      ("build_root", `String scan.build_root);
-      ("scan_dirs", `List (List.map (fun path -> `String path) scan.scan_dirs));
+      ("build_root", `String build_root);
+      ("scan_dirs", `List []);
     ]
 
-let write ~root ~dirs ~packages ~scans =
-  let path = File_util.path_of_parts root ["lib"; "bs"; ".sourcedirs.json"] in
+let write ~root ~dirs ~packages ~build_roots =
+  let path =
+    Filename.concat (Build_artifacts.artifact_dir root) ".sourcedirs.json"
+  in
   File_util.ensure_dir (Filename.dirname path);
   let json =
     `Assoc
       [
-        ("cmt_scan", `List (List.map scan_json scans));
+        ("cmt_scan", `List (List.map scan_json build_roots));
         ("dirs", `List (List.map (fun path -> `String path) dirs));
         ("generated", `List []);
         ( "pkgs",
@@ -40,8 +41,9 @@ let write_build ~(root_config : Config.t) session =
   |> List.iter (fun package ->
       if package.Package_plan.root <> root_config.root then
         File_util.remove_file
-          (File_util.path_of_parts package.root
-             ["lib"; "bs"; ".sourcedirs.json"]));
+          (Filename.concat
+             (Build_artifacts.artifact_dir package.root)
+             ".sourcedirs.json"));
   let local_packages =
     List.filter (fun package -> package.Package_plan.is_local) packages
   in
@@ -76,16 +78,10 @@ let write_build ~(root_config : Config.t) session =
     |> List.of_seq
     |> List.sort (fun (left, _) (right, _) -> String.compare left right)
   in
-  let scans =
+  let build_roots =
     local_packages
     |> List.map (fun package ->
-        let relative_root = relative_package_root package in
-        let build_root =
-          if relative_root = "" then File_util.path_of_parts "" ["lib"; "bs"]
-          else File_util.path_of_parts relative_root ["lib"; "bs"]
-        in
-        {build_root; scan_dirs = source_directories package})
-    |> List.sort (fun (left : scan) right ->
-        String.compare left.build_root right.build_root)
+        Build_artifacts.artifact_dir (relative_package_root package))
+    |> List.sort String.compare
   in
-  write ~root:root_config.root ~dirs ~packages:package_roots ~scans
+  write ~root:root_config.root ~dirs ~packages:package_roots ~build_roots

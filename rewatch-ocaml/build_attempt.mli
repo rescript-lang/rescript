@@ -60,7 +60,6 @@ val create_retained :
   t
 
 val register_cleanup : t -> (unit -> unit) -> unit
-val defer_artifact_cleanup : t -> string list -> unit
 
 val set_cleanup_result : t -> string -> Build_artifacts.cleanup_result -> unit
 (** Records the modules this attempt removed from a package, and keeps the

@@ -64,16 +64,17 @@ let tests =
           "dev-dependencies": ["development"]
         }|};
       let regular =
-        File_util.path_of_parts root ["node_modules"; "regular"; "lib"; "ocaml"]
+        File_util.path_of_parts root
+          ["node_modules"; "regular"; "lib"; "rescript"]
       in
       let development =
         File_util.path_of_parts root
-          ["node_modules"; "development"; "lib"; "ocaml"]
+          ["node_modules"; "development"; "lib"; "rescript"]
       in
       let ordinary_includes = compiler_args source |> adjacent_positions "-I" in
       check
         (Option.is_some (position regular ordinary_includes))
-        "regular dependency includes do not require a prebuilt lib/ocaml";
+        "regular dependency includes do not require a prebuilt lib/rescript";
       check
         (Option.is_none (position development ordinary_includes))
         "ordinary sources exclude development dependencies";

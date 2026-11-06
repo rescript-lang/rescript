@@ -14,7 +14,7 @@ rescript=$(realpath "$rescript")
 mkdir -p "$root/tmp"
 work=$(mktemp -d "$root/tmp/rewatch-config-acceptance-XXXXXX")
 trap 'rm -rf "$work"' EXIT
-mkdir -p "$work/project/src" "$work/project/node_modules/dep/lib/ocaml" \
+mkdir -p "$work/project/src" "$work/project/node_modules/dep/lib/rescript" \
   "$work/project/node_modules/ppx"
 project=$work/project
 printf 'let value = 1\n' >"$project/src/A.res"

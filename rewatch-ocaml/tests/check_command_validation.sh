@@ -58,9 +58,9 @@ project="$work/project"
 mkdir -p "$project/src" "$work/orphan" "$work/empty" "$work/malformed"
 mkdir -p "$work/malformed-parent/child/src" "$work/config-directory/rescript.json"
 mkdir -p "$work/missing-dependency/src"
-mkdir -p "$work/malformed-lock/src" "$work/malformed-lock/lib"
-mkdir -p "$work/watch-lock-order/src" "$work/watch-lock-order/lib"
-mkdir -p "$work/signal-lock/src" "$work/signal-lock/lib"
+mkdir -p "$work/malformed-lock/src" "$work/malformed-lock/lib/rescript"
+mkdir -p "$work/watch-lock-order/src" "$work/watch-lock-order/lib/rescript"
+mkdir -p "$work/signal-lock/src" "$work/signal-lock/lib/rescript"
 mkdir -p "$work/signal-lock-owner/src"
 mkdir -p "$work/interface-mismatch/src"
 mkdir -p "$work/exotic-module/src"
@@ -76,10 +76,10 @@ mkdir -p "$work/active-permission/node_modules/a" \
 mkdir -p "$work/source-path-file"
 mkdir -p "$work/missing-runtime-package"
 mkdir -p "$work/clean-missing-runtime/src" \
-  "$work/clean-missing-runtime/lib/bs"
+  "$work/clean-missing-runtime/lib/rescript"
 mkdir -p "$work/clean-duplicate/src/one" \
   "$work/clean-duplicate/src/two" \
-  "$work/clean-duplicate/lib/bs"
+  "$work/clean-duplicate/lib/rescript"
 mkdir -p "$work/missing-source-folder/src" \
   "$work/missing-source-folder/node_modules/dep"
 mkdir -p "$work/dependency-without-sources/src" \
@@ -201,7 +201,7 @@ printf '{"name":"missing-runtime-package","sources":[]}\n' \
 printf '{"name":"clean-missing-runtime","sources":["src"]}\n' \
   >"$work/clean-missing-runtime/rescript.json"
 printf 'let value = 1\n' >"$work/clean-missing-runtime/src/A.res"
-printf 'owned compiler artifact\n' >"$work/clean-missing-runtime/lib/bs/marker"
+printf 'owned compiler artifact\n' >"$work/clean-missing-runtime/lib/rescript/marker"
 printf '%s\n' \
   '{"name":"duplicate-clean","sources":{"dir":"src","subdirs":true},"package-specs":{"module":"esmodule","in-source":true}}' \
   >"$work/clean-duplicate/rescript.json"
@@ -209,7 +209,7 @@ printf 'let value = 1\n' >"$work/clean-duplicate/src/one/A.res"
 printf 'let value = 2\n' >"$work/clean-duplicate/src/two/A.res"
 printf 'generated\n' >"$work/clean-duplicate/src/one/A.js"
 printf 'generated\n' >"$work/clean-duplicate/src/two/A.js"
-printf 'owned compiler artifact\n' >"$work/clean-duplicate/lib/bs/marker"
+printf 'owned compiler artifact\n' >"$work/clean-duplicate/lib/rescript/marker"
 printf '{"name":"missing-source-folder","sources":["src"],"dependencies":["dep"]}\n' \
   >"$work/missing-source-folder/rescript.json"
 printf 'let value = 1\n' >"$work/missing-source-folder/src/App.res"
@@ -610,7 +610,7 @@ run_case compiler-args-no-project reject compiler-args "$work/orphan/A.res"
 
 run_rescript --unset RESCRIPT_RUNTIME clean "$work/clean-missing-runtime"
 if [ "$rescript_status" -ne 0 ] || \
-  [ -e "$work/clean-missing-runtime/lib/bs/marker" ]; then
+  [ -e "$work/clean-missing-runtime/lib/rescript/marker" ]; then
   echo "clean-missing-runtime: expected clean to succeed without a runtime" >&2
   dump_output
   exit 1
@@ -733,9 +733,9 @@ fi
 run_case js-post-build-nonzero reject build "$work/failed-js-post-build"
 js_post_build_error="js-post-build command failed for $work/failed-js-post-build/src/A.js"
 require_error_contains js-post-build-nonzero "$js_post_build_error"
-printf 'not-a-pid' >"$work/malformed-lock/lib/build.lock"
+printf 'not-a-pid' >"$work/malformed-lock/lib/rescript/build.lock"
 run_case build-malformed-lock reject build "$work/malformed-lock"
-if [ "$(cat "$work/malformed-lock/lib/build.lock")" != not-a-pid ]; then
+if [ "$(cat "$work/malformed-lock/lib/rescript/build.lock")" != not-a-pid ]; then
   echo "A malformed build lock with unknown ownership was replaced" >&2
   exit 1
 fi
@@ -754,7 +754,7 @@ signal_lock_owner_pid=$!
 background_pids="$background_pids $signal_lock_owner_pid"
 wait_for_text "$work/signal-lock-owner.out" "Finished initial compilation"
 printf '%s' "$(lock_owner_pid "$signal_lock_owner_pid")" \
-  >"$work/signal-lock/lib/build.lock"
+  >"$work/signal-lock/lib/rescript/build.lock"
 "$rescript" watch "$work/signal-lock" \
   >"$work/signal-lock.out" 2>"$work/signal-lock.err" &
 signal_lock_watch_pid=$!
@@ -782,9 +782,9 @@ fi
 kill -TERM "$signal_lock_owner_pid"
 wait "$signal_lock_owner_pid" 2>/dev/null || true
 checked=$((checked + 1))
-printf 'not-a-pid' >"$work/malformed-lock/lib/watch.lock"
+printf 'not-a-pid' >"$work/malformed-lock/lib/rescript/watch.lock"
 run_case watch-malformed-lock reject watch "$work/malformed-lock"
-if [ "$(cat "$work/malformed-lock/lib/watch.lock")" != not-a-pid ]; then
+if [ "$(cat "$work/malformed-lock/lib/rescript/watch.lock")" != not-a-pid ]; then
   echo "A malformed watch lock with unknown ownership was replaced" >&2
   exit 1
 fi
@@ -813,7 +813,7 @@ if [ -z "$native_owner_pid" ]; then
   exit 1
 fi
 printf '%s' "$native_owner_pid" \
-  >"$work/watch-lock-order/lib/watch.lock"
+  >"$work/watch-lock-order/lib/rescript/watch.lock"
 run_rescript watch "$work/watch-lock-order"
 if [ "$(classify "$rescript_status")" != reject ] || \
   ! grep -F 'A ReScript build is already running' \
@@ -830,7 +830,7 @@ run_case build-interface-path-mismatch reject build \
   "$work/interface-mismatch"
 check_output_snapshot --stderr-only build-interface-path-mismatch
 run_rescript build "$work/exotic-module"
-mlmap="$work/exotic-module/lib/bs/Ns.mlmap"
+mlmap="$work/exotic-module/lib/rescript/Ns.mlmap"
 if [ "$(classify "$rescript_status")" != accept ] || \
   ! grep -Fx Main "$mlmap" >/dev/null || \
   grep -F 'Foo-bar' "$mlmap" >/dev/null; then
@@ -996,7 +996,7 @@ watch_err="$work/watch-config.err"
 watch_pid=$!
 background_pids="$background_pids $watch_pid"
 wait_for_file "$watch_project/src/A.js"
-wait_for_text "$watch_project/lib/ocaml/.compiler.log" "#Done("
+wait_for_text "$watch_project/lib/rescript/.compiler.log" "#Done("
 printf '{ invalid json\n' >"$watch_project/rescript.json"
 wait_for_text "$watch_err" "invalid JSON"
 if ! kill -0 "$watch_pid" 2>/dev/null; then
@@ -1015,7 +1015,7 @@ fi
 printf '{"name":"watch-config","sources":["src"],"package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}\n' \
   >"$watch_project/rescript.json"
 wait_for_file "$watch_project/src/A.mjs"
-wait_for_file "$watch_project/lib/bs/build.ninja"
+wait_for_file "$watch_project/lib/rescript/compiler-info.json"
 if ! terminate_and_wait "$watch_pid" "recoverable-config watcher"; then
   cat "$watch_out" "$watch_err" >&2
   exit 1
@@ -1216,7 +1216,7 @@ if ! kill -0 "$quiet_watch_pid" 2>/dev/null; then
 fi
 printf 'let value = 3\n' >"$quiet_watch_project/src/A.res"
 wait_for_line_count "$quiet_watch_marker" 3
-rm "$quiet_watch_project/lib/watch.lock"
+rm "$quiet_watch_project/lib/rescript/watch.lock"
 wait_for_exit "$quiet_watch_pid"
 wait "$quiet_watch_pid"
 if [ -s "$work/quiet-watch.out" ] || \
@@ -1246,7 +1246,7 @@ run_rescript clean "$work/clean-duplicate"
 if [ "$rescript_status" -ne 0 ] || \
   [ -e "$work/clean-duplicate/src/one/A.js" ] || \
   [ -e "$work/clean-duplicate/src/two/A.js" ] || \
-  [ -e "$work/clean-duplicate/lib/bs/marker" ]; then
+  [ -e "$work/clean-duplicate/lib/rescript/marker" ]; then
   echo "clean-duplicate-modules: duplicate modules were not cleaned" >&2
   dump_output
   exit 1
@@ -1272,8 +1272,8 @@ if $windows_posix_shell; then
   # remove its locks. Its external termination intentionally leaves a stale
   # watch lock, and a build lock if the rebuild was still finishing, so remove
   # those harness artifacts before checking failure paths.
-  rm -f "$work/missing-dependency/lib/watch.lock" \
-    "$work/missing-dependency/lib/build.lock"
+  rm -f "$work/missing-dependency/lib/rescript/watch.lock" \
+    "$work/missing-dependency/lib/rescript/build.lock"
 fi
 printf '{"name":"missing-dependency","sources":["src"],"dependencies":["absent"]}\n' \
   >"$work/missing-dependency/rescript.json"
@@ -1284,8 +1284,8 @@ run_case --cwd "$work/configless-dependency" \
   format-configless-dependency exit2 format
 run_case --cwd "$work/malformed-dependency" \
   format-malformed-dependency exit2 format
-if [ -e "$work/missing-dependency/lib/build.lock" ] || \
-  [ -e "$work/missing-dependency/lib/watch.lock" ]; then
+if [ -e "$work/missing-dependency/lib/rescript/build.lock" ] || \
+  [ -e "$work/missing-dependency/lib/rescript/watch.lock" ]; then
   echo "Dependency failures left a build or watch lock behind" >&2
   exit 1
 fi

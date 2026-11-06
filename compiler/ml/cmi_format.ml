@@ -101,8 +101,14 @@ let create_cmi ?check_exists filename (cmi : cmi_infos) =
   let cmi_infos =
     if check_exists = None then None
     else
-      Build_file_store.read (Compiler_request_state.resolve_path filename)
-      |> Option.map (read_cmi_contents filename)
+      match
+        Build_file_store.read (Compiler_request_state.resolve_path filename)
+      with
+      | None -> None
+      | Some contents -> (
+        (* An interface cut short, as by a build killed while it wrote it in
+           place, or one of another version, is replaced. *)
+        try Some (read_cmi_contents filename contents) with Error _ -> None)
   in
   match cmi_infos with
   | Some

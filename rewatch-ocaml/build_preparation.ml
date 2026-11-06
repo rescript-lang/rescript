@@ -37,13 +37,13 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   in
   let previous_compile_assets =
     package_plans
-    |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)
+    |> List.map (fun (package : Package_plan.t) -> package.artifact_dir)
     |> Compile_assets.create
   in
   let dependents_by_raw_dependency = Hashtbl.create 64 in
   package_plans
   |> List.concat_map (fun (package : Package_plan.t) ->
-      Compile_assets.ast_sources previous_compile_assets package.ocaml_dir)
+      Compile_assets.ast_sources previous_compile_assets package.artifact_dir)
   |> List.iter (fun (ast_source : Compile_assets.ast_source) ->
       Compile_assets.ast_dependencies previous_compile_assets
         ast_source.ast_path
@@ -63,23 +63,22 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         |> Option.value ~default:[]
       in
       (* A cleanup failure can end the attempt before dependency preparation
-         records why consumers need recompilation. Remove their freshness
+         records why consumers need recompilation. Invalidate their freshness
          markers when the attempt finishes so the next invocation cannot reuse
          them, while the current invocation can still compile from the existing
          AST and report the source-level missing-module error. *)
       Build_attempt.register_cleanup attempt (fun () ->
-          List.iter File_util.remove_file dependent_asts))
+          List.iter Build_artifacts.invalidate_ast dependent_asts))
   in
-  let cleanup_stale (package : Package_plan.t) ~on_deferred_artifact =
+  let cleanup_stale (package : Package_plan.t) =
     Build_artifacts.cleanup_stale
-      ~ocaml_files:
-        (Compile_assets.files previous_compile_assets package.ocaml_dir)
+      ~artifact_files:
+        (Compile_assets.files previous_compile_assets package.artifact_dir)
       ~ast_sources:
-        (Compile_assets.ast_sources previous_compile_assets package.ocaml_dir)
-      ~root:package.root ~source_files:package.source_files
-      ~present_source_files:package.present_source_files
-      ~on_removed_module:invalidate_removed_module ~on_deferred_artifact
-      ~is_local:package.is_local package.compile_config package.modules
+        (Compile_assets.ast_sources previous_compile_assets package.artifact_dir)
+      ~root:package.root ~present_source_files:package.present_source_files
+      ~on_removed_module:invalidate_removed_module package.compile_config
+      package.modules
   in
   (* Outputs written under the previous package-specs are removed before the
      package is cleaned, because the new specs no longer name them. *)
@@ -95,7 +94,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
             (fun (module_ : Source.module_) -> module_.implementation)
             package.modules
           @ (Compile_assets.ast_sources previous_compile_assets
-               package.ocaml_dir
+               package.artifact_dir
             |> List.filter_map (fun (source : Compile_assets.ast_source) ->
                 if Filename.check_suffix source.ast_path ".iast" then None
                 else
@@ -108,9 +107,9 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   in
   let cleanup_started = Unix.gettimeofday () in
   (* A package that needs cleaning has its stale outputs removed before its
-     lib/bs and lib/ocaml trees are wiped, while the lib/bs mirror still
-     identifies which public outputs it owns. That cleanup result is final, so
-     the second pass only cleans up the remaining packages. *)
+     artifact directory is emptied, while its ASTs still identify which public
+     outputs it owns. That cleanup result is final, so the second pass only
+     cleans up the remaining packages. *)
   let cleanups_before_clean =
     List.map
       (fun (package : Package_plan.t) ->
@@ -120,16 +119,16 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         let cleanup =
           if Compiler_info.needs_clean package_context package.config then (
             remove_previous_spec_outputs package package_context;
-            let cleanup =
-              cleanup_stale package ~on_deferred_artifact:File_util.remove_file
-            in
+            let cleanup = cleanup_stale package in
             Compiler_info.clean_package package.config;
             attempt.compiler_cleaned <- true;
             Some cleanup)
           else None
         in
-        File_util.ensure_dir package.build_dir;
-        File_util.ensure_dir package.ocaml_dir;
+        File_util.ensure_dir package.artifact_dir;
+        (* Recorded once the package matches this compiler, so that a failed
+           or interrupted build does not clean it again. *)
+        Compiler_info.write_package package_context package.config;
         (package, cleanup))
       package_plans
   in
@@ -138,9 +137,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       let cleanup =
         match cleanup with
         | Some cleanup -> cleanup
-        | None ->
-          cleanup_stale package ~on_deferred_artifact:(fun path ->
-              Build_attempt.defer_artifact_cleanup attempt [path])
+        | None -> cleanup_stale package
       in
       Build_attempt.set_cleanup_result attempt package.root cleanup;
       attempt.cleaned <- attempt.cleaned + List.length cleanup.removed_modules;
@@ -151,7 +148,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
     if attempt.compiler_cleaned || Hashtbl.length attempt.removed_modules > 0
     then
       package_plans
-      |> List.map (fun (package : Package_plan.t) -> package.ocaml_dir)
+      |> List.map (fun (package : Package_plan.t) -> package.artifact_dir)
       |> Compile_assets.create
     else previous_compile_assets
   in
@@ -188,7 +185,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
   let parse_results =
     parse_entries
     |> List.map (fun ((package : Package_plan.t), path, _) ->
-        (package.build_dir, package.ocaml_dir, package.compile_config, path))
+        (package.artifact_dir, package.compile_config, path))
     |> Compiler_process.run_parses ?poll:attempt.process_poll
          ~on_complete:parse_completed
   in
@@ -232,9 +229,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       let regular_dependency_dirs, development_dependency_dirs =
         List.fold_left
           (fun (regular, development) (dependency : Package_plan.dependency) ->
-            let directory =
-              Build_artifacts.lib_path dependency.directory "ocaml"
-            in
+            let directory = Build_artifacts.artifact_dir dependency.directory in
             match dependency.kind with
             | Package_traversal.Regular -> (directory :: regular, development)
             | Package_traversal.Development ->

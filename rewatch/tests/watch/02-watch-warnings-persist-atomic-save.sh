@@ -28,7 +28,7 @@ wait_for_changed_completed_log() {
   return 1
 }
 
-COMPILER_LOG="./packages/watch-warnings/lib/bs/.compiler.log"
+COMPILER_LOG="./packages/watch-warnings/lib/rescript/.compiler.log"
 B_FILE="./packages/watch-warnings/src/B.res"
 WATCH_STDOUT="rewatch-stdout.log"
 WATCH_STDERR="rewatch-stderr.log"

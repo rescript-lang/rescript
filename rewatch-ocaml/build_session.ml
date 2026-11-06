@@ -17,7 +17,6 @@ type readiness =
   | Freshness_pending of prepared
   | Ready of prepared
 
-type compiler_info_state = Needs_publication | Published
 type cycle_cache =
   | Unknown_cycle
   | Known_cycle of Module_graph.cycle_info option
@@ -33,7 +32,6 @@ type t = {
   pending_removed_modules: (string, unit) Hashtbl.t;
   public_outputs: (string, (string, unit) Hashtbl.t) Hashtbl.t;
   mutable readiness: readiness;
-  mutable compiler_info_state: compiler_info_state;
   warning_state: Warning_state.t;
 }
 
@@ -49,7 +47,6 @@ let create ~warning_state =
     pending_removed_modules = Hashtbl.create 16;
     public_outputs = Hashtbl.create 32;
     readiness = Not_prepared;
-    compiler_info_state = Needs_publication;
     warning_state;
   }
 
@@ -111,13 +108,6 @@ let find_package_plan session root = Hashtbl.find_opt session.package_plans root
 
 let iter_package_plans session f = Hashtbl.iter f session.package_plans
 let package_plan_values session = Hashtbl.to_seq_values session.package_plans
-
-let publish_compiler_info session write =
-  match session.compiler_info_state with
-  | Published -> ()
-  | Needs_publication ->
-    Hashtbl.iter (fun _ package -> write package) session.package_plans;
-    session.compiler_info_state <- Published
 
 let add_source_reference session normalized_path source =
   Hashtbl.replace session.source_index normalized_path source

@@ -25,7 +25,7 @@ active_watch_transcript=""
 cleanup() {
   if [ -n "$active_script_pid" ]; then
     if [ -n "$active_watch_project" ]; then
-      rm -f "$active_watch_project/lib/watch.lock"
+      rm -f "$active_watch_project/lib/rescript/watch.lock"
     fi
     if ! wait_for_pid_gone "$active_script_pid" 50; then
       kill -TERM "$active_script_pid" 2>/dev/null || true
@@ -241,7 +241,7 @@ overwrite_line_in_place() {
 }
 
 stop_active_watch() {
-  rm -f "$active_watch_project/lib/watch.lock"
+  rm -f "$active_watch_project/lib/rescript/watch.lock"
   if ! wait_for_pid_gone "$active_script_pid"; then
     echo "Timed out waiting for the interactive watcher to stop" >&2
     if [ -f "$active_watch_transcript" ]; then

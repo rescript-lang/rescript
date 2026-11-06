@@ -25,7 +25,7 @@
 let init_path () =
   let stdlib_dir =
     let ( // ) = Filename.concat in
-    Runtime_package.get_path () // "lib" // "ocaml"
+    Runtime_package.get_path () // "lib" // "rescript"
   in
   let dirs = !((Clflags.current ()).include_dirs) in
   let exp_dirs = List.map (Misc.expand_directory stdlib_dir) dirs in

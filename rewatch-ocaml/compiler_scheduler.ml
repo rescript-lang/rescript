@@ -272,12 +272,12 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
       false
   in
   let invalidate_persistent_freshness (scheduled : scheduled_module) =
-    let ocaml_dir = Filename.dirname scheduled.cmi_path in
+    let artifact_dir = Filename.dirname scheduled.cmi_path in
     scheduled.source.Source.implementation
     :: Option.to_list scheduled.source.Source.interface
     |> List.iter (fun source ->
-        let path = Build_artifacts.published_ast_path ~ocaml_dir source in
-        File_util.remove_file path;
+        let path = Build_artifacts.ast_path ~artifact_dir source in
+        Build_artifacts.invalidate_ast path;
         Compile_assets.refresh_ast compile_assets
           ~source:(Filename.concat scheduled.package_root source)
           ~path)

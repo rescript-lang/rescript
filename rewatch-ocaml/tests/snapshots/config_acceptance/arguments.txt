@@ -1,504 +1,504 @@
 sources/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/shorthand
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/empty-list
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/qualified
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/empty-dir
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/subdirs-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/subdirs-false
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/subdirs-true
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/subdirs-empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/subdirs-shorthand
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/subdirs-qualified
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/type-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/type-dev
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/type-custom
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/feature-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/feature-string
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 sources/unknown-qualified-field
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/shorthand
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/ocaml -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/rescript -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/qualified
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/ocaml -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/rescript -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/features-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/ocaml -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/rescript -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/features-empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/ocaml -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/rescript -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/features-list
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/ocaml -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/rescript -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/empty-name
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -I <PROJECT>/node_modules/lib/ocaml -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -I <PROJECT>/node_modules/lib/rescript -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/unknown-qualified-field
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/ocaml -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/rescript -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/legacy-alias
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/ocaml -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/rescript -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/dev
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/legacy-dev-alias
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 features/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 features/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 features/empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 features/leaf
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 features/transitive
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 allowed-dependents/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 allowed-dependents/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 allowed-dependents/empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 allowed-dependents/list
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/esmodule
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/commonjs
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output commonjs:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output commonjs:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/es6-alias
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/cjs-alias
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output commonjs:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output commonjs:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/empty-list
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/in-source-false
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:lib/es6/src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:lib/es6/src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/null-suffix
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/explicit-suffix
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.mjs src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.mjs A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/empty-suffix
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src: src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src: A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/top-level-suffix
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.mjs src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.mjs A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/same-suffix-different-location
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.mjs -bs-package-output commonjs:lib/js/src:.mjs src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.mjs -bs-package-output commonjs:lib/js/src:.mjs A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/unknown-field
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/version-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/version-four
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-jsx 4 -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -bs-jsx 4 -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-jsx 4 -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -bs-jsx 4 -absname -bs-ast -o A.ast ../../src/A.res
 jsx/module-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/module-react-constructor
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-jsx-module React -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -bs-jsx-module React -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-jsx-module React -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -bs-jsx-module React -absname -bs-ast -o A.ast ../../src/A.res
 jsx/module-react-lowercase
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-jsx-module react -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -bs-jsx-module react -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-jsx-module react -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -bs-jsx-module react -absname -bs-ast -o A.ast ../../src/A.res
 jsx/module-custom
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-jsx-module Voby.JSX -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -bs-jsx-module Voby.JSX -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-jsx-module Voby.JSX -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -bs-jsx-module Voby.JSX -absname -bs-ast -o A.ast ../../src/A.res
 jsx/mode-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/mode-classic
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/mode-automatic
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/v3-dependencies-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/v3-dependencies
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/preserve-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/preserve-false
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/preserve-true
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-jsx-preserve -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -bs-jsx-preserve -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-jsx-preserve -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -bs-jsx-preserve -absname -bs-ast -o A.ast ../../src/A.res
 jsx/unknown-field
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/unknown-mode
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/boolean-mode
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/string-v3-dependencies
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/mixed-v3-dependencies
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/duplicate-mode
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 jsx/duplicate-v3-dependencies
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 source-map/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 source-map/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 source-map/disabled
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-source-map false -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-source-map false -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 source-map/linked-always
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-source-map linked -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-source-map linked -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 source-map/inline-dev
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-source-map false -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-source-map false -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 source-map/hidden
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-source-map hidden -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-source-map hidden -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 source-map/null-options
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-source-map linked -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-source-map linked -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 source-map/options
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-source-map linked -bs-source-map-sources-content true -bs-source-map-root /source -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-source-map linked -bs-source-map-sources-content true -bs-source-map-root /source -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 source-map/unknown-field
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-source-map linked -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-source-map linked -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 post-build/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 post-build/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 post-build/command
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 post-build/empty-command
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 post-build/unknown-field
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 top-level/minimal
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 top-level/empty-name
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name  -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name  -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 top-level/unknown-field
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 top-level/editor-arbitrary
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 top-level/reanalyze-arbitrary
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 top-level/internal-path-string
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 top-level/internal-path-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 top-level/internal-path-boolean
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 warnings/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 warnings/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 warnings/empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 warnings/number
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -w +A -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -w +A -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -w +A -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -w +A -absname -bs-ast -o A.ast ../../src/A.res
 warnings/error-true
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -warn-error A -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -warn-error A -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -warn-error A -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -warn-error A -absname -bs-ast -o A.ast ../../src/A.res
 warnings/error-false
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 warnings/error-string
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -warn-error +101 -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -warn-error +101 -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -warn-error +101 -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -warn-error +101 -absname -bs-ast -o A.ast ../../src/A.res
 warnings/null-fields
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 warnings/unknown-field
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 compiler-flags/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 compiler-flags/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 compiler-flags/empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 compiler-flags/string-entry
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -open Belt -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -open Belt -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -open Belt -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -open Belt -absname -bs-ast -o A.ast ../../src/A.res
 compiler-flags/array-entry
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -open Belt -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -open Belt -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -open Belt -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -open Belt -absname -bs-ast -o A.ast ../../src/A.res
 compiler-flags/mixed-entries
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -w +A -open Belt -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -w +A -open Belt -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -w +A -open Belt -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -w +A -open Belt -absname -bs-ast -o A.ast ../../src/A.res
 compiler-flags/empty-array-entry
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 compiler-flags/legacy-alias
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -open Belt -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -open Belt -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -open Belt -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -open Belt -absname -bs-ast -o A.ast ../../src/A.res
 ppx-flags/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 ppx-flags/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 ppx-flags/empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 ppx-flags/package-entry
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -ppx <PROJECT>/node_modules/ppx -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -ppx <PROJECT>/node_modules/ppx -absname -bs-ast -o A.ast ../../src/A.res
 ppx-flags/array-entry
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -ppx <PROJECT>/node_modules/ppx --flag -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -ppx <PROJECT>/node_modules/ppx --flag -absname -bs-ast -o A.ast ../../src/A.res
 ppx-flags/empty-array-entry
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 namespace/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 namespace/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 namespace/false
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 namespace/true
-  compiler: -bs-ns ScopeConfigShape -I ../ocaml -runtime-path <RUNTIME> -bs-package-name scope/config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -bs-ns ScopeConfigShape -I . -runtime-path <RUNTIME> -bs-package-name scope/config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 namespace/string-true
-  compiler: -bs-ns ScopeConfigShape -I ../ocaml -runtime-path <RUNTIME> -bs-package-name scope/config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -bs-ns ScopeConfigShape -I . -runtime-path <RUNTIME> -bs-package-name scope/config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 namespace/custom
-  compiler: -bs-ns CustomName -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -bs-ns CustomName -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 namespace/scoped-package
-  compiler: -bs-ns ScopeMyPkg -I ../ocaml -runtime-path <RUNTIME> -bs-package-name @scope/my-pkg -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -bs-ns ScopeMyPkg -I . -runtime-path <RUNTIME> -bs-package-name @scope/my-pkg -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 namespace/underscore-without-namespace
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name _ -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name _ -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 namespace/entry
-  compiler: -bs-ns @ConfigShape -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -bs-ns @ConfigShape -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 namespace/null-entry
-  compiler: -bs-ns ConfigShape -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -bs-ns ConfigShape -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 compiler-flags/whitespace-normalization
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -w +A -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -w +A -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -w +A -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -w +A -absname -bs-ast -o A.ast ../../src/A.res
 experimental/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 experimental/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 experimental/empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 experimental/enabled
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -enable-experimental LetUnwrap -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -enable-experimental LetUnwrap -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -enable-experimental LetUnwrap -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -enable-experimental LetUnwrap -absname -bs-ast -o A.ast ../../src/A.res
 experimental/disabled
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/omitted
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/module-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/module-esmodule
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module esmodule -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module esmodule -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/module-commonjs
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module commonjs -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module commonjs -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/package-module-fallback
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module commonjs -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output commonjs:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module commonjs -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output commonjs:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/module-overrides-package
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module esmodule -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output commonjs:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module esmodule -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output commonjs:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/resolution-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/resolution-node
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module-resolution node -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module-resolution node -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/resolution-node16
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module-resolution node16 -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module-resolution node16 -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/resolution-bundler
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module-resolution bundler -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-module-resolution bundler -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/export-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/export-false
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/export-true
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-export-interfaces -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-export-interfaces -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/extension-null
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/extension
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-generated-extension .gen.tsx -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-generated-extension .gen.tsx -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/explicit-suffix
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-suffix .mjs -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-suffix .mjs -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/shims-empty-object
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/shims-object
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-shim A=One -bs-gentype-shim B=Two -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-shim A=One -bs-gentype-shim B=Two -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/shims-empty-list
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/shims-list
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-shim A=One -bs-gentype-shim B=Two -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-shim A=One -bs-gentype-shim B=Two -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/shims-empty-source
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-shim =Target -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-shim =Target -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/shims-empty-target
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-shim Source= -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-shim Source= -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/debug-empty
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/debug-values
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-debug m -bs-gentype-debug z -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-debug m -bs-gentype-debug z -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/dependency
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/ocaml -bs-gentype -bs-gentype-dep dep -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -I <PROJECT>/node_modules/dep/lib/rescript -bs-gentype -bs-gentype-dep dep -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/source
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/unknown-field
-  compiler: -I ../ocaml -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js src/A.ast
-  parser: -absname -bs-ast -o src/A.ast ../../src/A.res
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res

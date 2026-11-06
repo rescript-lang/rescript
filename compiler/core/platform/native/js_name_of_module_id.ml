@@ -86,8 +86,8 @@ let string_of_module_id (dep_module_id : Lam_module_ident.t)
       let current_info_query =
         Js_packages_info.query_package_infos current_package_info module_system
       in
-      match Lam_compile_env.get_package_path_from_cmj dep_module_id with
-      | _, dep_package_info, case -> (
+      match Lam_compile_env.get_package_info_from_cmj dep_module_id with
+      | dep_package_info, case -> (
         let dep_info_query =
           Js_packages_info.query_package_infos dep_package_info module_system
         in

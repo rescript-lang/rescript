@@ -15,8 +15,7 @@ type t = {
   is_local: bool;
   config: Config.t;
   compile_config: Config.t;
-  build_dir: string;
-  ocaml_dir: string;
+  artifact_dir: string;
   dependencies: dependency list;
   gentype_dependency_args: string list;
   modules: Source.module_ list;

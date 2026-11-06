@@ -31,15 +31,21 @@ let tests =
       check
         (not (Compiler_info.needs_clean initial config))
         "a package without an earlier build is not spuriously cleaned";
+      write
+        (File_util.path_of_parts root ["lib"; "rescript"; ".compiler.log"])
+        "failed build";
+      check
+        (not (Compiler_info.needs_clean initial config))
+        "a log without compiler information is not cleaned";
       Compiler_info.write_package initial config;
-      let marker = File_util.path_of_parts root ["lib"; "ocaml"; "marker"] in
+      let marker = File_util.path_of_parts root ["lib"; "rescript"; "marker"] in
       write marker "keep";
       check
         (not (Compiler_info.needs_clean initial config))
         "matching compiler information is retained";
       check (Sys.file_exists marker) "matching artifacts remain";
       let info_path =
-        File_util.path_of_parts root ["lib"; "bs"; "compiler-info.json"]
+        File_util.path_of_parts root ["lib"; "rescript"; "compiler-info.json"]
       in
       Unix.utimes info_path 1_000_000_000. 1_000_000_000.;
       Compiler_info.write_package initial config;
@@ -100,6 +106,34 @@ let tests =
       Compiler_info.clean_package config;
       check (not (Sys.file_exists old_log)) "legacy build artifacts are removed");
   with_temp_dir (fun root ->
+      let config = config root in
+      let context = context root config [] in
+      let legacy_ast =
+        File_util.path_of_parts root ["lib"; "bs"; "src"; "A.ast"]
+      in
+      write legacy_ast "old build";
+      check
+        (Compiler_info.needs_clean context config)
+        "a lib/bs of an earlier version invalidates the build";
+      Compiler_info.clean_package config;
+      check
+        (not (Sys.file_exists (Filename.dirname (Filename.dirname legacy_ast))))
+        "the first build with lib/rescript removes lib/bs");
+  with_temp_dir (fun root ->
+      let config = config root in
+      let context = context root config [] in
+      Compiler_info.write_package context config;
+      check
+        (not (Compiler_info.needs_clean context config))
+        "a current build is kept";
+      (* A build of an earlier version after this one, such as on another
+         branch, leaves lib/ocaml next to current compiler information. *)
+      let legacy_cmi = File_util.path_of_parts root ["lib"; "ocaml"; "A.cmi"] in
+      write legacy_cmi "old build";
+      check
+        (Compiler_info.needs_clean context config)
+        "a lib/ocaml of an earlier version invalidates a current build");
+  with_temp_dir (fun root ->
       let dependency = config root in
       let bsc = Filename.concat root "bsc.exe" in
       let runtime = Filename.concat root "runtime" in
@@ -130,7 +164,7 @@ let tests =
           ~package_output_specs:commonjs
       in
       Compiler_info.write_package initial dependency;
-      let marker = File_util.path_of_parts root ["lib"; "ocaml"; "marker"] in
+      let marker = File_util.path_of_parts root ["lib"; "rescript"; "marker"] in
       write marker "keep";
       let changed =
         Compiler_info.make_context ~compiler_path:bsc

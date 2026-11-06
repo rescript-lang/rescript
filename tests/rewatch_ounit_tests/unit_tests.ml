@@ -502,7 +502,7 @@ let platform_tests _context =
       let command = if Sys.win32 then "worker.exe" else "worker" in
       Unix.mkdir (Filename.concat first command) 0o755;
       let executable = Filename.concat second command in
-      File_util.copy_existing_file test_executable executable;
+      Test_support.copy_file test_executable executable;
       Unix.chmod executable 0o755;
       let previous_path = Sys.getenv_opt "PATH" in
       let separator = if Sys.win32 then ";" else ":" in
@@ -525,7 +525,7 @@ let platform_tests _context =
             "an explicit current-directory executable does not use PATH";
           if Sys.win32 then (
             let cwd_executable = Filename.concat path_root "current.exe" in
-            File_util.copy_existing_file test_executable cwd_executable;
+            Test_support.copy_file test_executable cwd_executable;
             check
               (Platform.resolve_program ~cwd:path_root "current" = "current")
               "Windows executable lookup does not search the current directory")
@@ -540,8 +540,8 @@ let platform_tests _context =
             let trimmed_executable =
               Filename.concat trimmed_directory command
             in
-            File_util.copy_existing_file test_executable literal_executable;
-            File_util.copy_existing_file test_executable trimmed_executable;
+            Test_support.copy_file test_executable literal_executable;
+            Test_support.copy_file test_executable trimmed_executable;
             Unix.chmod literal_executable 0o755;
             Unix.chmod trimmed_executable 0o755;
             Unix.putenv "PATH" literal_directory;
@@ -791,14 +791,16 @@ let graph_and_diagnostic_tests _context =
             "dependency paths are canonicalized"
         | None -> failwith "dependency symlink was not resolved"));
   Test_support.with_temp_dir "rewatch-compiler-log-" (fun root ->
-      File_util.ensure_dir (Build_artifacts.lib_path root "ocaml");
+      File_util.ensure_dir (Build_artifacts.artifact_dir root);
       Compiler_log.initialize root;
       Compiler_log.append root "plain \027[1;31mred\027[0m text";
       Compiler_log.finalize root;
       check
         (String_util.contains
            (File_util.read_file
-              (File_util.path_of_parts root ["lib"; "ocaml"; ".compiler.log"]))
+              (Filename.concat
+                 (Build_artifacts.artifact_dir root)
+                 ".compiler.log"))
            "plain red text")
         "published compiler logs strip ANSI sequences");
   let decoded =
@@ -878,8 +880,8 @@ let lock_tests _context =
   Sys.remove lock_root;
   Unix.mkdir lock_root 0o755;
   let lock_root = Unix.realpath lock_root in
-  let lock_dir = Filename.concat lock_root "lib" in
-  Unix.mkdir lock_dir 0o755;
+  let lock_dir = Build_artifacts.artifact_dir lock_root in
+  File_util.ensure_dir lock_dir;
   let lock = Filename.concat lock_dir "build.lock" in
   let takeover = lock ^ ".takeover" in
   let write_owner path owner =
@@ -923,7 +925,7 @@ let lock_tests _context =
             "releasing a build lock twice is harmless");
       check (not (Sys.file_exists lock)) "released build lock is removed";
       let owner_executable = Filename.concat lock_root "rescript.exe" in
-      File_util.copy_existing_file test_executable owner_executable;
+      Test_support.copy_file test_executable owner_executable;
       if not Sys.win32 then Unix.chmod owner_executable 0o755;
       let owner_pid =
         Spawn.spawn ~prog:owner_executable

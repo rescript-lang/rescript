@@ -39,7 +39,7 @@ let parser_flags ?(ppx_flags = []) (config : Config.t) =
       | flag :: arguments ->
         let executable =
           (* A path starting with a dot names a file in the package itself;
-             bsc runs the PPX from lib/bs. *)
+             bsc runs the PPX from lib/rescript. *)
           if String.starts_with ~prefix:"." flag then
             Filename.concat config.root flag
           else
@@ -104,7 +104,7 @@ let parser_arguments ~(config : Config.t) ~contents ~path =
 
 let compiler_common_arguments ~project_root ~(config : Config.t) ~runtime
     ~dependency_dirs ~watch ~gentype_dependency_args =
-  ["-I"; Filename.concat Filename.parent_dir_name "ocaml"]
+  ["-I"; Filename.current_dir_name]
   @ ["-runtime-path"; runtime]
   @ List.concat_map (fun directory -> ["-I"; directory]) dependency_dirs
   @ compiler_flags ~watch config

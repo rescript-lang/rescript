@@ -263,7 +263,7 @@ let tests =
         with Exit -> true
       in
       check raised "build callback exception is preserved";
-      let lock = Filename.concat root "lib/watch.lock" in
+      let lock = Filename.concat root "lib/rescript/watch.lock" in
       check
         (not (Sys.file_exists lock))
         "watch lock is released when setup or the initial build fails";

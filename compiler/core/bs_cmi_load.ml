@@ -30,11 +30,17 @@ let read_file path =
   match
     Unix.openfile path [Unix.O_RDONLY; Unix.O_CLOEXEC; Unix.O_SHARE_DELETE] 0
   with
-  | descriptor ->
-    let channel = Unix.in_channel_of_descr descriptor in
-    Fun.protect
-      ~finally:(fun () -> close_in_noerr channel)
-      (fun () -> Some (really_input_string channel (in_channel_length channel)))
+  | descriptor -> (
+    (* A directory opens, and fails only here. *)
+    match Unix.in_channel_of_descr descriptor with
+    | exception Unix.Unix_error (error, _, _) ->
+      Unix.close descriptor;
+      raise (Sys_error (path ^ ": " ^ Unix.error_message error))
+    | channel ->
+      Fun.protect
+        ~finally:(fun () -> close_in_noerr channel)
+        (fun () ->
+          Some (really_input_string channel (in_channel_length channel))))
   | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
   | exception Unix.Unix_error (error, _, _) ->
     raise (Sys_error (path ^ ": " ^ Unix.error_message error))

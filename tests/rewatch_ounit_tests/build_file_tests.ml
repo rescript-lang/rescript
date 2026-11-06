@@ -76,20 +76,18 @@ let ast_header_boundary_tests _context =
    not the build store still holds it. *)
 let parsed_dependencies_tests _context =
   with_temp_dir (fun root ->
-      let build_dir = Filename.concat root "lib/bs" in
-      let ocaml_dir = Filename.concat root "lib/ocaml" in
+      let artifact_dir = Filename.concat root "lib/rescript" in
       let path = "src/A.res" in
       let source = Filename.concat root path in
+      let ast = Build_artifacts.ast_path ~artifact_dir path in
       Test_support.write_file
         (Filename.concat root "rescript.json")
         {|{"name":"graph","sources":{"dir":"src"}}|};
       Test_support.write_file source "let a = New.a\n";
-      Test_support.write_file
-        (Build_artifacts.published_ast_path ~ocaml_dir path)
-        (ast_contents ~dependencies:["Old"] ~source);
-      Test_support.write_file
-        (Filename.concat build_dir (Source.ast_path path))
-        (ast_contents ~dependencies:["New"] ~source);
+      Test_support.write_file ast (ast_contents ~dependencies:["Old"] ~source);
+      let compile_assets = Compile_assets.create [artifact_dir] in
+      (* This build's parse replaces the AST that the build read before. *)
+      Test_support.write_file ast (ast_contents ~dependencies:["New"] ~source);
       let config = Config.load_root root in
       let package : Package_plan.t =
         {
@@ -98,8 +96,7 @@ let parsed_dependencies_tests _context =
           is_local = true;
           config;
           compile_config = config;
-          build_dir;
-          ocaml_dir;
+          artifact_dir;
           dependencies = [];
           gentype_dependency_args = [];
           modules =
@@ -119,8 +116,7 @@ let parsed_dependencies_tests _context =
       let dependencies parsed_paths =
         let graph =
           Module_graph.initialize ~root_config:config ~package_plans:[package]
-            ~compile_assets:(Compile_assets.create [ocaml_dir])
-            ~parsed_paths ~failed_parse_paths:(Hashtbl.create 1)
+            ~compile_assets ~parsed_paths ~failed_parse_paths:(Hashtbl.create 1)
         in
         List.concat_map
           (fun (node : Module_graph.module_node) -> node.raw_dependencies)
@@ -134,34 +130,6 @@ let parsed_dependencies_tests _context =
       check
         (dependencies parsed_paths = ["New"])
         "a module parsed in this build has its new AST's dependencies")
-
-let copy_tests _context =
-  with_temp_dir (fun root ->
-      let source = Filename.concat root "A.cmi" in
-      let destination = Filename.concat root "published.cmi" in
-      let missing = Filename.concat root "Missing.map" in
-      Build_file_store.with_build (fun () ->
-          Build_file_store.write source "interface";
-          check
-            (File_util.copy_build_file_if_different source destination)
-            "a new destination is copied";
-          check
-            (not (File_util.copy_build_file_if_different source destination))
-            "an equal destination is kept";
-          Build_file_store.write source "changed";
-          check
-            (File_util.copy_build_file_if_different source destination)
-            "a changed source is copied";
-          File_util.copy_optional_build_file source missing;
-          File_util.copy_optional_build_file
-            (Filename.concat root "Absent.map")
-            missing;
-          check
-            (not (Sys.file_exists missing))
-            "a missing optional source removes the destination");
-      check
-        (File_util.read_file destination = "changed")
-        "copies are written to disk")
 
 let parallel_map_tests _context =
   let items = List.init 1000 Fun.id in
@@ -184,6 +152,5 @@ let tests =
          "ast_header" >:: ast_header_tests;
          "ast_header_boundary" >:: ast_header_boundary_tests;
          "parsed_dependencies" >:: parsed_dependencies_tests;
-         "copy" >:: copy_tests;
          "parallel_map" >:: parallel_map_tests;
        ]

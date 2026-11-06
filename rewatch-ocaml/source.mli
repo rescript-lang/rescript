@@ -59,5 +59,8 @@ val discover_with_inventory :
   discovery
 
 val ast_path : string -> string
+(** The file name, without directory, of a source's AST in the artifact
+    directory: [A.ast] for an implementation, [A.iast] for an interface. *)
+
 val compiler_basename : Config.t -> string -> string
 val compiler_asset_basename : Config.t -> string -> string

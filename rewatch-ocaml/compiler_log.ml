@@ -1,5 +1,5 @@
-let path root directory =
-  Filename.concat (Build_artifacts.lib_path root directory) ".compiler.log"
+let path root =
+  Filename.concat (Build_artifacts.artifact_dir root) ".compiler.log"
 
 let strip_ansi content =
   let length = String.length content in
@@ -25,14 +25,12 @@ let strip_ansi content =
   Buffer.contents output
 
 let initialize root =
-  let path = path root "bs" in
+  let path = path root in
   File_util.ensure_dir (Filename.dirname path);
   File_util.write_file path
     (Printf.sprintf "#Start(%.6f)\n" (Unix.gettimeofday ()))
 
-let append root content =
-  File_util.append_file (path root "bs") (strip_ansi content)
+let append root content = File_util.append_file (path root) (strip_ansi content)
 
 let finalize root =
-  append root (Printf.sprintf "#Done(%.6f)\n" (Unix.gettimeofday ()));
-  File_util.copy_existing_file (path root "bs") (path root "ocaml")
+  append root (Printf.sprintf "#Done(%.6f)\n" (Unix.gettimeofday ()))

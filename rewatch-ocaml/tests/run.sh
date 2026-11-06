@@ -7,6 +7,12 @@ if [ -n "${BASH_VERSION:-}" ]; then
   trap 'case $- in *e*) echo "run.sh: line $LINENO failed: $BASH_COMMAND" >&2 ;; esac' ERR
 fi
 
+# artifacts_removed ROOT: a clean removed every artifact below ROOT and left
+# lib/rescript empty, or with the lock files of a running watcher.
+artifacts_removed() {
+  [ ! -d "$1/lib/rescript" ] || [ -z "$(ls -A "$1/lib/rescript")" ]
+}
+
 port="$1"
 port_directory=$(CDPATH= cd -- "$(dirname "$port")" && pwd)
 port="$port_directory/$(basename "$port")"
@@ -49,7 +55,7 @@ done
 unlinked_dependency="$work/unlinked-dependency"
 mkdir -p "$unlinked_dependency/src" \
   "$unlinked_dependency/packages/dep/src" \
-  "$unlinked_dependency/packages/dep/lib/ocaml"
+  "$unlinked_dependency/packages/dep/lib/rescript"
 printf '%s\n' \
   '{"name":"unlinked-root","sources":"src","dependencies":["dep"]}' \
   >"$unlinked_dependency/rescript.json"
@@ -60,7 +66,7 @@ printf 'let value = 1\n' >"$unlinked_dependency/packages/dep/src/Dep.res"
 printf 'export const value = 1;\n' \
   >"$unlinked_dependency/packages/dep/src/Dep.js"
 printf 'owned outside the resolved graph\n' \
-  >"$unlinked_dependency/packages/dep/lib/ocaml/marker"
+  >"$unlinked_dependency/packages/dep/lib/rescript/marker"
 mkdir -p "$work/standalone-output/src" \
   "$work/standalone-output/node_modules"
 cp -R "$root/rewatch-ocaml/tests/shared-dep" \
@@ -476,7 +482,7 @@ done
 # bsc.exe shipped next to the executable.
 "$port" build "$packaged_basic" >"$packaged_basic/build.log"
 test -f "$packaged_basic/src/A.mjs"
-COMPILER_INFO=$(native_path "$packaged_basic/lib/bs/compiler-info.json") \
+COMPILER_INFO=$(native_path "$packaged_basic/lib/rescript/compiler-info.json") \
   EXPECTED_BSC=$(native_path "$port_directory/bsc.exe") node -e '
   const fs = require("node:fs");
   const path = require("node:path");
@@ -697,7 +703,7 @@ stop_watch() {
   project=$1
   pid=$2
   if $windows_posix_shell; then
-    remove_file_with_retry "$project/lib/watch.lock"
+    remove_file_with_retry "$project/lib/rescript/watch.lock"
   else
     kill -TERM "$pid"
   fi
@@ -771,11 +777,10 @@ grep -F "The file listed above needs formatting" \
 grep -F "Formatting check failed" "$work/format-check.err" >/dev/null
 
 "$port" build "$no_bin_annot" >/dev/null
-test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.cmi"
-test -f "$no_bin_annot/lib/bs/src/NoBinAnnot.cmj"
+test -f "$no_bin_annot/lib/rescript/NoBinAnnot.cmi"
+test -f "$no_bin_annot/lib/rescript/NoBinAnnot.cmj"
 test -f "$no_bin_annot/src/NoBinAnnot.js"
-test ! -e "$no_bin_annot/lib/bs/src/NoBinAnnot.cmt"
-test ! -e "$no_bin_annot/lib/ocaml/NoBinAnnot.cmt"
+test ! -e "$no_bin_annot/lib/rescript/NoBinAnnot.cmt"
 
 if (cd "$basic/src" && "$port" format --check) \
   >"$work/format-nested.out" 2>"$work/format-nested.err"; then
@@ -821,8 +826,8 @@ printf '%s\n' \
 "$port" build "$monorepo/packages/consumer"
 test -f "$monorepo/packages/consumer/src/Consumer.js"
 test -f "$monorepo/packages/dep/src/Dep.js"
-test ! -f "$monorepo/packages/dep/lib/bs/.sourcedirs.json"
-node - "$monorepo/packages/consumer/lib/bs/.sourcedirs.json" \
+test ! -f "$monorepo/packages/dep/lib/rescript/.sourcedirs.json"
+node - "$monorepo/packages/consumer/lib/rescript/.sourcedirs.json" \
   "$monorepo/packages/dep" <<'NODE'
 const fs = require("fs");
 const [sourceDirsPath, dependencyPath] = process.argv.slice(2);
@@ -831,7 +836,7 @@ const normalize = value => value.replaceAll("\\", "/");
 if (JSON.stringify(sourceDirs.dirs) !== JSON.stringify(["src"])) {
   throw new Error(`unexpected direct-package source dirs: ${JSON.stringify(sourceDirs.dirs)}`);
 }
-if (sourceDirs.cmt_scan.length !== 1 || normalize(sourceDirs.cmt_scan[0].build_root) !== "lib/bs") {
+if (sourceDirs.cmt_scan.length !== 1 || normalize(sourceDirs.cmt_scan[0].build_root) !== "lib/rescript") {
   throw new Error(`unexpected direct-package scan plan: ${JSON.stringify(sourceDirs.cmt_scan)}`);
 }
 const packages = new Map(sourceDirs.pkgs);
@@ -852,17 +857,19 @@ test -f "$basic/src/Authored.js"
 test ! -f "$basic/src/B.mjs"
 rm -rf "$basic/lib"
 rm -f "$basic/src/A.mjs"
+# A lib/bs of an earlier version is removed by the first build, and does not
+# make it remove authored JavaScript.
 mkdir -p "$basic/lib/bs/other"
 touch "$basic/lib/bs/other/Authored.js"
 
 "$port" build --after-build 'test -f src/A.mjs' "$basic"
-test -f "$basic/lib/bs/build.ninja"
+test ! -d "$basic/lib/bs"
 test -f "$basic/src/A.mjs"
 test -f "$basic/src/Authored.js"
 test -f "$basic/src/B.mjs"
 test -f "$basic/src/WithInterface.mjs"
-test -f "$basic/lib/ocaml/A.cmi"
-test -f "$basic/lib/ocaml/WithInterface.cmti"
+test -f "$basic/lib/rescript/A.cmi"
+test -f "$basic/lib/rescript/WithInterface.cmti"
 
 printf '\nlet streamedAfterBuild = 1\n' >>"$basic/src/A.res"
 after_build_release="$basic/after-build-release"
@@ -887,8 +894,7 @@ if "$port" build "$cleanup_lifecycle" >/dev/null 2>&1; then
   echo "build after a depended-on rename unexpectedly succeeded" >&2
   exit 1
 fi
-test ! -f "$cleanup_lifecycle/lib/bs/src/A.cmi"
-test ! -f "$cleanup_lifecycle/lib/ocaml/A.cmi"
+test ! -f "$cleanup_lifecycle/lib/rescript/A.cmi"
 
 # Destructive cleanup must invalidate consumers before a later deletion error
 # can abort the command and erase the removed module's AST provenance.
@@ -990,8 +996,7 @@ rm "$basic/src/lower.resi"
 printf 'let value = Lower.hidden\n' > "$basic/src/LowerConsumer.res"
 "$port" build "$basic" >/dev/null
 grep 'hidden' "$basic/src/LowerConsumer.mjs" >/dev/null
-test ! -f "$basic/lib/ocaml/lower.cmti"
-test ! -f "$basic/lib/bs/src/lower.cmti"
+test ! -f "$basic/lib/rescript/lower.cmti"
 
 "$port" clean "$basic"
 test ! -f "$basic/src/A.mjs"
@@ -1009,8 +1014,8 @@ if ! wait_for_file "$watch_basic/src/A.mjs"; then
   exit 1
 fi
 wait_for_initial_build "$watch_basic/watch.log"
-test -f "$watch_basic/lib/watch.lock"
-grep '^[0-9][0-9]*$' "$watch_basic/lib/watch.lock" >/dev/null
+test -f "$watch_basic/lib/rescript/watch.lock"
+grep '^[0-9][0-9]*$' "$watch_basic/lib/rescript/watch.lock" >/dev/null
 printf '\nlet watchedValue = 1\n' >> "$watch_basic/src/B.res"
 if ! wait_for_text "$watch_basic/src/B.mjs" 'watchedValue'; then
   kill -TERM "$watch_pid" 2>/dev/null || true
@@ -1089,11 +1094,11 @@ fi
 lock_exit_pid=$!
 background_pids="$background_pids $lock_exit_pid"
 wait_for_initial_build "$missing_nested_source/lock-exit.log"
-rm -f "$missing_nested_source/lib/watch.lock"
+rm -f "$missing_nested_source/lib/rescript/watch.lock"
 wait "$lock_exit_pid" 2>/dev/null || true
 if ! grep -F 'Exiting... (lockfile removed)' \
     "$missing_nested_source/lock-exit.log" >/dev/null; then
-  echo "watch did not report its exit after lib/watch.lock was removed" >&2
+  echo "watch did not report its exit after lib/rescript/watch.lock was removed" >&2
   cat "$missing_nested_source/lock-exit.log" >&2
   exit 1
 fi
@@ -1298,7 +1303,7 @@ fi
   >"$parse_publication/watch.log" 2>&1 &
 parse_publication_pid=$!
 background_pids="$background_pids $parse_publication_pid"
-parse_destination="$parse_publication/lib/ocaml/A.res"
+parse_destination="$parse_publication/lib/rescript/A.ast"
 if ! wait_for_text "$parse_publication/watch.log" \
   'Finished initial compilation' \
   || ! wait_for_file "$parse_destination"; then
@@ -1336,7 +1341,7 @@ wait "$parse_publication_pid" 2>/dev/null || true
   >"$multi_package_pending/watch.log" 2>&1 &
 multi_package_pending_pid=$!
 background_pids="$background_pids $multi_package_pending_pid"
-dep1_destination="$multi_package_pending/packages/dep1/lib/ocaml/A.res"
+dep1_destination="$multi_package_pending/packages/dep1/lib/rescript/A.ast"
 if ! wait_for_text "$multi_package_pending/watch.log" \
   'Finished initial compilation' \
   || ! wait_for_file "$dep1_destination"; then
@@ -1367,7 +1372,7 @@ wait "$multi_package_pending_pid" 2>/dev/null || true
   >"$full_watch_recovery/watch.log" 2>&1 &
 full_watch_recovery_pid=$!
 background_pids="$background_pids $full_watch_recovery_pid"
-full_watch_destination="$full_watch_recovery/lib/ocaml/C.res"
+full_watch_destination="$full_watch_recovery/lib/rescript/C.ast"
 if ! wait_for_text "$full_watch_recovery/watch.log" \
   'Finished initial compilation' \
   || ! wait_for_file "$full_watch_destination"; then
@@ -1413,7 +1418,7 @@ if ! grep 'Compiled 2 modules' "$deletion_retry/retry.log" >/dev/null; then
 fi
 
 "$port" build "$namespace_repair" >/dev/null
-namespace_repair_destination="$namespace_repair/packages/dep/lib/ocaml/Ns.cmj"
+namespace_repair_destination="$namespace_repair/packages/dep/lib/rescript/Ns.cmj"
 obstruct_file_with_directory "$namespace_repair_destination"
 "$port" watch "$namespace_repair" >"$namespace_repair/watch.log" 2>&1 &
 namespace_repair_pid=$!
@@ -1471,7 +1476,7 @@ wait "$retained_cycle_pid" 2>/dev/null || true
 # Initial watch recovery must retain freshness work discovered alongside an
 # unrelated parse failure.
 "$port" build "$initial_failure_freshness" >/dev/null
-rm "$initial_failure_freshness/lib/ocaml/A.cmi"
+rm "$initial_failure_freshness/lib/rescript/A.cmi"
 printf 'let other =\n' >"$initial_failure_freshness/src/B.res"
 "$port" watch "$initial_failure_freshness" \
   >"$initial_failure_freshness/watch.log" 2>&1 &
@@ -1483,7 +1488,7 @@ if ! wait_for_text "$initial_failure_freshness/watch.log" \
   exit 1
 fi
 printf 'let other = 2\n' >"$initial_failure_freshness/src/B.res"
-if ! wait_for_file "$initial_failure_freshness/lib/ocaml/A.cmi"; then
+if ! wait_for_file "$initial_failure_freshness/lib/rescript/A.cmi"; then
   cat "$initial_failure_freshness/watch.log" >&2
   echo "initial parse recovery forgot missing compile artifacts" >&2
   exit 1
@@ -1513,13 +1518,13 @@ grep -F "Namespace SharedNs is provided by both" \
 tr '\\' '/' <"$external_namespace/build.log" | \
   grep -F 'store/ns-one' >/dev/null
 mkdir -p \
-  "$duplicate_selection/node_modules/a/node_modules/shared/lib/ocaml"
+  "$duplicate_selection/node_modules/a/node_modules/shared/lib/rescript"
 printf 'preserve nested duplicate\n' \
-  >"$duplicate_selection/node_modules/a/node_modules/shared/lib/ocaml/marker"
+  >"$duplicate_selection/node_modules/a/node_modules/shared/lib/rescript/marker"
 "$port" clean "$duplicate_selection" >/dev/null
 test ! -f "$duplicate_selection/node_modules/shared/src/Shared.mjs"
 test -f \
-  "$duplicate_selection/node_modules/a/node_modules/shared/lib/ocaml/marker"
+  "$duplicate_selection/node_modules/a/node_modules/shared/lib/rescript/marker"
 "$port" watch "$duplicate_selection" \
   >"$duplicate_selection/watch.log" 2>&1 &
 duplicate_selection_pid=$!
@@ -1610,7 +1615,7 @@ if ! $windows_posix_shell; then
     exit 1
   fi
   wait_for_initial_build "$exit_watch_log"
-  printf '%s' "$lock_holder_pid" >"$warning_replay/lib/build.lock"
+  printf '%s' "$lock_holder_pid" >"$warning_replay/lib/rescript/build.lock"
   exit_started=$(date +%s)
   kill -TERM "$exit_watch_pid"
   set +e
@@ -1621,12 +1626,12 @@ if ! $windows_posix_shell; then
     echo "watch exit waited ${exit_seconds}s for another build's lock" >&2
     exit 1
   fi
-  test "$(cat "$warning_replay/lib/build.lock")" = "$lock_holder_pid"
+  test "$(cat "$warning_replay/lib/rescript/build.lock")" = "$lock_holder_pid"
   kill "$lock_holder_pid"
-  rm "$warning_replay/lib/build.lock"
+  rm "$warning_replay/lib/rescript/build.lock"
 fi
 stop_watch "$watch_basic" "$watch_pid"
-test ! -f "$watch_basic/lib/watch.lock"
+test ! -f "$watch_basic/lib/rescript/watch.lock"
 
 # Watch startup shares normal build initialization, so deleting a public output
 # between sessions must dirty its module even when compiler artifacts are current.
@@ -1640,7 +1645,7 @@ if ! wait_for_file "$watch_basic/src/A.js"; then
 fi
 wait_for_initial_build "$watch_basic/restart.log"
 stop_watch "$watch_basic" "$watch_restart_pid"
-test ! -f "$watch_basic/lib/watch.lock"
+test ! -f "$watch_basic/lib/rescript/watch.lock"
 
 if ! $windows_posix_shell; then
 # One-shot builds must unwind through the same process and lock owners when
@@ -1688,7 +1693,7 @@ for hook_signal in TERM:143 HUP:129 QUIT:131; do
     echo "js-post-build hook survived $signal_name of the build" >&2
     exit 1
   fi
-  test ! -f "$hook_build/lib/build.lock"
+  test ! -f "$hook_build/lib/rescript/build.lock"
 done
 fi
 
@@ -1724,7 +1729,7 @@ if ! wait "$lock_second_pid"; then
   exit 1
 fi
 test -f "$second_interrupt/src/Slow.js"
-test ! -f "$second_interrupt/lib/build.lock"
+test ! -f "$second_interrupt/lib/rescript/build.lock"
 
 # A stop waits for the modules compiling in-process, and a repeated signal
 # does not cut it short: the npm launcher forwards the Ctrl-C the terminal
@@ -1757,7 +1762,7 @@ if ! $windows_posix_shell; then
   second_interrupt_status=$?
   set -e
   if [ "$second_interrupt_status" -ne 130 ] || \
-    [ -e "$second_interrupt/lib/build.lock" ] || \
+    [ -e "$second_interrupt/lib/rescript/build.lock" ] || \
     [ -n "$(ls "$second_interrupt/tmp")" ]; then
     cat "$second_interrupt/build.log" >&2
     ls "$second_interrupt/tmp" >&2
@@ -1849,7 +1854,7 @@ if ! $windows_posix_shell; then
     interrupt_build_status=$?
     set -e
     if [ "$interrupt_build_status" -ne "$expected_status" ] || \
-      [ -e "$interrupt_build/lib/build.lock" ] || \
+      [ -e "$interrupt_build/lib/rescript/build.lock" ] || \
       [ -e "$interrupt_build/src/Dependent.js" ]; then
       cat "$interrupt_build/build.log" >&2
       echo "$signal_name during compiler work: status $interrupt_build_status, expected $expected_status without a lock or further compiles" >&2
@@ -1869,7 +1874,7 @@ if ! wait_for_text "$lock_interrupt/watch.log" 'compile dirty: Slow'; then
   echo "large module did not reach the compiler" >&2
   exit 1
 fi
-remove_file_with_retry "$lock_interrupt/lib/watch.lock"
+remove_file_with_retry "$lock_interrupt/lib/rescript/watch.lock"
 if ! wait_for_pid_gone "$lock_interrupt_pid" 600; then
   echo "watcher did not stop during compiler work after watch.lock removal" >&2
   exit 1
@@ -1904,7 +1909,7 @@ if ! wait_for_text "$atomic_save/src/Slow.js" 'value = 3' 1 1200; then
   echo "an atomic save during a rebuild was not built" >&2
   exit 1
 fi
-remove_file_with_retry "$atomic_save/lib/watch.lock"
+remove_file_with_retry "$atomic_save/lib/rescript/watch.lock"
 wait "$atomic_save_pid" 2>/dev/null || true
 
 # A failed parse stays pending until the source parses: an unrelated edit
@@ -1952,7 +1957,7 @@ fi
 grep 'value = 1' "$retained_parse/src/A.js" >/dev/null
 printf 'let value = 2\n' >"$retained_parse/src/A.res"
 wait_for_text "$retained_parse/src/A.js" 'value = 2'
-remove_file_with_retry "$retained_parse/lib/watch.lock"
+remove_file_with_retry "$retained_parse/lib/rescript/watch.lock"
 wait "$retained_parse_pid" 2>/dev/null || true
 
 # A damaged published AST, such as one cut short by a killed build, makes its
@@ -1966,15 +1971,15 @@ printf 'let value = A.value + 1\n' >"$damaged_ast/src/B.res"
 "$port" build "$damaged_ast" >/dev/null
 for damage in empty garbled; do
   case $damage in
-    empty) : >"$damaged_ast/lib/ocaml/A.ast" ;;
-    garbled) printf '\377\377\377\377' >"$damaged_ast/lib/ocaml/A.ast" ;;
+    empty) : >"$damaged_ast/lib/rescript/A.ast" ;;
+    garbled) printf '\377\377\377\377' >"$damaged_ast/lib/rescript/A.ast" ;;
   esac
   if ! "$port" build "$damaged_ast" >"$damaged_ast/$damage.log" 2>&1; then
     cat "$damaged_ast/$damage.log" >&2
     echo "a build failed after an $damage published AST" >&2
     exit 1
   fi
-  test -s "$damaged_ast/lib/ocaml/A.ast"
+  test -s "$damaged_ast/lib/rescript/A.ast"
   test -f "$damaged_ast/src/B.js"
 done
 
@@ -1990,7 +1995,7 @@ test ! -f "$feature_dependencies/packages/dep-empty/optional/EmptyOptional.js"
   >"$feature_dependencies/watch.log" 2>&1 &
 feature_dependencies_pid=$!
 background_pids="$background_pids $feature_dependencies_pid"
-if ! wait_for_file "$feature_dependencies/lib/watch.lock"; then
+if ! wait_for_file "$feature_dependencies/lib/rescript/watch.lock"; then
   cat "$feature_dependencies/watch.log" >&2
   exit 1
 fi
@@ -2018,7 +2023,7 @@ if "$port" clean "$unlinked_dependency" \
 fi
 grep -q "Could not resolve dependency dep" "$unlinked_dependency/clean.log"
 test -f "$unlinked_dependency/packages/dep/src/Dep.js"
-test -f "$unlinked_dependency/packages/dep/lib/ocaml/marker"
+test -f "$unlinked_dependency/packages/dep/lib/rescript/marker"
 
 "$port" clean "$feature_dependencies"
 "$port" build --prod "$feature_dependencies"
@@ -2090,8 +2095,8 @@ grep 'from "dep/lib/es6/src/Dep.mjs"' "$standalone_output/lib/es6/src/Main.mjs" 
   >/dev/null
 test ! -f "$standalone_output/node_modules/dep/src/Dep.js"
 "$port" clean "$standalone_output"
-test ! -d "$standalone_output/lib/bs"
-test ! -d "$standalone_output/node_modules/dep/lib/bs"
+artifacts_removed "$standalone_output"
+artifacts_removed "$standalone_output/node_modules/dep"
 test ! -f "$standalone_output/node_modules/dep/lib/es6/src/Dep.mjs"
 
 mkdir -p "$external_boundary/project/node_modules"
@@ -2220,7 +2225,7 @@ test ! -f "$out_of_source/lib/es6/src/Main.js"
 namespace_call_log="$namespace/compiler-calls.log"
 REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
   "$port" build "$namespace"
-test -f "$namespace/lib/ocaml/A-Widget.cmi"
+test -f "$namespace/lib/rescript/A-Widget.cmi"
 test -f "$namespace/src/B.js"
 : > "$namespace_call_log"
 REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
@@ -2265,8 +2270,8 @@ fi
 
 "$port" build "$namespace_entry"
 test -f "$namespace_entry/src/Entry.mjs"
-test -f "$namespace_entry/lib/ocaml/Entry.cmi"
-test -f "$namespace_entry/lib/ocaml/Entry_alias-@EntryNamespace.cmi"
+test -f "$namespace_entry/lib/rescript/Entry.cmi"
+test -f "$namespace_entry/lib/rescript/Entry_alias-@EntryNamespace.cmi"
 
 "$port" build "$qualified_namespace"
 test -f "$qualified_namespace/src/Extent.js"
@@ -2284,7 +2289,7 @@ grep 'namespace-two' "$namespace_collision/output.log" >/dev/null
 
 "$port" build "$source_map"
 test -f "$source_map/src/Main.js.map"
-test -f "$source_map/lib/bs/compiler-info.json"
+test -f "$source_map/lib/rescript/compiler-info.json"
 "$port" build "$source_map" >"$source_map/unchanged.log"
 grep 'Compiled 0 modules' "$source_map/unchanged.log" >/dev/null
 sed 's/"mode": "linked"/"mode": "hidden"/' "$source_map/rescript.json" \
@@ -2303,16 +2308,16 @@ test -f "$monorepo/src/Root.js"
 test -f "$monorepo/packages/consumer/src/Consumer.js"
 test -f "$monorepo/packages/dep/src/Dep.js"
 "$port" clean "$monorepo"
-test ! -d "$monorepo/lib/ocaml"
+artifacts_removed "$monorepo"
 # The consumer was also built directly above. A workspace clean still removes
 # every member's artifacts: outputs do not depend on which build ran first.
-test ! -d "$monorepo/packages/consumer/lib/ocaml"
-test ! -d "$monorepo/packages/dep/lib/ocaml"
+artifacts_removed "$monorepo/packages/consumer"
+artifacts_removed "$monorepo/packages/dep"
 "$port" build "$monorepo/packages/consumer"
-test -d "$monorepo/packages/dep/lib/ocaml"
+test -f "$monorepo/packages/dep/lib/rescript/Dep.cmj"
 "$port" clean "$monorepo/packages/consumer"
-test ! -d "$monorepo/packages/consumer/lib/ocaml"
-test ! -d "$monorepo/packages/dep/lib/ocaml"
+artifacts_removed "$monorepo/packages/consumer"
+artifacts_removed "$monorepo/packages/dep"
 "$port" build --features all "$features"
 test -f "$features/native/Native.js"
 
@@ -2332,10 +2337,46 @@ if "$port" build "$failure" >"$failure/output.log" 2>&1; then
   echo "invalid build unexpectedly succeeded" >&2
   exit 1
 fi
-test -f "$failure/lib/bs/build.ninja"
 grep "expected to have type" "$failure/output.log" >/dev/null
-test ! -f "$root/lib/build.lock"
+test ! -f "$root/lib/rescript/build.lock"
+
+# A failed first build records the compiler, so the next build does not clean
+# the package again.
+if "$port" build "$failure" >"$failure/retry.log" 2>&1; then
+  echo "invalid build unexpectedly succeeded on retry" >&2
+  exit 1
+fi
+if grep "Cleaned previous build" "$failure/retry.log" >/dev/null; then
+  echo "a build after a failed first build cleaned the package" >&2
+  cat "$failure/retry.log" >&2
+  exit 1
+fi
 
 cp "$failure/Broken.fixed" "$failure/src/Broken.res"
 "$port" build "$failure"
 test -f "$failure/src/Broken.js"
+
+# Sources dated to the epoch, as archives built with SOURCE_DATE_EPOCH=0 have
+# them: the AST of a module that failed to compile is still parsed again.
+epoch_sources="$work/epoch-sources"
+mkdir -p "$epoch_sources/src"
+printf '%s\n' \
+  '{"name":"epoch-sources","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$epoch_sources/rescript.json"
+printf 'let x = 1\n' >"$epoch_sources/src/A.res"
+printf 'let y = A.x + 1\n' >"$epoch_sources/src/B.res"
+date_to_epoch() {
+  node -e 'for (const file of process.argv.slice(1)) require("fs").utimesSync(file, 0, 0)' \
+    "$(native_path "$1")"
+}
+date_to_epoch "$epoch_sources/src/A.res"
+date_to_epoch "$epoch_sources/src/B.res"
+"$port" build "$epoch_sources"
+printf 'let x = "s"\n' >"$epoch_sources/src/A.res"
+for attempt in first second; do
+  if "$port" build "$epoch_sources" >"$epoch_sources/$attempt.log" 2>&1; then
+    echo "the $attempt build after B's dependency changed type succeeded" >&2
+    cat "$epoch_sources/$attempt.log" >&2
+    exit 1
+  fi
+done

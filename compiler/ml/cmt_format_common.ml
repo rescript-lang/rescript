@@ -58,10 +58,6 @@ type cmt_infos = {
    integrated in Typerex).
 *)
 
-let read_magic_number ic =
-  let len_magic_number = String.length Config.cmt_magic_number in
-  really_input_string ic len_magic_number
-
 type error = Not_a_typedtree of string
 
 let need_to_clear_env =
@@ -100,27 +96,29 @@ let clear_env binary_annots =
 
 exception Error of error
 
-let input_cmt ic = (input_value ic : cmt_infos)
-
 (** [read filename] reads a .cmi file as its cmi_infos, or a .cmt or .cmti
     file as its cmt_infos. *)
 let read filename =
-  (*  Printf.fprintf stderr "Cmt_format.read %s\n%!" filename; *)
-  let ic = open_in_bin (Compiler_request_state.resolve_path filename) in
-  try
-    let magic_number = read_magic_number ic in
-    let cmi, cmt =
-      if magic_number = Config.cmt_magic_number then (None, Some (input_cmt ic))
-      else if magic_number = Config.cmi_magic_number then
-        (Some (Cmi_format.input_cmi ic), None)
-      else raise (Cmi_format.Error (Cmi_format.Not_an_interface filename))
-    in
-    close_in ic;
-    (*    Printf.fprintf stderr "Cmt_format.read done\n%!"; *)
-    (cmi, cmt)
-  with e ->
-    close_in ic;
-    raise e
+  (* Through the build file store, which holds the typed tree of the module
+     being compiled until the build publishes it, without keeping the typed
+     trees of other modules. *)
+  let path = Compiler_request_state.resolve_path filename in
+  let contents =
+    match Build_file_store.read ~keep:false path with
+    | Some contents -> contents
+    | None -> raise (Sys_error (path ^ ": No such file or directory"))
+  in
+  let magic_length = String.length Config.cmt_magic_number in
+  let magic_number =
+    if String.length contents < magic_length then
+      raise (Cmi_format.Error (Cmi_format.Not_an_interface filename))
+    else String.sub contents 0 magic_length
+  in
+  if magic_number = Config.cmt_magic_number then
+    (None, Some (Marshal.from_string contents magic_length : cmt_infos))
+  else if magic_number = Config.cmi_magic_number then
+    (Some (Cmi_format.read_cmi_contents filename contents), None)
+  else raise (Cmi_format.Error (Cmi_format.Not_an_interface filename))
 
 let read_cmt filename =
   match read filename with
