@@ -326,15 +326,16 @@ jobs:
           name: binaries-${{ matrix.node-target }}
           path: packages/@rescript/${{ matrix.node-target }}/bin
 
-      - name: "Upload artifacts: lib/ocaml"
+      - name: "Upload artifacts: lib/rescript"
         if: matrix.upload_libs
         uses: actions/upload-artifact@v7
         with:
-          name: lib-ocaml
+          name: lib-rescript
           path: |
-            packages/@rescript/runtime/lib/ocaml
-            !packages/@rescript/runtime/lib/ocaml/*.ast
-            !packages/@rescript/runtime/lib/ocaml/*.iast
+            packages/@rescript/runtime/lib/rescript
+            !packages/@rescript/runtime/lib/rescript/*.ast
+            !packages/@rescript/runtime/lib/rescript/*.iast
+            !packages/@rescript/runtime/lib/rescript/compiler-info.json
 
       - name: Select API docs website branch
         id: api-docs-plan
@@ -423,7 +424,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: "@(binaries-*|lib-ocaml)"
+          pattern: "@(binaries-*|lib-rescript)"
 
       - name: Move artifacts into packages
         run: .github/workflows/moveArtifacts.sh

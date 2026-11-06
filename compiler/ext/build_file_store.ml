@@ -9,10 +9,15 @@
    So an entry changes only when it is written through the store, and the
    store is emptied before each build. *)
 
+(* What the disk holds for a path, as far as the build has read it. *)
+type on_disk = Read of string | Missing | Unknown
+
 type entry =
   | Contents of string
   | Exists  (** On disk, contents not read yet. *)
   | Absent
+  | Held of {contents: string; on_disk: on_disk}
+      (** Written by a request, not on disk until {!publish_held}. *)
 
 (* [enabled] and [generation] are read without the lock: only [with_build]
    changes them, before a build's requests start and after they finish. *)
@@ -53,6 +58,9 @@ let default_disk_reader path =
 let disk_reader = Atomic.make default_disk_reader
 let set_disk_reader reader = Atomic.set disk_reader reader
 
+let held_writes = Atomic.make (fun (_ : string) -> false)
+let set_held_writes held = Atomic.set held_writes held
+
 let enabled () = state.enabled
 let generation () = state.generation
 
@@ -70,9 +78,10 @@ let with_build f =
           empty ()))
 
 (* Requests spell paths relative to their own working directory, such as
-   [lib/bs/../ocaml/A.cmi], and the build system as [lib/ocaml/A.cmi]. Both
-   must find the same entry. Build directories are never symbolic links, so
-   removing [..] lexically is sound for the paths the store sees. *)
+   [lib/rescript/./A.cmi] or [lib/rescript/../../src/A.res], and the build
+   system as [lib/rescript/A.cmi]. Both must find the same entry. Build
+   directories are never symbolic links, so removing [..] lexically is sound
+   for the paths the store sees. *)
 let key path =
   let is_separator c = c = '/' || (Sys.win32 && c = '\\') in
   let length = String.length path in
@@ -104,18 +113,18 @@ let record key entry =
   locked (fun () ->
       if state.enabled then Hashtbl.replace state.entries key entry)
 
-let read path =
+let read ?(keep = true) path =
   if not state.enabled then (Atomic.get disk_reader) path
   else
     let key = key path in
     match find key with
-    | Some (Contents contents) -> Some contents
+    | Some (Contents contents | Held {contents; _}) -> Some contents
     | Some Absent -> None
     | Some Exists | None ->
       let contents = (Atomic.get disk_reader) path in
       record key
         (match contents with
-        | Some contents -> Contents contents
+        | Some contents -> if keep then Contents contents else Exists
         | None -> Absent);
       contents
 
@@ -124,7 +133,7 @@ let exists path =
   else
     let key = key path in
     match find key with
-    | Some (Contents _ | Exists) -> true
+    | Some (Contents _ | Exists | Held _) -> true
     | Some Absent -> false
     | None ->
       let exists = Sys.file_exists path in
@@ -140,15 +149,29 @@ let write_to_disk path contents =
       close_out channel)
 
 let write ?(keep = true) path contents =
-  match write_to_disk path contents with
-  | () ->
-    if state.enabled then
-      record (key path) (if keep then Contents contents else Exists)
-  | exception exn ->
-    (* A failed write can leave anything on disk. *)
-    if state.enabled then
-      locked (fun () -> Hashtbl.remove state.entries (key path));
-    raise exn
+  if state.enabled && (Atomic.get held_writes) path then
+    let key = key path in
+    locked (fun () ->
+        (* Remember what the disk holds, so that publishing compares with
+           what this build read instead of reading it again. *)
+        let on_disk =
+          match Hashtbl.find_opt state.entries key with
+          | Some (Contents contents) -> Read contents
+          | Some Absent -> Missing
+          | Some (Held {on_disk; _}) -> on_disk
+          | Some Exists | None -> Unknown
+        in
+        Hashtbl.replace state.entries key (Held {contents; on_disk}))
+  else
+    match write_to_disk path contents with
+    | () ->
+      if state.enabled then
+        record (key path) (if keep then Contents contents else Exists)
+    | exception exn ->
+      (* A failed write can leave anything on disk. *)
+      if state.enabled then
+        locked (fun () -> Hashtbl.remove state.entries (key path));
+      raise exn
 
 let evict path =
   if state.enabled then
@@ -156,7 +179,8 @@ let evict path =
     locked (fun () ->
         match Hashtbl.find_opt state.entries key with
         | Some (Contents _) -> Hashtbl.replace state.entries key Exists
-        | Some (Exists | Absent) | None -> ())
+        (* Held contents exist nowhere else. *)
+        | Some (Exists | Absent | Held _) | None -> ())
 
 let forget path =
   if state.enabled then
@@ -166,5 +190,25 @@ let cached path =
   if not state.enabled then None
   else
     match find (key path) with
-    | Some (Contents contents) -> Some contents
+    | Some (Contents contents | Held {contents; _}) -> Some contents
     | Some (Exists | Absent) | None -> None
+
+let publish_held ~if_changed ~write path =
+  let key = key path in
+  match find key with
+  | Some (Held {contents; on_disk}) ->
+    let changed =
+      (not if_changed)
+      ||
+      let on_disk =
+        match on_disk with
+        | Read on_disk -> Some on_disk
+        | Missing -> None
+        | Unknown -> (Atomic.get disk_reader) path
+      in
+      on_disk <> Some contents
+    in
+    if changed then write path contents;
+    record key (Contents contents);
+    changed
+  | Some (Contents _ | Exists | Absent) | None -> raise Not_found

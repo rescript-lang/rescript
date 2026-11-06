@@ -1,5 +1,4 @@
-lib/bs
-lib/ocaml
+lib/rescript
 *.lock
 .buildstamp
 bs/

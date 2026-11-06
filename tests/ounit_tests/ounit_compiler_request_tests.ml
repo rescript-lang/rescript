@@ -1666,7 +1666,7 @@ let concurrent_request_isolation_tests _context =
 let concurrent_async_context_tests _context =
   with_temp_dir "rewatch-driver-async-domains-" (fun root ->
       let runtime = Runtime_package.get_path () in
-      let runtime_ocaml = Filename.concat runtime "lib/ocaml" in
+      let runtime_artifacts = Filename.concat runtime "lib/rescript" in
       let async_source =
         "external get: unit => promise<int> = \"get\"\n"
         ^ (List.init 80 (fun index ->
@@ -1700,7 +1700,7 @@ let concurrent_async_context_tests _context =
               List.iter
                 (fun input ->
                   let _, result =
-                    run directory ~extra:["-I"; runtime_ocaml] input
+                    run directory ~extra:["-I"; runtime_artifacts] input
                   in
                   if result.exit_code <> 0 then
                     assert_failure (Printf.sprintf "%s: %s" input result.stderr))

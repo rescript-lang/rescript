@@ -46,4 +46,8 @@ let read_file path =
 let read path =
   match Build_file_store.cached path with
   | Some contents -> of_contents contents |> Option.value ~default:damaged
-  | None -> read_file path
+  | None -> (
+    try read_file path
+    with Unix.Unix_error (error, operation, "") ->
+      (* Unix.read does not name the file it failed to read. *)
+      raise (Unix.Unix_error (error, operation, path)))

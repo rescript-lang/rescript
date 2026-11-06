@@ -1,5 +1,5 @@
 type entry = {path: string; modified: float}
-(** This index avoids repeatedly scanning [lib/ocaml] while retaining the source
+(** This index avoids repeatedly scanning [lib/rescript] while retaining the source
     provenance embedded in AST headers. Mutating refresh operations must be
     called whenever publication changes the corresponding filesystem entry. *)
 
@@ -7,6 +7,9 @@ type ast_source = {ast_path: string; source_path: string}
 type t
 
 val is_managed_basename : string -> bool
+(** Compiler artifacts, and leftover {!File_util.write_file_atomic} files,
+    which cleanup removes when no current module expects them. *)
+
 val create : string list -> t
 val files : t -> string -> string list
 val ast_sources : t -> string -> ast_source list

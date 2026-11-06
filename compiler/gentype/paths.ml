@@ -75,10 +75,15 @@ let get_cmt_file cmt =
       let path_cmti_lower_case =
         (Filename.chop_extension path_cmt_lower_case [@doesNotRaise]) ^ ".cmti"
       in
-      if Sys.file_exists path_cmti_lower_case then path_cmti_lower_case
-      else if Sys.file_exists path_cmti then path_cmti
-      else if Sys.file_exists path_cmt_lower_case then path_cmt_lower_case
-      else if Sys.file_exists path_cmt then path_cmt
+      (* The compiler's spelling first: on a case-insensitive file system
+         the lowercase one exists too, and the build file store, which holds
+         the typed tree of the module being compiled, knows only the
+         compiler's spelling. *)
+      let exists = Build_file_store.exists in
+      if exists path_cmti then path_cmti
+      else if exists path_cmti_lower_case then path_cmti_lower_case
+      else if exists path_cmt then path_cmt
+      else if exists path_cmt_lower_case then path_cmt_lower_case
       else ""
     else ""
   in

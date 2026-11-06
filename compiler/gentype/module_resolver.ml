@@ -3,21 +3,107 @@ module Module_name_map = Config.Module_name_map
 
 let ( +++ ) = Filename.concat
 
-(** Read all the dirs from a library in node_modules *)
-let read_bs_dependencies_dirs ~root =
-  let dirs = ref [] in
-  let rec find_sub_dirs dir =
-    let abs_dir =
-      match dir = "" with
-      | true -> root
-      | false -> root +++ dir
+(** The source path in the header of an AST file, read from its first bytes
+    (a header is a few hundred bytes), or [None] when the file is not an AST. *)
+let ast_source path =
+  match open_in_bin path with
+  | exception Sys_error _ -> None
+  | channel ->
+    Fun.protect
+      ~finally:(fun () -> close_in_noerr channel)
+      (fun () ->
+        let read length =
+          let contents = really_input_string channel length in
+          Binary_ast.read_header contents
+          |> Option.map (Binary_ast.header_source contents)
+        in
+        let length = in_channel_length channel in
+        match read (min length 4096) with
+        | Some source -> Some source
+        | None when length > 4096 ->
+          seek_in channel 0;
+          read length
+        | None -> None)
+
+(** The directories of a dependency's sources, relative to its root, by the
+    name of their ASTs ([X] for [X.ast]): each AST records its source. *)
+let read_source_dirs ~root ~artifact_dir names =
+  let prefix = root ^ Filename.dir_sep in
+  let source_dirs = Hashtbl.create 64 in
+  names
+  |> Array.iter (fun name ->
+      if Filename.check_suffix name ".ast" then
+        match ast_source (artifact_dir +++ name) with
+        | Some source when String.starts_with ~prefix source ->
+          let relative =
+            String.sub source (String.length prefix)
+              (String.length source - String.length prefix)
+          in
+          let dir = Filename.dirname relative in
+          Hashtbl.replace source_dirs
+            (Filename.chop_suffix name ".ast")
+            (if dir = Filename.current_dir_name then "" else dir)
+        | Some _ | None -> ());
+  source_dirs
+
+(* Every gentype compile of a build resolves the same dependencies, and their
+   ASTs, unlike their compiled files, are complete once the build parsed. So
+   the AST headers are read once per build (a generation of the build file
+   store). *)
+let source_dirs_cache = Hashtbl.create 8
+let source_dirs_mutex = Mutex.create ()
+
+let source_dirs ~root ~artifact_dir names =
+  if not (Build_file_store.enabled ()) then
+    read_source_dirs ~root ~artifact_dir names
+  else
+    let generation = Build_file_store.generation () in
+    let locked f =
+      Mutex.lock source_dirs_mutex;
+      Fun.protect ~finally:(fun () -> Mutex.unlock source_dirs_mutex) f
     in
-    if Sys.file_exists abs_dir && Sys.is_directory abs_dir then (
-      dirs := dir :: !dirs;
-      abs_dir |> Sys.readdir |> Array.iter (fun d -> find_sub_dirs (dir +++ d)))
-  in
-  find_sub_dirs "";
-  !dirs
+    match locked (fun () -> Hashtbl.find_opt source_dirs_cache root) with
+    | Some (cached_generation, source_dirs) when cached_generation = generation
+      ->
+      source_dirs
+    | Some _ | None ->
+      let source_dirs = read_source_dirs ~root ~artifact_dir names in
+      locked (fun () ->
+          Hashtbl.replace source_dirs_cache root (generation, source_dirs));
+      source_dirs
+
+(** The directories of a dependency's modules, relative to its root, by the
+    name of their compiled files. Its artifacts are flat in [lib/rescript],
+    so a module's [X.cmt] or [X-Ns.cmt] lies in the directory of the source
+    that [X.ast] names. *)
+let dependency_module_dirs ~root =
+  let artifact_dir = ["lib"; "rescript"] |> List.fold_left ( +++ ) root in
+  if not (Sys.file_exists artifact_dir && Sys.is_directory artifact_dir) then []
+  else
+    let names = Sys.readdir artifact_dir in
+    let source_dirs = source_dirs ~root ~artifact_dir names in
+    (* A namespaced module's compiled files append "-" and the namespace,
+       which has no "-" of its own, to the source file name. The namespace
+       itself has a map instead of a source, and belongs to the package root. *)
+    let source_dir compiled =
+      match Hashtbl.find_opt source_dirs compiled with
+      | Some dir -> Some dir
+      | None when Array.mem (compiled ^ ".mlmap") names -> Some ""
+      | None -> (
+        match String.rindex_opt compiled '-' with
+        | Some index ->
+          Hashtbl.find_opt source_dirs (String.sub compiled 0 index)
+        | None -> None)
+    in
+    names |> Array.to_list
+    |> List.filter_map (fun name ->
+        if
+          Filename.check_suffix name ".cmt"
+          || Filename.check_suffix name ".cmti"
+        then
+          source_dir (Filename.remove_extension name)
+          |> Option.map (fun dir -> (name, dir))
+        else None)
 
 (** Build a map of source filenames (with the given extensions) back to the
     directory where they belong. Source directories and dependency install
@@ -54,17 +140,13 @@ let sourcedirs_to_map ~(config : Config.t) ~extensions ~exclude_file =
   |> List.iter (fun package_name ->
       match Hashtbl.find config.dep_paths package_name with
       | path ->
-        let root = ["lib"; "bs"] |> List.fold_left ( +++ ) path in
-        let filter file_name =
-          [".cmt"; ".cmti"]
-          |> List.exists (fun ext -> Filename.check_suffix file_name ext)
-        in
-        read_bs_dependencies_dirs ~root
-        |> List.iter (fun dir ->
-            let dir_on_disk = root +++ dir in
-            let dir_emitted = package_name +++ dir in
-            add_dir ~dir_emitted ~dir_on_disk ~filter
-              ~map:bs_dependencies_file_map)
+        dependency_module_dirs ~root:path
+        |> List.iter (fun (fname, dir) ->
+            bs_dependencies_file_map :=
+              !bs_dependencies_file_map
+              |> Module_name_map.add
+                   (fname |> chop_extensions |> Module_name.from_string_unsafe)
+                   (package_name +++ dir))
       | exception Not_found -> ());
   (!file_map, !bs_dependencies_file_map)
 

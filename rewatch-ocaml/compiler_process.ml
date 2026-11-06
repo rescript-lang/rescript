@@ -113,81 +113,122 @@ let run_tasks ?poll ?on_complete tasks =
 let run_requests ?poll ?on_complete requests =
   requests |> List.map task |> run_tasks ?poll ?on_complete
 
-let parse_request ~build_dir ~(config : Config.t) path =
-  let ast = Source.ast_path path in
-  File_util.ensure_dir (Filename.concat build_dir (Filename.dirname ast));
+(* A request writes its ASTs, interfaces and typed trees into the artifact
+   directory that later requests and builds read. They are held in memory
+   until the request finished (Build_file_store.set_held_writes, which the
+   build installs with this predicate), so a failed request leaves the
+   previous AST and interface on disk, and a build killed before it published
+   an interface leaves the typed tree that marks its module compiled stale. *)
+let is_held path =
+  List.exists
+    (Filename.check_suffix path)
+    [".ast"; ".iast"; ".cmi"; ".cmt"; ".cmti"]
+
+(* Renamed into place, so that neither a reader nor a build killed while
+   writing sees part of a file. On Windows the rename fails while another
+   process, such as an editor, has the file open without delete sharing; the
+   file is then written in place, and a write that fails removes its partial
+   file. *)
+let write_held path contents =
+  try File_util.write_file_atomic ~ensure_parent:false path contents
+  with Sys_error _ | Unix.Unix_error _ -> (
+    try File_util.write_file path contents
+    with Sys_error message ->
+      File_util.remove_file_best_effort path;
+      raise
+        (Sys_error
+           (if String_util.contains message path then message
+            else path ^ ": " ^ message)))
+
+let parse_request ~artifact_dir ~(config : Config.t) path =
   let contents =
     if config.ppx_flags = [] then ""
     else File_util.read_file (Filename.concat config.root path)
   in
   let args = Compiler_args.parser_arguments ~config ~contents ~path in
-  {args; cwd = build_dir}
+  {args; cwd = artifact_dir}
+
+(* An AST is written even when it is unchanged: its modification time records
+   when its source was parsed. *)
+let publish_parse ~artifact_dir path =
+  ignore
+    (Build_file_store.publish_held ~if_changed:false ~write:write_held
+       (Build_artifacts.ast_path ~artifact_dir path))
 
 (* Runs on the worker that parsed [path], right after the parse, so that
-   publishing the outputs of a large project's parses does not run on one
-   domain afterwards. The source is kept: compiling reads it again. *)
-let publish_parse ~build_dir ~ocaml_dir ~(config : Config.t) path =
-  File_util.copy_build_file ~keep:false
-    (Filename.concat build_dir (Source.ast_path path))
-    (Build_artifacts.published_ast_path ~ocaml_dir path);
-  File_util.copy_build_file
-    (Filename.concat config.root path)
-    (Filename.concat ocaml_dir (Filename.basename path))
-
-(* A parse that printed warnings is published later, on the main domain, once
-   the build has registered the cleanup that makes the next build parse it
-   again and repeat them. Published now, it would outlive a build interrupted
-   before that, and the next build would not report the warnings. *)
+   publishing the ASTs of a large project's parses does not run on one domain
+   afterwards. A parse that printed warnings is published later, on the main
+   domain, once the build has registered the cleanup that makes the next build
+   parse it again and repeat them. Published now, it would outlive a build
+   interrupted before that, and the next build would not report the
+   warnings. *)
 let run_parses ?poll ?on_complete parses =
   parses
-  |> List.map (fun (build_dir, ocaml_dir, config, path) ->
+  |> List.map (fun (artifact_dir, config, path) ->
       Process.map_result
-        (task (parse_request ~build_dir ~config path))
+        (task (parse_request ~artifact_dir ~config path))
         (fun result ->
-          if Process.succeeded result && result.stderr = "" then
-            publish_parse ~build_dir ~ocaml_dir ~config path;
+          if not (Process.succeeded result) then
+            Build_file_store.forget
+              (Build_artifacts.ast_path ~artifact_dir path)
+          else if result.stderr = "" then publish_parse ~artifact_dir path;
           result))
   |> run_tasks ?poll ?on_complete
 
-type compiler_artifact = Cmi | Required of string | Optional of string
+type compiler_artifact = Cmi | Required of string | Typed_tree of string
 
-let publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename artifacts =
+(* A typed tree marks its module compiled, so it is published last. Not every
+   compile writes one (-bs-no-bin-annot). *)
+let publish_typed_tree path =
+  match
+    Build_file_store.publish_held ~if_changed:false ~write:write_held path
+  with
+  | exception Not_found -> ()
+  (* Once published, it is only read by gentype, which then finds it on disk. *)
+  | _ -> Build_file_store.evict path
+
+(* The compiler wrote the other artifacts into the artifact directory:
+   interfaces are held until now and written only when they changed, which
+   keeps the modification time that tells dependents whether to compile
+   again. Callers list typed trees last. *)
+let publish_compiler_artifacts ~artifact_dir ~basename artifacts =
   let cmi_change = ref Compiler_scheduler.Cmi_change_unknown in
   try
     List.iter
       (fun artifact ->
-        let extension =
-          match artifact with
-          | Cmi -> "cmi"
-          | Required name | Optional name -> name
-        in
-        let source =
-          Filename.concat artifact_dir (basename ^ "." ^ extension)
-        in
-        let destination =
-          Filename.concat ocaml_dir (basename ^ "." ^ extension)
-        in
-        (* Dependents read the published .cmi and .cmj, so the store keeps
-           them; nothing in the build reads the other copies again. *)
-        (match artifact with
+        match artifact with
         | Cmi ->
+          let path = Filename.concat artifact_dir (basename ^ ".cmi") in
+          let changed =
+            try
+              Build_file_store.publish_held ~if_changed:true ~write:write_held
+                path
+            with Not_found ->
+              (* The compiler does not write an interface identical to the
+                 one on disk (Cmi_format.create_cmi). *)
+              if Build_file_store.exists path then false
+              else raise (Unix.Unix_error (Unix.ENOENT, "open", path))
+          in
           cmi_change :=
-            if File_util.copy_build_file_if_different source destination then
-              Compiler_scheduler.Cmi_changed
+            if changed then Compiler_scheduler.Cmi_changed
             else Compiler_scheduler.Cmi_unchanged
-        | Required "cmj" -> File_util.copy_build_file source destination
-        | Required _ -> File_util.copy_build_file ~keep:false source destination
-        | Optional _ ->
-          File_util.copy_optional_build_file ~keep:false source destination);
-        Build_file_store.evict source)
+        | Required extension ->
+          let path =
+            Filename.concat artifact_dir (basename ^ "." ^ extension)
+          in
+          if not (Build_file_store.exists path) then
+            raise (Unix.Unix_error (Unix.ENOENT, "open", path))
+        | Typed_tree extension ->
+          publish_typed_tree
+            (Filename.concat artifact_dir (basename ^ "." ^ extension)))
       artifacts;
     !cmi_change
   with error ->
     raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
 
-let namespace_task ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty ~force
-    namespace modules =
-  let mlmap = Filename.concat build_dir (namespace ^ ".mlmap") in
+let namespace_task ~runtime ~artifact_dir ~entry ~package_dirty ~force namespace
+    modules =
+  let mlmap = Filename.concat artifact_dir (namespace ^ ".mlmap") in
   let contents =
     let buffer = Buffer.create 128 in
     Buffer.add_string buffer "randjbuildsystem\n";
@@ -206,25 +247,19 @@ let namespace_task ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty ~force
   let mlmap_changed = previous_contents <> Some contents in
   if mlmap_changed then
     File_util.write_file_atomic ~ensure_parent:false mlmap contents;
-  let outputs_exist =
-    ["cmi"; "cmj"; "cmt"; "mlmap"]
+  let typed_tree = Filename.concat artifact_dir (namespace ^ ".cmt") in
+  let outputs_current =
+    ["cmi"; "cmj"; "cmt"]
     |> List.for_all (fun extension ->
         File_util.is_regular_file
-          (Filename.concat ocaml_dir (namespace ^ "." ^ extension)))
+          (Filename.concat artifact_dir (namespace ^ "." ^ extension)))
   in
-  let published_mlmap_matches =
-    try
-      File_util.read_file (Filename.concat ocaml_dir (namespace ^ ".mlmap"))
-      = contents
-    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> false
-  in
-  if
-    not
-      (force || package_dirty || mlmap_changed
-      || (not published_mlmap_matches)
-      || not outputs_exist)
-  then None
-  else
+  if not (force || package_dirty || mlmap_changed || not outputs_current) then
+    None
+  else (
+    (* The typed tree, published last, marks the namespace compiled: without
+       it, a build that fails or is killed before then compiles it again. *)
+    File_util.remove_file typed_tree;
     Some
       Compiler_scheduler.
         {
@@ -242,21 +277,25 @@ let namespace_task ~runtime ~build_dir ~ocaml_dir ~entry ~package_dirty ~force
                     "-no-alias-deps";
                     Filename.basename mlmap;
                   ];
-                cwd = build_dir;
+                cwd = artifact_dir;
               };
           publish =
             (fun result ->
-              if not (Process.succeeded result) then
+              if not (Process.succeeded result) then (
+                List.iter
+                  (fun extension ->
+                    Build_file_store.forget
+                      (Filename.concat artifact_dir (namespace ^ extension)))
+                  [".cmi"; ".cmt"];
                 raise
                   (Compiler_scheduler.Build_failure
-                     (result.Process.stderr ^ result.stdout));
+                     (result.Process.stderr ^ result.stdout)));
               let cmi_change =
-                publish_compiler_artifacts ~artifact_dir:build_dir ~ocaml_dir
-                  ~basename:namespace
-                  [Cmi; Required "cmj"; Required "cmt"; Required "mlmap"]
+                publish_compiler_artifacts ~artifact_dir ~basename:namespace
+                  [Cmi; Required "cmj"; Typed_tree "cmt"]
               in
               Compiler_scheduler.{stderr = result.stderr; cmi_change});
-        }
+        })
 
 let post_build_tasks (config : Config.t) path =
   match config.js_post_build with
@@ -280,7 +319,7 @@ let post_build_tasks (config : Config.t) path =
           })
       config.package_specs
 
-let compile_request ~build_dir ~(config : Config.t) ~common_args
+let compile_request ~artifact_dir ~(config : Config.t) ~common_args
     (module_ : Source.module_) ~source_kind path =
   let args =
     Compiler_args.compiler_arguments_with_common ~config ~common_args
@@ -288,69 +327,64 @@ let compile_request ~build_dir ~(config : Config.t) ~common_args
       ~has_interface:(Option.is_some module_.interface)
       ~path
   in
-  {args; cwd = build_dir}
+  {args; cwd = artifact_dir}
 
-let publish ~build_dir ~ocaml_dir ~is_local ~(config : Config.t) ~has_interface
+(* A compile that failed leaves the interface on disk. It publishes the
+   partial typed tree the compiler wrote, which editor tooling reads, but
+   first dates its AST back, so that the next build compiles the module again
+   even if this one is killed before the scheduler records the failure (which
+   dates the AST back as well). Best effort, so that a file another process
+   holds does not replace the compile error with a disk error. *)
+let discard_compile ~artifact_dir ~(config : Config.t) path =
+  let artifact extension =
+    Filename.concat artifact_dir
+      (Source.compiler_asset_basename config path ^ extension)
+  in
+  Build_file_store.forget (artifact ".cmi");
+  (try
+     Build_artifacts.invalidate_ast
+       (Build_artifacts.ast_path ~artifact_dir path)
+   with Unix.Unix_error _ -> ());
+  let typed_tree =
+    artifact (if Filename.check_suffix path ".resi" then ".cmti" else ".cmt")
+  in
+  try publish_typed_tree typed_tree
+  with Sys_error _ -> Build_file_store.forget typed_tree
+
+let publish ~artifact_dir ~is_local ~(config : Config.t) ~has_interface
     ~source_kind path result =
   let stderr =
     if is_local then result.Process.stderr
     else retain_critical_external_warnings result.stderr
   in
   let basename = Source.compiler_asset_basename config path in
-  let artifact_dir = Filename.concat build_dir (Filename.dirname path) in
   let cmi_change = ref Compiler_scheduler.Cmi_change_unknown in
   try
     (cmi_change :=
        match source_kind with
        | Source.Interface ->
-         publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
-           [Cmi; Optional "cmti"]
+         publish_compiler_artifacts ~artifact_dir ~basename
+           [Cmi; Typed_tree "cmti"]
        | Source.Implementation when has_interface ->
          (* The implementation is compiled with -bs-read-cmi, so its .cmi is
-           the one already published after compiling the interface, which
-           this compile read again. *)
+           the one published after compiling the interface. *)
          ignore
-           (publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
-              [Required "cmj"; Optional "cmt"]);
-         Build_file_store.evict
-           (Filename.concat artifact_dir (basename ^ ".cmi"));
+           (publish_compiler_artifacts ~artifact_dir ~basename
+              [Required "cmj"; Typed_tree "cmt"]);
          Compiler_scheduler.Cmi_unchanged
        | Source.Implementation ->
-         publish_compiler_artifacts ~artifact_dir ~ocaml_dir ~basename
-           [Cmi; Required "cmj"; Optional "cmt"]);
-    let source = Filename.concat config.root path in
-    let build_source = Filename.concat build_dir path in
-    File_util.ensure_dir (Filename.dirname build_source);
-    File_util.copy_build_file ~keep:false source build_source;
-    let published_source = Filename.concat ocaml_dir (Filename.basename path) in
-    (* Usually published unchanged when the source was parsed. *)
-    ignore
-      (File_util.copy_build_file_if_different ~keep:false source
-         published_source);
+         publish_compiler_artifacts ~artifact_dir ~basename
+           [Cmi; Required "cmj"; Typed_tree "cmt"]);
+    (* The parse and the typed tree's source digest read the source through
+       the store. *)
     List.iter Build_file_store.evict
       [
-        source;
-        published_source;
-        Filename.concat build_dir (Source.ast_path path);
+        Filename.concat config.root path;
+        Build_artifacts.ast_path ~artifact_dir path;
       ];
     (match source_kind with
     | Source.Interface -> ()
     | Source.Implementation ->
-      List.iter
-        (fun spec ->
-          if spec.Config.in_source then (
-            let output = Build_artifacts.generated_js_path config path spec in
-            let build_output =
-              Build_artifacts.generated_build_js_path ~build_dir config path
-                spec
-            in
-            File_util.ensure_dir (Filename.dirname build_output);
-            Option.iter
-              (File_util.write_build_file ~keep:false build_output)
-              (Build_file_store.read output);
-            File_util.copy_optional_build_file ~keep:false (output ^ ".map")
-              (build_output ^ ".map")))
-        config.package_specs;
       List.iter
         (fun spec ->
           let output = Build_artifacts.generated_js_path config path spec in

@@ -25,7 +25,7 @@ const beltLib = path.join(
   "@rescript",
   "belt",
   "lib",
-  "ocaml",
+  "rescript",
 );
 
 const prefix = ["-w", "+A", "-bs-jsx", "4", "-I", beltLib];

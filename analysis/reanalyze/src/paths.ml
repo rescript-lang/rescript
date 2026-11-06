@@ -133,14 +133,15 @@ type cmt_scan_entry = {
     This is a v2 extension produced by `rewatch` to support monorepos without requiring
     reanalyze-side package resolution.
 
-    The scan plan is a list of build roots (usually `<pkg>/lib/bs`) relative to the project root,
+    The scan plan is a list of build roots (`<pkg>/lib/rescript`) relative to the project root,
     plus a list of subdirectories (relative to that build root) to scan for `.cmt/.cmti`.
+    Build roots are flat, so the subdirectories are empty and each build root is scanned itself.
 
     If missing, returns the empty list and callers should fall back to legacy behavior. *)
 
 let read_cmt_scan () =
   let source_dirs_file =
-    ["lib"; "bs"; ".sourcedirs.json"]
+    ["lib"; "rescript"; ".sourcedirs.json"]
     |> List.fold_left Filename.concat run_config.bsb_project_root
   in
   let get_fn key fn json =

@@ -67,7 +67,7 @@
       "!**/rewatch-ocaml",
       "!**/lib/es6",
       "!**/lib/js",
-      "!**/lib/bs",
+      "!**/lib/rescript",
       "!**/playground",
       "!**/*.bs.js",
       "!**/*.res.js",

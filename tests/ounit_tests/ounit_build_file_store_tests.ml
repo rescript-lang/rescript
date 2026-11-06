@@ -108,6 +108,131 @@ let kept_and_evicted_tests _ =
           assert_bool "an evicted file exists" (Build_file_store.exists kept));
       assert_equal ~printer (Some "interface") (Build_file_store.read kept))
 
+(* A held interface stays off the disk until it is published, and publishing
+   writes it only when it changed, so an unchanged interface keeps its
+   modification time. A forgotten one never reaches the disk. *)
+let held_writes_tests _ =
+  with_temp_dir (fun root ->
+      let interface = Filename.concat root "A.cmi" in
+      let unchanged = Filename.concat root "B.cmi" in
+      let failed = Filename.concat root "C.cmi" in
+      let implementation = Filename.concat root "A.cmj" in
+      List.iter
+        (fun path -> write_on_disk path "old")
+        [interface; unchanged; failed];
+      let on_disk path =
+        let channel = open_in_bin path in
+        Fun.protect
+          ~finally:(fun () -> close_in_noerr channel)
+          (fun () -> really_input_string channel (in_channel_length channel))
+      in
+      let written = ref [] in
+      let write path contents =
+        written := path :: !written;
+        write_on_disk path contents
+      in
+      Build_file_store.set_held_writes (fun path ->
+          Filename.check_suffix path ".cmi");
+      Fun.protect
+        ~finally:(fun () -> Build_file_store.set_held_writes (fun _ -> false))
+        (fun () ->
+          Build_file_store.with_build (fun () ->
+              Build_file_store.write interface "new";
+              Build_file_store.write unchanged "old";
+              Build_file_store.write failed "new";
+              Build_file_store.write implementation "code";
+              assert_equal ~printer (Some "new")
+                (Build_file_store.read interface);
+              assert_equal ~printer (Some "old") (Some (on_disk interface));
+              assert_equal ~printer (Some "code")
+                (Some (on_disk implementation));
+              assert_bool "a changed interface is published"
+                (Build_file_store.publish_held ~if_changed:true ~write interface);
+              assert_bool "an unchanged interface is not rewritten"
+                (not
+                   (Build_file_store.publish_held ~if_changed:true ~write
+                      unchanged));
+              assert_equal ~printer:(String.concat ",") [interface] !written;
+              assert_raises Not_found (fun () ->
+                  Build_file_store.publish_held ~if_changed:true ~write
+                    interface);
+              Build_file_store.forget failed;
+              assert_equal ~printer (Some "old") (Build_file_store.read failed));
+          assert_equal ~printer (Some "new") (Some (on_disk interface));
+          assert_equal ~printer (Some "old") (Some (on_disk failed))))
+
+(* Publishing compares a held interface with the one the build read before,
+   without reading the disk again. *)
+let held_write_compares_read_contents_tests _ =
+  with_temp_dir (fun root ->
+      let path = Filename.concat root "A.cmi" in
+      write_on_disk path "interface";
+      let reads = ref 0 in
+      Build_file_store.set_held_writes (fun _ -> true);
+      Fun.protect
+        ~finally:(fun () ->
+          Build_file_store.set_held_writes (fun _ -> false);
+          Build_file_store.set_disk_reader Bs_cmi_load.read_file)
+        (fun () ->
+          Build_file_store.with_build (fun () ->
+              ignore (Build_file_store.read path);
+              Build_file_store.set_disk_reader (fun path ->
+                  incr reads;
+                  Bs_cmi_load.read_file path);
+              Build_file_store.write path "interface";
+              assert_bool "an identical interface is not published"
+                (not
+                   (Build_file_store.publish_held ~if_changed:true
+                      ~write:(fun _ _ -> assert_failure "written")
+                      path));
+              assert_equal ~printer:string_of_int 0 !reads)))
+
+(* Large files that one request reads, such as typed trees, are not kept, but
+   held contents are seen. *)
+let read_without_keeping_tests _ =
+  with_temp_dir (fun root ->
+      let read = Filename.concat root "B.cmt" in
+      let held = Filename.concat root "A.cmt" in
+      write_on_disk read "typed tree";
+      Build_file_store.set_held_writes (fun path ->
+          Filename.check_suffix path ".cmt");
+      Fun.protect
+        ~finally:(fun () -> Build_file_store.set_held_writes (fun _ -> false))
+        (fun () ->
+          Build_file_store.with_build (fun () ->
+              assert_equal ~printer (Some "typed tree")
+                (Build_file_store.read ~keep:false read);
+              assert_equal ~printer None (Build_file_store.cached read);
+              assert_bool "a file read once exists"
+                (Build_file_store.exists read);
+              Build_file_store.write held "held typed tree";
+              assert_equal ~printer (Some "held typed tree")
+                (Build_file_store.read ~keep:false held))))
+
+(* An existing interface cut short, as by a build killed while it wrote it in
+   place, is replaced instead of failing the compile that checks it. *)
+let truncated_existing_interface_tests _ =
+  with_temp_dir (fun root ->
+      let path = Filename.concat root "Abc.cmi" in
+      write_on_disk path (Config.cmi_magic_number ^ "cut");
+      Compiler_request_state.with_fresh ~cwd:root (fun () ->
+          ignore
+            (Cmi_format.create_cmi ~check_exists:() path
+               {
+                 Cmi_format.cmi_name = "Abc";
+                 cmi_sign = [];
+                 cmi_crcs = [];
+                 cmi_flags = [];
+               }));
+      let contents =
+        let channel = open_in_bin path in
+        Fun.protect
+          ~finally:(fun () -> close_in_noerr channel)
+          (fun () -> really_input_string channel (in_channel_length channel))
+      in
+      assert_bool "a truncated interface is replaced"
+        (String.length contents > String.length Config.cmi_magic_number + 3))
+
 (* A file that the compiler removes, such as a stale source map, is missing
    for the rest of the build. *)
 let removed_file_tests _ =
@@ -312,6 +437,11 @@ let suites =
          "build_reads_once" >:: build_reads_once_tests;
          "spellings_share_an_entry" >:: spellings_share_an_entry_tests;
          "kept_and_evicted" >:: kept_and_evicted_tests;
+         "held_writes" >:: held_writes_tests;
+         "held_write_compares_read_contents"
+         >:: held_write_compares_read_contents_tests;
+         "read_without_keeping" >:: read_without_keeping_tests;
+         "truncated_existing_interface" >:: truncated_existing_interface_tests;
          "removed_file" >:: removed_file_tests;
          "unreadable_file" >:: unreadable_file_tests;
          "concurrent_domains" >:: concurrent_domains_tests;

@@ -27,13 +27,13 @@ then
 fi
 
 # Count compiled files in the cleaned project
-compiler_assets=$(find node_modules/rescript-nodejs/lib/ocaml -type f -name '*.*' | wc -l | tr -d '[:space:]')
+compiler_assets=$(find node_modules/rescript-nodejs/lib/rescript -type f -name '*.*' 2>/dev/null | wc -l | tr -d '[:space:]')
 if [ $compiler_assets -eq 0 ];
 then
   success "compiler assets from node_modules cleaned"
   git restore --worktree -- .
 else
-  error "Expected 0 files in node_modules/rescript-nodejs/lib/ocaml after clean, got $compiler_assets"
+  error "Expected 0 files in node_modules/rescript-nodejs/lib/rescript after clean, got $compiler_assets"
   printf "%s\n" "$error_output"
   exit 1
 fi

@@ -93,7 +93,7 @@ if ! wait_for_file_gone "./src/Test.mjs" 20; then
 fi
 
 # Verify the watcher is still running (didn't crash on config change)
-if [ -f lib/watch.lock ]; then
+if [ -f lib/rescript/watch.lock ]; then
   success "Watcher still running after config change"
 else
   error "Watcher crashed after config change"

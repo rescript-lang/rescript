@@ -72,18 +72,18 @@ wait_for_pid_gone() {
 
 exit_watcher() {
   local watcher_pid=""
-  if [ -f lib/watch.lock ]; then
-    watcher_pid=$(cat lib/watch.lock)
+  if [ -f lib/rescript/watch.lock ]; then
+    watcher_pid=$(cat lib/rescript/watch.lock)
   fi
 
   # Windows refuses to delete a file while another process has it open
   # without delete sharing, so a watcher reading the lock can make one
   # attempt fail.
   local attempts=0
-  until rm -f lib/watch.lock 2> /dev/null; do
+  until rm -f lib/rescript/watch.lock 2> /dev/null; do
     attempts=$((attempts + 1))
     if [ "$attempts" -ge 50 ]; then
-      rm -f lib/watch.lock
+      rm -f lib/rescript/watch.lock
       break
     fi
     sleep 0.1
@@ -93,7 +93,7 @@ exit_watcher() {
     if ! wait_for_pid_gone "$watcher_pid" 20; then
       error "Watcher process $watcher_pid did not exit after watch.lock was removed"
       kill_process "$watcher_pid"
-      rm -f lib/watch.lock
+      rm -f lib/rescript/watch.lock
       return 1
     fi
   fi
@@ -113,7 +113,7 @@ kill_process() {
 }
 
 clear_locks() {
-  rm -f lib/watch.lock lib/build.lock
+  rm -f lib/rescript/watch.lock lib/rescript/build.lock
 }
 
 wait_for_file() {

@@ -154,7 +154,7 @@ let resolved_dependencies ~find_module ~find_namespace_maps (node : module_node)
   |> List.filter (fun dependency -> dependency <> node.key)
   |> List.sort_uniq String.compare
 
-let raw_dependencies ?(published_dependencies = fun _ -> None) ~build_dir
+let raw_dependencies ?(published_dependencies = fun _ -> None) ~artifact_dir
     ~parse_failed (module_ : Source.module_) =
   let dependencies path =
     if parse_failed path then []
@@ -162,7 +162,7 @@ let raw_dependencies ?(published_dependencies = fun _ -> None) ~build_dir
       match published_dependencies path with
       | Some dependencies -> dependencies
       | None ->
-        (Ast_header.read (Filename.concat build_dir (Source.ast_path path)))
+        (Ast_header.read (Filename.concat artifact_dir (Source.ast_path path)))
           .dependencies
   in
   List.sort_uniq String.compare
@@ -203,7 +203,7 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
   let raw_dependencies =
     modules
     |> Parallel.map (fun ((package : Package_plan.t), _, module_) ->
-        raw_dependencies ~build_dir:package.build_dir
+        raw_dependencies ~artifact_dir:package.artifact_dir
           ~published_dependencies:(fun path ->
             let path = Filename.concat package.root path in
             (* The published headers were read before this build parsed. *)

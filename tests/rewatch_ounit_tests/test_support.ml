@@ -9,6 +9,10 @@ let write_file path contents =
     ~finally:(fun () -> close_out_noerr channel)
     (fun () -> output_string channel contents)
 
+(* Copies contents only; callers set the mode they need. *)
+let copy_file source destination =
+  write_file destination (File_util.read_file source)
+
 let write_ast_header path ~dependencies ~source =
   File_util.ensure_dir (Filename.dirname path);
   let channel = open_out_bin path in

@@ -28,7 +28,7 @@ _build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
 ```
 
 Builds and `rescript format` use the embedded compiler. The `bsc.exe` next to
-`rescript.exe` is still recorded in `lib/bs/compiler-info.json`, where editor
+`rescript.exe` is still recorded in `lib/rescript/compiler-info.json`, where editor
 tooling looks for the platform binaries.
 
 Linux release builds use dune's `static` profile, so the published executable
@@ -56,6 +56,38 @@ does not depend on the runner's libc. The version lives in
 Native filesystem notifications only wake the watcher. The snapshot taken
 afterwards decides what changed, so merged, reordered, or dropped events can't
 cause missed rebuilds.
+
+## Artifacts
+
+Each package keeps its artifacts flat in `lib/rescript`, keyed by the
+compiler's file name of each module (`X` or `X-Ns`): ASTs, `.cmi`, `.cmj`,
+`.cmt` and `.cmti` files, namespace maps, `.compiler.log`,
+`compiler-info.json`, `.sourcedirs.json` and, in the project that takes them,
+the build and watch locks. The compiler runs in that directory and writes
+there directly; dependencies are on its include path as their
+`lib/rescript`.
+
+- Freshness is timestamp-based: an AST newer than its source is current, a
+  `.cmt` records the last compile, and a `.cmi` the last change of an
+  interface.
+- ASTs, interfaces and typed trees are held in memory until their request
+  finished (`Build_file_store.set_held_writes`), so a failed request leaves
+  the previous AST and interface on disk. An interface is written only when
+  it changed, which keeps the modification time that dependents compare
+  with, and before the typed tree that marks the module compiled, so a build
+  killed in between compiles the module again. A failed compile publishes its
+  partial typed tree for editor tooling after dating its AST back.
+- Published files are renamed into place, so neither a reader nor a killed
+  build sees part of one. On Windows the rename fails while an editor has the
+  file open without delete sharing; the file is then written in place, and a
+  failed write removes its partial file.
+- To make the next build parse a source again, the build dates its AST back
+  instead of removing it: a later compile of the same build or watch session
+  may still read it.
+- Stale public JavaScript is removed only when an AST shows that the build
+  generated it for a source that is gone.
+- `lib/bs` and `lib/ocaml`, left by ReScript 12 and earlier, make the first
+  build clean the package and are removed with it.
 
 ## In-process compilation
 

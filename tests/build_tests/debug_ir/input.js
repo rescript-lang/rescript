@@ -9,8 +9,7 @@ const { execBuildOrThrow, execClean } = setup(import.meta.dirname);
 const diagnosticsDir = path.join(
   import.meta.dirname,
   "lib",
-  "bs",
-  "src",
+  "rescript",
   "Main.debug-ir",
 );
 

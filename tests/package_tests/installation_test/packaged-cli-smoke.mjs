@@ -6,7 +6,7 @@ import path from "node:path";
 
 const launcher = path.resolve("node_modules/rescript/cli/rescript.js");
 const output = path.resolve("src/Test.mjs");
-const watchLock = path.resolve("lib/watch.lock");
+const watchLock = path.resolve("lib/rescript/watch.lock");
 const timeoutMs = process.platform === "win32" ? 120000 : 30000;
 
 function run(args, input) {

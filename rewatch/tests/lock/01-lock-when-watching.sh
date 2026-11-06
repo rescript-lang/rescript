@@ -27,7 +27,7 @@ clear_locks
 rewatch_bg watch > /dev/null 2>&1 &
 success "Watcher Started"
 
-if ! wait_for_file "lib/watch.lock" 40; then
+if ! wait_for_file "lib/rescript/watch.lock" 40; then
   error "watch.lock was not created"
   exit 1
 fi
@@ -60,7 +60,7 @@ fi
 
 success "Build succeeds while watcher is running"
 
-if wait_for_file_gone "lib/build.lock" 20;
+if wait_for_file_gone "lib/rescript/build.lock" 20;
 then
   success "build.lock is removed after build finishes"
 else
@@ -68,7 +68,7 @@ else
   exit 1
 fi
 
-if [ -f lib/watch.lock ];
+if [ -f lib/rescript/watch.lock ];
 then
   success "watch.lock remains while watcher is running"
 else
@@ -80,14 +80,14 @@ if ! exit_watcher; then
   exit 1
 fi
 
-if ! wait_for_file_gone "lib/watch.lock" 20; then
+if ! wait_for_file_gone "lib/rescript/watch.lock" 20; then
   error "watch.lock was not removed"
   exit 1
 fi
 
 rewatch_bg watch > rewatch.log 2>&1 &
 
-if wait_for_file "lib/watch.lock" 40; then
+if wait_for_file "lib/rescript/watch.lock" 40; then
   success "Watcher can start again after watch.lock is removed"
 else
   error "Watcher did not restart after watch.lock removal"
