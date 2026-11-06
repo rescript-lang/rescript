@@ -284,7 +284,9 @@ jobs:
         shell: bash
         run: |
           git -c advice.detachedHead=false clone --quiet --depth 1 --branch v2.27.0 https://github.com/rescript-lang/reanalyze.git "$RUNNER_TEMP/reanalyze"
-          (cd "$RUNNER_TEMP/reanalyze" && opam exec -- dune build -p reanalyze @install)
+          # opam exec finds the repository's local switch from the current
+          # directory, so it changes directory itself.
+          opam exec -- sh -c 'cd "$RUNNER_TEMP/reanalyze" && dune build -p reanalyze @install'
           REANALYZE="$RUNNER_TEMP/reanalyze/_build/install/default/bin/reanalyze.exe" opam exec -- make dead-code
 
       - name: Test playground compiler
