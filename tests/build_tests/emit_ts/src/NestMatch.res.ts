@@ -2,7 +2,13 @@
 
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 
-export function getOr<a extends string | number | boolean | bigint>(o: (undefined | a), d: a): a {
+export function getOr<a extends string | number | boolean | bigint>(o: (undefined | a), d: a): a;
+export function getOr<a extends string | number | boolean | bigint>(o: (undefined | (
+    (undefined | a)
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 })), d: (undefined | a)): (undefined | a);
+export function getOr<a extends string | number | boolean | bigint>(o: (undefined | (
+    (undefined | a)
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 })), d: (undefined | a)): (undefined | a) {
   if (o !== undefined) {
     return Primitive_option.valFromOption(o);
   } else {
@@ -12,7 +18,7 @@ export function getOr<a extends string | number | boolean | bigint>(o: (undefine
 
 export function useNested(o: (undefined | (
     (undefined | number)
-  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }))): (undefined | number) {
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }))): (undefined | number) {
   return getOr(o, 3);
 }
 
@@ -22,7 +28,7 @@ export function useNestedFolded(): (undefined | number) {
 
 export function inner(o: (undefined | (
     (undefined | number)
-  | { readonly BS_PRIVATE_NESTED_SOME_NONE: number }))): number {
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 }))): number {
   if (o === undefined) {
     return 0;
   }

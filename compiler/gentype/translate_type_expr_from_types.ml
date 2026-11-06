@@ -472,8 +472,8 @@ let process_variant row_fields =
 
 (* The runtime's representation of [Some(v)] when [v] is [undefined] or
    itself a marker: a frozen object holding the nesting depth
-   (Primitive_option.marker). *)
-let nested_option_marker =
+   (Primitive_option.marker), at the type [depth]. *)
+let nested_option_marker depth =
   Object
     ( Closed,
       [
@@ -481,26 +481,34 @@ let nested_option_marker =
           mutable_ = Immutable;
           name_js = "BS_PRIVATE_NESTED_SOME_NONE";
           optional = Mandatory;
-          type_ = number_t;
+          type_ = depth;
           doc_string = Doc_string.empty;
         };
       ] )
 
 (* The payload of an option as the option's representation holds it: the
-   payload's type, joined with the marker type where the payload can hold a
-   marker. *)
+   payload's type, joined with the marker of each depth [Some(v)] can be, a
+   literal type, or [number] where the depth is not known. *)
 let some_type ~config (payload : Types.type_expr) type_ =
-  if config.Config.option_payload_may_nest payload then
+  let joined markers =
     Variant
       {
-        inherits = [type_; nested_option_marker];
+        inherits = type_ :: markers;
         no_payloads = [];
         payloads = [];
         polymorphic = false;
         tag = None;
         unboxed = false;
       }
-  else type_
+  in
+  match config.Config.option_payload_markers payload with
+  | Config.No_markers | Config.Depths [] -> type_
+  | Config.Depths depths ->
+    joined
+      (List.map
+         (fun d -> nested_option_marker (ident (string_of_int d)))
+         depths)
+  | Config.Any_depth -> joined [nested_option_marker number_t]
 
 let rec translate_arrow_type ~config ~type_vars_gen ~type_env
     (params : Types.arg list) (ret : Types.type_expr) =
