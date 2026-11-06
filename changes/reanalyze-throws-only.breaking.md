@@ -1,0 +1,1 @@
+- Reanalyze no longer honors `@raises`, `@raise`, `@throw`, `@doesNotRaise` or the other `@doesNotThrow` variants: write `@throws` and `@doesNotThrow` instead.

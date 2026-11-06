@@ -614,7 +614,7 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
     match type_env |> Type_env.lookup_module_type_signature ~path with
     | Some (signature, type_env) ->
       let type_equations_translation =
-        (List.combine ids types [@doesNotRaise])
+        (List.combine ids types [@doesNotThrow])
         |> List.map (fun (x, t) ->
             ( x,
               t |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env

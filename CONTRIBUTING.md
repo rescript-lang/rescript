@@ -471,7 +471,7 @@ Some tips:
 - The first sentence or line should show the function call with a very short summary.
 - Ideally, every function should have an `## Examples` section with **at least one** example. The examples are compiled to check that they are correct. Use `==` to generate tests from the examples.
 - Always use `@deprecated` when applicable.
-- Always use `@throw` when applicable.
+- Always use `@throws` when applicable.
 - Always provide a `See` section pointing to MDN for more information when available.
 
 ## Contribute to JSX `domProps`

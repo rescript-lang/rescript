@@ -187,7 +187,7 @@ let print_multiline_comment_content txt =
       while !len > 0 && String.unsafe_get first (!len - 1) = '\r' do
         decr len
       done;
-      String.sub first 0 !len [@doesNotRaise]
+      String.sub first 0 !len [@doesNotThrow]
     in
     let first_line = Comment.trim_spaces first in
     Doc.concat
@@ -562,7 +562,7 @@ let print_poly_var_ident txt =
       let len = String.length txt in
       (* UppercaseExoticIdent follows the \"..." format,
          so removing the leading backslash is enough to transform it into polyvar style *)
-      Doc.text ((String.sub [@doesNotRaise]) txt 1 (len - 1))
+      Doc.text ((String.sub [@doesNotThrow]) txt 1 (len - 1))
     | ExoticIdent -> Doc.concat [Doc.text "\""; Doc.text txt; Doc.text "\""]
     | NormalIdent -> (
       match txt with
@@ -6233,7 +6233,7 @@ and print_mod_expr ~state mod_expr cmt_tbl =
              call_expr_doc;
              (if is_unit_sugar then
                 print_mod_apply_arg ~state
-                  (List.hd args [@doesNotRaise])
+                  (List.hd args [@doesNotThrow])
                   cmt_tbl
               else
                 Doc.concat
@@ -6241,7 +6241,7 @@ and print_mod_expr ~state mod_expr cmt_tbl =
                     Doc.lparen;
                     (if should_hug then
                        print_mod_apply_arg ~state
-                         (List.hd args [@doesNotRaise])
+                         (List.hd args [@doesNotThrow])
                          cmt_tbl
                      else
                        Doc.indent

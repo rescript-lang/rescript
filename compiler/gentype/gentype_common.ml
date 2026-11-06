@@ -30,7 +30,7 @@ type case = {label_js: label_js}
 
 let is_js_safe_property_name name =
   name = ""
-  || (match name.[0] [@doesNotRaise] with
+  || (match name.[0] [@doesNotThrow] with
        | 'A' .. 'z' -> true
        | _ -> false)
      && name
@@ -42,12 +42,12 @@ let is_number s =
   let len = String.length s in
   len > 0
   && (match len > 1 with
-    | true -> (s.[0] [@doesNotRaise]) > '0'
+    | true -> (s.[0] [@doesNotThrow]) > '0'
     | false -> true)
   &&
   let res = ref true in
   for i = 0 to len - 1 do
-    match s.[i] [@doesNotRaise] with
+    match s.[i] [@doesNotThrow] with
     | '0' .. '9' -> ()
     | _ -> res := false
   done;
@@ -222,7 +222,7 @@ module Node_filename = struct
 
     let concat dirname filename =
       let is_dir_sep s i =
-        let c = (s.[i] [@doesNotRaise]) in
+        let c = (s.[i] [@doesNotThrow]) in
         c = '/' || c = '\\' || c = ':'
       in
       let l = length dirname in

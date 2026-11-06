@@ -95,7 +95,7 @@ let item x =
   Format.fprintf Format.std_formatter "  ";
   Format.fprintf Format.std_formatter x
 
-let missing_raise_info_to_text {Issue.missing_annotations; loc_full} =
+let missing_throw_info_to_text {Issue.missing_annotations; loc_full} =
   let missing_txt =
     Format.asprintf "%a" (Exceptions.pp ~exn_table:None) missing_annotations
   in
@@ -107,8 +107,8 @@ let missing_raise_info_to_text {Issue.missing_annotations; loc_full} =
 
 let log_additional_info ~(description : Issue.description) =
   match description with
-  | ExceptionAnalysisMissing missing_raise_info ->
-    missing_raise_info_to_text missing_raise_info
+  | ExceptionAnalysisMissing missing_throw_info ->
+    missing_throw_info_to_text missing_throw_info
   | _ -> ""
 
 let missing_throw_info_to_message
@@ -131,8 +131,8 @@ let description_to_message (description : Issue.description) =
   | DeadWarning {path; message} ->
     Format.asprintf "@{<info>%s@} %s" path message
   | ExceptionAnalysis {message} -> message
-  | ExceptionAnalysisMissing missing_raise_info ->
-    missing_throw_info_to_message missing_raise_info
+  | ExceptionAnalysisMissing missing_throw_info ->
+    missing_throw_info_to_message missing_throw_info
   | Termination {message} -> message
 
 let description_to_name (description : Issue.description) =

@@ -264,7 +264,7 @@ let keyword_table = function
   | "when" -> When
   | "while" -> While
   | _ -> raise Not_found
-[@@raises Not_found]
+[@@throws Not_found]
 
 let is_keyword = function
   | Await | Break | Continue | And | As | Assert | Constraint | Else | Exception
@@ -277,7 +277,7 @@ let is_keyword = function
 let lookup_keyword str =
   try keyword_table str
   with Not_found -> (
-    match str.[0] [@doesNotRaise] with
+    match str.[0] [@doesNotThrow] with
     | 'A' .. 'Z' -> Uident str
     | _ -> Lident str)
 
