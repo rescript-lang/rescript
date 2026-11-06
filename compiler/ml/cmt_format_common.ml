@@ -35,11 +35,18 @@ and binary_part =
   | Partial_signature_item of signature_item
   | Partial_module_type of module_type
 
+(* What reanalyze needs from one value inclusion check. Keeping the two full
+   value descriptions instead made up a fifth of the stdlib's .cmt bytes. *)
+type value_dependency = {
+  value_loc: Location.t;
+  spec_loc: Location.t;
+  optional_args: bool;
+}
+
 type cmt_infos = {
   cmt_modname: string;
   cmt_annots: binary_annots;
-  cmt_value_dependencies:
-    (Types.value_description * Types.value_description) list;
+  cmt_value_dependencies: value_dependency list;
   cmt_args: string array;
   cmt_source_digest: Digest.t option;
   cmt_extra_info: Cmt_utils.cmt_extra_info;
@@ -138,7 +145,6 @@ let accumulators =
       {saved_types = []; value_deps = []; deprecated_used = []})
 
 let current_accumulators () = Domain.DLS.get accumulators
-let value_dependencies () = (current_accumulators ()).value_deps
 let deprecated_uses () = (current_accumulators ()).deprecated_used
 
 let clear () =
@@ -170,7 +176,35 @@ let[@live] record_deprecated_used ?deprecated_context ?migration_template
 
 let _ = Cmt_utils.record_deprecated_used := record_deprecated_used
 
-let record_value_dependency vd1 vd2 =
-  if vd1.Types.val_loc <> vd2.Types.val_loc then
+(* Whether a type is a function with an optional parameter. *)
+let rec takes_optional_args (t : Types.type_expr) =
+  match t.desc with
+  | Tarrow (params, _) ->
+    List.exists
+      (fun ({lbl} : Types.arg) ->
+        match lbl with
+        | Optional _ -> true
+        | Nolabel | Labelled _ -> false)
+      params
+  | Tlink t | Tsubst t -> takes_optional_args t
+  | _ -> false
+
+let record_value_dependency (vd1 : Types.value_description)
+    (vd2 : Types.value_description) =
+  if vd1.val_loc <> vd2.val_loc then
     let state = current_accumulators () in
     state.value_deps <- (vd1, vd2) :: state.value_deps
+
+(* The flag is decided when the .cmt is written, not when the dependency is
+   recorded: the inclusion check that follows the recording can still
+   instantiate weak type variables of the value. *)
+let value_dependencies () =
+  List.map
+    (fun ((vd1 : Types.value_description), (vd2 : Types.value_description)) ->
+      {
+        value_loc = vd1.val_loc;
+        spec_loc = vd2.val_loc;
+        optional_args =
+          takes_optional_args vd1.val_type && takes_optional_args vd2.val_type;
+      })
+    (current_accumulators ()).value_deps

@@ -38,11 +38,19 @@ and binary_part =
   | Partial_signature_item of signature_item
   | Partial_module_type of module_type
 
+type value_dependency = {
+  value_loc: Location.t;  (** The value that was matched. *)
+  spec_loc: Location.t;  (** The declaration it was matched against. *)
+  optional_args: bool;
+      (** Both types are functions with an optional parameter. *)
+}
+(** One value inclusion check (an implementation against its interface, or a
+    module against a module type), recorded for reanalyze. *)
+
 type cmt_infos = {
   cmt_modname: string;
   cmt_annots: binary_annots;
-  cmt_value_dependencies:
-    (Types.value_description * Types.value_description) list;
+  cmt_value_dependencies: value_dependency list;
   cmt_args: string array;
   cmt_source_digest: Digest.t option;
   cmt_extra_info: Cmt_utils.cmt_extra_info;

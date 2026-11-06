@@ -593,20 +593,21 @@ let traverse_structure ~config ~decls ~refs ~cross_file ~file ~do_types
 
 (* Merge a location's references to another one's *)
 let process_value_dependency ~config ~refs ~cross_file
-    ( ({
-         val_loc = {loc_start = pos_to; loc_ghost = ghost1} as loc_to;
-         val_type = type_to;
-       } :
-        Types.value_description),
-      ({
-         val_loc = {loc_start = pos_from; loc_ghost = ghost2} as loc_from;
-         val_type = type_from;
-       } :
-        Types.value_description) ) =
+    ({
+       value_loc = {loc_start = pos_to; loc_ghost = ghost1} as loc_to;
+       spec_loc = {loc_start = pos_from; loc_ghost = ghost2} as loc_from;
+       optional_args;
+     } :
+      Cmt_format.value_dependency) =
   if (not ghost1) && (not ghost2) && pos_to <> pos_from then (
     add_value_reference ~config ~refs ~binding:Location.none ~loc_from ~loc_to;
-    Dead_optional_args.add_function_reference ~config ~cross_file ~loc_from
-      ~loc_to ~type_from ~type_to)
+    (* The compiler decides this from the two types rather than reanalyze
+       consulting its declaration table: references can be collected before
+       their target declaration is visited, notably in [let rec ... and ...]
+       groups. *)
+    if optional_args then
+      Dead_optional_args.add_function_reference ~config ~cross_file ~loc_from
+        ~loc_to)
 
 let process_structure ~config ~decls ~refs ~cross_file ~file
     ~cmt_value_dependencies ~do_types ~do_externals
