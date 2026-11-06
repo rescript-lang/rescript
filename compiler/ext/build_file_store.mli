@@ -22,6 +22,10 @@ val generation : unit -> int
 (** Changes whenever the store is emptied, so caches derived from its contents
     know to start over. *)
 
+val key : string -> string
+(** [key path] names the entry of [path]: [path] with [.] and [..] segments
+    removed lexically, so that two spellings of one build file share it. *)
+
 val read : string -> string option
 (** [read path] is the contents of [path], or [None] when it does not exist.
     Other failures raise [Sys_error]. *)

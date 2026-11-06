@@ -13,6 +13,21 @@ type namespace_task = {
 }
 type post_build_task = {output: string; task: Process.task}
 
+type compile_hooks = {
+  gate: Speculation_gate.t option;
+  on_interface_computed: (string -> string -> unit) option;
+  cmi_redirects: (string * string) list;
+  cmi_directories: string list;
+}
+
+let no_compile_hooks =
+  {
+    gate = None;
+    on_interface_computed = None;
+    cmi_redirects = [];
+    cmi_directories = [];
+  }
+
 type phase =
   | Start
   | Interface of string
@@ -44,7 +59,11 @@ type scheduled_module = {
   cmi_path: string;
   publication: publication option Atomic.t;
   prepare: unit -> unit;
-  compile: source_kind:Source.source_kind -> string -> Process.task;
+  compile:
+    hooks:compile_hooks ->
+    source_kind:Source.source_kind ->
+    string ->
+    Process.task;
   publish:
     source_kind:Source.source_kind -> string -> Process.result -> publish_result;
   record_published_outputs: source_kind:Source.source_kind -> string -> unit;
@@ -54,6 +73,11 @@ type scheduled_module = {
   mark_warning: string -> unit;
   mutable messages: string list;
   mutable phase: phase;
+  mutable speculation: Speculation_gate.t option;
+  mutable speculation_abandoned: bool;
+  mutable attempt: int;
+      (* Identifies the latest compile request, so a message from an
+         abandoned speculation is not taken for one from its successor. *)
 }
 
 type candidate = {
@@ -63,7 +87,7 @@ type candidate = {
   make: unit -> scheduled_module;
 }
 
-type scheduled_item = Module of scheduled_module | Namespace_barrier
+type scheduled_item = Module of scheduled_module | Namespace_barrier of string
 
 let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile
     ~publish ~record_published_outputs ~post_build ~package_root ~is_local
@@ -85,6 +109,9 @@ let create ~key ~dependencies ~source ~state ~cmi_path ~prepare ~compile
     mark_warning;
     messages = [];
     phase = Start;
+    speculation = None;
+    speculation_abandoned = false;
+    attempt = 0;
   }
 
 let candidate ~key ~state ~warning_paths ~make =
@@ -183,7 +210,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
               {
                 key;
                 dependencies = scheduled_dependencies state.dependencies;
-                value = Namespace_barrier;
+                value = Namespace_barrier key;
               }
         | Some _ | None -> None)
     |> List.of_seq
@@ -252,8 +279,9 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
      only touches that module's files: dependents are scheduled after its result
      is recorded. Build-state updates stay on this scheduler domain. A stop
      cancels a compile before publication starts, never during it. *)
-  let compilation_task (scheduled : scheduled_module) ~source_kind path =
-    let task = scheduled.compile ~source_kind path in
+  let compilation_task ?(hooks = no_compile_hooks)
+      (scheduled : scheduled_module) ~source_kind path =
+    let task = scheduled.compile ~hooks ~source_kind path in
     Atomic.set scheduled.publication None;
     Process.map_result task (publish_compilation scheduled ~source_kind path)
   in
@@ -282,14 +310,244 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
           ~source:(Filename.concat scheduled.package_root source)
           ~path)
   in
+  (* Pipelining. A module's dependents may start type checking as soon as its
+     interface is final: after its .cmi is written, or after its interface
+     file compiled. Such a speculative request reads not yet published .cmi
+     files through redirects and waits before writing anything until the
+     module is ready in the dependency graph, so its artifacts, diagnostics and
+     effects are those of a request started then. Codegen therefore always
+     sees the .cmj of completed dependencies. *)
+  let max_jobs = Compiler_execution_mode.configured_count () in
+  let mailbox = Process.create_mailbox () in
+  (* Test-only record of speculation decisions, as REWATCH_COMPILER_CALL_LOG
+     records compiler calls. Written on this scheduling domain. *)
+  let speculation_log =
+    match Sys.getenv_opt "REWATCH_SPECULATION_LOG" with
+    | None -> fun _ _ -> ()
+    | Some path ->
+      fun event key ->
+        let channel =
+          open_out_gen [Open_creat; Open_append; Open_binary] 0o644 path
+        in
+        Fun.protect
+          ~finally:(fun () -> close_out_noerr channel)
+          (fun () -> Printf.fprintf channel "%s\t%s\n" event key)
+  in
+  let module_by_key = Hashtbl.create (List.length scheduled_modules) in
+  List.iter
+    (fun (scheduled : scheduled_module) ->
+      Hashtbl.replace module_by_key scheduled.key scheduled)
+    scheduled_modules;
+  let dependents_by_key = Hashtbl.create (List.length works) in
+  works
+  |> List.iter (fun (work : _ Process.work) ->
+      List.iter
+        (fun dependency ->
+          Hashtbl.replace dependents_by_key dependency
+            (work.key
+            :: Option.value ~default:[]
+                 (Hashtbl.find_opt dependents_by_key dependency)))
+        work.dependencies);
+  let dependencies_by_key = Hashtbl.create (List.length works) in
+  List.iter
+    (fun (work : _ Process.work) ->
+      Hashtbl.replace dependencies_by_key work.key work.dependencies)
+    works;
+  (* Modules (and namespace barriers) whose work completed successfully. *)
+  let completed = Hashtbl.create (List.length works) in
+  (* Running modules whose interface dependents may type check against. *)
+  let interface_ready = Hashtbl.create 16 in
+  let to_check = Hashtbl.create 16 in
+  let eligible = Hashtbl.create 16 in
+  let check_dependents key =
+    Hashtbl.find_opt dependents_by_key key
+    |> Option.iter
+         (List.iter (fun dependent -> Hashtbl.replace to_check dependent ()))
+  in
+  let mark_completed key =
+    Hashtbl.remove interface_ready key;
+    Hashtbl.replace completed key ();
+    check_dependents key
+  in
+  let has_post_build (scheduled : scheduled_module) =
+    scheduled.post_build scheduled.source.Source.implementation <> []
+  in
+  let mark_interface_ready (scheduled : scheduled_module) ready =
+    (* A dependent waits for this module's completion while holding a job
+       slot, so only modules whose remaining work is already queued may
+       release dependents: post-build tasks are queued later. *)
+    if not (has_post_build scheduled) then (
+      Hashtbl.replace interface_ready scheduled.key ready;
+      check_dependents scheduled.key)
+  in
+  let speculation_eligible (scheduled : scheduled_module) =
+    scheduled.phase = Start
+    && Option.is_none scheduled.speculation
+    && (not scheduled.speculation_abandoned)
+    &&
+    let dependencies =
+      Option.value ~default:[]
+        (Hashtbl.find_opt dependencies_by_key scheduled.key)
+    in
+    let waiting =
+      List.filter (fun key -> not (Hashtbl.mem completed key)) dependencies
+    in
+    waiting <> []
+    && List.for_all (Hashtbl.mem interface_ready) waiting
+    && (scheduled.state.compile_dirty
+       || List.exists
+            (fun key ->
+              match Hashtbl.find interface_ready key with
+              | _, Cmi_unchanged -> false
+              | _, (Cmi_changed | Cmi_change_unknown) -> true)
+            waiting)
+  in
+  let speculation_candidates () =
+    Hashtbl.iter (fun key () -> Hashtbl.replace eligible key ()) to_check;
+    Hashtbl.reset to_check;
+    let keys = Hashtbl.fold (fun key () keys -> key :: keys) eligible [] in
+    List.filter
+      (fun key ->
+        match Hashtbl.find_opt module_by_key key with
+        | Some scheduled when speculation_eligible scheduled -> true
+        | Some _ | None ->
+          Hashtbl.remove eligible key;
+          false)
+      keys
+  in
+  let interface_hook (scheduled : scheduled_module) =
+    scheduled.attempt <- scheduled.attempt + 1;
+    let attempt = scheduled.attempt in
+    (* Nothing can speculate on one domain, or without scheduled dependents. *)
+    if
+      max_jobs < 2
+      || (not (Hashtbl.mem dependents_by_key scheduled.key))
+      || has_post_build scheduled
+    then None
+    else
+      Some
+        (fun built_cmi bytes ->
+          (* On the worker, before the request writes the .cmi. A dependent
+             looks the file up by its module name first, which only names this
+             file on a case-insensitive file system if the spellings match, so
+             a lowercase file name is not redirected. *)
+          let basename = Filename.basename scheduled.cmi_path in
+          if
+            Filename.basename built_cmi = basename
+            && String.capitalize_ascii basename = basename
+          then
+            (* Read past the build file store: an abandoned request can
+               still run this while its successor publishes the file. *)
+            let change =
+              match File_util.read_file scheduled.cmi_path with
+              | published when published = bytes -> Cmi_unchanged
+              | _ -> Cmi_changed
+              | exception (Unix.Unix_error _ | Sys_error _) -> Cmi_changed
+            in
+            Process.post mailbox (fun () ->
+                if scheduled.attempt = attempt then
+                  match (scheduled.phase, scheduled.speculation) with
+                  | Implementation _, None when scheduled.messages = [] ->
+                    mark_interface_ready scheduled (Some bytes, change)
+                  | Start, Some _ ->
+                    (* A speculation: its dependents are abandoned with it. *)
+                    mark_interface_ready scheduled (Some bytes, change)
+                  | ( ( Start | Interface _ | Implementation _ | Post_build _
+                      | Done ),
+                      _ ) ->
+                    ()))
+  in
+  let first_source (scheduled : scheduled_module) =
+    match scheduled.source.Source.interface with
+    | Some path -> (Source.Interface, path)
+    | None -> (Source.Implementation, scheduled.source.Source.implementation)
+  in
+  let cmi_directories = lazy (Compile_assets.directories compile_assets) in
+  let start_speculation (scheduled : scheduled_module) =
+    Hashtbl.remove eligible scheduled.key;
+    if not (speculation_eligible scheduled) then None
+    else
+      let gate = Speculation_gate.create () in
+      let cmi_redirects =
+        Hashtbl.fold
+          (fun key (bytes, _) redirects ->
+            match (bytes, Hashtbl.find_opt module_by_key key) with
+            | Some bytes, Some (dependency : scheduled_module) ->
+              (dependency.cmi_path, bytes) :: redirects
+            | _ -> redirects)
+          interface_ready []
+      in
+      let source_kind, path = first_source scheduled in
+      let on_interface_computed =
+        match source_kind with
+        | Source.Implementation -> interface_hook scheduled
+        | Source.Interface -> None
+      in
+      let task =
+        compilation_task scheduled
+          ~hooks:
+            {
+              gate = Some gate;
+              on_interface_computed;
+              cmi_redirects;
+              cmi_directories = Lazy.force cmi_directories;
+            }
+          ~source_kind path
+      in
+      scheduled.speculation <- Some gate;
+      speculation_log "start" scheduled.key;
+      Some task
+  in
+  let abandon_speculation (scheduled : scheduled_module) =
+    speculation_log "abandon" scheduled.key;
+    Option.iter Speculation_gate.abandon scheduled.speculation;
+    scheduled.speculation <- None;
+    scheduled.speculation_abandoned <- true;
+    (* Dependents read this interface only through the speculation. *)
+    if scheduled.phase = Start then Hashtbl.remove interface_ready scheduled.key
+  in
+  let speculation =
+    Process.
+      {
+        mailbox;
+        candidates = speculation_candidates;
+        start =
+          (function
+          | Module scheduled -> start_speculation scheduled
+          | Namespace_barrier _ -> None);
+        abandon =
+          (function
+          | Module scheduled -> abandon_speculation scheduled
+          | Namespace_barrier _ -> ());
+      }
+  in
+  let start_compilation (scheduled : scheduled_module) ~source_kind path =
+    match scheduled.speculation with
+    | Some gate ->
+      speculation_log "adopt" scheduled.key;
+      scheduled.speculation <- None;
+      Speculation_gate.open_ gate;
+      Process.adopt_speculation
+    | None ->
+      let on_interface_computed =
+        match source_kind with
+        | Source.Implementation -> interface_hook scheduled
+        | Source.Interface -> None
+      in
+      compilation_task scheduled
+        ~hooks:{no_compile_hooks with on_interface_computed}
+        ~source_kind path
+  in
   let complete_module (scheduled : scheduled_module) =
     scheduled.phase <- Done;
     Output.Progress.advance progress;
     if scheduled.messages <> [] then (
+      Hashtbl.remove interface_ready scheduled.key;
       invalidate_persistent_freshness scheduled;
       raise Module_failed)
     else (
       finish_successful_compile scheduled;
+      mark_completed scheduled.key;
       incr completed_modules)
   in
   let continue_post_build (scheduled : scheduled_module) tasks =
@@ -327,8 +585,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
   in
   let () =
     try
-      let max_jobs = Compiler_execution_mode.configured_count () in
-      Process.run_dependency_graph ~max_jobs ?poll
+      Process.run_dependency_graph ~max_jobs ?poll ~speculation
         works
         (* Finish ready independent work after a module failure; dependents of
            the failed module remain blocked. Interruptions still abort. *)
@@ -337,7 +594,9 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
           | _ -> Process.Abort_immediately)
         ~next:(fun item result ->
           match item with
-          | Namespace_barrier -> None
+          | Namespace_barrier key ->
+            mark_completed key;
+            None
           | Module scheduled -> (
             match (result, scheduled.phase) with
             | None, Start ->
@@ -350,7 +609,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
                     ("Compiling interface file: " ^ scheduled.key);
                   scheduled.phase <- Interface path;
                   Some
-                    (compilation_task scheduled ~source_kind:Source.Interface
+                    (start_compilation scheduled ~source_kind:Source.Interface
                        path)
                 | None ->
                   let path = scheduled.source.Source.implementation in
@@ -358,24 +617,32 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
                     ("Compiling file: " ^ scheduled.key);
                   scheduled.phase <- Implementation path;
                   Some
-                    (compilation_task scheduled
+                    (start_compilation scheduled
                        ~source_kind:Source.Implementation path))
               else (
                 scheduled.phase <- Done;
+                mark_completed scheduled.key;
                 incr completed_modules;
                 Output.Progress.advance progress;
                 None)
             | Some result, Interface path ->
-              ignore
-                (record_result scheduled ~source_kind:Source.Interface path
-                   result);
+              let interface_succeeded =
+                record_result scheduled ~source_kind:Source.Interface path
+                  result
+              in
               let path = scheduled.source.Source.implementation in
               Output.Progress.debug progress ~verbosity
                 ("Compiling file: " ^ scheduled.key);
               scheduled.phase <- Implementation path;
-              Some
-                (compilation_task scheduled ~source_kind:Source.Implementation
-                   path)
+              let task =
+                compilation_task scheduled ~source_kind:Source.Implementation
+                  path
+              in
+              (* The published .cmi is final; the implementation is queued
+                 before any dependent can start. *)
+              if interface_succeeded then
+                mark_interface_ready scheduled (None, Cmi_unchanged);
+              Some task
             | Some result, Implementation path ->
               if
                 record_result scheduled ~source_kind:Source.Implementation path

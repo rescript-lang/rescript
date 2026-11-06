@@ -167,7 +167,10 @@ let anonymous ~(rev_args : string list) =
           process_file filename (ppf ()))
     else Bsc_args.bad_arg "can not handle multiple files"
 
+(* Immediate actions of the command line write files: a request started
+   early waits for the build system first. *)
 let format_file input =
+  Compiler_request_state.before_effect ();
   let ext =
     Ext_file_extensions.classify_input (Ext_filename.get_extension_maybe input)
   in
@@ -192,6 +195,7 @@ let set_color_option option =
    directory under the process's working directory, while a request resolves
    relative paths against its own. *)
 let eval (s : string) ~suffix =
+  Compiler_request_state.before_effect ();
   let tmpfile = Filename.temp_file "eval" suffix in
   let tmpfile =
     if Filename.is_relative tmpfile then Filename.concat (Sys.getcwd ()) tmpfile
@@ -584,16 +588,16 @@ let leave_cached_interfaces_clean action =
     Bs_cmi_load.discard_cached_cmis ();
     raise exn
 
-let with_fresh_request_states ~cwd action =
+let with_fresh_request_states ?hooks ~cwd action =
   Predef.with_fresh (fun () ->
       Env.with_fresh_initial (fun () ->
           Ident.with_fresh (fun () ->
               Request_local.with_fresh (fun () ->
-                  Compiler_request_state.with_fresh ~cwd (fun () ->
+                  Compiler_request_state.with_fresh ~cwd ?hooks (fun () ->
                       leave_cached_interfaces_clean action)))))
 
-let run_argv ?run_external ~capture ~cwd argv =
-  with_fresh_request_states ~cwd (fun () ->
+let run_argv ?run_external ?hooks ~capture ~cwd argv =
+  with_fresh_request_states ?hooks ~cwd (fun () ->
       start_request ();
       Cmt_format.set_args argv;
       let execute () =
@@ -651,8 +655,12 @@ let run_argv ?run_external ~capture ~cwd argv =
         in
         {exit_code; stdout = ""; stderr = ""})
 
-let run_request ~run_external ~cwd ~argv ~input =
+let run_request_with_hooks ~hooks ~run_external ~cwd ~argv ~input =
   let logical_argv = Array.of_list ("bsc" :: (argv @ [input])) in
-  run_argv ?run_external ~capture:true ~cwd logical_argv
+  run_argv ?run_external ~hooks ~capture:true ~cwd logical_argv
+
+let run_request ~run_external ~cwd ~argv ~input =
+  run_request_with_hooks ~hooks:Compiler_request_state.no_hooks ~run_external
+    ~cwd ~argv ~input
 
 let run argv = (run_argv ~capture:false ~cwd:(Sys.getcwd ()) argv).exit_code

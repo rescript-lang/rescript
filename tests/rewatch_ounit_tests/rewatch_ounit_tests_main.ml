@@ -15,12 +15,14 @@ let () =
            Compiler_info_tests.tests;
            Compiler_process_tests.tests;
            Compiler_scheduler_tests.tests;
+           Compiler_speculation_tests.tests;
            Config_tests.tests;
            File_util_tests.tests;
            Format_tests.tests;
            Native_watcher_tests.tests;
            Output_tests.tests;
            Package_metadata_tests.tests;
+           Process_speculation_tests.tests;
            Project_context_tests.tests;
            Source_tests.tests;
            Toolchain_tests.tests;
