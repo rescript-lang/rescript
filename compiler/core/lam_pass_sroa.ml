@@ -128,32 +128,35 @@ let analyze ~considered (lam : Lambda.t) =
         c.slots;
       false)
   in
-  (* [slot]: the innermost pending slot containing [lam]. *)
-  let rec go slot (lam : Lambda.t) =
+  (* The innermost pending slot containing the term being traversed. A
+     reference rather than an argument of [go], so that traversing allocates
+     no closures. *)
+  let slot = ref None in
+  let rec go (lam : Lambda.t) =
     match lam with
     | Lvar id -> (
       match Hash_ident.find_opt candidates id with
-      | Some c -> record slot (Escape c)
+      | Some c -> record !slot (Escape c)
       | None -> ())
     | Lassign (id, value) ->
       (match Hash_ident.find_opt candidates id with
-      | Some c -> record slot (Escape c)
+      | Some c -> record !slot (Escape c)
       | None -> ());
-      go slot value
+      go value
     | Lprim {primitive = Pfield (index, _); args = [Lvar id]}
       when Hash_ident.mem candidates id ->
       let c = Hash_ident.find candidates id in
-      if valid_field c.uses index then record slot (Read (c, index))
-      else record slot (Escape c)
+      if valid_field c.uses index then record !slot (Read (c, index))
+      else record !slot (Escape c)
     | Lprim {primitive = Psetfield (index, _); args = [Lvar id; value]}
       when Hash_ident.mem candidates id ->
       let c = Hash_ident.find candidates id in
       if valid_field c.uses index then (
         c.uses.(index).written <- true;
-        go (value_slot slot c index value) value)
+        go_value c index value)
       else (
-        record slot (Escape c);
-        go slot value)
+        record !slot (Escape c);
+        go value)
     | Llet (kind, block, init, body)
       when is_candidate kind init && considered block -> (
       match init with
@@ -170,25 +173,29 @@ let analyze ~considered (lam : Lambda.t) =
           }
         in
         incr count;
-        List.iteri
-          (fun index init -> go (value_slot slot c index init) init)
-          initializers;
+        List.iteri (fun index init -> go_value c index init) initializers;
         Hash_ident.add candidates block c;
-        go slot body;
+        go body;
         if decide c then
           c.fields <- Some (fields_for_block block info field_count)
       | _ -> assert false)
-    | _ -> Lambda_traverse.iter (go slot) lam
-  (* The slot for a value of field [index] of [c], if the rewrite drops the
-     value when the field is never read. *)
-  and value_slot slot c index value =
+    | _ -> ignore (Lambda_traverse.shallow_exists go_child lam)
+  and go_child lam =
+    go lam;
+    false
+  (* Traverse a value of field [index] of [c], in a slot of its own if the
+     rewrite drops the value when the field is never read. *)
+  and go_value c index value =
     if Lam_analysis.no_side_effects value then (
-      let s = {owner = c; field = index; parent = slot; occurrences = []} in
+      let parent = !slot in
+      let s = {owner = c; field = index; parent; occurrences = []} in
       c.slots <- s :: c.slots;
-      Some s)
-    else slot
+      slot := Some s;
+      go value;
+      slot := parent)
+    else go value
   in
-  go None lam;
+  go lam;
   candidates
 
 let rewrite candidates (lam : Lambda.t) =
