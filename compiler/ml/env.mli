@@ -186,6 +186,16 @@ val deferred_signature_copy_stats : unit -> int * int
    them and were made again with fresh ones (expected: none), in the process
    so far. *)
 
+val deferred_component_stats : unit -> int * int
+(* For tests: how many values of compilation units' components were
+   left to be copied when first read, and how many of those copies did not take
+   the type ids reserved for them and were made again with fresh ones
+   (expected: none), on the calling domain so far. *)
+
+val forget_component_counts : unit -> unit
+(* For tests: build the components of every compilation unit at once again
+   (and learn their counts), as when the process has not built them before. *)
+
 val save_signature :
   ?check_exists:unit ->
   deprecated:string option ->
