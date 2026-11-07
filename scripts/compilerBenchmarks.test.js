@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  compareAll,
   compareResults,
   parseAllocatedWords,
+  parseInstructions,
   renderSummary,
   stressInputs,
-} from "./allocBenchmarks.js";
+} from "./compilerBenchmarks.js";
 
 const stats = `allocated_words: 628461
 minor_words: 593681
@@ -15,9 +17,20 @@ minor_collections: 3
 top_heap_words: 208279
 `;
 
+const cachegrind = `==4242== Cachegrind, a high-precision tracing profiler
+==4242== Command: bsc.exe -format Napkinscript.res
+==4242==
+==4242== I refs:        1,234,567,890
+`;
+
 test("reads the allocated words from the runtime's statistics", () => {
   assert.equal(parseAllocatedWords(`Warning 26\n${stats}`), 628461);
   assert.equal(parseAllocatedWords("minor_words: 1\n"), undefined);
+});
+
+test("reads the instructions from cachegrind's report", () => {
+  assert.equal(parseInstructions(`${stats}${cachegrind}`), 1234567890);
+  assert.equal(parseInstructions(stats), undefined);
 });
 
 test("alerts on a growth above the threshold only", () => {
@@ -62,12 +75,13 @@ test("reports an improvement above the threshold", () => {
     ["a"],
   );
   assert.deepEqual(comparison.regressions, []);
-  const summary = renderSummary(comparison, 1);
+  const summary = renderSummary([comparison], 1);
   assert.match(
     summary,
     /\*\*🎉 Improvement: 1 benchmark allocates more than 1% less\.\*\*/,
   );
-  assert.match(summary, /^## 🎉 Allocation benchmarks$/m);
+  assert.match(summary, /^## 🎉 Compiler benchmarks$/m);
+  assert.match(summary, /^### Allocated words$/m);
   assert.doesNotMatch(summary, /Regression/);
   assert.match(summary, /\| `a` \| 1,000 \| 800 \| -20\.00% \|/);
 });
@@ -96,7 +110,7 @@ test("lists benchmarks that only one measurement has", () => {
   assert.deepEqual(comparison.removed, ["old"]);
   // Only benchmarks both measurements have count towards the totals.
   assert.deepEqual(comparison.total, { base: 7, head: 7 });
-  const summary = renderSummary(comparison, 1);
+  const summary = renderSummary([comparison], 1);
   assert.match(summary, /New: fresh\./);
   assert.match(summary, /Removed: old\./);
   assert.match(summary, /^The benchmark didn't change by 0\.1% or more\.$/m);
@@ -117,12 +131,12 @@ test("leaves changes below 0.1% out of the table", () => {
     },
     1,
   );
-  const summary = renderSummary(comparison, 1);
+  const summary = renderSummary([comparison], 1);
   assert.match(
     summary,
     /\*\*⚠️ Regression: 1 benchmark allocates more than 1% more\.\*\*/,
   );
-  assert.match(summary, /^## ⚠️ Allocation benchmarks$/m);
+  assert.match(summary, /^## ⚠️ Compiler benchmarks$/m);
   assert.match(summary, /\| `big` \| 100,000 \| 103,000 \| \+3\.00% \|/);
   assert.match(summary, /\| `zero` \(inputs changed\) \| 0 \| 10 \| new \|/);
   assert.match(summary, /^\(inputs changed\): this pull request changes/m);
@@ -132,17 +146,19 @@ test("leaves changes below 0.1% out of the table", () => {
 
 test("counts several benchmarks in the plural", () => {
   const summary = renderSummary(
-    compareResults(
-      {
-        a: { allocated: 1000, inputs: "x" },
-        b: { allocated: 1000, inputs: "x" },
-      },
-      {
-        a: { allocated: 1100, inputs: "x" },
-        b: { allocated: 1200, inputs: "x" },
-      },
-      1,
-    ),
+    [
+      compareResults(
+        {
+          a: { allocated: 1000, inputs: "x" },
+          b: { allocated: 1000, inputs: "x" },
+        },
+        {
+          a: { allocated: 1100, inputs: "x" },
+          b: { allocated: 1200, inputs: "x" },
+        },
+        1,
+      ),
+    ],
     1,
   );
   assert.match(
@@ -155,25 +171,27 @@ test("counts several benchmarks in the plural", () => {
 
 test("says how many benchmarks it compared when none changed", () => {
   const summary = renderSummary(
-    compareResults(
-      {
-        a: { allocated: 100000, inputs: "x" },
-        b: { allocated: 5000, inputs: "x" },
-      },
-      {
-        // A path-length difference only.
-        a: { allocated: 100030, inputs: "x" },
-        b: { allocated: 5000, inputs: "x" },
-      },
-      1,
-    ),
+    [
+      compareResults(
+        {
+          a: { allocated: 100000, inputs: "x" },
+          b: { allocated: 5000, inputs: "x" },
+        },
+        {
+          // A path-length difference only.
+          a: { allocated: 100030, inputs: "x" },
+          b: { allocated: 5000, inputs: "x" },
+        },
+        1,
+      ),
+    ],
     1,
   );
   assert.match(
     summary,
     /^None of the 2 benchmarks changed by 0\.1% or more\.$/m,
   );
-  assert.match(summary, /^## ✅ Allocation benchmarks$/m);
+  assert.match(summary, /^## ✅ Compiler benchmarks$/m);
   // The title's symbol is the only one.
   assert.equal(summary.match(/✅|⚠️|🎉/gu)?.length, 1);
   assert.doesNotMatch(summary, /\|/);
@@ -187,14 +205,14 @@ test("shows the overall status in the title", () => {
   };
   /** @param {Record<string, {allocated: number, inputs: string}>} head */
   const title = head =>
-    renderSummary(compareResults(base, head, 1), 1).split("\n")[0];
+    renderSummary([compareResults(base, head, 1)], 1).split("\n")[0];
   // A regression outweighs an improvement.
   assert.equal(
     title({
       a: { allocated: 1100, inputs: "x" },
       b: { allocated: 800, inputs: "x" },
     }),
-    "## ⚠️ Allocation benchmarks",
+    "## ⚠️ Compiler benchmarks",
   );
   // Changed inputs alone are neither.
   assert.equal(
@@ -202,7 +220,69 @@ test("shows the overall status in the title", () => {
       a: { allocated: 2000, inputs: "y" },
       b: { allocated: 1000, inputs: "x" },
     }),
-    "## ✅ Allocation benchmarks",
+    "## ✅ Compiler benchmarks",
+  );
+});
+
+test("compares instructions where both measurements have them", () => {
+  const base = {
+    a: { allocated: 1000, instructions: 50000, inputs: "x" },
+    b: { allocated: 1000, inputs: "x" },
+    c: { allocated: 1000, instructions: 70000, inputs: "x" },
+  };
+  const head = {
+    a: { allocated: 1000, instructions: 60000, inputs: "x" },
+    b: { allocated: 1000, instructions: 9, inputs: "x" },
+    c: { allocated: 1000, instructions: 70000, inputs: "x" },
+  };
+  const [allocated, instructions] = compareAll(base, head, 1);
+  assert.equal(allocated.compared, 3);
+  assert.deepEqual(allocated.changes, []);
+  // b has no instructions on the base side.
+  assert.equal(instructions.compared, 2);
+  assert.deepEqual(instructions.added, ["b"]);
+  assert.deepEqual(
+    instructions.regressions.map(c => c.name),
+    ["a"],
+  );
+  assert.deepEqual(instructions.total, { base: 120000, head: 130000 });
+
+  const summary = renderSummary([allocated, instructions], 1);
+  // A regression in either section shows in the title.
+  assert.match(summary, /^## ⚠️ Compiler benchmarks$/m);
+  assert.match(summary, /^### Allocated words$/m);
+  assert.match(summary, /^### Instructions$/m);
+  // One symbol for the title and one for the instructions' headline.
+  assert.equal(summary.match(/✅|⚠️|🎉/gu)?.length, 2);
+  assert.match(
+    summary,
+    /\*\*⚠️ Regression: 1 benchmark executes more than 1% more instructions\.\*\*/,
+  );
+  assert.match(summary, /\| `a` \| 50,000 \| 60,000 \| \+20\.00% \|/);
+});
+
+test("leaves out the instructions section when nothing measured them", () => {
+  const results = { a: { allocated: 1000, inputs: "x" } };
+  const summary = renderSummary(compareAll(results, results, 1), 1);
+  assert.match(summary, /^### Allocated words$/m);
+  assert.doesNotMatch(summary, /Instructions/);
+});
+
+test("words an improvement in instructions", () => {
+  const [, instructions] = compareAll(
+    {
+      a: { allocated: 1, instructions: 1000, inputs: "x" },
+      b: { allocated: 1, instructions: 1000, inputs: "x" },
+    },
+    {
+      a: { allocated: 1, instructions: 900, inputs: "x" },
+      b: { allocated: 1, instructions: 800, inputs: "x" },
+    },
+    1,
+  );
+  assert.match(
+    renderSummary([instructions], 1),
+    /\*\*🎉 Improvement: 2 benchmarks execute more than 1% fewer instructions\.\*\*/,
   );
 });
 
@@ -215,7 +295,7 @@ test("folds all but the 10 largest changes away", () => {
     base[`b${i}`] = { allocated: 1000, inputs: "x" };
     head[`b${i}`] = { allocated: 1010 + i, inputs: "x" };
   }
-  const summary = renderSummary(compareResults(base, head, 1), 1);
+  const summary = renderSummary([compareResults(base, head, 1)], 1);
   assert.match(
     summary,
     /\*\*⚠️ Regression: 252 benchmarks allocate more than 1% more\.\*\*/,
