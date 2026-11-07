@@ -498,6 +498,40 @@ let row_terminator_generic rest =
   in
   go rest
 
+(* Whether no type variable is reachable from the generic node [ty], so that
+   an instance of it would be an identical copy. Results are kept per node:
+   a closed generic node stays closed, because unification only links its
+   nodes to equal variable-free types. Cycles count as not closed. *)
+module Type_tbl = Hashtbl.Make (Type_ops)
+
+(* Keyed by physical node: saved types reuse negative ids across modules. *)
+let closed_generic_key = Request_local.new_key (fun () -> Type_tbl.create 256)
+
+let is_closed_generic ty =
+  let memo = Domain.DLS.get closed_generic_key in
+  let rec closed ty =
+    let ty = repr ty in
+    ty.level = generic_level
+    &&
+    match Type_tbl.find_opt memo ty with
+    | Some c -> c
+    | None -> (
+      match ty.desc with
+      | Tvar _ | Tunivar _ | Tsubst _ -> false
+      | Tvariant row when not (static_row row) -> false
+      | _ ->
+        Type_tbl.replace memo ty false;
+        let c =
+          try
+            iter_type_expr (fun t -> if not (closed t) then raise Exit) ty;
+            true
+          with Exit -> false
+        in
+        Type_tbl.replace memo ty c;
+        c)
+  in
+  closed ty
+
 let rec copy_type_desc ?(keep_names = false) ?(fresh_mutability = false) f =
   function
   | Tvar _ as ty -> if keep_names then ty else Tvar None

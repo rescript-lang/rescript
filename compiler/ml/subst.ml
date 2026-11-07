@@ -110,7 +110,12 @@ let to_subst_by_type_function s p =
 
 (* Special type ids for saved signatures *)
 
+(* Saved copies of closed generic types, so that the signature being saved
+   holds one copy of a type shared by several items. *)
+let saved_closed_key = Request_local.new_key (fun () -> Btype.Type_tbl.create 64)
+
 let reset_for_saving () =
+  Btype.Type_tbl.reset (Domain.DLS.get saved_closed_key);
   (Compiler_request_state.current ()).substitution_saved_id <- -1
 
 let newpersty desc =
@@ -146,7 +151,23 @@ let rec typexp_rec s ty =
      | Tvariant row when not (static_row row) ->
          ty
   *)
-  | _ ->
+  | _
+    when (not s.for_saving)
+         && Path_map.is_empty s.types
+         && Path_map.is_empty s.modules
+         && is_closed_generic ty ->
+    ty
+  | _ when s.for_saving && is_closed_generic ty -> (
+    let saved = Domain.DLS.get saved_closed_key in
+    match Btype.Type_tbl.find_opt saved ty with
+    | Some ty' -> ty'
+    | None ->
+      let ty' = typexp_fresh s ty in
+      Btype.Type_tbl.replace saved ty ty';
+      ty')
+  | _ -> typexp_fresh s ty
+
+and typexp_fresh s ty =
     let desc = ty.desc in
     save_desc ty desc;
     let tm = row_of_type ty in

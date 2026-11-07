@@ -760,6 +760,7 @@ let rec copy ?env ?partial ?keep_names ty =
   | Tsubst ty -> ty
   | _ ->
     if ty.level <> generic_level && partial = None then ty
+    else if env = None && partial = None && is_closed_generic ty then ty
     else
       (* We only forget types that are non generic and do not contain
          free univars *)

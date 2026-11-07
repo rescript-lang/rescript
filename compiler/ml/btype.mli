@@ -22,6 +22,7 @@ open Types
 
 module Type_set : Set.S with type elt = type_expr
 module Type_map : Map.S with type key = type_expr
+module Type_tbl : Hashtbl.S with type key = type_expr
 module Type_hash : Hashtbl.S with type key = type_expr
 
 (**** Levels ****)
@@ -63,6 +64,10 @@ val row_fixed : row_desc -> bool
 (* Return whether the row should be treated as fixed or not *)
 
 val static_row : row_desc -> bool
+
+val is_closed_generic : type_expr -> bool
+(* Whether no type variable is reachable from the generic type; an instance
+   of it would be an identical copy. *)
 (* Return whether the row is static or not *)
 
 val hash_variant : label -> int
