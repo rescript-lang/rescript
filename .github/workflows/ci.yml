@@ -270,7 +270,7 @@ jobs:
         shell: bash
 
       - name: Run rewatch snapshot tests
-        if: ${{ !matrix.compatibility }}
+        if: ${{ !contains(matrix.ocaml_compiler, '5.3.0') }}
         timeout-minutes: 20
         run: |
           . rewatch-ocaml/tests/process_watchdog.sh
@@ -294,7 +294,7 @@ jobs:
         shell: bash
 
       - name: Run rewatch verbose output tests
-        if: ${{ !matrix.compatibility }}
+        if: ${{ !contains(matrix.ocaml_compiler, '5.3.0') }}
         timeout-minutes: 10
         run: |
           bash rewatch-ocaml/tests/check_verbose_output.sh \
