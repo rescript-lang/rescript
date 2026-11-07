@@ -25,8 +25,9 @@
 open Ast_helper
 
 (* Handling `fun [@this]` used in `object [@bs] end` *)
-let to_method_callback ~async ~newtypes loc (self : Ast_mapper.mapper)
-    (params : Parsetree.fun_param list) body : Parsetree.expression_desc =
+let to_method_callback ~async ~newtypes ~fun_attrs loc
+    (self : Ast_mapper.mapper) (params : Parsetree.fun_param list) body :
+    Parsetree.expression_desc =
   match params with
   | [] -> assert false
   | {p_lbl = label; p_pat = self_pat} :: rest ->
@@ -53,7 +54,8 @@ let to_method_callback ~async ~newtypes loc (self : Ast_mapper.mapper)
     let arity = List.length mapped_params in
     let body =
       Ast_async.make_function_async ~async
-        (Ast_helper.Exp.fun_ ~loc ~async ~newtypes mapped_params result)
+        (Ast_helper.Exp.fun_ ~loc ~attrs:fun_attrs ~async ~newtypes
+           mapped_params result)
     in
     let arity_s = string_of_int arity in
     Stack.pop (Js_config.current ()).self_stack |> ignore;

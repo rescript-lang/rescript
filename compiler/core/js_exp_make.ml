@@ -357,7 +357,7 @@ let ocaml_fun ?immutable_mask ?directive ~return_unit ~async ~one_unit_arg
     source_loc = None;
   }
 
-let method_ ~async ~return_unit params body : t =
+let method_ ?directive ~async ~return_unit params body : t =
   let len = List.length params in
   {
     expression_desc =
@@ -369,7 +369,7 @@ let method_ ~async ~return_unit params body : t =
           env = Js_fun_env.make len;
           return_unit;
           async;
-          directive = None;
+          directive;
         };
     comment = None;
     source_loc = None;

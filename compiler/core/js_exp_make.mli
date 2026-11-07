@@ -95,7 +95,13 @@ val ocaml_fun :
   J.block ->
   t
 
-val method_ : async:bool -> return_unit:bool -> J.ident list -> J.block -> t
+val method_ :
+  ?directive:string ->
+  async:bool ->
+  return_unit:bool ->
+  J.ident list ->
+  J.block ->
+  t
 
 val econd : ?comment:string -> t -> t -> t -> t
 
