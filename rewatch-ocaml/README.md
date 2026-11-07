@@ -1,7 +1,7 @@
 # Rewatch
 
 This directory contains ReScript's build system and CLI (`rescript build`,
-`watch`, `clean`, `format`, and `compiler-args`). It ships as `rescript` in the
+`watch`, `clean`, `format`, `compiler-args` and `lsp`). It ships as `rescript` in the
 `@rescript/<platform>` packages and is tested with the integration suite in
 [`../rewatch/tests`](../rewatch/tests).
 

@@ -4,6 +4,7 @@ type command =
   | Watch of build_options
   | Format of format_input
   | Compiler_args of {verbosity: int; path: string}
+  | Lsp
 
 and build_options = {
   verbosity: int;
@@ -207,6 +208,14 @@ let compiler_args_term =
   let+ verbosity = verbosity and+ path in
   Compiler_args {verbosity; path}
 
+let lsp_term =
+  Arg.(
+    required
+    & vflag None
+        [
+          (Some Lsp, info ["stdio"] ~doc:"Use standard input/output (required).");
+        ])
+
 let exits =
   [
     Cmd.Exit.info 0 ~doc:"on success.";
@@ -260,6 +269,11 @@ let root =
       (command_info "help" "Print this message or command help.")
       help_term
   in
+  let lsp =
+    Cmd.make
+      (command_info "lsp" "Start the ReScript language server over stdio.")
+      lsp_term
+  in
   let info =
     let man =
       [
@@ -277,7 +291,7 @@ let root =
       ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
   in
   Cmd.group info ~default:(build_term ~watch:false)
-    [build; watch; clean; format; compiler_args; help]
+    [build; watch; clean; format; compiler_args; lsp; help]
 
 type evaluation = Run of command | Exit of int
 
@@ -321,7 +335,9 @@ let normalize_argv argv =
     argument = "--version" || short_cluster_contains 'V' argument
   in
   let is_command = function
-    | "build" | "watch" | "clean" | "format" | "compiler-args" | "help" -> true
+    | "build" | "watch" | "clean" | "format" | "compiler-args" | "lsp" | "help"
+      ->
+      true
     | _ -> false
   in
   let rec normalize_display_options = function

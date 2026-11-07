@@ -71,7 +71,7 @@ $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 
 # Compiler
 
-COMPILER_SOURCE_DIRS := compiler tests analysis tools rewatch-ocaml
+COMPILER_SOURCE_DIRS := compiler tests analysis tools rewatch-ocaml lsp
 COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \))
 COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
@@ -157,7 +157,10 @@ test-gentype: lib
 test-rewatch: lib
 	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
 
-test-all: test test-gentype test-analysis test-tools test-rewatch
+test-lsp: lib
+	@dune runtest tests/lsp_tests
+
+test-all: test test-gentype test-analysis test-tools test-rewatch test-lsp
 
 # Playground
 

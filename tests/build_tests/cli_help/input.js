@@ -37,6 +37,9 @@ const cliHelp =
   "       help [OPTION]… [COMMAND]\n" +
   "           Print this message or command help.\n" +
   "\n" +
+  "       lsp --stdio [OPTION]…\n" +
+  "           Start the ReScript language server over stdio.\n" +
+  "\n" +
   "       watch [OPTION]… [FOLDER]\n" +
   "           Build, then start a watcher.\n" +
   "\n" +
@@ -334,6 +337,25 @@ async function test(params, expected) {
   assert.equal(stdout, expected.stdout);
   assert.equal(stderr, expected.stderr);
   assert.equal(out.status, expected.status);
+}
+
+// Missing transport is a usage error, not a running server or a help success.
+await test(["lsp"], {
+  stdout: "",
+  stderr:
+    "Usage: rescript lsp [--help] --stdio [OPTION]…\n" +
+    "rescript: required option --stdio is missing\n",
+  status: 2,
+});
+
+for (const flag of ["--quiet", "--verbose"]) {
+  await test(["lsp", "--stdio", flag], {
+    stdout: "",
+    stderr:
+      "Usage: rescript lsp [--help] --stdio [OPTION]…\n" +
+      `rescript: unknown option ${flag}\n`,
+    status: 2,
+  });
 }
 
 // Shows build help with --help arg
