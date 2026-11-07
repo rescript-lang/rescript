@@ -1,0 +1,1 @@
+- Speed up type checking of long chains of parameterized type aliases.

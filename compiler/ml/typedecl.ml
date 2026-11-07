@@ -800,6 +800,20 @@ let generalize_decl decl =
 module Type_set = Btype.Type_set
 module Type_map = Btype.Type_map
 
+(* Whether the parameters of [path] are distinct variables, so that the
+   constructor accepts any arguments. *)
+let has_unconstrained_params env path =
+  match Env.find_type path env with
+  | decl ->
+    let params = List.map Ctype.repr decl.type_params in
+    let rec distinct_vars = function
+      | [] -> true
+      | p :: rest ->
+        Btype.is_Tvar p && (not (List.memq p rest)) && distinct_vars rest
+    in
+    distinct_vars params
+  | exception Not_found -> false
+
 let rec check_constraints_rec env loc visited ty =
   let ty = Ctype.repr ty in
   if Type_set.mem ty !visited then ()
@@ -807,13 +821,17 @@ let rec check_constraints_rec env loc visited ty =
     visited := Type_set.add ty !visited;
     match ty.desc with
     | Tconstr (path, args, _) ->
-      let args' = List.map (fun _ -> Ctype.newvar ()) args in
-      let ty' = Ctype.newconstr path args' in
-      (try Ctype.enforce_constraints env ty' with
-      | Ctype.Unify _ -> assert false
-      | Not_found -> raise (Error (loc, Unavailable_type_constructor path)));
-      if not (Ctype.matches env ty ty') then
-        raise (Error (loc, Constraint_failed (ty, ty')));
+      (* Unifying with the constrained instance expands both types fully,
+         which is costly for long chains of aliases. Without constraints
+         every instance matches. *)
+      if not (has_unconstrained_params env path) then (
+        let args' = List.map (fun _ -> Ctype.newvar ()) args in
+        let ty' = Ctype.newconstr path args' in
+        (try Ctype.enforce_constraints env ty' with
+        | Ctype.Unify _ -> assert false
+        | Not_found -> raise (Error (loc, Unavailable_type_constructor path)));
+        if not (Ctype.matches env ty ty') then
+          raise (Error (loc, Constraint_failed (ty, ty'))));
       List.iter (check_constraints_rec env loc visited) args
     | Tpoly (ty, tl) ->
       let _, ty = Ctype.instance_poly ~fixed:false tl ty in
