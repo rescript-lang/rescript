@@ -31,14 +31,14 @@ let tcr = {};
 
 function tsiC(c) {
   c.increment = function (amount) {
-    let me = this ;
+    let me = this;
     console.log(me);
   };
 }
 
 function tsiU(c) {
   c.increment = function (amount) {
-    let me = this ;
+    let me = this;
     console.log(me);
   };
 }
@@ -65,13 +65,13 @@ let StandardNotation = {
 };
 
 function methodWithAsync() {
-  let $$this = this ;
+  let $$this = this;
   return async arg => $$this + arg | 0;
 }
 
 let p1 = {
   watch: async function (name, ev) {
-    let pc = this ;
+    let pc = this;
     console.log(pc);
   }
 };

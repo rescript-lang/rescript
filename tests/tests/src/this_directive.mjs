@@ -3,13 +3,13 @@
 
 function plain(x) {
   'use cache';
-  let self = this ;
+  let self = this;
   return self + x | 0;
 }
 
 async function action(x) {
   'use server';
-  let self = this ;
+  let self = this;
   return self + x | 0;
 }
 

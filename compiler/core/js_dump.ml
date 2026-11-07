@@ -253,7 +253,6 @@ let pp_var_assign cxt f id =
 let pp_var_assign_this cxt f id =
   let cxt = pp_var_assign cxt f id in
   P.string f L.this;
-  P.space f;
   semi f;
   P.newline f;
   cxt
