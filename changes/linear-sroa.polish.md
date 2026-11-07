@@ -1,0 +1,1 @@
+- Compile functions with many local `ref`s or mutable records in linear time.
