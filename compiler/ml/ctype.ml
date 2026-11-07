@@ -1392,6 +1392,7 @@ let is_contractive env p =
 
 exception Occur
 
+(* [occur_reaches] must follow the same edges in expression mode. *)
 let rec occur_rec env allow_recursive visited ty0 = function
   | {desc = Tlink ty} -> occur_rec env allow_recursive visited ty0 ty
   | ty -> (
@@ -1425,7 +1426,38 @@ let type_changed () = Domain.DLS.get type_changed_key
 
 let merge r b = if b then r := true
 
-let occur env ty0 ty =
+(* Cheap first passes for [occur] and [deep_occur]: walks with no visited
+   set and no marks that give up (raise [Give_up]) after [walk_budget]
+   nodes, which also stops cycles and heavy sharing, or when they cannot
+   decide; the caller then runs the full walk. A pass that finishes has
+   visited every node the full walk would. *)
+exception Give_up
+
+let walk_budget = 256
+
+let spend budget =
+  decr budget;
+  if !budget < 0 then raise Give_up
+
+(* Must follow the same edges as [occur_rec] in expression mode. Finishing
+   proves [occur_rec] would neither meet [ty0] nor find a [Tconstr] cycle,
+   its only ways to raise, and it expands types only after raising. *)
+let rec occur_reaches budget ty0 ty =
+  match ty.desc with
+  | Tlink ty -> occur_reaches budget ty0 ty
+  | _ -> (
+    if ty == ty0 then raise Occur;
+    spend budget;
+    match ty.desc with
+    | Tobject _ | Tvariant _ -> ()
+    | _ -> iter_type_expr (occur_reaches budget ty0) ty)
+
+let occur_cannot_fail ty0 ty =
+  match occur_reaches (ref walk_budget) ty0 ty with
+  | () -> true
+  | exception (Occur | Give_up) -> false
+
+let occur_full env ty0 ty =
   let allow_recursive = !(umode ()) = Pattern in
   let old = !(type_changed ()) in
   try
@@ -1443,6 +1475,12 @@ let occur env ty0 ty =
       (match exn with
       | Occur -> Unify []
       | _ -> exn)
+
+(* In pattern mode [occur_rec] looks types up ([is_contractive]), which can
+   load interfaces, so only expression mode takes the shortcut. *)
+let occur env ty0 ty =
+  if !(umode ()) = Expression && occur_cannot_fail ty0 ty then ()
+  else occur_full env ty0 ty
 
 let occur_in env ty0 t =
   try
@@ -1669,8 +1707,26 @@ let mkvariant fields closed =
 
 (**** Unification ****)
 
-(* Return whether [t0] occurs in [ty]. Objects are also traversed. *)
-let deep_occur t0 ty =
+(* Must follow the same edges as [deep_occur_marked]. Answers only "absent":
+   it gives up on meeting [t0] (where the marked walk stops early) and on a
+   node an enclosing walk marked (which the marked walk skips but then
+   unmarks in [unmark_type]), so it never leaves marks that differ. *)
+let deep_occur_fast_absent t0 ty =
+  let budget = ref walk_budget in
+  let rec walk ty =
+    let ty = repr ty in
+    if ty.level < lowest_level then raise Give_up
+    else (
+      if ty == t0 then raise Occur;
+      spend budget;
+      iter_type_expr walk ty)
+  in
+  match walk ty with
+  | () -> true
+  | exception (Occur | Give_up) -> false
+
+(* [deep_occur_fast_absent] must follow the same edges. *)
+let deep_occur_marked t0 ty =
   let rec occur_rec ty =
     let ty = repr ty in
     if ty.level >= lowest_level then (
@@ -1685,6 +1741,10 @@ let deep_occur t0 ty =
   with Occur ->
     unmark_type ty;
     true
+
+(* Return whether [t0] occurs in [ty]. Objects are also traversed. *)
+let deep_occur t0 ty =
+  (not (deep_occur_fast_absent t0 ty)) && deep_occur_marked t0 ty
 
 (*
    1. When unifying two non-abbreviated types, one type is made a link
