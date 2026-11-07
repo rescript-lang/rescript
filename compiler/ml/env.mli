@@ -180,6 +180,12 @@ val get_unit_name : unit -> string
 val read_signature : string -> string -> signature
 (* Arguments: module name, file name. Results: signature. *)
 
+val deferred_signature_copy_stats : unit -> int * int
+(* For tests: how many copies of compilation units' signatures were deferred,
+   and how many of those did not take the stamps and type ids reserved for
+   them and were made again with fresh ones (expected: none), in the process
+   so far. *)
+
 val save_signature :
   ?check_exists:unit ->
   deprecated:string option ->
