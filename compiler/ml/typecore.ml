@@ -148,6 +148,17 @@ let rp node =
 
 type recarg = Allowed | Required | Rejected
 
+(* The variables bound so far by the pattern being typed, most recent first,
+   with their names: looking each new variable up in the list would make
+   patterns that bind many variables, like a large [let rec], quadratic.
+   Both are saved and restored together. *)
+type pattern_variables = {
+  vars: (Ident.t * type_expr * string loc * Location.t * bool) list;
+  names: Set_string.t;
+}
+
+let no_pattern_variables = {vars = []; names = Set_string.empty}
+
 (* Typing a request mutates these stacks while traversing expressions and
    patterns. A failed request must not leave them in another request. *)
 type request_state = {
@@ -156,8 +167,7 @@ type request_state = {
      break and continue must not leave. *)
   in_finally: bool ref;
   newtype_level: int option ref;
-  pattern_variables:
-    (Ident.t * type_expr * string loc * Location.t * bool) list ref;
+  pattern_variables: pattern_variables ref;
   pattern_force: (unit -> unit) list ref;
   allow_modules: bool ref;
   module_variables: (string loc * Location.t) list ref;
@@ -168,7 +178,7 @@ let fresh_state () =
     loop_depth = ref 0;
     in_finally = ref false;
     newtype_level = ref None;
-    pattern_variables = ref [];
+    pattern_variables = ref no_pattern_variables;
     pattern_force = ref [];
     allow_modules = ref false;
     module_variables = ref [];
@@ -540,20 +550,21 @@ let has_variants p =
 
 (* pattern environment *)
 let reset_pattern allow =
-  pattern_variables_ref () := [];
+  pattern_variables_ref () := no_pattern_variables;
   pattern_force_ref () := [];
   allow_modules_ref () := allow;
   module_variables_ref () := []
 
 let enter_variable ?(is_module = false) ?(is_as_variable = false) loc name ty =
-  if
-    List.exists
-      (fun (id, _, _, _, _) -> Ident.name id = name.txt)
-      !(pattern_variables_ref ())
-  then raise (Error (loc, Env.empty, Multiply_bound_variable name.txt));
+  let {vars; names} = !(pattern_variables_ref ()) in
+  if Set_string.mem name.txt names then
+    raise (Error (loc, Env.empty, Multiply_bound_variable name.txt));
   let id = Ident.create name.txt in
   pattern_variables_ref () :=
-    (id, ty, name, loc, is_as_variable) :: !(pattern_variables_ref ());
+    {
+      vars = (id, ty, name, loc, is_as_variable) :: vars;
+      names = Set_string.add name.txt names;
+    };
   if is_module then (
     (* Note: unpack patterns enter a variable of the same name *)
     if not !(allow_modules_ref ()) then
@@ -1831,7 +1842,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       | Some p, None | None, Some p -> p (* no variables in this case *)
       | Some p1, Some p2 ->
         let alpha_env =
-          enter_orpat_variables loc !env p1_variables p2_variables
+          enter_orpat_variables loc !env p1_variables.vars p2_variables.vars
         in
         pattern_variables_ref () := p1_variables;
         module_variables_ref () := p1_module_variables;
@@ -1959,7 +1970,8 @@ let check_unused ?(lev = get_current_level ()) env expected_ty cases =
     cases
 
 let add_pattern_variables ?check ?check_as env =
-  let pv = get_ref (pattern_variables_ref ()) in
+  let pv = !(pattern_variables_ref ()).vars in
+  pattern_variables_ref () := no_pattern_variables;
   ( List.fold_right
       (fun (id, ty, _name, loc, as_var) env ->
         let check = if as_var then check_as else check in
