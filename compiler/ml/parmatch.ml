@@ -1830,38 +1830,41 @@ let row_head_key = function
    rows whose first pattern has the same key or none: comparing all pairs is
    quadratic for a switch on many constants or tags. *)
 let get_mins_pats pss =
-  (* The rows that no later row includes, in order. *)
-  let select pss =
-    let rec go keyed unkeyed kept = function
-      | [] -> kept
-      | ps :: rest ->
-        let includes ps0 = le_pats ps0 ps in
-        let key = row_head_key ps in
-        let included =
-          List.exists includes unkeyed
-          ||
-          match key with
-          | Some key -> (
-            match Head_map.find_opt key keyed with
-            | Some rows -> List.exists includes rows
-            | None -> false)
-          | None ->
-            Head_map.exists (fun _ rows -> List.exists includes rows) keyed
-        in
-        let keyed, unkeyed =
-          match key with
-          | Some key ->
-            ( Head_map.update key
-                (fun rows -> Some (ps :: Option.value rows ~default:[]))
-                keyed,
-              unkeyed )
-          | None -> (keyed, ps :: unkeyed)
-        in
-        go keyed unkeyed (if included then kept else ps :: kept) rest
+  match pss with
+  | [] | [_] -> pss
+  | _ ->
+    (* The rows that no later row includes, in order. *)
+    let select pss =
+      let rec go keyed unkeyed kept = function
+        | [] -> kept
+        | ps :: rest ->
+          let includes ps0 = le_pats ps0 ps in
+          let key = row_head_key ps in
+          let included =
+            List.exists includes unkeyed
+            ||
+            match key with
+            | Some key -> (
+              match Head_map.find_opt key keyed with
+              | Some rows -> List.exists includes rows
+              | None -> false)
+            | None ->
+              Head_map.exists (fun _ rows -> List.exists includes rows) keyed
+          in
+          let keyed, unkeyed =
+            match key with
+            | Some key ->
+              ( Head_map.update key
+                  (fun rows -> Some (ps :: Option.value rows ~default:[]))
+                  keyed,
+                unkeyed )
+            | None -> (keyed, ps :: unkeyed)
+          in
+          go keyed unkeyed (if included then kept else ps :: kept) rest
+      in
+      go Head_map.empty [] [] (List.rev pss)
     in
-    go Head_map.empty [] [] (List.rev pss)
-  in
-  List.rev (select (List.rev (select pss)))
+    List.rev (select (List.rev (select pss)))
 
 (*
   lub p q is a pattern that matches all values matched by p and q
@@ -2623,7 +2626,7 @@ let check_unused pred casel =
            | Used -> ()
          with Empty | Not_found | NoGuard -> assert false);
 
-        if c_guard <> None then do_rec rows rem
+        if c_guard <> None || rem = [] then do_rec rows rem
         else do_rec (add_row qs rows) rem
     in
 
