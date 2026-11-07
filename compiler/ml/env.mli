@@ -38,6 +38,8 @@ val empty : t
 val initial_safe_string : unit -> t
 val reset_initial_for_request : unit -> unit
 val with_fresh_initial : (unit -> 'a) -> 'a
+(* Runs a request with its own initial environment; on return, also empties
+   this domain's type path memo. *)
 
 type type_descriptions = constructor_description list * label_description list
 
@@ -77,6 +79,10 @@ val normalize_path : Location.t option -> t -> Path.t -> Path.t
    If the option is None, allow returning dangling paths.
    Otherwise raise a Missing_module error, and may add forgotten
    head as required global. *)
+val normalize_type_path : t -> Path.t -> Path.t option
+(* [normalize_type_path env path] is [Some (normalize_path None env path)] when
+   that differs from [path] according to [Path.same], and [None] otherwise. *)
+
 val normalize_path_prefix : Location.t option -> t -> Path.t -> Path.t
 (* Only normalize the prefix part of the path *)
 
@@ -298,4 +304,9 @@ module Persistent_signature : sig
   (** Function used to load a persistent signature. The default is to look for
       the .cmi file in the load path. This function can be overridden to load
       it from memory, for instance to build a self-contained toplevel. *)
+end
+
+module For_test : sig
+  val type_path_memo_entries : unit -> int
+  (** The type path memo entries held on this domain. *)
 end
