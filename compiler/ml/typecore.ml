@@ -2566,9 +2566,27 @@ let object_valid_fields env ty =
     Some (List.fold_left collect_fields [] fields)
   | _ -> None
 
-let rec type_exp ?deprecated_context ~context ?recarg env sexp =
+(* Whether [ty] is generic and has no variables, so that an instance of it
+   would be an identical copy. Generic types don't change, so the answer
+   for the last type asked about is kept: field reads of one object usually
+   come one after another, and each check traverses the whole type. *)
+let last_closed_scheme_key = Request_local.new_key (fun () -> ref None)
+
+let is_closed_scheme ty =
+  let ty = repr ty in
+  let last = Domain.DLS.get last_closed_scheme_key in
+  match !last with
+  | Some (ty', closed) when ty' == ty -> closed
+  | _ ->
+    let closed = ty.level = generic_level && Ctype.free_variables ty = [] in
+    last := Some (ty, closed);
+    closed
+
+let rec type_exp ?deprecated_context ~context ?recarg ?share_closed_type env
+    sexp =
   (* We now delegate everything to type_expect *)
-  type_expect ?deprecated_context ~context ?recarg env sexp (newvar ())
+  type_expect ?deprecated_context ~context ?recarg ?share_closed_type env sexp
+    (newvar ())
 
 (* Typing of an expression with an expected type.
    This provide better error messages, and allows controlled
@@ -2576,8 +2594,8 @@ let rec type_exp ?deprecated_context ~context ?recarg env sexp =
    In the principal case, [type_expected'] may be at generic_level.
 *)
 
-and type_expect ~context ?deprecated_context ?recarg ?match_context env sexp
-    ty_expected =
+and type_expect ~context ?deprecated_context ?recarg ?match_context
+    ?share_closed_type env sexp ty_expected =
   (* Special errors for braced identifiers passed to records *)
   let context =
     match sexp.pexp_desc with
@@ -2588,8 +2606,8 @@ and type_expect ~context ?deprecated_context ?recarg ?match_context env sexp
   let previous_saved_types = Cmt_format.get_saved_types () in
   let exp =
     Builtin_attributes.warning_scope sexp.pexp_attributes (fun () ->
-        type_expect_ ?deprecated_context ~context ?recarg ?match_context env
-          sexp ty_expected)
+        type_expect_ ?deprecated_context ~context ?recarg ?match_context
+          ?share_closed_type env sexp ty_expected)
   in
   Cmt_format.set_saved_types
     (Cmt_format.Partial_expression exp :: previous_saved_types);
@@ -2599,8 +2617,13 @@ and type_expect ~context ?deprecated_context ?recarg ?match_context env sexp
    a match, and says what that match stands for in the source: it decides the
    wording of the match's diagnostics, which would otherwise speak of a
    switch. *)
+(* [share_closed_type]: an identifier whose type has no variables gets that
+   type itself rather than a copy, and is not unified with [ty_expected].
+   Only for callers that pass a fresh variable as [ty_expected] and don't
+   unify the type of the result. *)
 and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
-    ?(match_context : [`Function] option) env sexp ty_expected =
+    ?(match_context : [`Function] option) ?(share_closed_type = false) env sexp
+    ty_expected =
   let loc = sexp.pexp_loc in
   (* Record the expression type before unifying it with the expected type *)
   let rue exp =
@@ -2652,15 +2675,22 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     | true, Rejected, _ | false, Required, (Tvar _ | Tconstr _) ->
       raise (Error (loc, env, Inlined_record_escape))
     | false, Required, _ -> () (* will fail later *));
-    rue
+    let exp_type, share =
+      if share_closed_type && is_closed_scheme desc.val_type then
+        (desc.val_type, true)
+      else (instance env desc.val_type, false)
+    in
+    let exp =
       {
         exp_desc = Texp_ident (path, lid, desc);
         exp_loc = loc;
         exp_extra = [];
-        exp_type = instance env desc.val_type;
+        exp_type;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
+    in
+    if share then re exp else rue exp
   | Pexp_constant cst ->
     let cst = constant_or_raise env loc cst in
     rue
@@ -3674,7 +3704,11 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
         exp_env = env;
       }
   | Pexp_object_get (e, ({txt = met} as met_loc)) -> (
-    let obj = type_exp ~context:None env e in
+    (* A copy of the object's type would be made and stored in the .cmt
+       file for each field read, which is quadratic for many reads of a
+       large object. Looking up a field that the type has doesn't change
+       the type, and the field's type is instantiated below. *)
+    let obj = type_exp ~context:None ~share_closed_type:true env e in
     try
       (* Lookup constrains an open object row to contain the field, without
          requiring or adding write capability. *)
