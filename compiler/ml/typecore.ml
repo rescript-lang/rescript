@@ -2542,6 +2542,18 @@ let should_unify_expected_result_before_typing_lowered_apply funct sargs =
 
 type targs = (Asttypes.arg_label * Typedtree.expression option) list
 
+(* The type of the most recent object field read if that read added the field
+   to an open object row ([obj["m"]] with [obj: {..}]), [None] after any other
+   read; likewise for the result of a call of such a field. The [Pexp_apply]
+   case resets it before typing the callee and checks it right after, where it
+   is only meaningful when the callee itself is such a read; a field read
+   checks it right after typing its object, to see whether a still-unknown
+   object came from an open row ([obj["a"]["m"]]). Request-local, so requests
+   type-checked
+   concurrently on other domains cannot overwrite it in between. *)
+let open_row_field_read : type_expr option ref Request_local.key =
+  Request_local.new_key (fun () -> ref None)
+
 (* Eliminate an object-field scheme for a read. A declared field payload is
    wrapped in [Tpoly]: an empty binder list needs ordinary instantiation, while
    a nonempty list needs polymorphic instantiation. An inferred field whose
@@ -2810,8 +2822,18 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     assert (sargs <> []);
     begin_def ();
     (* one more level for non-returning functions *)
+    Request_local.get open_row_field_read := None;
     let funct =
       type_exp ~deprecated_context:FunctionCall ~context:None env sfunct
+    in
+    (* Whether the callee is a JS object method that its read added to an open
+       object row ([obj["m"]] with [obj: {..}]). Its type is a fresh variable
+       like that of a callee that never returns, but the method receives its
+       arguments, so [type_application] must not report them as unused. *)
+    let open_row_method =
+      match (funct.exp_desc, !(Request_local.get open_row_field_read)) with
+      | Texp_object_get _, Some ty -> repr ty == repr funct.exp_type
+      | _ -> false
     in
     (if should_unify_expected_result_before_typing_lowered_apply funct sargs
      then
@@ -2835,9 +2857,14 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     let args, ty_res, fully_applied =
       match translate_unified_ops env funct sargs with
       | Some (targs, result_type) -> (targs, result_type, true)
-      | None -> type_application ~context total_app env funct sargs
+      | None ->
+        type_application ~context ~open_row_method total_app env funct sargs
     in
     end_def ();
+    (* The result of an open-row method is as unknown as the method itself, so
+       a field read on it ([obj["m"](x)["n"]]) also comes from an open row. *)
+    Request_local.get open_row_field_read
+    := if open_row_method then Some ty_res else None;
     if transformed_jsx then check_jsx_props ~loc env args;
     unify_var env (newvar ()) funct.exp_type;
 
@@ -3675,11 +3702,28 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
       }
   | Pexp_object_get (e, ({txt = met} as met_loc)) -> (
     let obj = type_exp ~context:None env e in
+    (* An object type without the field gets it from its open row (or the
+       lookup fails). An object whose type is still a variable counts only if
+       that variable itself came from an open row ([obj["a"]["m"]],
+       [obj["f"](x)["m"]]), not if it is the result of [failwith("x")]. *)
+    let adds_field_to_row =
+      match (expand_head env obj.exp_type).desc with
+      | Tobject fields ->
+        let fields, _ = Ctype.flatten_fields fields in
+        not (List.exists (fun (f : Ctype.field_info) -> f.f_name = met) fields)
+      | Tvar _ -> (
+        match !(Request_local.get open_row_field_read) with
+        | Some ty -> repr ty == repr obj.exp_type
+        | None -> false)
+      | _ -> false
+    in
     try
       (* Lookup constrains an open object row to contain the field, without
          requiring or adding write capability. *)
       let typ = filter_method env met obj.exp_type in
       let typ = object_field_use_type env typ in
+      Request_local.get open_row_field_read
+      := if adds_field_to_row then Some typ else None;
       rue
         {
           exp_desc = Texp_object_get (obj, met_loc);
@@ -4487,8 +4531,8 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
     | _ -> None)
   | _ -> None
 
-and type_application ~context total_app env funct (sargs : sargs) :
-    targs * Types.type_expr * bool =
+and type_application ~context ~open_row_method total_app env funct
+    (sargs : sargs) : targs * Types.type_expr * bool =
   match sargs with
   (* Special case for ignore: avoid discarding warning *)
   | [(Nolabel, sarg)] when is_ignore ~env funct ->
@@ -4517,9 +4561,16 @@ and type_application ~context total_app env funct (sargs : sargs) :
         List.map (fun (l1, _) -> {Types.lbl = l1; typ = newvar ()}) sargs
       in
       let ty_ret = newvar () in
+      (* A fresh type variable as function type usually means the function
+         never returns (e.g. [failwith("x")(1)]), so the arguments are
+         unused. A JS object method that the read added to an open object
+         row ([obj["m"]] with [obj: {..}]) also gets a fresh variable, but it
+         is an ordinary JS method that receives its arguments
+         ([open_row_method]). *)
       if
         ty_fun.level >= ty_ret.level
-        && not (is_identity_coercion funct.exp_desc)
+        && (not (is_identity_coercion funct.exp_desc))
+        && not open_row_method
       then
         List.iter
           (fun (_, sarg1) ->
