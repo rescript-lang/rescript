@@ -52,6 +52,7 @@
     "test-build": "node scripts/test.js -build",
     "test-ocaml": "node scripts/test.js -ounit",
     "test-release-plan": "node --test scripts/releasePlan.test.js",
+    "test-alloc-benchmarks": "node --test scripts/allocBenchmarks.test.js",
     "check": "biome check --no-errors-on-unmatched .",
     "check:all": "biome check .",
     "format": "biome check --no-errors-on-unmatched . --fix",
