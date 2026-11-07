@@ -64,10 +64,10 @@ jobs:
 
           # Verify that the compiler still builds with the oldest OCaml version we support.
           # The build system's snapshot tests are skipped on this job; the
-          # first linux-x64 job runs them. OCaml 5.0 does not build with GCC 15
-          # (C23 by default), so this job stays on Ubuntu 24.04.
+          # first linux-x64 job runs them.
           - os: ubuntu-24.04
-            ocaml_compiler: ocaml-variants.5.2.0+options,ocaml-option-static
+            ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
+            compatibility: true
             node-target: linux-x64
             dune-profile: static
 
@@ -271,7 +271,7 @@ jobs:
         shell: bash
 
       - name: Run rewatch snapshot tests
-        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
+        if: ${{ !matrix.compatibility }}
         timeout-minutes: 20
         run: |
           . rewatch-ocaml/tests/process_watchdog.sh
@@ -295,7 +295,7 @@ jobs:
         shell: bash
 
       - name: Run rewatch verbose output tests
-        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
+        if: ${{ !matrix.compatibility }}
         timeout-minutes: 10
         run: |
           bash rewatch-ocaml/tests/check_verbose_output.sh \
