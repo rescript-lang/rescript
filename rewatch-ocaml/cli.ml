@@ -290,7 +290,7 @@ exception Version
    behind the selected command and expand short help/version clusters because
    Cmdliner's standard display options only provide long names. A root display
    request takes precedence over otherwise invalid implicit-build options, but
-   a positional help topic must name a known command. *)
+   a positional command must be valid even when help or version is requested. *)
 let normalize_argv argv =
   let is_short_global_cluster argument =
     let length = String.length argument in
@@ -366,19 +366,20 @@ let normalize_argv argv =
         executable :: command :: (globals @ rest)
       | None ->
         let globals, others = partition_implicit arguments in
-        let has_help_topic =
+        let has_command_topic =
           match others with
           | topic :: _ -> not (String.starts_with ~prefix:"-" topic)
           | [] -> false
         in
-        if List.exists requests_help globals && has_help_topic then
-          executable :: "help" :: others
-        else if
+        let requests_display =
           List.exists
             (fun argument ->
               requests_help argument || requests_version argument)
             globals
-        then executable :: globals
+        in
+        if requests_display && has_command_topic then
+          executable :: "help" :: others
+        else if requests_display then executable :: globals
         else executable :: "build" :: (globals @ others)
     in
     Array.of_list (normalize_display_options routed)

@@ -95,8 +95,17 @@ let tests =
     (shows_version ["-V"; "build"])
     "a leading short version flag has global precedence";
   check
-    (shows_version ["some-folder"; "-V"])
-    "implicit build extracts a trailing global version flag";
+    (rejects ["unkdnow"; "--version"])
+    "an unknown command with version is rejected";
+  check
+    (rejects ["unkdnow"; "-V"])
+    "an unknown command with short version is rejected";
+  check
+    (rejects ["--version"; "unkdnow"])
+    "leading version rejects unknown commands";
+  check
+    (rejects ["-vV"; "unkdnow"])
+    "version in a verbosity cluster rejects unknown commands";
   check (shows_version ["--version"]) "the long global version flag is accepted";
   check
     (shows_version ["build"; "-V"])

@@ -585,6 +585,11 @@ run_case unknown-command-help exit2 invalid --help
 require_error_contains unknown-command-help 'unknown command "invalid"'
 run_case unknown-command-short-help exit2 invalid -h
 run_case unknown-command-formatted-help exit2 --help=plain invalid
+run_case unknown-command-version exit2 unkdnow --version
+require_error_contains unknown-command-version 'unknown command "unkdnow"'
+run_case unknown-command-short-version exit2 unkdnow -V
+run_case unknown-command-leading-version exit2 --version unkdnow
+run_case unknown-command-clustered-version exit2 -vV unkdnow
 run_case clustered-global-version accept -vV build
 run_case clustered-global-verbosity accept -vvvvv build "$project"
 run_case clustered-global-version-before-help accept -Vh build
