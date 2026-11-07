@@ -354,6 +354,105 @@ jobs:
           name: api
           path: scripts/res/apiDocs/
 
+  # Compares the words the compiler allocates on fixed inputs with the base
+  # branch (scripts/allocBenchmarks.js). Allocation counts don't depend on the
+  # runner's speed, so this can fail on a growth of 1%. It is not needed by
+  # ci-ok: a deliberate growth shouldn't block a merge. The report goes to the
+  # job summary and, for a pull request from a branch of this repository, to
+  # a comment on it; a fork's pull request gets a token that can't comment.
+  alloc-benchmarks:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04-arm
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      # The same build as the linux-arm64 build-compiler job, so that the
+      # OPAM environment and the dune cache are shared.
+      DUNE_PROFILE: static
+      OCAML_COMPILER: ocaml-variants.5.5.2+options,ocaml-option-static
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # The merge commit and its first parent, the base branch.
+          fetch-depth: 2
+
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node
+
+      - name: Test the benchmark script
+        run: yarn test-alloc-benchmarks
+
+      - name: Setup Linux dependencies
+        uses: ./.github/actions/setup-linux-dependencies
+
+      - name: Setup OCaml
+        id: setup_ocaml
+        uses: ./.github/actions/setup-ocaml
+        with:
+          compiler: ${{ env.OCAML_COMPILER }}
+          os: ubuntu-26.04-arm
+          cache-prefix: opam-env-v9
+
+      - name: Compiler build state key
+        id: compiler-build-state-key
+        run: |
+          echo "value=compiler-build-state-v1-ubuntu-26.04-arm-${{ steps.setup_ocaml.outputs.setup_version }}-$OCAML_COMPILER-${{ hashFiles('*.opam') }}" \
+            | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
+
+      - name: Restore compiler build state
+        uses: actions/cache/restore@v6
+        with:
+          # The paths are part of the cache's version, so they must be the
+          # ones build-compiler saves.
+          path: |
+            C:\.cache\dune
+            ~/.cache/dune
+            _build
+          key: ${{ steps.compiler-build-state-key.outputs.value }}
+
+      - name: Build the compiler, runtime and Belt
+        run: |
+          opam exec -- dune build --display quiet
+          node scripts/allocBenchmarks.js prepare .
+
+      - name: Build the base branch's compiler, runtime and Belt
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/base" HEAD^1
+          opam exec -- dune build --root "$RUNNER_TEMP/base" --display quiet
+          node scripts/allocBenchmarks.js prepare "$RUNNER_TEMP/base"
+
+      - name: Measure and compare
+        id: compare
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          node scripts/allocBenchmarks.js measure "$RUNNER_TEMP/base" "$RUNNER_TEMP/base.json"
+          node scripts/allocBenchmarks.js measure . "$RUNNER_TEMP/head.json"
+          status=0
+          node scripts/allocBenchmarks.js compare "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json" \
+            --threshold 1 --summary "$RUNNER_TEMP/alloc-summary.md" || status=$?
+          cat "$RUNNER_TEMP/alloc-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nPull request %s compared with base %s in [this run](%s).\n' \
+            "$(git rev-parse --short=9 HEAD^2)" "$(git rev-parse --short=9 HEAD^1)" "$RUN_URL" \
+            >> "$RUNNER_TEMP/alloc-summary.md"
+          echo "summary=$RUNNER_TEMP/alloc-summary.md" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      # The pull request's one comment, edited in place on each push, also
+      # when nothing changed, so that it shows the comparison ran.
+      - name: Comment on the pull request
+        if: >-
+          !cancelled() && steps.compare.outputs.summary != '' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          comment-tag: alloc-benchmarks
+          mode: upsert
+          file-path: ${{ steps.compare.outputs.summary }}
+
   dev-playground:
     needs:
       - build-compiler

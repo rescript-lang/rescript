@@ -125,9 +125,6 @@ artifacts: lib
 
 # Tests
 
-bench: compiler
-	$(DUNE_BIN_DIR)/syntax_benchmarks
-
 test: lib
 	node scripts/test.js -all
 
@@ -351,4 +348,4 @@ clean: clean-lib clean-compiler clean-coverage
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat semantic-diff clean-compiler clean-lib clean-gentype clean-tests clean
+.PHONY: yarn-install build compiler lib artifacts test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat semantic-diff clean-compiler clean-lib clean-gentype clean-tests clean
