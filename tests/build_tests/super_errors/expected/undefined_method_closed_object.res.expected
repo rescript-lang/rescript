@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/undefined_method_closed_object.res[0m:[2m4:11[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m let ok = o["existing"] + 1
+  [1;31m4[0m [2m│[0m let bad = [1;31mo[0m["missing"]
+  5 [2m│[0m 
+
+  This expression has type {"existing": int, "other": string}
+  It has no field missing
+Hint: Did you mean existing?
