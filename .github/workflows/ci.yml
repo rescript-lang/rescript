@@ -276,18 +276,11 @@ jobs:
         run: opam exec -- make playground
 
       # Runs after the playground build, whose browser-profile tree it
-      # analyzes together with the native one. reanalyze is built from its
-      # release tag in the existing switch: an opam install would recompile
-      # the restored static switch, whose musl system package opam misses.
+      # analyzes together with the native one. reanalyze is a test
+      # dependency, installed with the switch.
       - name: Check for dead code
         if: matrix.build_playground
-        shell: bash
-        run: |
-          git -c advice.detachedHead=false clone --quiet --depth 1 --branch v2.27.0 https://github.com/rescript-lang/reanalyze.git "$RUNNER_TEMP/reanalyze"
-          # opam exec finds the repository's local switch from the current
-          # directory, so it changes directory itself.
-          opam exec -- sh -c 'cd "$RUNNER_TEMP/reanalyze" && dune build -p reanalyze @install'
-          REANALYZE="$RUNNER_TEMP/reanalyze/_build/install/default/bin/reanalyze.exe" opam exec -- make dead-code
+        run: opam exec -- make dead-code
 
       - name: Test playground compiler
         if: matrix.build_playground

@@ -61,7 +61,13 @@
    (and
     (<> :os "win32")
     :with-test
-    (= 6.5.0)))))
+    (= 6.5.0)))
+  ; make dead-code
+  (reanalyze
+   (and
+    (<> :os "win32")
+    :with-test
+    (= 2.27.0)))))
 
 (package
  (name analysis)
