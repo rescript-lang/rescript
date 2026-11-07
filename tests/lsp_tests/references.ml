@@ -8,6 +8,66 @@ let references doc pos =
        ~context:(ReferenceContext.create ~includeDeclaration:true)
        ())
 
+let%expect_test "finds a consumer from a namespaced module declaration" =
+  Test.with_project ~name:"namespaced-references"
+    ~rescript_json:
+      {|{"name":"namespaced-references","namespace":"my-namespace","sources":{"dir":"."}}|}
+    ~text:{|let myFunc2 = () => 42
+|}
+    ~files:[("Consumer.res", {|let myFunc1 = () => Test.myFunc2()
+|})]
+    (fun ~root ~doc client ->
+      Test.snapshot ~root client (references doc (0, 5)));
+  [%expect
+    {|
+    [
+      {
+        "range": {
+          "end": { "character": 32, "line": 0 },
+          "start": { "character": 25, "line": 0 }
+        },
+        "uri": "file:///workspace/./Consumer.res"
+      },
+      {
+        "range": {
+          "end": { "character": 11, "line": 0 },
+          "start": { "character": 4, "line": 0 }
+        },
+        "uri": "file:///workspace/Test.res"
+      }
+    ]
+    |}]
+
+let%expect_test "finds a namespaced declaration from a consumer" =
+  Test.with_project ~name:"namespaced-references"
+    ~rescript_json:
+      {|{"name":"namespaced-references","namespace":"my-namespace","sources":{"dir":"."}}|}
+    ~text:{|let myFunc1 = () => Other.myFunc2()
+|}
+    ~files:[("Other.res", {|let myFunc2 = () => 42
+|})]
+    (fun ~root ~doc client ->
+      Test.snapshot ~root client (references doc (0, 26)));
+  [%expect
+    {|
+    [
+      {
+        "range": {
+          "end": { "character": 33, "line": 0 },
+          "start": { "character": 26, "line": 0 }
+        },
+        "uri": "file:///workspace/./Test.res"
+      },
+      {
+        "range": {
+          "end": { "character": 11, "line": 0 },
+          "start": { "character": 4, "line": 0 }
+        },
+        "uri": "file:///workspace/./Other.res"
+      }
+    ]
+    |}]
+
 let%expect_test "finds uses through a module alias in another file" =
   Test.with_project ~name:"references" ~text:{|let x = 12
 |}

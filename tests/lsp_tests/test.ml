@@ -415,7 +415,7 @@ let rec remove_project path =
     Unix.rmdir path)
   else Sys.remove path
 
-let with_project ?(files = []) ?(run_build = true) ?(jsx = false)
+let with_project ?(files = []) ?(run_build = true) ?(jsx = false) ?rescript_json
     ?(capabilities = client_capabilities) ~name ~text f =
   let root = Filename.temp_file ("rescript-lsp-" ^ name ^ "-") "" in
   Sys.remove root;
@@ -432,9 +432,11 @@ let with_project ?(files = []) ?(run_build = true) ?(jsx = false)
              files
       in
       let rescript_json =
-        if jsx then
+        match rescript_json with
+        | Some config -> config
+        | None when jsx ->
           {|{"name":"lsp-test","sources":{"dir":"."},"dependencies":["@rescript/react"],"jsx":{"version":4},"package-specs":{"module":"esmodule","in-source":false},"suffix":".res.js"}|}
-        else
+        | None ->
           {|{"name":"lsp-test","sources":{"dir":"."},"package-specs":{"module":"esmodule","in-source":false},"suffix":".res.js"}|}
       in
       if jsx then setup_react ~root;

@@ -11,7 +11,7 @@ LSP positions, recalculated after removing marker lines and uncommenting code.
 | Analysis marker | Test module | LSP request |
 | --- | --- | --- |
 | `def` | `definition.ml` | `textDocument/definition` |
-| `com` | `completion.ml`, `completion_jsx.ml` | `textDocument/completion` |
+| `com` | `completion.ml`, `completion_jsx.ml`, `completion_generic_jsx.ml`, `completion_typed_arrays.ml` | `textDocument/completion` |
 | `cre` | `completion_resolve.ml` | `completionItem/resolve` |
 | `doc` | `document_symbol.ml` | `textDocument/documentSymbol` |
 | `sem`, `hig` | `semantic_tokens.ml` | `textDocument/semanticTokens/full` |
@@ -34,6 +34,11 @@ exercise unsaved buffers without changing the compiled source, and
 `Test.configure` to answer the server's configuration request.
 
 Use `~jsx:true` to build with a temporary copy of the local React bindings.
+Use `~rescript_json` to override the project configuration for namespaces or
+custom JSX runtimes. `record_rest.ml` covers definitions, completion, inlay
+hints, and semantic tokens for typed record-rest patterns. Completion coverage
+also includes Temporal shared result types and all eleven typed-array kinds;
+namespaced references and existential hover have dedicated cases.
 Use `~capabilities` to exercise push-only clients as well as the default client
 with pull diagnostics. `diagnostics.ml` tests both actual recompilation and
 explicit compiler-log phases delivered through `workspace/didChangeWatchedFiles`.

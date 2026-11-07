@@ -6,6 +6,32 @@ let completion doc pos =
     (CompletionParams.create ~textDocument:(Test.text_document doc)
        ~position:(Test.position pos) ())
 
+let%expect_test "completes a Temporal conversion from its shared result type" =
+  let text =
+    {|let dateTime = Temporal.PlainDateTime.fromStringOrThrow("2024-02-29T09:30")
+let date = dateTime->Temporal.PlainDateTime.toPlainDate
+|}
+  in
+  Test.with_project ~name:"completion-temporal" ~text (fun ~root ~doc client ->
+      Test.change_document client doc ~version:1
+        ~text:(text ^ {|date->toPlainY|});
+      Test.snapshot ~root client (completion doc (2, 14)));
+  [%expect
+    {|
+    [
+      {
+        "detail": "t => Temporal_Common.plainYearMonth",
+        "documentation": {
+          "kind": "markdown",
+          "value": "\n`toPlainYearMonth(date)` returns the year and month of `date`.\n\nSee [`Temporal.PlainDate.prototype.toPlainYearMonth`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal/PlainDate/toPlainYearMonth) on MDN.\n\n## Examples\n\n```rescript\nTemporal.PlainDate.fromStringOrThrow(\"2024-02-29\")\n->Temporal.PlainDate.toPlainYearMonth\n->Temporal.PlainYearMonth.toString == \"2024-02\"\n```\n"
+        },
+        "kind": 12,
+        "label": "Temporal.PlainDate.toPlainYearMonth",
+        "tags": []
+      }
+    ]
+    |}]
+
 let%expect_test "completes a string function after a pipe" =
   let text = {|let value = "abc"
 |} in

@@ -48,6 +48,20 @@ let test_hover ~text ~position =
         ])
   |> ignore
 
+let%expect_test "shows the existential array type bound by a constructor" =
+  test_hover
+    ~text:
+      {|type rec any = Any(array<'a>, 'a => string): any
+let showAll = (Any(xs, f)) => xs->Array.map(f)
+|}
+    ~position:(1, 19);
+  [%expect
+    {|
+    {
+      "contents": { "kind": "markdown", "value": "```rescript\narray<$a>\n```" }
+    }
+    |}]
+
 let%expect_test "shows documentation for an exported value from another file" =
   Test.with_project ~name:"hover" ~text:{|let x = Other.customDouble(2)
 |}
