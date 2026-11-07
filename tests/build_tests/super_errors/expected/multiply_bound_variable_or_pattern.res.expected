@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/multiply_bound_variable_or_pattern.res[0m:[2m4:20[0m
+
+  2 [2m┆[0m switch x {
+  3 [2m┆[0m | (Some(a), None) | (None, Some(a)) => a
+  [1;31m4[0m [2m┆[0m | (Some(a), Some([1;31ma[0m)) => a
+  5 [2m┆[0m | (None, None) => 0
+  6 [2m┆[0m }
+
+  Variable a is bound several times in this pattern

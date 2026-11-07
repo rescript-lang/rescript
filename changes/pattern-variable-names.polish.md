@@ -1,0 +1,1 @@
+- Speed up type checking of patterns that bind many variables, such as large `let rec` groups.
