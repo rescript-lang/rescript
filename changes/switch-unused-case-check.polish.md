@@ -1,0 +1,1 @@
+- Speed up the unused-case check of switches with many constant or polymorphic variant cases.

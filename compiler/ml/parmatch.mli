@@ -57,6 +57,10 @@ val lubs : pattern list -> pattern list -> pattern list
 
 val get_mins : ('a -> 'a -> bool) -> 'a list -> 'a list
 
+(* [get_mins le_pats], without comparing rows whose first patterns are
+   different constants or polymorphic variant tags. *)
+val get_mins_pats : pattern list list -> pattern list list
+
 (* Those two functions recombine one pattern and its arguments:
    For instance:
      (_,_)::p1::p2::rem -> (p1, p2)::rem
