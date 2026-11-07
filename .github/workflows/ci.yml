@@ -354,20 +354,22 @@ jobs:
           name: api
           path: scripts/res/apiDocs/
 
-  # Compares the words the compiler allocates on fixed inputs with the base
-  # branch (scripts/allocBenchmarks.js). Allocation counts don't depend on the
-  # runner's speed, so this can fail on a growth of 1%. It is not needed by
-  # ci-ok: a deliberate growth shouldn't block a merge. The report goes to the
-  # job summary and, for a pull request from a branch of this repository, to
-  # a comment on it; a fork's pull request gets a token that can't comment.
-  alloc-benchmarks:
+  # Compares the words the compiler allocates on fixed inputs, and the
+  # instructions it executes on some of them, with the base branch
+  # (scripts/compilerBenchmarks.js). Neither count depends on the runner's
+  # speed, so this can fail on a growth of 1%. It is not needed by ci-ok: a
+  # deliberate growth shouldn't block a merge. The report goes to the job
+  # summary and, for a pull request from a branch of this repository, to a
+  # comment on it; a fork's pull request gets a token that can't comment.
+  benchmarks:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-26.04-arm
+    # x64, since bsc doesn't run under valgrind on arm64.
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       pull-requests: write
     env:
-      # The same build as the linux-arm64 build-compiler job, so that the
+      # The same build as the first linux-x64 build-compiler job, so that the
       # OPAM environment and the dune cache are shared.
       DUNE_PROFILE: static
       OCAML_COMPILER: ocaml-variants.5.5.2+options,ocaml-option-static
@@ -382,23 +384,29 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Test the benchmark script
-        run: yarn test-alloc-benchmarks
+        run: yarn test-compiler-benchmarks
 
       - name: Setup Linux dependencies
         uses: ./.github/actions/setup-linux-dependencies
+
+      - name: Install valgrind
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends valgrind
+          valgrind --version
 
       - name: Setup OCaml
         id: setup_ocaml
         uses: ./.github/actions/setup-ocaml
         with:
           compiler: ${{ env.OCAML_COMPILER }}
-          os: ubuntu-26.04-arm
+          os: ubuntu-26.04
           cache-prefix: opam-env-v9
 
       - name: Compiler build state key
         id: compiler-build-state-key
         run: |
-          echo "value=compiler-build-state-v1-ubuntu-26.04-arm-${{ steps.setup_ocaml.outputs.setup_version }}-$OCAML_COMPILER-${{ hashFiles('*.opam') }}" \
+          echo "value=compiler-build-state-v1-ubuntu-26.04-${{ steps.setup_ocaml.outputs.setup_version }}-$OCAML_COMPILER-${{ hashFiles('*.opam') }}" \
             | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
 
       - name: Restore compiler build state
@@ -412,46 +420,73 @@ jobs:
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
-      - name: Build the compiler, runtime and Belt
-        run: |
-          opam exec -- dune build --display quiet
-          node scripts/allocBenchmarks.js prepare .
+      - name: Build the compiler
+        run: opam exec -- dune build --display quiet
 
-      - name: Build the base branch's compiler, runtime and Belt
+      - name: Build the base branch's compiler
         run: |
           git worktree add --detach "$RUNNER_TEMP/base" HEAD^1
           opam exec -- dune build --root "$RUNNER_TEMP/base" --display quiet
-          node scripts/allocBenchmarks.js prepare "$RUNNER_TEMP/base"
 
       - name: Measure and compare
-        id: compare
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          node scripts/allocBenchmarks.js measure "$RUNNER_TEMP/base" "$RUNNER_TEMP/base.json"
-          node scripts/allocBenchmarks.js measure . "$RUNNER_TEMP/head.json"
+          # Both checkouts are measured from the same path, one after the
+          # other: the paths in the compiler's arguments change its counts a
+          # little, and the instructions of the runtime and Belt files by up
+          # to 0.2%. The runtime and Belt are built there too, since the
+          # replayed builds would otherwise write interfaces that don't
+          # match those of the files they don't replay yet.
+          measure() {
+            sudo mkdir -p /bench
+            sudo mount --bind "$1" /bench
+            node scripts/compilerBenchmarks.js prepare /bench
+            node scripts/compilerBenchmarks.js measure /bench "$2" --instructions
+            sudo umount /bench
+          }
+          measure "$RUNNER_TEMP/base" "$RUNNER_TEMP/base.json"
+          measure "$GITHUB_WORKSPACE" "$RUNNER_TEMP/head.json"
           status=0
-          node scripts/allocBenchmarks.js compare "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json" \
-            --threshold 1 --summary "$RUNNER_TEMP/alloc-summary.md" || status=$?
-          cat "$RUNNER_TEMP/alloc-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          report="$RUNNER_TEMP/benchmarks-report.md"
+          node scripts/compilerBenchmarks.js compare "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json" \
+            --threshold 1 --summary "$report" || status=$?
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
           printf '\nPull request %s compared with base %s in [this run](%s).\n' \
             "$(git rev-parse --short=9 HEAD^2)" "$(git rev-parse --short=9 HEAD^1)" "$RUN_URL" \
-            >> "$RUNNER_TEMP/alloc-summary.md"
-          echo "summary=$RUNNER_TEMP/alloc-summary.md" >> "$GITHUB_OUTPUT"
+            >> "$report"
           exit "$status"
+
+      # When a step failed before the comparison, the comment says so instead
+      # of keeping the report of an earlier commit.
+      - name: Report a failure to run the benchmarks
+        if: ${{ !cancelled() }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          report="$RUNNER_TEMP/benchmarks-report.md"
+          if [ ! -f "$report" ]; then
+            {
+              echo "## ⚠️ Compiler benchmarks"
+              echo
+              echo "The benchmarks couldn't run for pull request ${HEAD_SHA:0:9}; [the run]($RUN_URL) shows why."
+            } > "$report"
+            cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       # The pull request's one comment, edited in place on each push, also
       # when nothing changed, so that it shows the comparison ran.
       - name: Comment on the pull request
         if: >-
-          !cancelled() && steps.compare.outputs.summary != '' &&
+          !cancelled() &&
           github.event.pull_request.head.repo.full_name == github.repository
         uses: thollander/actions-comment-pull-request@v3
         with:
           pr-number: ${{ github.event.pull_request.number }}
-          comment-tag: alloc-benchmarks
+          comment-tag: compiler-benchmarks
           mode: upsert
-          file-path: ${{ steps.compare.outputs.summary }}
+          file-path: ${{ runner.temp }}/benchmarks-report.md
 
   dev-playground:
     needs:
