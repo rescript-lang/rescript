@@ -1,0 +1,1 @@
+- `rescript watch` starts a rebuild as soon as the burst of file events from a save has settled, instead of always waiting 50 ms.
