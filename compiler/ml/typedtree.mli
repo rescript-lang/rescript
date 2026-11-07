@@ -511,7 +511,6 @@ and value_description = {
   val_name: string loc;
   val_desc: core_type;
   val_val: Types.value_description;
-  val_prim: Parsetree.primitive_repr option;
   val_loc: Location.t;
   val_attributes: attributes;
 }

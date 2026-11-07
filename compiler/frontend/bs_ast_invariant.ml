@@ -64,7 +64,12 @@ let warn_unused_attribute
   if
     is_checked_attribute txt && (not loc.loc_ghost)
     && not (Used_attributes.is_used_attribute sloc)
-  then Location.prerr_warning loc (Bs_unused_attribute txt)
+  then (
+    Location.prerr_warning loc (Bs_unused_attribute txt);
+    (* Report each attribute once, also when a copy of its declaration is
+       checked too, such as the resolved [val] of an external that is not
+       inlined across modules. *)
+    Used_attributes.mark_used_attribute attr)
 
 let warn_discarded_unused_attributes (attrs : Parsetree.attributes) =
   if attrs <> [] then Ext_list.iter attrs warn_unused_attribute
@@ -134,26 +139,21 @@ let emit_external_warnings : iterator =
     value_description =
       (fun self v ->
         match v with
-        | ({pval_loc; pval_prim = Some (Prim_name byte_name); pval_type} :
-            Parsetree.value_description) -> (
-          match byte_name with
-          | ("%identity" | "%component_identity")
-            when not (Ast_core_type.is_arity_one pval_type) ->
-            Location.raise_errorf ~loc:pval_loc
-              "%s expects a function type of the form 'a => 'b (arity 1)"
-              byte_name
-          | _ ->
-            if byte_name <> "" then
-              let c = String.unsafe_get byte_name 0 in
-              if not (c = '%' || c = '#' || c = '?') then
-                Location.prerr_warning pval_loc
-                  (Warnings.Bs_ffi_warning
-                     (byte_name ^ " such externals are unsafe"))
-              else super.value_description self v
-            else
-              Location.prerr_warning pval_loc
-                (Warnings.Bs_ffi_warning
-                   (byte_name ^ " such externals are unsafe")))
+        | {pval_prim = Some {txt = prim_name}}
+          when Ast_attributes.is_ffi_external v.pval_attributes prim_name ->
+          (* Checked in its resolved form by [Ast_external.validate], with
+             [emit_external_warnings_on_value_description]. *)
+          ()
+        | {
+         pval_loc;
+         pval_prim =
+           Some {txt = ("%identity" | "%component_identity") as byte_name};
+         pval_type;
+        }
+          when not (Ast_core_type.is_arity_one pval_type) ->
+          Location.raise_errorf ~loc:pval_loc
+            "%s expects a function type of the form 'a => 'b (arity 1)"
+            byte_name
         | _ -> super.value_description self v);
     pat =
       (fun self (pat : Parsetree.pattern) ->
@@ -189,6 +189,10 @@ let emit_external_warnings_on_structure (stru : Parsetree.structure) =
 
 let emit_external_warnings_on_signature (sigi : Parsetree.signature) =
   emit_external_warnings.signature emit_external_warnings sigi
+
+let emit_external_warnings_on_value_description
+    (value_desc : Parsetree.value_description) =
+  super.value_description emit_external_warnings value_desc
 
 (* The PPX bridge renames the [ocaml.]-prefixed builtins a PPX emits to their
    bare names, so source written with them is checked before it reaches the

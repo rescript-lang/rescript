@@ -121,8 +121,7 @@ let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
     let source = "/" ^ pattern ^ "/" ^ flags in
     Ast_payload.validate_raw_source ~kind:Raw_re ~loc ~offset:0 source;
     let raw =
-      Ast_external_mk.local_external_apply loc
-        ~pval_prim:(Prim_name "#raw_expr")
+      Ast_external_mk.local_external_apply loc ~pval_prim:"#raw_expr"
         ~pval_type:
           (Ast_helper.Typ.arrow
              [
@@ -458,87 +457,27 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
   | Psig_type (rf, tdcls) -> Ast_tdcls.handle_tdcls_in_sigi self sigi rf tdcls
   | Psig_value ({pval_attributes; pval_prim} as value_desc) -> (
     let pval_attributes = self.attributes self pval_attributes in
-    if Ast_attributes.rs_externals pval_attributes pval_prim then
-      Ast_external.handle_external_in_sig self value_desc sigi
-    else
+    match pval_prim with
+    | Some {txt = prim_name}
+      when Ast_attributes.is_ffi_external pval_attributes prim_name ->
+      Ast_external.handle_external_in_sig self value_desc ~prim_name sigi
+    | _ -> (
       match Ast_attributes.has_inline_payload pval_attributes with
-      | Some ((_, PStr [{pstr_desc = Pstr_eval (expression, _)}]) as attr) -> (
-        match (Ast_payload.unwrap_braces expression).pexp_desc with
-        | Pexp_constant (Pconst_string _)
-        | Pexp_template {source_segments = [_]; values = []} ->
-          let semantic =
-            match Ast_payload.semantic_string_of_expression expression with
-            | Some semantic -> semantic
-            | None -> assert false
-          in
+      | Some
+          (({loc = attr_loc}, PStr [{pstr_desc = Pstr_eval (expression, _)}]) as
+           attr) -> (
+        match Ast_external_mk.inline_const_of_expression expression with
+        | Some _ ->
           succeed attr pval_attributes;
           {
             sigi with
             psig_desc =
               Psig_value
-                {
-                  value_desc with
-                  pval_prim = Some (Ast_external_mk.inline_string semantic);
-                  pval_jsx_component = None;
-                  pval_attributes = [];
-                };
+                (Ast_external_mk.inline_const_declaration ~attr_loc value_desc
+                   expression);
           }
-        | Pexp_constant (Pconst_integer (s, None)) ->
-          succeed attr pval_attributes;
-          let s = Int32.of_string s in
-          {
-            sigi with
-            psig_desc =
-              Psig_value
-                {
-                  value_desc with
-                  pval_prim = Some (Ast_external_mk.inline_int s);
-                  pval_jsx_component = None;
-                  pval_attributes = [];
-                };
-          }
-        | Pexp_constant (Pconst_integer (s, Some 'n')) ->
-          succeed attr pval_attributes;
-          {
-            sigi with
-            psig_desc =
-              Psig_value
-                {
-                  value_desc with
-                  pval_prim = Some (Ast_external_mk.inline_bigint s);
-                  pval_jsx_component = None;
-                  pval_attributes = [];
-                };
-          }
-        | Pexp_constant (Pconst_float (s, None)) ->
-          succeed attr pval_attributes;
-          {
-            sigi with
-            psig_desc =
-              Psig_value
-                {
-                  value_desc with
-                  pval_prim = Some (Ast_external_mk.inline_float s);
-                  pval_jsx_component = None;
-                  pval_attributes = [];
-                };
-          }
-        | Pexp_construct ({txt = Lident (("true" | "false") as txt)}, {txt = []})
-          ->
-          succeed attr pval_attributes;
-          {
-            sigi with
-            psig_desc =
-              Psig_value
-                {
-                  value_desc with
-                  pval_prim = Some (Ast_external_mk.inline_bool (txt = "true"));
-                  pval_jsx_component = None;
-                  pval_attributes = [];
-                };
-          }
-        | _ -> default_mapper.signature_item self sigi)
-      | Some _ | None -> default_mapper.signature_item self sigi)
+        | None -> default_mapper.signature_item self sigi)
+      | Some _ | None -> default_mapper.signature_item self sigi))
   | _ -> default_mapper.signature_item self sigi
 
 let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
@@ -564,9 +503,9 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
         (LetUnwrap_not_supported_in_position `Toplevel)
   | Pstr_type (rf, tdcls) (* [ {ptype_attributes} as tdcl ] *) ->
     Ast_tdcls.handle_tdcls_in_stru self str rf tdcls
-  | Pstr_primitive prim
-    when Ast_attributes.rs_externals prim.pval_attributes prim.pval_prim ->
-    Ast_external.handle_external_in_stru self prim str
+  | Pstr_primitive ({pval_prim = Some {txt = prim_name}} as prim)
+    when Ast_attributes.is_ffi_external prim.pval_attributes prim_name ->
+    Ast_external.handle_external_in_stru self prim ~prim_name str
   | Pstr_value
       ( Nonrecursive,
         [
@@ -584,78 +523,39 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
     let has_inline_property =
       Ast_attributes.has_inline_payload pvb_attributes
     in
-    match
-      (has_inline_property, (Ast_payload.unwrap_braces pvb_expr).pexp_desc)
-    with
-    | ( Some attr,
-        ( Pexp_constant (Pconst_string _)
-        | Pexp_template {source_segments = [_]; values = []} ) ) ->
-      let semantic =
-        match Ast_payload.semantic_string_of_expression pvb_expr with
-        | Some semantic -> semantic
-        | None -> assert false
+    let inline_const =
+      match has_inline_property with
+      | None -> None
+      | Some attr -> (
+        match Ast_external_mk.inline_const_of_expression pvb_expr with
+        | None -> None
+        | Some c -> Some (attr, c))
+    in
+    match inline_const with
+    | Some ((({loc = attr_loc}, _) as attr), c) ->
+      succeed attr pvb_attributes;
+      let pval_type =
+        match c with
+        | Const_string _ -> Ast_literal.type_string ()
+        | Const_int _ -> Ast_literal.type_int ()
+        | Const_float _ -> Ast_literal.type_float
+        | Const_bool _ -> Ast_literal.type_bool ()
+        | Const_bigint _ -> Ast_literal.type_bigint
       in
-      succeed attr pvb_attributes;
       {
         str with
         pstr_desc =
           Pstr_primitive
-            {
-              pval_name;
-              pval_type = Ast_literal.type_string ();
-              pval_loc = pvb_loc;
-              pval_jsx_component = None;
-              pval_attributes = [];
-              pval_prim = Some (Ast_external_mk.inline_string semantic);
-            };
-      }
-    | Some attr, Pexp_constant (Pconst_integer (s, None)) ->
-      let s = Int32.of_string s in
-      succeed attr pvb_attributes;
-      {
-        str with
-        pstr_desc =
-          Pstr_primitive
-            {
-              pval_name;
-              pval_type = Ast_literal.type_int ();
-              pval_loc = pvb_loc;
-              pval_jsx_component = None;
-              pval_attributes = [];
-              pval_prim = Some (Ast_external_mk.inline_int s);
-            };
-      }
-    | Some attr, Pexp_constant (Pconst_float (s, None)) ->
-      succeed attr pvb_attributes;
-      {
-        str with
-        pstr_desc =
-          Pstr_primitive
-            {
-              pval_name;
-              pval_type = Ast_literal.type_float;
-              pval_loc = pvb_loc;
-              pval_jsx_component = None;
-              pval_attributes = [];
-              pval_prim = Some (Ast_external_mk.inline_float s);
-            };
-      }
-    | ( Some attr,
-        Pexp_construct ({txt = Lident (("true" | "false") as txt)}, {txt = []})
-      ) ->
-      succeed attr pvb_attributes;
-      {
-        str with
-        pstr_desc =
-          Pstr_primitive
-            {
-              pval_name;
-              pval_type = Ast_literal.type_bool ();
-              pval_loc = pvb_loc;
-              pval_jsx_component = None;
-              pval_attributes = [];
-              pval_prim = Some (Ast_external_mk.inline_bool (txt = "true"));
-            };
+            (Ast_external_mk.inline_const_declaration ~attr_loc
+               {
+                 pval_name;
+                 pval_type;
+                 pval_loc = pvb_loc;
+                 pval_jsx_component = None;
+                 pval_attributes = [];
+                 pval_prim = None;
+               }
+               pvb_expr);
       }
     | _ ->
       {
@@ -738,12 +638,16 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
   | [] -> []
   | item :: rest -> (
     match item.pstr_desc with
+    (* Each case maps the item before the rest, so that diagnostics come in
+       source order: the right operand of [::] is evaluated first. *)
     | Pstr_extension (({txt = "raw"; loc}, payload), _attrs) ->
-      Ast_exp_handle_external.handle_raw_structure loc payload
-      :: structure_mapper ~await_context self rest
+      let item = Ast_exp_handle_external.handle_raw_structure loc payload in
+      item :: structure_mapper ~await_context self rest
     | Pstr_raw {name_loc; source} ->
-      Ast_exp_handle_external.handle_raw_structure_node ~loc:name_loc source
-      :: structure_mapper ~await_context self rest
+      let item =
+        Ast_exp_handle_external.handle_raw_structure_node ~loc:name_loc source
+      in
+      item :: structure_mapper ~await_context self rest
     (* | Pstr_extension (({txt = "i"}, _),_)
        ->
        structure_mapper self rest *)
@@ -819,8 +723,8 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
         }
         :: structure_mapper ~await_context self rest
       | Some (_, _, Some _) | None ->
-        self.structure_item self item
-        :: structure_mapper ~await_context self rest)
+        let item = self.structure_item self item in
+        item :: structure_mapper ~await_context self rest)
     | Pstr_value (_, vbs) ->
       let item = self.structure_item self item in
       (* [ module __List__ = module type of List ] *)
@@ -863,8 +767,8 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
 
       module_type_decls @ (item :: structure_mapper ~await_context self rest)
     | _ ->
-      self.structure_item self item :: structure_mapper ~await_context self rest
-    )
+      let item = self.structure_item self item in
+      item :: structure_mapper ~await_context self rest)
 
 let structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t) =
   let await_saved = !await_context in

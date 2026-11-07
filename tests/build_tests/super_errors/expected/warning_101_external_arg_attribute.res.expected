@@ -1,0 +1,26 @@
+
+  [1;31mWarning number 101[0m (configured as error) 
+  [36m/.../fixtures/warning_101_external_arg_attribute.res[0m:[2m2:27-29[0m
+
+  1 [2m│[0m type t
+  [1;31m2[0m [2m│[0m @send external first: (t, [1;31m@as[0m("x") int) => unit = "first"
+  3 [2m│[0m @send external second: (t, @as("y") int) => unit = "second"
+  4 [2m│[0m 
+
+  Unused attribute: @as
+This attribute has no effect here.
+For example, some attributes are only meaningful in externals.
+
+
+
+  [1;31mWarning number 101[0m (configured as error) 
+  [36m/.../fixtures/warning_101_external_arg_attribute.res[0m:[2m3:28-30[0m
+
+  1 [2m│[0m type t
+  2 [2m│[0m @send external first: (t, @as("x") int) => unit = "first"
+  [1;31m3[0m [2m│[0m @send external second: (t, [1;31m@as[0m("y") int) => unit = "second"
+  4 [2m│[0m 
+
+  Unused attribute: @as
+This attribute has no effect here.
+For example, some attributes are only meaningful in externals.
