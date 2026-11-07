@@ -2,7 +2,7 @@ open Shared_types
 
 module String_set = Set.Make (String)
 
-let show_module_top_level ~docstring ~is_type ~name
+let show_module_top_level ?(functor_params = []) ~docstring ~is_type ~name
     (top_level : Module.item list) =
   let contents =
     top_level
@@ -22,6 +22,10 @@ let show_module_top_level ~docstring ~is_type ~name
     Markdown.code_block
       ("module "
       ^ (if is_type then "type " ^ name ^ " = " else name ^ ": ")
+      ^ (match functor_params with
+        | [] -> ""
+        | ["()"] -> "() => "
+        | params -> "(" ^ String.concat ", " params ^ ") => ")
       ^ "{" ^ "\n" ^ contents ^ "\n}")
   in
   let doc =
@@ -39,13 +43,13 @@ let rec show_module ~state ~docstring ~(file : File.t) ~package ~name
   match declared with
   | None ->
     show_module_top_level ~docstring ~is_type:false ~name file.structure.items
-  | Some {item = Structure {items}; module_path} ->
+  | Some {item = Structure {items; functor_params}; module_path} ->
     let is_type =
       match module_path with
       | ExportedModule {is_type} -> is_type
       | _ -> false
     in
-    show_module_top_level ~docstring ~is_type ~name items
+    show_module_top_level ~functor_params ~docstring ~is_type ~name items
   | Some ({item = Constraint (_moduleItem, module_type_item)} as declared) ->
     (* show the interface *)
     show_module ~state ~docstring ~file ~name ~package
