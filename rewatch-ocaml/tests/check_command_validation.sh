@@ -581,6 +581,10 @@ run_build_output_case quiet-warning 0 \
   "$root/rewatch-ocaml/tests/warning-replay" quiet
 
 run_case build-subcommand-version accept build --version
+run_case unknown-command-help exit2 invalid --help
+require_error_contains unknown-command-help 'unknown command "invalid"'
+run_case unknown-command-short-help exit2 invalid -h
+run_case unknown-command-formatted-help exit2 --help=plain invalid
 run_case clustered-global-version accept -vV build
 run_case clustered-global-verbosity accept -vvvvv build "$project"
 run_case clustered-global-version-before-help accept -Vh build

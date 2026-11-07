@@ -1,0 +1,1 @@
+- Report a usage error and exit with code 2 for unknown CLI commands even when help is requested.

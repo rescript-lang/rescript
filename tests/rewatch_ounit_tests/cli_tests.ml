@@ -49,11 +49,18 @@ let tests =
     ((build_options ["--"; "-v"]).folder = "-v")
     "double dash preserves an option-looking folder";
   check
-    (shows_help ["some-folder"; "--help"])
-    "implicit command folder help uses global help";
+    (rejects ["invalid"; "--help"])
+    "an unknown command with help is rejected";
   check
-    (shows_help ["some-folder"; "-h"])
-    "short implicit command help uses global help";
+    (rejects ["invalid"; "-h"])
+    "an unknown command with short help is rejected";
+  check
+    (rejects ["--help=plain"; "invalid"])
+    "leading formatted help rejects unknown commands";
+  check
+    (rejects ["invalid"; "-Vh"])
+    "help in a version cluster rejects unknown commands";
+  check (shows_help ["--help"]) "root help remains accepted";
   check (shows_help ["build"; "--help"]) "explicit build displays command help";
   check (shows_help ["build"; "-h"]) "explicit build accepts short command help";
   check
