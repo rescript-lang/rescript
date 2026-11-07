@@ -40,7 +40,7 @@ fi
 
 pushd tests
 
-legacyJsReferences=$(find syntax_tests/data syntax_benchmarks/data \( -name "*.res" -o -name "*.resi" \) -exec grep -nHE '(^|[^[:alnum:]_])Js\.' {} + || true)
+legacyJsReferences=$(find syntax_tests/data alloc_benchmarks/data \( -name "*.res" -o -name "*.resi" \) -exec grep -nHE '(^|[^[:alnum:]_])Js\.' {} + || true)
 if [[ $legacyJsReferences != "" ]]; then
   printf "Legacy Js. references remain in syntax fixtures:\n%s\n" "$legacyJsReferences"
   exit 1
