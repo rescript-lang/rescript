@@ -2544,9 +2544,12 @@ type targs = (Asttypes.arg_label * Typedtree.expression option) list
 
 (* The type of the most recent object field read if that read added the field
    to an open object row ([obj["m"]] with [obj: {..}]), [None] after any other
-   read. Only the [Pexp_apply] case reads it: it resets it before typing the
-   callee and checks it right after, where it is only meaningful when the
-   callee itself is such a read. Request-local, so requests type-checked
+   read; likewise for the result of a call of such a field. The [Pexp_apply]
+   case resets it before typing the callee and checks it right after, where it
+   is only meaningful when the callee itself is such a read; a field read
+   checks it right after typing its object, to see whether a still-unknown
+   object came from an open row ([obj["a"]["m"]]). Request-local, so requests
+   type-checked
    concurrently on other domains cannot overwrite it in between. *)
 let open_row_field_read : type_expr option ref Request_local.key =
   Request_local.new_key (fun () -> ref None)
@@ -2858,6 +2861,10 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
         type_application ~context ~open_row_method total_app env funct sargs
     in
     end_def ();
+    (* The result of an open-row method is as unknown as the method itself, so
+       a field read on it ([obj["m"](x)["n"]]) also comes from an open row. *)
+    Request_local.get open_row_field_read
+    := if open_row_method then Some ty_res else None;
     if transformed_jsx then check_jsx_props ~loc env args;
     unify_var env (newvar ()) funct.exp_type;
 
@@ -3696,13 +3703,18 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
   | Pexp_object_get (e, ({txt = met} as met_loc)) -> (
     let obj = type_exp ~context:None env e in
     (* An object type without the field gets it from its open row (or the
-       lookup fails). An object whose type is still a variable, such as
-       [failwith("x")], does not count. *)
+       lookup fails). An object whose type is still a variable counts only if
+       that variable itself came from an open row ([obj["a"]["m"]],
+       [obj["f"](x)["m"]]), not if it is the result of [failwith("x")]. *)
     let adds_field_to_row =
       match (expand_head env obj.exp_type).desc with
       | Tobject fields ->
         let fields, _ = Ctype.flatten_fields fields in
         not (List.exists (fun (f : Ctype.field_info) -> f.f_name = met) fields)
+      | Tvar _ -> (
+        match !(Request_local.get open_row_field_read) with
+        | Some ty -> repr ty == repr obj.exp_type
+        | None -> false)
       | _ -> false
     in
     try

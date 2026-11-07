@@ -13,6 +13,12 @@ let openLast = clipboardData("e")["m"]("a", clipboardData("o")["x"])
 let openFirst = clipboardData("e")["m"](clipboardData("o")["x"], "a")
 let nested = clipboardData("e")["m"](clipboardData("f")["n"]("y"))
 
+// Nor do chains of reads and calls on an open object.
+let field = clipboardData("e")["target"]["focus"]()
+let result = clipboardData("e")["querySelector"]("x")["focus"]()
+let chain = clipboardData("e")["a"]["b"](1)["c"]["d"]()
+let chainArgs = clipboardData("e")["q"](clipboardData("o")["x"])["m"](closed["x"])
+
 // Reading the method before calling it does not change that either.
 let retained = clipboardData("e")
 let first = retained["m"]
@@ -31,3 +37,4 @@ let ignored = () => throw(Failure("unreachable"))(1)
 // A field read that cannot return ignores its arguments: warning 20.
 let fromLiteral = () => ({"m": throw(Failure("boom"))})["m"](Console.log("a"))
 let fromThrow = () => throw(Failure("boom"))["m"](Console.log("b"))
+let fromThrowField = () => throw(Failure("boom"))["a"]["m"](Console.log("c"))
