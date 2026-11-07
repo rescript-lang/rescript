@@ -469,14 +469,13 @@ Path Fi
 ]
 
 Complete src/CompletionSpreadLiteral.res 50:44
-pos_cursor:[50:44] pos_no_white:[50:43] Found expr:[50:24->50:58]
-pos_cursor:[50:44] pos_no_white:[50:43] Found expr:[50:42->50:44]
-Pexp_construct Fi:[50:42->50:44] None
-Completable: Cpath Value[Fi]
+XXX Not found!
+Completable: Cexpression list<Type[kind]>=Fi->list
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-ContextPath Value[Fi]
-Path Fi
+ContextPath list<Type[kind]>
+ContextPath Type[kind]
+Path kind
 [
   {
     "detail": "First",
@@ -484,8 +483,66 @@ Path Fi
       "kind": "markdown",
       "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
     },
+    "insertText": "First",
+    "insertTextFormat": 2,
     "kind": 4,
     "label": "First",
+    "sortText": "A First",
+    "tags": []
+  },
+  { "detail": "module File", "kind": 9, "label": "File", "tags": [] },
+  {
+    "data": {
+      "modulePath": "Firebase",
+      "filePath": "src/CompletionSpreadLiteral.res"
+    },
+    "detail": "module Firebase",
+    "kind": 9,
+    "label": "Firebase",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "FirstClassModules",
+      "filePath": "src/CompletionSpreadLiteral.res"
+    },
+    "detail": "module FirstClassModules",
+    "kind": 9,
+    "label": "FirstClassModules",
+    "tags": []
+  }
+]
+
+Complete src/CompletionSpreadLiteral.res 55:42
+XXX Not found!
+Completable: Cexpression list<Type[kind]>=baseList
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath list<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[ { "detail": "list<kind>", "kind": 12, "label": "baseList", "tags": [] } ]
+
+Complete src/CompletionSpreadLiteral.res 58:31
+XXX Not found!
+Completable: Cexpression list<Type[kind]>=Fi->list
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath list<Type[kind]>
+ContextPath Type[kind]
+Path kind
+[
+  {
+    "detail": "First",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nFirst\n```\n\n```rescript\ntype kind = First | Second\n```"
+    },
+    "insertText": "First",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "First",
+    "sortText": "A First",
     "tags": []
   },
   { "detail": "module File", "kind": 9, "label": "File", "tags": [] },

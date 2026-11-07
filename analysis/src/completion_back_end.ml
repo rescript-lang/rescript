@@ -995,6 +995,12 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
       Completion.create "array" ~env
         ~kind:(Completion.Value (Ctype.newconstr Predef.path_array []));
     ]
+  | CPList None ->
+    if Debug.verbose () then print_endline "[ctx_path]--> CPList (no payload)";
+    [
+      Completion.create "list" ~env
+        ~kind:(Completion.Value (Ctype.newconstr Predef.path_list []));
+    ]
   | CPDict None ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPDict (no payload)";
     [
@@ -1025,9 +1031,16 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
         Completion.create "dummy" ~env
           ~kind:(Completion.Value (Ctype.newconstr Predef.path_dict []));
       ])
-  | CPArray (Some cp) -> (
+  | (CPArray (Some cp) | CPList (Some cp)) as context_path -> (
+    let is_list =
+      match context_path with
+      | CPList _ -> true
+      | _ -> false
+    in
     if Debug.verbose () then
-      print_endline "[ctx_path]--> CPArray (with payload)";
+      print_endline
+        (if is_list then "[ctx_path]--> CPList (with payload)"
+         else "[ctx_path]--> CPArray (with payload)");
     match mode with
     | Regular -> (
       match
@@ -1041,14 +1054,21 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
         [
           Completion.create "dummy" ~env
             ~kind:
-              (Completion.ExtractedType (Tarray (env, ExtractedType typ), `Type));
+              (Completion.ExtractedType
+                 ( (if is_list then Tlist (env, ExtractedType typ)
+                    else Tarray (env, ExtractedType typ)),
+                   `Type ));
         ])
     | Pipe ->
-      (* Pipe completion with array just needs to know that it's an array, not
-         what inner type it has. *)
+      (* Pipe completion with an array or a list just needs to know which one
+         it is, not what inner type it has. *)
       [
         Completion.create "dummy" ~env
-          ~kind:(Completion.Value (Ctype.newconstr Predef.path_array []));
+          ~kind:
+            (Completion.Value
+               (Ctype.newconstr
+                  (if is_list then Predef.path_list else Predef.path_array)
+                  []));
       ])
   | CPOption cp -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPOption";
@@ -1970,6 +1990,24 @@ let rec complete_typed_value ?(type_arg_context : type_arg_context option)
                   | Pattern _ -> `Type
                   | Expression -> `Value )
             | TypeExpr typ -> Value typ)
+          ~env;
+      ]
+    else []
+  | Tlist (env, typ) as extracted_type ->
+    if Debug.verbose () then print_endline "[complete_typed_value]--> Tlist";
+    if prefix = "" then
+      [
+        create "list{}" ~includes_snippets:true ~insert_text:"list{$0}"
+          ~sort_text:"A"
+          ~kind:
+            (match typ with
+            | ExtractedType _ ->
+              ExtractedType
+                ( extracted_type,
+                  match mode with
+                  | Pattern _ -> `Type
+                  | Expression -> `Value )
+            | TypeExpr typ -> Value (Ctype.newconstr Predef.path_list [typ]))
           ~env;
       ]
     else []
