@@ -1,0 +1,103 @@
+module StrSet = AppliedFunctor.MakeSet({
+  type t = string
+  let compare = (a: string, b) => a < b ? -1 : a > b ? 1 : 0
+})
+
+let s = StrSet.add([], "a")
+//             ^def
+
+let t: StrSet.t = []
+//            ^hov
+
+// let _ = StrSet.add(
+//                    ^she
+
+let value: StrSet.t = []
+//   ^typ
+
+let s2 = StrSet.add([], "b")
+//              ^ref
+
+module N = AppliedFunctor.WithNested(AppliedFunctor.IntOrd)
+
+let nv = N.Nested.value
+//         ^def
+
+let nv2 = N.Nested.value
+//                 ^def
+
+let nv3 = N.Nested.value
+//                 ^ref
+
+module Shapes = AppliedFunctor.WithShapes(AppliedFunctor.IntOrd)
+
+let p: Shapes.point = {x: 1}
+//  ^typ
+
+let px = p.x
+//         ^def
+
+let box = Shapes.Box(1)
+//               ^def
+
+module Local = (O: AppliedFunctor.Ord) => {
+  module Inner = {
+    type t = O.t
+  }
+}
+
+module LocalApplied = Local(AppliedFunctor.IntOrd)
+
+let li: LocalApplied.Inner.t = 1
+//  ^typ
+
+let li2: LocalApplied.Inner.t = 2
+//                   ^def
+
+let nv4 = N.Nested.value
+//          ^ref
+
+let p2: Shapes.point = {x: 2}
+//             ^ref
+
+let s3 = StrSet.add([], "c")
+//              ^ren addItem
+
+let p3: Shapes.point = {x: 3}
+//             ^ren location
+
+let nv5 = N.Nested.value
+//                 ^ren renamedValue
+
+let px2 = p.x
+//          ^ref
+
+let box2 = Shapes.Box(2)
+//                ^ren Square
+
+module Make = AppliedFunctor.MakeSet
+
+module Aliased = Make(AppliedFunctor.IntOrd)
+
+let a = Aliased.add([], 1)
+//               ^def
+
+let av: Aliased.t = []
+//  ^typ
+
+module Make2 = Make
+
+module Functors = {
+  module Make = Make2
+}
+
+module Chained = Functors.Make(AppliedFunctor.IntOrd)
+
+let c = Chained.add([], 1)
+//               ^def
+
+let cv: Chained.t = []
+//  ^typ
+
+let a2 = Aliased.add([], 2)
+//                ^ref
