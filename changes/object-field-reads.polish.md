@@ -1,0 +1,1 @@
+- Speed up reading many fields of a large object, and shrink the `.cmt` files of such modules.
