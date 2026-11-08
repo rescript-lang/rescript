@@ -5,8 +5,10 @@ let canonical_project_root folder =
   if not (File_util.exists folder) then
     raise
       (Error
-         ("Could not start Rescript build: Could not write lockfile because \
-           the specified project folder does not exist: " ^ folder));
+         (Printf.sprintf
+            "Project folder '%s' does not exist. Run 'rescript --help' for the \
+             available commands."
+            folder));
   Platform.canonicalize_path folder
 
 type dependency_context = {
@@ -169,9 +171,9 @@ let require_dependency_directory ~context package_root
     raise
       (Package_error
          (Printf.sprintf
-            "Could not build package tree reading dependency '%s' at path \
-             '%s'. Error: Could not resolve dependency %s"
-            dependency.name context.current_root dependency.name))
+            "Could not resolve dependency %s of the package at '%s'. Is it \
+             installed?"
+            dependency.name context.current_root))
   | Some directory when not (Config.exists_in_root directory) ->
     raise
       (Package_error

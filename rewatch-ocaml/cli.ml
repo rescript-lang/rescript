@@ -39,7 +39,7 @@ let verbosity =
       & info ["q"; "quiet"]
           ~doc:"Decrease logging verbosity: hide progress and summary output.")
   in
-  Term.term_result
+  Term.term_result ~usage:true
     (let+ verbose and+ quiet in
      match (verbose, quiet) with
      | _ :: _, _ :: _ ->
@@ -105,8 +105,8 @@ let after_build =
     & opt (some string) None
     & info ["a"; "after-build"] ~docv:"COMMAND"
         ~doc:
-          "Run an additional command after a successful build. E.g., play a \
-           sound or run a test suite when done compiling.")
+          "Run an additional command through the shell after a successful \
+           build. E.g., play a sound or run a test suite when done compiling.")
 
 let filter =
   let parse value =
@@ -189,7 +189,7 @@ let format_term =
             "Files to format. If no files are provided, all files are \
              formatted.")
   in
-  Term.term_result
+  Term.term_result ~usage:true
     (let+ verbosity = verbosity and+ check and+ stdin and+ files in
      match (check, stdin, files) with
      | true, Some _, _ -> Error (`Msg "--stdin conflicts with --check")
@@ -198,10 +198,20 @@ let format_term =
      | _, None, paths -> Ok (Format (Format_files {verbosity; check; paths})))
 
 let compiler_args_term =
+  let source =
+    let parse path =
+      if Filename.check_suffix path ".res" || Filename.check_suffix path ".resi"
+      then Ok path
+      else
+        Error
+          (`Msg (Printf.sprintf "%s is not a .res or .resi source file" path))
+    in
+    Arg.conv (parse, Stdlib.Format.pp_print_string)
+  in
   let path =
     Arg.(
       required
-      & pos 0 (some string) None
+      & pos 0 (some source) None
       & info [] ~docv:"PATH" ~doc:"ReScript source file (.res or .resi).")
   in
   let+ verbosity = verbosity and+ path in
@@ -210,9 +220,9 @@ let compiler_args_term =
 let exits =
   [
     Cmd.Exit.info 0 ~doc:"on success.";
-    Cmd.Exit.info 1 ~doc:"on build, configuration, or file system errors.";
-    Cmd.Exit.info 2
-      ~doc:"on command-line usage errors and invalid package dependencies.";
+    Cmd.Exit.info 1
+      ~doc:"on build, configuration, dependency, or file system errors.";
+    Cmd.Exit.info 2 ~doc:"on command-line usage errors.";
     Cmd.Exit.info 129 ~max:143
       ~doc:"when interrupted by a signal (128 plus the signal number).";
   ]
@@ -267,6 +277,7 @@ let root =
         `P
           "If no command is provided, the $(b,build) command is run by \
            default. See $(b,rescript help build) for more information.";
+        `P "$(b,-h) is short for $(b,--help), and $(b,-V) for $(b,--version).";
         `P
           "To create a new ReScript project, or to add ReScript to an existing \
            project, use https://github.com/rescript-lang/create-rescript-app.";

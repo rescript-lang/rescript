@@ -18,6 +18,8 @@ const cliHelp =
   "       If no command is provided, the build command is run by default. See\n" +
   "       rescript help build for more information.\n" +
   "\n" +
+  "       -h is short for --help, and -V for --version.\n" +
+  "\n" +
   "       To create a new ReScript project, or to add ReScript to an existing\n" +
   "       project, use https://github.com/rescript-lang/create-rescript-app.\n" +
   "\n" +
@@ -47,8 +49,8 @@ const cliHelp =
   "\n" +
   "OPTIONS\n" +
   "       -a COMMAND, --after-build=COMMAND\n" +
-  "           Run an additional command after a successful build. E.g., play a\n" +
-  "           sound or run a test suite when done compiling.\n" +
+  "           Run an additional command through the shell after a successful\n" +
+  "           build. E.g., play a sound or run a test suite when done compiling.\n" +
   "\n" +
   "       -f REGEX, --filter=REGEX\n" +
   "           Filter source files by regular expression. E.g., filter out test\n" +
@@ -92,9 +94,9 @@ const cliHelp =
   "\n" +
   "       0   on success.\n" +
   "\n" +
-  "       1   on build, configuration, or file system errors.\n" +
+  "       1   on build, configuration, dependency, or file system errors.\n" +
   "\n" +
-  "       2   on command-line usage errors and invalid package dependencies.\n" +
+  "       2   on command-line usage errors.\n" +
   "\n" +
   "       129-143\n" +
   "           when interrupted by a signal (128 plus the signal number).\n" +
@@ -114,8 +116,8 @@ const buildHelp =
   "\n" +
   "OPTIONS\n" +
   "       -a COMMAND, --after-build=COMMAND\n" +
-  "           Run an additional command after a successful build. E.g., play a\n" +
-  "           sound or run a test suite when done compiling.\n" +
+  "           Run an additional command through the shell after a successful\n" +
+  "           build. E.g., play a sound or run a test suite when done compiling.\n" +
   "\n" +
   "       -f REGEX, --filter=REGEX\n" +
   "           Filter source files by regular expression. E.g., filter out test\n" +
@@ -159,9 +161,9 @@ const buildHelp =
   "\n" +
   "       0   on success.\n" +
   "\n" +
-  "       1   on build, configuration, or file system errors.\n" +
+  "       1   on build, configuration, dependency, or file system errors.\n" +
   "\n" +
-  "       2   on command-line usage errors and invalid package dependencies.\n" +
+  "       2   on command-line usage errors.\n" +
   "\n" +
   "       129-143\n" +
   "           when interrupted by a signal (128 plus the signal number).\n" +
@@ -207,9 +209,9 @@ const cleanHelp =
   "\n" +
   "       0   on success.\n" +
   "\n" +
-  "       1   on build, configuration, or file system errors.\n" +
+  "       1   on build, configuration, dependency, or file system errors.\n" +
   "\n" +
-  "       2   on command-line usage errors and invalid package dependencies.\n" +
+  "       2   on command-line usage errors.\n" +
   "\n" +
   "       129-143\n" +
   "           when interrupted by a signal (128 plus the signal number).\n" +
@@ -258,9 +260,9 @@ const formatHelp =
   "\n" +
   "       0   on success.\n" +
   "\n" +
-  "       1   on build, configuration, or file system errors.\n" +
+  "       1   on build, configuration, dependency, or file system errors.\n" +
   "\n" +
-  "       2   on command-line usage errors and invalid package dependencies.\n" +
+  "       2   on command-line usage errors.\n" +
   "\n" +
   "       129-143\n" +
   "           when interrupted by a signal (128 plus the signal number).\n" +
@@ -303,9 +305,9 @@ const compilerArgsHelp =
   "\n" +
   "       0   on success.\n" +
   "\n" +
-  "       1   on build, configuration, or file system errors.\n" +
+  "       1   on build, configuration, dependency, or file system errors.\n" +
   "\n" +
-  "       2   on command-line usage errors and invalid package dependencies.\n" +
+  "       2   on command-line usage errors.\n" +
   "\n" +
   "       129-143\n" +
   "           when interrupted by a signal (128 plus the signal number).\n" +

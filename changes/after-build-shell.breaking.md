@@ -1,0 +1,1 @@
+- `--after-build` runs its command through the shell (`/bin/sh -c`, or `cmd.exe /C` on Windows) instead of splitting it on whitespace, so quotes, `&&` and `exit` work as typed.

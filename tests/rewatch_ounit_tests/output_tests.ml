@@ -23,7 +23,7 @@ let tests =
         Platform.clean_symbol)
     "interactive compiler cleanup format";
   check
-    (Output.parsing_message ~color:true ~step:"2/3" ~count:4 ~seconds:1.5
+    (Output.parsing_message ~color:true ~step:"2/3" ~count:4 ~seconds:(Some 1.5)
     = Printf.sprintf
         "\027[2K\r\027[1m\027[2m[2/3]\027[0m %sParsed 4 source files in 1.50s"
         Platform.parse_symbol)

@@ -525,7 +525,7 @@ if "$port" build "$missing_project" >"$work/missing-project.log" 2>&1; then
 fi
 missing_project_native=$(native_path "$missing_project")
 tr '\\' '/' <"$work/missing-project.log" | grep -F \
-  "Could not start Rescript build: Could not write lockfile because the specified project folder does not exist: $missing_project_native" \
+  "Project folder '$missing_project_native' does not exist." \
   >/dev/null
 
 compiler_args_json=$("$port" compiler-args "$basic/src/A.res")
@@ -704,10 +704,19 @@ stop_watch() {
   pid=$2
   if $windows_posix_shell; then
     remove_file_with_retry "$project/lib/rescript/watch.lock"
+    expected_status=0
   else
     kill -TERM "$pid"
+    expected_status=143
   fi
+  set +e
   wait "$pid"
+  stop_status=$?
+  set -e
+  if [ "$stop_status" -ne "$expected_status" ]; then
+    echo "watch of $project exited with $stop_status, expected $expected_status" >&2
+    exit 1
+  fi
 }
 
 remove_obstruction_directory() {
@@ -863,6 +872,16 @@ mkdir -p "$basic/lib/bs/other"
 touch "$basic/lib/bs/other/Authored.js"
 
 "$port" build --after-build 'test -f src/A.mjs' "$basic"
+# The command runs through the shell, so its operators and exit status count;
+# this one works in both /bin/sh and cmd.exe.
+if "$port" build --after-build 'echo shell-ok && exit 3' "$basic" \
+  >"$work/after-build-shell.log" 2>&1; then
+  echo "a failing --after-build shell command did not fail the build" >&2
+  exit 1
+fi
+grep -q 'shell-ok' "$work/after-build-shell.log"
+grep -q -- '--after-build command failed with exit code 3' \
+  "$work/after-build-shell.log"
 test ! -d "$basic/lib/bs"
 test -f "$basic/src/A.mjs"
 test -f "$basic/src/Authored.js"
@@ -2016,12 +2035,11 @@ if "$port" build "$unlinked_dependency" \
   exit 1
 fi
 grep -q "Could not resolve dependency dep" "$unlinked_dependency/build.log"
-if "$port" clean "$unlinked_dependency" \
-  >"$unlinked_dependency/clean.log" 2>&1; then
-  echo "clean resolved an unlinked packages dependency" >&2
-  exit 1
-fi
-grep -q "Could not resolve dependency dep" "$unlinked_dependency/clean.log"
+# Clean skips the dependency it cannot resolve and cleans the rest.
+"$port" clean "$unlinked_dependency" >"$unlinked_dependency/clean.log" 2>&1
+grep -q "Skipping a dependency: Could not resolve dependency dep" \
+  "$unlinked_dependency/clean.log"
+artifacts_removed "$unlinked_dependency"
 test -f "$unlinked_dependency/packages/dep/src/Dep.js"
 test -f "$unlinked_dependency/packages/dep/lib/rescript/marker"
 

@@ -71,9 +71,7 @@ let main () =
     | Cli.Run command -> run command
     | Cli.Exit code -> exit code
   with
-  | Project_context.Package_error message ->
-    prerr_endline message;
-    exit 2
+  | Project_context.Package_error message
   | Config.Error message
   | Source.Error message
   | Project_context.Error message

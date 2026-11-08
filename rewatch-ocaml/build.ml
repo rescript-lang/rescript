@@ -284,7 +284,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   (* Each build reaches this at most once: the failure reports end by raising
      Reported_failure, and a parse failure is raised before any other outcome
      writes the marker. *)
-  let phase_seconds seconds = if no_timing then 0. else seconds in
+  let phase_seconds seconds = if no_timing then None else Some seconds in
   let parse_step = Build_report.parse_step report in
   let compile_step = Build_report.compile_step report in
   let report_failure ~compile_seconds output =
