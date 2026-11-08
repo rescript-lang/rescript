@@ -1,5 +1,5 @@
 #!/bin/bash
-# Checks the DEBUG and TRACE events of `rescript -v build` and `-vv build`
+# Checks the DEBUG and TRACE events of `rescript build -v` and `build -vv`
 # against snapshots/verbose_output. Only the event lines are compared, sorted,
 # so parallel compilation does not reorder them.
 set -eu
@@ -45,7 +45,7 @@ capture() {
   project="$work/$level"
   (
     cd "$project"
-    "$rescript" "-$level" build >"$work/$name.stdout" 2>"$work/$name.stderr"
+    "$rescript" build "-$level" >"$work/$name.stdout" 2>"$work/$name.stderr"
   )
   if [ -s "$work/$name.stderr" ]; then
     echo "$name unexpectedly wrote verbose build output to stderr" >&2

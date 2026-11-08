@@ -183,7 +183,7 @@ if $windows_posix_shell; then
 fi
 
 echo "Checking quiet interactive builds..."
-run_in_terminal "$work/quiet.tty" -q build "$(command_path "$work/project")"
+run_in_terminal "$work/quiet.tty" build -q "$(command_path "$work/project")"
 if tr '\r' '\n' <"$work/quiet.tty" \
   | grep -E '(Cleaned|Parsed|Parsing\.\.\.|Compiled|Compiling\.\.\.|Finished .*compilation)' >/dev/null; then
   echo "A quiet interactive build emitted progress" >&2
@@ -216,7 +216,7 @@ if ! cmp -s "$work/expected-clean" "$work/clean.phases"; then
 fi
 
 echo "Checking quiet interactive cleans..."
-run_in_terminal "$work/clean-quiet.tty" -q clean "$(command_path "$work/project")"
+run_in_terminal "$work/clean-quiet.tty" clean -q "$(command_path "$work/project")"
 if tr '\r' '\n' <"$work/clean-quiet.tty" | grep -E '(Cleaning|Cleaned)' >/dev/null; then
   echo "A quiet interactive clean emitted progress" >&2
   cat "$work/clean-quiet.tty" >&2

@@ -26,7 +26,7 @@ node -e "
 "
 
 # Start watcher and capture output (use -vv to get error logs)
-rewatch_bg -vv watch > rewatch.log 2>&1 &
+rewatch_bg watch -vv > rewatch.log 2>&1 &
 success "Watcher Started"
 
 # Wait for initial build to complete

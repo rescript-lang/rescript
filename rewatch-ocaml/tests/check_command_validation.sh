@@ -474,7 +474,7 @@ run_build_output_case() {
   build_project="$work/$name-build"
   cp -R "$fixture" "$build_project"
   if [ "$mode" = quiet ]; then
-    run_rescript -q build "$build_project"
+    run_rescript build -q "$build_project"
   elif [ "$mode" = forced-color ]; then
     CLICOLOR_FORCE=1 run_rescript build "$build_project"
   else
@@ -582,12 +582,15 @@ run_build_output_case quiet-warning 0 \
   "$root/rewatch-ocaml/tests/warning-replay" quiet
 
 run_case build-subcommand-version accept build --version
-run_case clustered-global-version accept -vV build
-run_case clustered-global-verbosity accept -vvvvv build "$project"
-run_case clustered-global-version-before-help accept -Vh build
-run_case clustered-global-help-before-version accept -hV build
-run_case clustered-subcommand-help-before-version accept build -hV
-run_case clustered-subcommand-version-before-help accept build -Vh
+run_case short-help accept -h
+run_case short-version accept -V
+run_case clustered-verbosity accept build -vvvvv "$project"
+run_case options-before-command exit2 -v build
+require_error_contains options-before-command \
+  'options go after the command: rescript build'
+run_case folder-named-like-command reject -v ./build
+require_error_contains folder-named-like-command \
+  "Project folder './build' does not exist."
 "$rescript" build --help=groff >"$work/help-groff.out"
 if ! grep -F '.\" Pipe this output to groff' \
   "$work/help-groff.out" >/dev/null; then
@@ -597,11 +600,15 @@ if ! grep -F '.\" Pipe this output to groff' \
 fi
 checked=$((checked + 1))
 run_case implicit-conflicting-verbosity exit2 -v -q
-require_error_contains implicit-conflicting-verbosity 'Usage: rescript build'
+require_error_contains implicit-conflicting-verbosity \
+  'verbose cannot be used together with --quiet'
 run_case build-conflicting-verbosity exit2 build --verbose --quiet
-run_case unknown-command reject bogus-command
-require_error_contains unknown-command \
-  "Project folder 'bogus-command' does not exist. Run 'rescript --help' for the available commands."
+run_case unknown-command exit2 bogus-command
+require_error_contains unknown-command 'unknown command bogus-command'
+run_case unknown-command-help exit2 bogus-command --help
+require_error_contains unknown-command-help 'unknown command bogus-command'
+run_case unknown-command-version exit2 bogus-command -V
+require_error_contains unknown-command-version 'unknown command bogus-command'
 run_case filter-perl-quoting accept build --filter '\QA.res\E' "$project"
 run_case filter-invalid exit2 build --filter '(' "$project"
 require_error_contains filter-invalid 'invalid regular expression'
@@ -989,7 +996,7 @@ if [ "$rescript_status" -ne 0 ] || \
 fi
 check_output_snapshot clean-redirected
 checked=$((checked + 1))
-run_rescript -q clean "$project"
+run_rescript clean -q "$project"
 if [ "$rescript_status" -ne 0 ] || \
   [ -s "$work/rescript.out" ] || [ -s "$work/rescript.err" ]; then
   echo "Quiet redirected clean emitted output" >&2
@@ -1122,7 +1129,7 @@ wait_for_file "$work/watch-dependency-recovery/src/A.js"
 terminate_and_wait "$dependency_recovery_pid" "dependency-recovery watcher"
 checked=$((checked + 1))
 
-"$rescript" -v watch "$work/watch-dependency-install" \
+"$rescript" watch -v "$work/watch-dependency-install" \
   >"$work/watch-dependency-install.out" \
   2>"$work/watch-dependency-install.err" &
 dependency_install_pid=$!
@@ -1150,7 +1157,7 @@ checked=$((checked + 1))
 
 directory_link "$work/watch-dependency-fallback/packages/dep" \
   "$work/node_modules/dep"
-"$rescript" -v watch "$work/watch-dependency-fallback" \
+"$rescript" watch -v "$work/watch-dependency-fallback" \
   >"$work/watch-dependency-fallback.out" \
   2>"$work/watch-dependency-fallback.err" &
 dependency_fallback_pid=$!
@@ -1256,7 +1263,7 @@ checked=$((checked + 1))
 quiet_watch_project="$work/quiet-watch"
 quiet_watch_marker="$quiet_watch_project/after-build.log"
 REWATCH_WATCH_FILTER_MARKER="$quiet_watch_marker" \
-  "$rescript" -q watch \
+  "$rescript" watch -q \
     --after-build "node $command_work/watch-filter-marker.js" \
     "$quiet_watch_project" \
     >"$work/quiet-watch.out" 2>"$work/quiet-watch.err" &
