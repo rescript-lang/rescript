@@ -1,0 +1,1 @@
+- Ship a `THIRD_PARTY_LICENSES` file in each native platform package with the notices for all vendored sources, linked OCaml libraries, and the glibc and MinGW-w64 runtimes.
