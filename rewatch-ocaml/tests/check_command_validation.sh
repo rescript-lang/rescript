@@ -603,12 +603,14 @@ run_case implicit-conflicting-verbosity exit2 -v -q
 require_error_contains implicit-conflicting-verbosity \
   'verbose cannot be used together with --quiet'
 run_case build-conflicting-verbosity exit2 build --verbose --quiet
-run_case unknown-command exit2 bogus-command
-require_error_contains unknown-command 'unknown command bogus-command'
-run_case unknown-command-help exit2 bogus-command --help
-require_error_contains unknown-command-help 'unknown command bogus-command'
-run_case unknown-command-version exit2 bogus-command -V
-require_error_contains unknown-command-version 'unknown command bogus-command'
+# Cmdliner quotes the command name when colors are off and styles it
+# otherwise, so the name is checked apart from the message.
+for display in "" --help -V; do
+  name=unknown-command${display:+-$display}
+  run_case "$name" exit2 bogus-command ${display:+"$display"}
+  require_error_contains "$name" 'unknown command'
+  require_error_contains "$name" 'bogus-command'
+done
 run_case filter-perl-quoting accept build --filter '\QA.res\E' "$project"
 run_case filter-invalid exit2 build --filter '(' "$project"
 require_error_contains filter-invalid 'invalid regular expression'
