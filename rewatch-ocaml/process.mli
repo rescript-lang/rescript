@@ -14,6 +14,10 @@ val succeeded : result -> bool
 val status_string : Unix.process_status -> string
 val default_max_jobs : int
 
+val worker_allocated_words : unit -> int
+(** The words that the worker domains of finished worker pools allocated,
+    which the runtime's report at exit leaves out. *)
+
 val task : ?env:Spawn.Env.t -> ?on_result:(result -> result) -> job -> task
 val concurrent_task :
   cancel:(unit -> unit) ->

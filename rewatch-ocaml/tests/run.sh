@@ -2380,3 +2380,19 @@ for attempt in first second; do
     exit 1
   fi
 done
+
+# The compiler benchmarks add the words the worker domains allocated, which
+# the runtime's report at exit leaves out, to that report.
+worker_allocations="$work/worker-allocations"
+mkdir -p "$worker_allocations/src"
+printf '%s\n' \
+  '{"name":"worker-allocations","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$worker_allocations/rescript.json"
+printf 'let x = 1\n' >"$worker_allocations/src/A.res"
+env REWATCH_REPORT_WORKER_ALLOCATIONS=1 REWATCH_COMPILER_DOMAINS=1 \
+  "$port" build "$worker_allocations" >"$worker_allocations/build.log" 2>&1
+worker_words=$(sed -n 's/^worker_allocated_words: \([0-9]*\)$/\1/p' "$worker_allocations/build.log")
+if ! test "${worker_words:-0}" -gt 0; then
+  cat "$worker_allocations/build.log" >&2
+  exit 1
+fi

@@ -226,6 +226,20 @@ let rec worker_loop pool =
    memory. 8M added memory for little more speed. *)
 let worker_minor_heap_words = 4 * 1024 * 1024
 
+(* The words that finished workers allocated. The runtime's own report at exit
+   (OCAMLRUNPARAM=v=0x400) counts only the main domain, so the compiler
+   benchmarks add these to it. Allocated words are counted as the runtime
+   counts them: minor plus major, without the promoted ones. *)
+let worker_allocated_words_total = Atomic.make 0
+
+let record_worker_allocations () =
+  let minor, promoted, major = Gc.counters () in
+  ignore
+    (Atomic.fetch_and_add worker_allocated_words_total
+       (int_of_float (minor +. major -. promoted)))
+
+let worker_allocated_words () = Atomic.get worker_allocated_words_total
+
 let create_worker_pool ~max_jobs notifier =
   let pool =
     {
@@ -251,10 +265,12 @@ let create_worker_pool ~max_jobs notifier =
      before re-raising the first error. *)
   let run_worker () =
     Gc.set {(Gc.get ()) with minor_heap_size = worker_minor_heap_words};
-    try worker_loop pool
-    with exn ->
-      Child.with_lock pool.mutex (fun () ->
-          if Option.is_none pool.worker_error then pool.worker_error <- Some exn)
+    (try worker_loop pool
+     with exn ->
+       Child.with_lock pool.mutex (fun () ->
+           if Option.is_none pool.worker_error then
+             pool.worker_error <- Some exn));
+    record_worker_allocations ()
   in
   let rec start_workers remaining =
     if remaining > 0 then (
