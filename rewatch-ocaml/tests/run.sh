@@ -733,7 +733,7 @@ if printf 'let =\n' | "$port" format --stdin .res \
   echo "format stdin unexpectedly accepted invalid syntax" >&2
   exit 1
 fi
-grep -F "Error formatting stdin:" "$work/format-invalid.err" >/dev/null
+grep -F "Error formatting <stdin>:" "$work/format-invalid.err" >/dev/null
 
 format_stdin_tmp="$work/format-stdin-tmp"
 format_stdin_fifo="$work/format-stdin.fifo"
@@ -778,9 +778,9 @@ if "$port" format --check "$work/unformatted.res" \
   echo "format check unexpectedly accepted an unformatted file" >&2
   exit 1
 fi
-unformatted_native=$(native_path "$work/unformatted.res")
+# Paths are shown relative to the current directory when they are below it.
 tr '\\' '/' <"$work/format-check.err" | \
-  grep -F "[format check] $unformatted_native" >/dev/null
+  grep -E '^\[format check\] .*unformatted\.res$' >/dev/null
 grep -F "The file listed above needs formatting" \
   "$work/format-check.err" >/dev/null
 grep -F "Formatting check failed" "$work/format-check.err" >/dev/null
