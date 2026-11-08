@@ -41,7 +41,7 @@
 // of this script, so both measurements use the same ones. With `--project`,
 // it also builds tests/tests of the given checkout with the build system,
 // clean, with nothing to do and after two edits (see measureProjectBuild);
-// the builds after the clean one run under cachegrind with `--instructions`.
+// the no-op and leaf-edit builds run under cachegrind with `--instructions`.
 // With `--playground`, it measures the size of the playground's compiler.
 //
 // `compare` reports the changes between two measurements as Markdown,
@@ -541,8 +541,11 @@ function measureProjectBuild(checkout, projectCheckout, instructions, results) {
     /** @param {string} file */
     const edit = file => fs.appendFileSync(file, "\nlet benchmarkEdit = 1\n");
 
-    // The clean build runs under cachegrind for no measurement: it would
-    // take minutes, and the replayed builds above cover its compiler work.
+    // Only the builds that compile little run under cachegrind. The others
+    // would take minutes, the replayed builds above cover their compiler
+    // work, and with two domains collecting, their instructions depend on
+    // how the domains interleave: the shared edit's differed by 9.5% in a
+    // pull request that didn't change what it compiles.
     results["build/clean"] = { ...build(false), inputs };
     const outputs = outputSizes(workDir);
     for (const ext of outputExtensions) {
@@ -552,7 +555,7 @@ function measureProjectBuild(checkout, projectCheckout, instructions, results) {
     edit(leafModule);
     results["build/leaf-edit"] = { ...build(instructions), inputs };
     edit(path.join(workDir, sharedModule));
-    results["build/shared-edit"] = { ...build(instructions), inputs };
+    results["build/shared-edit"] = { ...build(false), inputs };
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
   }
