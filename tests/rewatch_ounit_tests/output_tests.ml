@@ -29,6 +29,16 @@ let tests =
         Platform.parse_symbol)
     "interactive parsing phase styles the step when color is enabled";
   check
+    (Output.count_of 1 "module" = "1 module"
+    && Output.count_of 0 "module" = "0 modules"
+    && Output.stale_modules ~cleaned:1 = "1 stale module")
+    "counts use the singular for one";
+  check
+    (Output.compiler_output ~color:false "\027[1;31mError\027[0m" = "Error"
+    && Output.compiler_output ~color:true "\027[1;31mError\027[0m"
+       = "\027[1;31mError\027[0m")
+    "compiler output is uncolored when colors are off";
+  check
     (Output.should_clear_screen ~clear_screen:true ~show_progress:true
        ~interactive:true)
     "interactive clear-screen";

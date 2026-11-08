@@ -16,5 +16,5 @@ assert.ok(
     "This untagged variant definition is invalid: Case Bool can never match: both true and false are already cases of this variant.",
   ),
 );
-assert.ok(stderr.includes("Failed to Compile"));
+assert.ok(stderr.includes("Build failed"));
 await execClean();

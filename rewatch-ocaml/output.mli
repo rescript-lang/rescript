@@ -26,14 +26,16 @@ val colors_enabled_with :
 
 val colors_enabled : interactive:bool -> bool
 val strip_sgr : string -> string
+val compiler_output : color:bool -> string -> string
+
+val count_of : int -> string -> string
+(** [count_of 1 "module"] is ["1 module"], [count_of 2 "module"]
+    ["2 modules"]. *)
+
+val stale_modules : cleaned:int -> string
 
 val cleanup_message :
-  color:bool ->
-  step:string ->
-  cleaned:int ->
-  total:int ->
-  seconds:float option ->
-  string
+  color:bool -> step:string -> cleaned:int -> seconds:float option -> string
 
 val compiler_cleanup_message : color:bool -> step:string -> string
 val cleaning_command_message : color:bool -> step:string -> string -> string

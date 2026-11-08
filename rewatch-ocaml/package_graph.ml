@@ -108,7 +108,7 @@ let discover ~(root_config : Config.t) ~(workspace_config : Config.t) ~prod
           ~on_missing:(Package_diagnostics.report_missing_source_folder config)
           ~on_orphan:(fun path ->
             Printf.eprintf
-              "\027[2K\r No implementation file found for interface file \
+              "warning: no implementation file found for interface file \
                (skipping): %s\n\
                %!"
               path)

@@ -321,7 +321,7 @@ let run_with_native_create ~native_create ~report_native_fallback ~root ~prod
   Build_lock.with_watch root
     ~running:
       (Printf.sprintf
-         "Could not start Rescript build: A ReScript build is already running. \
+         "Could not start ReScript build: A ReScript build is already running. \
           The process ID (PID) is %s") (fun watch_lock ->
       ignore (Config.load_root root);
       run_locked ~native_create ~report_native_fallback ~root ~prod ~features

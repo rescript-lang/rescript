@@ -1,0 +1,7 @@
+- The build system's messages read more consistently:
+  - counts use the singular for one (`Parsed 1 source file`, `Compiled 1 module`), and the cleanup step reports `Cleaned N stale modules`;
+  - a failed build ends with `Build failed: see the errors above.`, without a terminal escape sequence when redirected;
+  - a redirected one-shot build ends with `Finished compilation`, like watch mode;
+  - warnings and verbose logs are labeled inline (`warning: …`, `debug: …`, `trace: …`), and a missing source folder is a warning;
+  - parse errors no longer get an `Error in <package>:` header;
+  - compiler errors and warnings are uncolored when output is redirected or `NO_COLOR` is set.

@@ -1,4 +1,3 @@
 status: 0
 --- stderr
-ERROR:
-Could not read folder: "missing". Specified in dependency: dep, located "<WORK>/missing-source-folder/node_modules/dep"...
+warning: source folder "missing" of package dep (<WORK>/missing-source-folder/node_modules/dep) does not exist or is not a folder

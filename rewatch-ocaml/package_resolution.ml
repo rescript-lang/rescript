@@ -73,7 +73,8 @@ let resolve resolution ~package_root (declaration : Config.dependency) =
              && not (Hashtbl.mem resolution.reported_duplicates key)
            then (
              Hashtbl.add resolution.reported_duplicates key ();
-             Printf.eprintf "Duplicated package: %s %s (chosen) vs %s in %s\n%!"
+             Printf.eprintf
+               "warning: duplicated package: %s %s (chosen) vs %s in %s\n%!"
                declaration.name
                (Project_context.display_path ~root:resolution.root_config.root
                   selected.directory)

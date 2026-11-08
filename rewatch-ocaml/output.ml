@@ -1,16 +1,19 @@
 let line_clear = "\027[2K\r"
 
+(* [count_of 1 "module"] is "1 module", [count_of 2 "module"] "2 modules". *)
+let count_of count noun =
+  Printf.sprintf "%d %s%s" count noun (if count = 1 then "" else "s")
+
 (* Logs go to stdout by default. Commands whose stdout is machine-readable
    output (compiler-args, format) log to stderr instead. *)
 let log ?(channel = stdout) ~minimum ~verbosity ~label message =
-  if verbosity >= minimum then
-    Printf.fprintf channel "%s:\n%s\n%!" label message
+  if verbosity >= minimum then Printf.fprintf channel "%s: %s\n%!" label message
 
 let debug ?channel ~verbosity message =
-  log ?channel ~minimum:1 ~verbosity ~label:"DEBUG" message
+  log ?channel ~minimum:1 ~verbosity ~label:"debug" message
 
 let trace ?channel ~verbosity message =
-  log ?channel ~minimum:2 ~verbosity ~label:"TRACE" message
+  log ?channel ~minimum:2 ~verbosity ~label:"trace" message
 let trace_enabled verbosity = verbosity >= 2
 
 let format_step ~color step =
@@ -73,7 +76,7 @@ module Progress = struct
     if verbosity >= 1 then (
       let redraw = progress.enabled && Option.is_some progress.phase in
       if redraw then Printf.printf "%s%!" line_clear;
-      log ~minimum:1 ~verbosity ~label:"DEBUG" message;
+      log ~minimum:1 ~verbosity ~label:"debug" message;
       if redraw then draw ~force:true progress)
 
   let start_grouped progress ~step ~symbol ~label groups =
@@ -157,9 +160,12 @@ let duration = function
   | Some seconds -> Printf.sprintf " in %.2fs" seconds
   | None -> ""
 
-let cleanup_message ~color ~step ~cleaned ~total ~seconds =
-  Printf.sprintf "%s%s %sCleaned %d/%d%s" line_clear (format_step ~color step)
-    Platform.clean_symbol cleaned total (duration seconds)
+(* What a build's cleanup step removed: the modules whose sources are gone. *)
+let stale_modules ~cleaned = count_of cleaned "stale module"
+
+let cleanup_message ~color ~step ~cleaned ~seconds =
+  Printf.sprintf "%s%s %sCleaned %s%s" line_clear (format_step ~color step)
+    Platform.clean_symbol (stale_modules ~cleaned) (duration seconds)
 
 let compiler_cleanup_message ~color ~step =
   Printf.sprintf "%s%s %sCleaned previous build due to compiler update"
@@ -174,20 +180,22 @@ let cleaned_command_message ~color ~step ~target ~seconds =
     Platform.clean_symbol target (duration seconds)
 
 let parsing_message ~color ~step ~count ~seconds =
-  Printf.sprintf "%s%s %sParsed %d source files%s" line_clear
-    (format_step ~color step) Platform.parse_symbol count (duration seconds)
+  Printf.sprintf "%s%s %sParsed %s%s" line_clear (format_step ~color step)
+    Platform.parse_symbol
+    (count_of count "source file")
+    (duration seconds)
 
 let parsing_failed_message ~color ~step ~seconds =
   Printf.sprintf "%s%s %sError parsing source files%s" line_clear
     (format_step ~color step) Platform.error_symbol (duration seconds)
 
 let compiling_message ~color ~step ~count ~seconds =
-  Printf.sprintf "%s%s %sCompiled %d modules%s" line_clear
-    (format_step ~color step) Platform.build_symbol count (duration seconds)
+  Printf.sprintf "%s%s %sCompiled %s%s" line_clear (format_step ~color step)
+    Platform.build_symbol (count_of count "module") (duration seconds)
 
 let compilation_failed_message ~color ~step ~count ~seconds =
-  Printf.sprintf "%s%s %sCompiled %d modules%s" line_clear
-    (format_step ~color step) Platform.error_symbol count (duration seconds)
+  Printf.sprintf "%s%s %sCompiled %s%s" line_clear (format_step ~color step)
+    Platform.error_symbol (count_of count "module") (duration seconds)
 
 type compilation_label = Standard | Initial | Incremental
 
@@ -207,3 +215,7 @@ let finished_compilation_message ~label ~warnings ~seconds =
 
 let should_clear_screen ~clear_screen ~show_progress ~interactive =
   clear_screen && show_progress && interactive
+
+(* The compiler always colors its diagnostics, which stay colored in
+   .compiler.log for editors; printed, they follow the color policy. *)
+let compiler_output ~color text = if color then text else strip_sgr text
