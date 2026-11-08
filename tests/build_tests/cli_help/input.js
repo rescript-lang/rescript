@@ -37,6 +37,10 @@ const cliHelp =
   "       help [OPTION]… [COMMAND]\n" +
   "           Print this message or command help.\n" +
   "\n" +
+  "       typecheck [OPTION]… PATH\n" +
+  "           Type-check a ReScript source file for an editor and print its\n" +
+  "           diagnostics.\n" +
+  "\n" +
   "       watch [OPTION]… [FOLDER]\n" +
   "           Build, then start a watcher.\n" +
   "\n" +

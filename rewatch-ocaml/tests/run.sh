@@ -998,6 +998,54 @@ printf 'let value = Lower.hidden\n' > "$basic/src/LowerConsumer.res"
 grep 'hidden' "$basic/src/LowerConsumer.mjs" >/dev/null
 test ! -f "$basic/lib/rescript/lower.cmti"
 
+# typecheck compiles a copy of the source in lib/rescript/incremental with the
+# embedded compiler, for editors, and leaves the build's artifacts alone.
+cp "$basic/lib/rescript/B.cmt" "$work/typecheck-B.cmt"
+"$port" typecheck "$basic/src/B.res" >"$work/typecheck-clean.out"
+test ! -s "$work/typecheck-clean.out"
+test -f "$basic/lib/rescript/incremental/B.cmt"
+if printf 'let answer = A.value + "x"\nlet broken =\n' |
+  "$port" typecheck --stdin "$basic/src/B.res" >"$work/typecheck-error.out"; then
+  echo "typecheck accepted a type error" >&2
+  exit 1
+fi
+# Diagnostics name the source, not its copy, and a parse error doesn't hide
+# the type error before it.
+tr '\\' '/' <"$work/typecheck-error.out" | grep -F "basic/src/B.res:1:24" >/dev/null
+grep 'This let-binding misses an expression' "$work/typecheck-error.out" >/dev/null
+if grep 'incremental' "$work/typecheck-error.out" >/dev/null; then
+  echo "typecheck diagnostics named the incremental copy" >&2
+  exit 1
+fi
+printf 'let answer = A.value + 1\n' | cmp - "$basic/src/B.res"
+cmp "$work/typecheck-B.cmt" "$basic/lib/rescript/B.cmt"
+if ls "$basic/lib/rescript/incremental" | grep -v -E '\.(res|cmi|cmj|cmt)$'; then
+  echo "typecheck wrote unexpected output" >&2
+  exit 1
+fi
+# The build's interface still constrains the implementation.
+if printf 'let value = "s"\n' |
+  "$port" typecheck --stdin "$basic/src/WithInterface.res" \
+    >"$work/typecheck-interface.out"; then
+  echo "typecheck ignored the interface" >&2
+  exit 1
+fi
+grep 'does not match the interface' "$work/typecheck-interface.out" >/dev/null
+# With --across-files, a dependent sees the unsaved change of its dependency.
+printf 'let value = "s"\n' | "$port" typecheck --stdin "$basic/src/A.res"
+"$port" typecheck "$basic/src/B.res" >/dev/null
+if "$port" typecheck --across-files "$basic/src/B.res" >/dev/null; then
+  echo "typecheck --across-files ignored the unsaved dependency" >&2
+  exit 1
+fi
+if "$port" typecheck "$basic/src/A.txt" 2>"$work/typecheck-extension.err"; then
+  echo "typecheck accepted a non-ReScript file" >&2
+  exit 1
+fi
+grep 'typecheck expects a .res or .resi source file' \
+  "$work/typecheck-extension.err" >/dev/null
+rm -r "$basic/lib/rescript/incremental"
+
 "$port" clean "$basic"
 test ! -f "$basic/src/A.mjs"
 

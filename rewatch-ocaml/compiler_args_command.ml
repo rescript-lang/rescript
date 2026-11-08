@@ -32,7 +32,19 @@ let lexical_absolute path =
   if Sys.win32 then String.map (fun c -> if c = '/' then '\\' else c) path
   else path
 
-let run ~verbosity path =
+type context = {
+  config: Config.t;
+  source: string;
+  relative: string;
+  contents: string;
+  source_kind: Source.source_kind;
+  has_interface: bool;
+  dependency_dirs: string list;
+  runtime: string;
+  project_root: string;
+}
+
+let context ~verbosity ~command ?contents path =
   let source =
     try
       Filename.concat
@@ -47,7 +59,7 @@ let run ~verbosity path =
     not
       (Filename.check_suffix source ".res"
       || Filename.check_suffix source ".resi")
-  then error "compiler-args expects a .res or .resi source file";
+  then error (command ^ " expects a .res or .resi source file");
   let package_config =
     match Project_context.nearest_config_path (Filename.dirname source) with
     | Some path -> Config.load path
@@ -63,13 +75,13 @@ let run ~verbosity path =
   let config = Config.with_root_options package_config root_config in
   let relative = Project_context.relative_to config.root source in
   let contents =
-    try File_util.read_file source with
-    | Sys_error message -> source_error path message
-    | Unix.Unix_error (unix_error, _, _) ->
-      source_error path (Unix.error_message unix_error)
-  in
-  let parser_args =
-    Compiler_args.parser_arguments ~config ~contents ~path:relative
+    match contents with
+    | Some contents -> contents
+    | None -> (
+      try File_util.read_file source with
+      | Sys_error message -> source_error path message
+      | Unix.Unix_error (unix_error, _, _) ->
+        source_error path (Unix.error_message unix_error))
   in
   let source_kind =
     if Filename.check_suffix source ".resi" then Source.Interface
@@ -108,6 +120,35 @@ let run ~verbosity path =
     Project_context.nearest_config_path
       (Filename.dirname (lexical_absolute path))
     |> Option.fold ~none:config.root ~some:Filename.dirname
+  in
+  {
+    config;
+    source;
+    relative;
+    contents;
+    source_kind;
+    has_interface;
+    dependency_dirs;
+    runtime;
+    project_root;
+  }
+
+let run ~verbosity path =
+  let {
+    config;
+    relative;
+    contents;
+    source_kind;
+    has_interface;
+    dependency_dirs;
+    runtime;
+    project_root;
+    source;
+  } =
+    context ~verbosity ~command:"compiler-args" path
+  in
+  let parser_args =
+    Compiler_args.parser_arguments ~config ~contents ~path:relative
   in
   let compiler_args =
     Compiler_args.compiler_arguments ~project_root ~config ~runtime

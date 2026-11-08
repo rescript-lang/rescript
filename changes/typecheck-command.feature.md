@@ -1,0 +1,1 @@
+- Add `rescript typecheck <file>` for editors, which type-checks a file, or its unsaved contents from stdin with `--stdin`, using the compiler built into `rescript`, and prints the diagnostics.

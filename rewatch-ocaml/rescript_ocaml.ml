@@ -56,6 +56,9 @@ let run_command ~poll = function
     Format.run_files ~poll ~verbosity ~check paths
   | Cli.Compiler_args {verbosity; path} ->
     print_endline (Compiler_args_command.run ~verbosity path)
+  | Cli.Typecheck {verbosity; stdin; across_files; path} ->
+    if not (Typecheck_command.run ~poll ~verbosity ~stdin ~across_files path)
+    then exit 1
   | Cli.Clean {verbosity; folder; prod} ->
     Clean.run ~poll ~verbosity ~folder ~prod
 

@@ -31,25 +31,26 @@ let source_map_args (config : Config.t) ~watch =
   if config.source_map_dev && not watch then ["-bs-source-map"; "false"]
   else config.source_map_args
 
+let ppx_arguments (config : Config.t) ppx_flags =
+  ppx_flags
+  |> List.concat_map (function
+    | [] -> []
+    | flag :: arguments ->
+      let executable =
+        (* A path starting with a dot names a file in the package itself;
+           bsc runs the PPX from lib/rescript. *)
+        if String.starts_with ~prefix:"." flag then
+          Filename.concat config.root flag
+        else
+          match Project_context.dependency_path config.root flag with
+          | Some path -> path
+          | None -> flag
+      in
+      ["-ppx"; String.concat " " (executable :: arguments)])
+
 let parser_flags ?(ppx_flags = []) (config : Config.t) =
-  let ppx_args =
-    ppx_flags
-    |> List.concat_map (function
-      | [] -> []
-      | flag :: arguments ->
-        let executable =
-          (* A path starting with a dot names a file in the package itself;
-             bsc runs the PPX from lib/rescript. *)
-          if String.starts_with ~prefix:"." flag then
-            Filename.concat config.root flag
-          else
-            match Project_context.dependency_path config.root flag with
-            | Some path -> path
-            | None -> flag
-        in
-        ["-ppx"; String.concat " " (executable :: arguments)])
-  in
-  ppx_args @ config.jsx_args @ config.experimental_args @ config.warning_flags
+  ppx_arguments config ppx_flags
+  @ config.jsx_args @ config.experimental_args @ config.warning_flags
   @ config.compiler_flags
 
 let compiler_flags ~watch (config : Config.t) =
@@ -111,13 +112,14 @@ let compiler_common_arguments ~project_root ~(config : Config.t) ~runtime
   @ gentype_dependency_args
   @ ["-bs-package-name"; config.name; "-bs-project-root"; project_root]
 
+let interface_arguments ~source_kind ~has_interface =
+  match source_kind with
+  | Source.Implementation when has_interface -> ["-bs-read-cmi"]
+  | Source.Implementation | Source.Interface -> []
+
 let compiler_arguments_with_common ~(config : Config.t) ~common_args
     ~module_name ~source_kind ~has_interface ~path =
-  let interface_args =
-    match source_kind with
-    | Source.Implementation when has_interface -> ["-bs-read-cmi"]
-    | Source.Implementation | Source.Interface -> []
-  in
+  let interface_args = interface_arguments ~source_kind ~has_interface in
   let output_args =
     match source_kind with
     | Source.Interface -> []
@@ -138,3 +140,21 @@ let compiler_arguments ~project_root ~(config : Config.t) ~runtime
       (compiler_common_arguments ~project_root ~config ~runtime ~dependency_dirs
          ~watch ~gentype_dependency_args)
     ~module_name ~source_kind ~has_interface ~path
+
+(* The arguments of an editor type check of [input], a copy of the source
+   with the editor's unsaved contents. It runs the parse and the compile in one
+   request and writes no JavaScript and no genType output: only the interface
+   and typed tree next to [input], which editor analysis reads. A parse error
+   does not stop the type check, so the rest of the file still gets
+   diagnostics. *)
+let typecheck_arguments ~project_root ~(config : Config.t) ~runtime
+    ~dependency_dirs ~module_name ~source_kind ~has_interface ~contents
+    ~include_dirs ~input =
+  let config = {config with gentype_args = []} in
+  List.concat_map (fun directory -> ["-I"; directory]) include_dirs
+  @ namespace_args config module_name
+  @ interface_arguments ~source_kind ~has_interface
+  @ compiler_common_arguments ~project_root ~config ~runtime ~dependency_dirs
+      ~watch:false ~gentype_dependency_args:[]
+  @ ppx_arguments config (filter_ppx_flags config.ppx_flags contents)
+  @ ["-color"; "never"; "-ignore-parse-errors"; input]

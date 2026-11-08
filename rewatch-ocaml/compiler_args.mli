@@ -46,3 +46,19 @@ val compiler_arguments_with_common :
   has_interface:bool ->
   path:string ->
   string list
+
+val typecheck_arguments :
+  project_root:string ->
+  config:Config.t ->
+  runtime:string ->
+  dependency_dirs:string list ->
+  module_name:string ->
+  source_kind:Source.source_kind ->
+  has_interface:bool ->
+  contents:string ->
+  include_dirs:string list ->
+  input:string ->
+  string list
+(** The arguments that type-check [input], a copy of a source file with
+    [contents], for an editor: no JavaScript or genType output, and
+    [include_dirs] searched before the build's interfaces. *)

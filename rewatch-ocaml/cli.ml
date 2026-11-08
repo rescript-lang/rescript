@@ -4,6 +4,7 @@ type command =
   | Watch of build_options
   | Format of format_input
   | Compiler_args of {verbosity: int; path: string}
+  | Typecheck of {verbosity: int; stdin: bool; across_files: bool; path: string}
 
 and build_options = {
   verbosity: int;
@@ -207,6 +208,30 @@ let compiler_args_term =
   let+ verbosity = verbosity and+ path in
   Compiler_args {verbosity; path}
 
+let typecheck_term =
+  let stdin =
+    Arg.(
+      value & flag
+      & info ["stdin"]
+          ~doc:"Type-check the contents read from stdin in place of PATH's.")
+  in
+  let across_files =
+    Arg.(
+      value & flag
+      & info ["across-files"]
+          ~doc:
+            "Use the interfaces of earlier type checks of other files, so that \
+             unsaved changes in one file are seen in the others.")
+  in
+  let path =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"PATH" ~doc:"ReScript source file (.res or .resi).")
+  in
+  let+ verbosity = verbosity and+ stdin and+ across_files and+ path in
+  Typecheck {verbosity; stdin; across_files; path}
+
 let exits =
   [
     Cmd.Exit.info 0 ~doc:"on success.";
@@ -241,6 +266,13 @@ let root =
       (command_info "compiler-args"
          "Print the compiler arguments for a ReScript source file.")
       compiler_args_term
+  in
+  let typecheck =
+    Cmd.make
+      (command_info "typecheck"
+         "Type-check a ReScript source file for an editor and print its \
+          diagnostics.")
+      typecheck_term
   in
   let help =
     let topic =
@@ -277,7 +309,7 @@ let root =
       ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
   in
   Cmd.group info ~default:(build_term ~watch:false)
-    [build; watch; clean; format; compiler_args; help]
+    [build; watch; clean; format; compiler_args; typecheck; help]
 
 type evaluation = Run of command | Exit of int
 
@@ -321,7 +353,9 @@ let normalize_argv argv =
     argument = "--version" || short_cluster_contains 'V' argument
   in
   let is_command = function
-    | "build" | "watch" | "clean" | "format" | "compiler-args" | "help" -> true
+    | "build" | "watch" | "clean" | "format" | "compiler-args" | "typecheck"
+    | "help" ->
+      true
     | _ -> false
   in
   let rec normalize_display_options = function

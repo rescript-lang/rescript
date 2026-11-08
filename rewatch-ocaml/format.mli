@@ -6,6 +6,9 @@ val format_check_summary : int -> string
 
 val format_files : ?poll:(unit -> unit) -> check:bool -> string list -> unit
 
+val read_stdin_interruptibly : ?poll:(unit -> unit) -> unit -> string
+(** Reads all of stdin, calling [poll] while waiting. *)
+
 val format_stdin : ?poll:(unit -> unit) -> string -> unit
 val run_files :
   ?poll:(unit -> unit) -> verbosity:int -> check:bool -> string list -> unit

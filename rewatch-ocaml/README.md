@@ -1,7 +1,7 @@
 # Rewatch
 
 This directory contains ReScript's build system and CLI (`rescript build`,
-`watch`, `clean`, `format`, and `compiler-args`). It ships as `rescript` in the
+`watch`, `clean`, `format`, `compiler-args`, and `typecheck`). It ships as `rescript` in the
 `@rescript/<platform>` packages and is tested with the integration suite in
 [`../rewatch/tests`](../rewatch/tests).
 
@@ -51,7 +51,7 @@ does not depend on the runner's libc. The version lives in
 | Processes | `process` (worker pool), `process_child` (one child and its pipes), `after_build` |
 | Platform | `platform.mli` implemented by `platform_unix.ml` or `platform_windows.ml` (selected by dune), `windows_job_stubs.c`, `termination_signals`, `build_lock` |
 | Watching | `watcher` (rebuild loop), `watch_scope` (what to watch), `watch_snapshot` (filesystem snapshots), `native_watcher` (libuv notifications) |
-| Other commands | `format`, `compiler_args_command` |
+| Other commands | `format`, `compiler_args_command`, `typecheck_command` (editor type checks of unsaved contents) |
 
 Native filesystem notifications only wake the watcher. The snapshot taken
 afterwards decides what changed, so merged, reordered, or dropped events can't
@@ -125,8 +125,14 @@ under the process owners described below.
 - A failing `--after-build` command fails the build. On Unix, hooks inherit
   redirected stdin but not an interactive terminal, because they run in their
   own process group.
-- `format -v` and `compiler-args -v` write their logs to stderr, so stdout
-  remains formatted source or JSON.
+- `format -v`, `compiler-args -v` and `typecheck -v` write their logs to
+  stderr, so stdout remains formatted source, JSON or diagnostics.
+- `typecheck` compiles a copy of the source (or of stdin with `--stdin`) in
+  `lib/rescript/incremental`, where editor analysis reads its typed tree. It
+  writes no JavaScript or genType output and leaves the build's artifacts
+  alone. Its diagnostics name the source instead of the copy, and a parse error
+  doesn't stop the type check. With `--across-files`, the interfaces of earlier
+  type checks there take precedence over the build's.
 - While the root configuration is invalid, only configuration changes trigger
   recovery attempts in watch mode.
 - Watch mode notices a missing dependency being installed into an existing

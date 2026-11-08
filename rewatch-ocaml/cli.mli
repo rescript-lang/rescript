@@ -4,6 +4,7 @@ type command =
   | Watch of build_options
   | Format of format_input
   | Compiler_args of {verbosity: int; path: string}
+  | Typecheck of {verbosity: int; stdin: bool; across_files: bool; path: string}
 
 and build_options = {
   verbosity: int;
