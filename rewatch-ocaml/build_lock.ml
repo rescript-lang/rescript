@@ -164,17 +164,12 @@ let with_build ?(poll = fun () -> ()) ?(attempts = 1200) root action =
     root
     (fun lock -> action ~release:(fun () -> release lock))
 
-let with_watch root action =
+let with_watch ~running root action =
   acquire ~name:"watch.lock" ~prefix:".watch-lock-" ~attempts:1000
     ~delay:(fun () -> ignore (Unix.select [] [] [] 0.01))
     ~timeout:"Timed out recovering a stale ReScript watch lock"
     ~on_live_owner:(fun ~first_attempt:_ owner ->
-      raise
-        (Project_context.Error
-           (Printf.sprintf
-              "Could not start Rescript build: A ReScript build is already \
-               running. The process ID (PID) is %s"
-              owner)))
+      raise (Project_context.Error (running owner)))
     root
     (fun (lock : owned_lock) -> action {path = lock.path; pid = lock.pid})
 

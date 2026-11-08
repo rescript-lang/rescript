@@ -80,6 +80,14 @@ let run ~poll ~verbosity ~folder ~prod =
         (Output.cleaned_command_message ~color:colors ~step ~target
            ~seconds:(Unix.gettimeofday () -. started_at))
   in
+  (* A watcher of this project would keep reading the artifacts removed
+     here. *)
+  Build_lock.with_watch root
+    ~running:
+      (Printf.sprintf
+         "Could not clean while rescript watch or another clean is running. \
+          The process ID (PID) is %s")
+  @@ fun _watch_lock ->
   let lock_root = Project_context.workspace_lock_root root in
   Build_lock.with_build ~poll lock_root (fun ~release:_ ->
       poll ();
