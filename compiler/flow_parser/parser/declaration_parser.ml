@@ -495,7 +495,6 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
                   let tparams =
                     type_params_remove_trailing
                       env
-                      ~kind:Flow_ast_mapper.DeclareFunctionTP
                       (Type.type_params env)
                   in
                   let id =
@@ -525,7 +524,6 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
                   let tparams =
                     type_params_remove_trailing
                       env
-                      ~kind:Flow_ast_mapper.DeclareFunctionTP
                       (Type.type_params env)
                   in
                   (tparams, Some id)
@@ -849,7 +847,6 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
               let tparams =
                 type_params_remove_trailing
                   env
-                  ~kind:Flow_ast_mapper.DeclareComponentTP
                   (Type.type_params env)
               in
               let params =
