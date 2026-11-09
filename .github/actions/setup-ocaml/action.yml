@@ -175,6 +175,10 @@ runs:
       shell: bash
       env:
         DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
+        # In a restored environment, opam takes the system packages that
+        # setup-linux-dependencies unpacks without dpkg, and Binaryen, for
+        # removed, and would rebuild the whole switch.
+        OPAMNODEPEXTS: ${{ steps.cache.outputs.cache-matched-key != '' && '1' || '0' }}
       run: |
         read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
         if [[ "$RUNNER_OS" == "Windows" ]]; then
