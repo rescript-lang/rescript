@@ -81,10 +81,13 @@ runs:
         dependency_flags_key="${DEPENDENCY_FLAGS//--/}"
         dependency_flags_key="${dependency_flags_key// /_}"
         dependency_hash="${{ hashFiles('*.opam') }}"
-        key="$CACHE_PREFIX-$OS-3.9.0-$COMPILER-$dependency_flags_key-$dependency_hash"
-        echo "value=${key//,/-}" >> "$GITHUB_OUTPUT"
+        prefix="$CACHE_PREFIX-$OS-3.9.0-$COMPILER-$dependency_flags_key-"
+        echo "prefix=${prefix//,/-}" >> "$GITHUB_OUTPUT"
+        echo "value=${prefix//,/-}$dependency_hash" >> "$GITHUB_OUTPUT"
         echo "setup-version=3.9.0" >> "$GITHUB_OUTPUT"
 
+    # When the dependencies changed, the environment of the previous ones is
+    # restored and updated, which takes minutes less than building it anew.
     - name: Restore OPAM environment
       id: cache
       uses: actions/cache/restore@v6
@@ -97,9 +100,10 @@ runs:
           C:\cygwin
           C:\.opam
         key: ${{ steps.cache-key.outputs.value }}
+        restore-keys: ${{ steps.cache-key.outputs.prefix }}
 
     - name: Use OCaml ${{ inputs.compiler }}
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: steps.cache.outputs.cache-matched-key == ''
       uses: ocaml/setup-ocaml@v3.9.0
       with:
         ocaml-compiler: ${{ inputs.compiler }}
@@ -112,7 +116,7 @@ runs:
         cache: false
 
     - name: Get OPAM executable path
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: steps.cache.outputs.cache-matched-key == ''
       uses: actions/github-script@v9
       with:
         script: |
@@ -123,40 +127,8 @@ runs:
           await fs.writeFile('.opam-path', opamPath, 'utf-8');
           console.log('stored path to .opam-path');
 
-    - name: Install OPAM dependencies
-      if: steps.cache.outputs.cache-hit != 'true'
-      shell: bash
-      env:
-        DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
-      run: |
-        read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          export AR=x86_64-w64-mingw32-ar
-          export RANLIB=x86_64-w64-mingw32-ranlib
-          export STRIP=x86_64-w64-mingw32-strip
-          export NM=x86_64-w64-mingw32-nm
-          export DLLTOOL=x86_64-w64-mingw32-dlltool
-          export OBJDUMP=x86_64-w64-mingw32-objdump
-        fi
-        opam install . "${dependency_flags[@]}"
-
-    - name: Cache OPAM environment
-      # Caches created by pull_request runs are scoped to that PR's merge ref
-      # and cannot seed other PRs or branches, so only push runs save them.
-      if: steps.cache.outputs.cache-hit != 'true' && github.event_name == 'push'
-      uses: actions/cache/save@v6
-      with:
-        path: |
-          ${{ runner.tool_cache }}/opam
-          ~/.opam
-          _opam
-          .opam-path
-          C:\cygwin
-          C:\.opam
-        key: ${{ steps.cache-key.outputs.value }}
-
     - name: Use cached OPAM environment
-      if: steps.cache.outputs.cache-hit == 'true'
+      if: steps.cache.outputs.cache-matched-key != ''
       shell: bash
       run: |
         echo "OPAMCOLOR=always"                    >> "$GITHUB_ENV"
@@ -190,3 +162,49 @@ runs:
           echo "CYGWIN=winsymlinks:native" >> "$GITHUB_ENV"
           echo "BASH_ENV=C:\\cygwin\\bash_env" >> "$GITHUB_ENV"
         fi
+
+    # A restored environment of earlier dependencies may predate the
+    # packages they now need.
+    - name: Update OPAM repository
+      if: steps.cache.outputs.cache-matched-key != '' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: opam update --repositories
+
+    - name: Install OPAM dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
+      run: |
+        read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          export AR=x86_64-w64-mingw32-ar
+          export RANLIB=x86_64-w64-mingw32-ranlib
+          export STRIP=x86_64-w64-mingw32-strip
+          export NM=x86_64-w64-mingw32-nm
+          export DLLTOOL=x86_64-w64-mingw32-dlltool
+          export OBJDUMP=x86_64-w64-mingw32-objdump
+        fi
+        opam install . "${dependency_flags[@]}"
+
+    - name: Cache OPAM environment
+      # Caches created by pull_request runs are scoped to that PR's merge ref
+      # and cannot seed other PRs or branches, so only push runs save them.
+      if: steps.cache.outputs.cache-hit != 'true' && github.event_name == 'push'
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          ${{ runner.tool_cache }}/opam
+          ~/.opam
+          _opam
+          .opam-path
+          C:\cygwin
+          C:\.opam
+        key: ${{ steps.cache-key.outputs.value }}
+
+    - name: Delete superseded OPAM environments
+      if: steps.cache.outputs.cache-hit != 'true' && github.event_name == 'push'
+      uses: ./.github/actions/delete-caches
+      with:
+        prefix: ${{ steps.cache-key.outputs.prefix }}
+        keep: ${{ steps.cache-key.outputs.value }}

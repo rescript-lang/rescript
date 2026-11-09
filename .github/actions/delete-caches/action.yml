@@ -1,0 +1,34 @@
+name: Delete caches
+description: >-
+  Delete this ref's caches whose keys start with a prefix, except one key.
+  A key that ends in a hash of the inputs leaves its earlier generations
+  behind when the inputs change, and they push live caches out of the
+  repository's cache storage.
+
+inputs:
+  prefix:
+    description: Key prefix of the caches to delete.
+    required: true
+  keep:
+    description: Key of a cache to keep.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Delete caches
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PREFIX: ${{ inputs.prefix }}
+        KEEP: ${{ inputs.keep }}
+      run: |
+        gh cache list --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF" \
+          --key "$PREFIX" --limit 100 --json key --jq '.[].key' |
+          while IFS= read -r key; do
+            if [[ "$key" != "$KEEP" ]]; then
+              echo "Deleting $key"
+              gh cache delete "$key" --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF"
+            fi
+          done

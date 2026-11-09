@@ -104,9 +104,12 @@ jobs:
         id: compiler-build-state-key
         shell: bash
         run: |
-          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
-            | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
+          prefix="compiler-build-state-v1-${{ matrix.os }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ matrix.ocaml_compiler }}-"
+          echo "prefix=${prefix//,/-}" >> "$GITHUB_OUTPUT"
+          echo "value=${prefix//,/-}${{ hashFiles('*.opam') }}" >> "$GITHUB_OUTPUT"
 
+      # After a change of the dependencies, the state built with the previous
+      # ones still saves most of the build.
       - name: Restore compiler build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
         id: compiler-build-state
@@ -117,21 +120,18 @@ jobs:
             ~/.cache/dune
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
+          restore-keys: ${{ steps.compiler-build-state-key.outputs.prefix }}
 
       - name: Build compiler
         run: opam exec -- dune build --display quiet
 
+      # A cache can't be overwritten, so the state is deleted and saved again,
+      # together with the states of earlier dependencies.
       - name: Delete stable compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        shell: bash
-        run: |
-          gh extension install actions/gh-actions-cache
-          gh actions-cache delete ${{ steps.compiler-build-state-key.outputs.value }} \
-            -R ${{ github.repository }} \
-            -B "$GITHUB_REF" \
-            --confirm || echo "not exist"
-        env:
-          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/delete-caches
+        with:
+          prefix: ${{ steps.compiler-build-state-key.outputs.prefix }}
 
       - name: Save compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -461,8 +461,9 @@ jobs:
       - name: Compiler build state key
         id: compiler-build-state-key
         run: |
-          echo "value=compiler-build-state-v1-ubuntu-26.04-${{ steps.setup_ocaml.outputs.setup_version }}-$OCAML_COMPILER-${{ hashFiles('*.opam') }}" \
-            | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
+          prefix="compiler-build-state-v1-ubuntu-26.04-${{ steps.setup_ocaml.outputs.setup_version }}-$OCAML_COMPILER-"
+          echo "prefix=${prefix//,/-}" >> "$GITHUB_OUTPUT"
+          echo "value=${prefix//,/-}${{ hashFiles('*.opam') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore compiler build state
         uses: actions/cache/restore@v6
@@ -474,6 +475,7 @@ jobs:
             ~/.cache/dune
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
+          restore-keys: ${{ steps.compiler-build-state-key.outputs.prefix }}
 
       - name: Build the compiler
         run: opam exec -- dune build --display quiet
