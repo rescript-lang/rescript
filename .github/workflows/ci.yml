@@ -261,14 +261,39 @@ jobs:
           opam exec -- ./_build/default/tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe -runner sequential
         shell: bash
 
-      - name: Run rewatch focused integration tests
+      # The canonical suite works in rewatch/testrepo and the focused one in
+      # directories of its own, so they run side by side; each takes one to
+      # three and a half minutes. The canonical suite fails when another
+      # process runs its executable as it starts, so it runs a copy. Its
+      # output is shown once both are done.
+      - name: Run rewatch focused integration and canonical tests
         timeout-minutes: 30
         run: |
-          sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
-        shell: bash
+          bin=packages/@rescript/${{ matrix.node-target }}/bin
+          rm -rf tmp/canonical-bin
+          mkdir -p tmp
+          cp -R "$bin" tmp/canonical-bin
+          canonical_log=tmp/canonical-tests.log
+          ./rewatch/tests/suite.sh tmp/canonical-bin/rescript.exe >"$canonical_log" 2>&1 &
+          canonical=$!
 
-      - name: Run rewatch canonical tests
-        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+          focused_status=0
+          sh rewatch-ocaml/tests/run.sh "$bin/rescript.exe" || focused_status=$?
+          canonical_status=0
+          wait "$canonical" || canonical_status=$?
+
+          if [ "$canonical_status" -eq 0 ]; then
+            echo "::group::Canonical tests"
+            cat "$canonical_log"
+            echo "::endgroup::"
+          else
+            cat "$canonical_log"
+            echo "::error::The canonical tests failed with status $canonical_status"
+          fi
+          if [ "$focused_status" -ne 0 ]; then
+            echo "::error::The focused integration tests failed with status $focused_status"
+          fi
+          [ "$focused_status" -eq 0 ] && [ "$canonical_status" -eq 0 ]
         shell: bash
 
       - name: Build playground compiler
