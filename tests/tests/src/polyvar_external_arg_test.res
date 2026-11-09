@@ -7,12 +7,13 @@ external testAsync: (string, unit => promise<unit>) => unit = "test"
 // A polymorphic variant argument of an external is evaluated once, in its
 // place among the arguments. An event-style argument is passed as its tag and
 // its payload, so an argument with side effects is read from a temporary, as
-// is a JS property read such as a @get getter, while a JS global is read in
-// place, like a value of a JS module. An @as or @int dispatch is a function
-// that switches on the argument and is called with it, so the argument, an
-// await in it included, is evaluated where it is. Like any argument, it is
-// read from a temporary only if an argument after it has statements to run
-// first. In a while condition, the temporary is bound inside the loop.
+// is a JS property read such as a @get getter or a @val with a dotted name,
+// while a JS global is read in place, like a value of a JS module. An @as or
+// @int dispatch is a function that switches on the argument and is called
+// with it, so the argument, an await in it included, is evaluated where it
+// is. Like any argument, it is read from a temporary only if an argument after
+// it has statements to run first. In a while condition, the temporary is
+// bound inside the loop.
 
 type target
 
@@ -151,6 +152,24 @@ external currentEvent: [#click(int => string) | #keydown(int => string)] =
 
 let setCurrentEvent: [#click(int => string) | #keydown(int => string)] => unit = %raw(`e => {
   globalThis.polyvarExternalArgCurrentEvent = e
+}`)
+
+@val
+external dottedEvent: [#click(int => string) | #keydown(int => string)] =
+  "polyvarExternalArgScope.event"
+
+@val @scope("polyvarExternalArgScope")
+external scopedEvent: [#click(int => string) | #keydown(int => string)] = "event"
+
+let defineScopedEvent: unit => unit => int = %raw(`() => {
+  let reads = 0
+  globalThis.polyvarExternalArgScope = {
+    get event() {
+      reads++
+      return { NAME: "keydown", VAL: x => "keydown " + x }
+    }
+  }
+  return () => reads
 }`)
 
 // Opaque, so that the optimizer cannot tell the argument is a literal.
@@ -372,9 +391,21 @@ describe(__MODULE__, () => {
     on(t, globalEvent)
     onAs(t, globalEvent)
     eq(__LOC__, 4, globalReads())
+    // A @val with a dotted name is a property read, like one with @scope
+    let scopedReads = defineScopedEvent()
+    on(t, dottedEvent)
+    on(t, scopedEvent)
+    eq(__LOC__, 2, scopedReads())
     eq(
       __LOC__,
-      ["keydown keydown 1", "keydown! keydown 1", "click click 1", "click! click 1"],
+      [
+        "keydown keydown 1",
+        "keydown! keydown 1",
+        "click click 1",
+        "click! click 1",
+        "keydown keydown 1",
+        "keydown keydown 1",
+      ],
       calls(t),
     )
   })
