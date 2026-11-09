@@ -71,6 +71,7 @@ let read_ast_exn (type t) ~fname (_ : t kind) : t =
 *)
 let write_ast (type t) ~(sourcefile : string) ~output (kind : t kind) (pt : t) :
     unit =
+  Compiler_request_state.before_effect ();
   let output_set = Ast_extract.read_parse_and_extract kind pt in
   let buf = Ext_buffer.create 1000 in
   Ext_buffer.add_char buf magic_sep_char;

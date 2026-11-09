@@ -1,5 +1,24 @@
+type hooks = {
+  before_effect: unit -> unit;
+      (** Called before the request writes a file (such as an .ast, .cmi,
+          .cmt or .cmti) or runs a command. A build system that starts a
+          request before its dependencies have finished uses it to wait for
+          them; it may raise to abandon the request before any effect. *)
+  interface_computed: string -> string -> unit;
+      (** Called with the path of a .cmi the request is about to write, and
+          the file's contents, when no error is pending. Called before
+          {!before_effect}. *)
+  redirect_cmi: string -> string option;
+      (** The bytes to read instead of the .cmi file at a resolved candidate
+          path. The name the compiler records stays the candidate's. *)
+}
+(** Callbacks a build system attaches to one in-process request. *)
+
+val no_hooks : hooks
+
 type t = {
   active: bool;
+  hooks: hooks;
   cwd: string;
   mutable input_name: string;
   mutable command_runner: string -> int;
@@ -26,5 +45,9 @@ val resolve_path : string -> string
 (** Resolve a relative file path against the active request root. Outside a
     request, preserve the path so ordinary process-relative I/O is unchanged. *)
 
-val with_fresh : ?cwd:string -> (unit -> 'a) -> 'a
+val before_effect : unit -> unit
+val interface_computed : string -> string -> unit
+val redirect_cmi : string -> string option
+
+val with_fresh : ?cwd:string -> ?hooks:hooks -> (unit -> 'a) -> 'a
 (** Run with new request state and restore the prior state on success or failure. *)
