@@ -75,15 +75,27 @@ let read_cmi filename =
          (Compiler_request_state.resolve_path filename
          ^ ": No such file or directory"))
 
-(* Writes the .cmi file, keeping an existing one with the same contents
-   when [check_exists] is given *)
-let create_cmi ?check_exists filename (cmi : cmi_infos) =
+(* The contents of the .cmi file for [cmi], and its CRC. *)
+let cmi_contents (cmi : cmi_infos) =
   (* beware: the provided signature must have been substituted for saving *)
   let content =
     Config.cmi_magic_number ^ Marshal.to_string (cmi.cmi_name, cmi.cmi_sign) []
     (* checkout [output_value] in {!Pervasives} module *)
   in
   let crc = Digest.string content in
+  let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
+  ( String.concat ""
+      [content; Marshal.to_string crcs []; Marshal.to_string cmi.cmi_flags []],
+    crc )
+
+(* Writes the .cmi file, keeping an existing one with the same contents
+   when [check_exists] is given *)
+let create_cmi ?check_exists ?contents filename (cmi : cmi_infos) =
+  let contents, crc =
+    match contents with
+    | Some contents -> contents
+    | None -> cmi_contents cmi
+  in
   let cmi_infos =
     if check_exists = None then None
     else
@@ -109,13 +121,9 @@ let create_cmi ?check_exists filename (cmi : cmi_infos) =
          && cmi_flags = cmi.cmi_flags ->
     crc
   | _ ->
-    let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
     Build_file_store.write
       (Compiler_request_state.resolve_path filename)
-      (String.concat ""
-         [
-           content; Marshal.to_string crcs []; Marshal.to_string cmi.cmi_flags [];
-         ]);
+      contents;
     crc
 
 (* Error report *)

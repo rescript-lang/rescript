@@ -1,5 +1,19 @@
+type hooks = {
+  before_effect: unit -> unit;
+  interface_computed: string -> string -> unit;
+  redirect_cmi: string -> string option;
+}
+
+let no_hooks =
+  {
+    before_effect = ignore;
+    interface_computed = (fun _ _ -> ());
+    redirect_cmi = (fun _ -> None);
+  }
+
 type t = {
   active: bool;
+  hooks: hooks;
   cwd: string;
   mutable input_name: string;
   mutable command_runner: string -> int;
@@ -15,9 +29,10 @@ type t = {
   mutable load_path: string list;
 }
 
-let create ~active cwd =
+let create ?(hooks = no_hooks) ~active cwd =
   {
     active;
+    hooks;
     cwd;
     input_name = "_none_";
     command_runner = Sys.command;
@@ -45,7 +60,12 @@ let resolve_path path =
     Filename.concat state.cwd path
   else path
 
-let with_fresh ?cwd:requested_cwd action =
+let before_effect () = (current ()).hooks.before_effect ()
+let interface_computed path bytes =
+  (current ()).hooks.interface_computed path bytes
+let redirect_cmi path = (current ()).hooks.redirect_cmi path
+
+let with_fresh ?cwd:requested_cwd ?hooks action =
   let previous = current () in
   let cwd =
     match requested_cwd with
@@ -53,5 +73,5 @@ let with_fresh ?cwd:requested_cwd action =
     | Some path when Filename.is_relative path -> Filename.concat (cwd ()) path
     | Some path -> path
   in
-  Domain.DLS.set key (create ~active:true cwd);
+  Domain.DLS.set key (create ?hooks ~active:true cwd);
   Fun.protect action ~finally:(fun () -> Domain.DLS.set key previous)

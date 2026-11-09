@@ -24,6 +24,16 @@ val run_request :
     I/O against [cwd] without changing the process working directory. Request
     state is restored on success and failure. *)
 
+val run_request_with_hooks :
+  hooks:Compiler_request_state.hooks ->
+  run_external:(string -> int * string * string) option ->
+  cwd:string ->
+  argv:string list ->
+  input:string ->
+  result
+(** {!run_request} with build-system callbacks attached to the request; see
+    {!Compiler_request_state.hooks}. *)
+
 val run : string array -> int
 (** Command-line entry point of the standalone [bsc]. It writes to the process's
     stdout and stderr as it goes. *)

@@ -1945,11 +1945,18 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
     | Some s -> [Deprecated s]
     | None -> []
   in
+  let cmi =
+    {cmi_name = modname; cmi_sign = sg; cmi_crcs = imports; cmi_flags = flags}
+  in
+  let ((cmi_contents, _) as contents) = Cmi_format.cmi_contents cmi in
+  (* The interface is final here. A build system may let dependents type
+     check against it while this request waits to write it. A warning already
+     reported as an error fails the request, so it keeps the interface back. *)
+  if Warnings.nerrors () = 0 then
+    Compiler_request_state.interface_computed filename cmi_contents;
+  Compiler_request_state.before_effect ();
   try
-    let cmi =
-      {cmi_name = modname; cmi_sign = sg; cmi_crcs = imports; cmi_flags = flags}
-    in
-    let crc = create_cmi ?check_exists filename cmi in
+    let crc = create_cmi ?check_exists ~contents filename cmi in
     (* Enter signature in persistent table so that imports ()
        will also return its crc *)
     let comps =
