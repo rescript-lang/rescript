@@ -28,9 +28,6 @@ env:
 
 jobs:
   build-compiler:
-    outputs:
-      api-docs-artifact-id: ${{ steps.upload-api-docs.outputs.artifact-id }}
-      website-branch: ${{ steps.api-docs-plan.outputs.website-branch }}
     strategy:
       fail-fast: false
       matrix:
@@ -353,13 +350,60 @@ jobs:
         if: ${{ matrix.generate_api_docs }}
         run: yarn apidocs:generate
 
+      # Release builds publish this artifact to the website (publish.yml).
       - name: "Upload artifacts: scripts/res/apiDocs"
-        id: upload-api-docs
         if: ${{ matrix.generate_api_docs }}
         uses: actions/upload-artifact@v7
         with:
           name: api
           path: scripts/res/apiDocs/
+
+      # Checks that the website builds with the generated API docs. These
+      # steps stay in this job rather than in one that needs build-compiler,
+      # which would wait for the slowest platform before starting.
+      - name: Checkout rescript-lang.org
+        if: ${{ matrix.generate_api_docs }}
+        uses: actions/checkout@v7
+        with:
+          repository: rescript-lang/rescript-lang.org
+          ref: ${{ steps.api-docs-plan.outputs.website-branch }}
+          path: rescript-lang.org
+
+      - name: Check for API docs changes
+        id: api-docs-diff
+        if: ${{ matrix.generate_api_docs }}
+        run: |
+          cp -R scripts/res/apiDocs/. rescript-lang.org/data/api/
+          git -C rescript-lang.org status
+          if [[ -z "$(git -C rescript-lang.org status --porcelain)" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+      # The website is checked out inside this repository, so its Yarn also
+      # reads this repository's .yarnrc.yml and rejects the settings it does
+      # not know yet. The steps that need this config are done.
+      - name: Hide the compiler's Yarn config from the website
+        if: ${{ matrix.generate_api_docs && steps.api-docs-diff.outputs.changed == 'true' }}
+        run: mv .yarnrc.yml "$RUNNER_TEMP/rescript.yarnrc.yml"
+        shell: bash
+
+      - name: Use Node.js for website
+        if: ${{ matrix.generate_api_docs && steps.api-docs-diff.outputs.changed == 'true' }}
+        uses: actions/setup-node@v7
+        with:
+          cache: yarn
+          cache-dependency-path: rescript-lang.org/yarn.lock
+          node-version-file: rescript-lang.org/.node-version
+
+      - name: Build website with the API docs
+        if: ${{ matrix.generate_api_docs && steps.api-docs-diff.outputs.changed == 'true' }}
+        run: |
+          yarn
+          yarn build
+        working-directory: rescript-lang.org
 
   # Compares the words the compiler allocates on fixed inputs, and the
   # instructions it executes on some of them, with the base branch
@@ -589,46 +633,6 @@ jobs:
         run: |
           yarn dlx pkg-pr-new publish --yarn "." "./packages/@rescript/*"
 
-  api-docs:
-    needs:
-      - build-compiler
-    runs-on: ubuntu-26.04-arm
-    steps:
-      - name: Checkout rescript-lang.org
-        uses: actions/checkout@v7
-        with:
-          repository: rescript-lang/rescript-lang.org
-          ref: ${{ needs.build-compiler.outputs.website-branch }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v8
-        with:
-          artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
-          path: data/api
-
-      - name: Check if repo is clean
-        id: diffcheck
-        run: |
-          git status
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "clean=true" >> $GITHUB_OUTPUT
-          else
-            echo "clean=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Use Node.js
-        if: steps.diffcheck.outputs.clean == 'false'
-        uses: actions/setup-node@v7
-        with:
-          cache: yarn
-          node-version-file: .node-version
-
-      - name: Build website
-        if: steps.diffcheck.outputs.clean == 'false'
-        run: |
-          yarn
-          yarn build
-
   test-devcontainer:
     runs-on: ubuntu-26.04-arm
     steps:
@@ -810,7 +814,6 @@ jobs:
     needs:
       - build-compiler
       - pkg-pr-new
-      - api-docs
       - test-devcontainer
       - test-installation-npm
       - test-installation-pnpm
