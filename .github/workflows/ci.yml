@@ -28,6 +28,9 @@ env:
 
 jobs:
   build-compiler:
+    permissions:
+      contents: read
+      actions: write # Master pushes delete superseded caches.
     strategy:
       fail-fast: false
       matrix:
