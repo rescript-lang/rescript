@@ -28,22 +28,24 @@ module S = Js_stmt_make
 type arg_expression = Splice0 | Splice1 of E.t | Splice2 of E.t * E.t
 
 (* [eval_as_event] reads an argument other than a literal twice, for the tag
-   and for the payload. That is the same as reading it once, in place, for
-   constants, variables, and fields, array elements and conditionals of them.
-   A JS global ([@val]) counts as a variable, like a value of a JS module
-   ([@module]), though either may be a getter. A JS property read does not
-   count: a [@get] external is there to run a getter, and a [@val] or
-   [@module] value with [@scope] is a property read as well, which cannot be
-   told from it. *)
+   and for the payload. That is the same as reading it once, in place, when
+   [Js_analyzer.is_okay_to_duplicate ~property_reads:false] holds for it: for
+   constants, variables and fields of records. A JS global ([@val]) counts as
+   a variable, like a value of a JS module ([@module]), though either may be
+   a getter. A JS property read does not count: a [@get] external is there to
+   run a getter, and a [@val] or [@module] value with [@scope], or a [@val]
+   with a dotted name such as ["window.ev"], is a property read as well,
+   which cannot be told from it. Array elements and conditionals of such
+   arguments, and their fields, count too, though [is_okay_to_duplicate]
+   leaves them out: here the alternative is a temporary, a statement that
+   also binds the arguments to its left that have side effects. *)
 let eval_as_event_in_place (arg : J.expression) =
   let rec duplicable (e : J.expression) =
     match e.expression_desc with
-    | Undefined _ | Bool _ | Number _ | Str _ | Template_literal _ | Var _ ->
-      true
     | Static_index (e, _, Some _) -> duplicable e
     | Array_index (a, b) -> duplicable a && duplicable b
     | Cond (a, b, c) -> duplicable a && duplicable b && duplicable c
-    | _ -> false
+    | _ -> Js_analyzer.is_okay_to_duplicate ~property_reads:false e
   in
   match arg.expression_desc with
   | Caml_block ([{expression_desc = Str _}; _], _, Blk_poly_var) -> true
