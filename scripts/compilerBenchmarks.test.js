@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  chainProject,
   compareAll,
   compareResults,
   generatedProjects,
+  median,
   parseAllocatedWords,
   parseInstructions,
   renderSummary,
+  renderTimings,
   stressInputs,
+  timeRatio,
 } from "./compilerBenchmarks.js";
 
 const stats = `allocated_words: 628461
@@ -385,7 +389,7 @@ test("adds up the generated projects apart from the total", () => {
 });
 
 test("generates the same projects every time", () => {
-  for (const generate of Object.values(generatedProjects)) {
+  for (const generate of [...Object.values(generatedProjects), chainProject]) {
     const project = generate();
     assert.deepEqual(generate(), project);
     // The edit changes one of the project's sources.
@@ -404,4 +408,59 @@ test("namespaces only the namespace benchmark's project", () => {
   assert.match(files["src/Mod10.res"], /^let value = Mod4\.value \+ 10$/m);
   const wide = generatedProjects.WideDeps();
   assert.equal(JSON.parse(wide.files["rescript.json"]).namespace, undefined);
+});
+
+test("chains the modules of the wall-time benchmark's project", () => {
+  const { files } = chainProject();
+  assert.match(files["src/Chain1.res"], /prev: Chain0\.t/);
+  assert.match(files["src/Chain149.res"], /prev: Chain148\.t/);
+  assert.equal(files["src/Chain150.res"], undefined);
+  assert.match(files["src/Side7.res"], /Chain7\.f0/);
+});
+
+test("takes the median of an odd and an even number of values", () => {
+  assert.equal(median([3, 1, 2]), 2);
+  assert.equal(median([4, 1, 3, 2]), 2.5);
+  // The values are left as they were.
+  const values = [2, 1];
+  median(values);
+  assert.deepEqual(values, [2, 1]);
+});
+
+test("pairs the rounds of the times to compare", () => {
+  // The machine gets slower during the run, but the head is always 10%
+  // faster in the same round.
+  const base = [100, 120, 140, 160, 180, 200, 220, 240, 260, 280];
+  const head = base.map(time => time * 0.9);
+  const { ratio, low, high, rounds } = timeRatio(base, head);
+  assert.equal(rounds, 10);
+  assert.ok(Math.abs(ratio - 0.9) < 1e-9);
+  assert.ok(Math.abs(low - 0.9) < 1e-9);
+  assert.ok(Math.abs(high - 0.9) < 1e-9);
+});
+
+test("gives a confidence interval around the median ratio", () => {
+  const base = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100];
+  const head = [85, 95, 90, 88, 92, 99, 80, 91, 89, 93];
+  const result = timeRatio(base, head);
+  assert.equal(result.ratio, 0.905);
+  assert.ok(result.low <= result.ratio && result.ratio <= result.high);
+  assert.ok(result.low >= 0.8 && result.high <= 0.99);
+  // The resamples are drawn the same way every time.
+  assert.deepEqual(timeRatio(base, head), result);
+  assert.throws(() => timeRatio([1, 2], [1]));
+  assert.throws(() => timeRatio([], []));
+});
+
+test("summarizes the wall times", () => {
+  assert.deepEqual(
+    renderTimings({
+      "time/Chain/clean": { base: [100, 100, 100], head: [150, 160, 155] },
+      one: { base: [100], head: [90] },
+    }),
+    [
+      "time/Chain/clean (3 rounds): base 100 ms, head 155 ms (medians), head / base 1.550 (95% CI 1.500 to 1.600)",
+      "one (1 round): base 100 ms, head 90 ms (medians), head / base 0.900 (95% CI 0.900 to 0.900)",
+    ],
+  );
 });

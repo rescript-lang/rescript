@@ -26,6 +26,8 @@
 //   node scripts/compilerBenchmarks.js prepare <checkout>
 //   node scripts/compilerBenchmarks.js measure <checkout> <out.json> [--instructions]
 //     [--project <checkout>] [--playground]
+//   node scripts/compilerBenchmarks.js time <base checkout> <head checkout>
+//     <out.json> [--rounds <n>]
 //   node scripts/compilerBenchmarks.js compare <base.json> <head.json>
 //     [--threshold <percent>] [--summary <file.md>]
 //
@@ -45,6 +47,13 @@
 // with the number of modules of a build (see generatedProjects), counting
 // allocated words only.
 // With `--playground`, it measures the size of the playground's compiler.
+//
+// `time` builds a generated project with the build systems of two prepared
+// checkouts in turn, writes the wall-clock times to <out.json> and prints
+// their medians and the median ratio of the head's time to the base's with
+// a 95% confidence interval (see timeBuilds). It is the one benchmark that
+// measures time, run by hand to indicate the effect of a change that does
+// the same work sooner; CI doesn't run it.
 //
 // `compare` reports the changes between two measurements as Markdown,
 // improvements and regressions alike, one section per count, and exits with
@@ -418,6 +427,50 @@ export const generatedProjects = {
     return { files, edit: `src/Mod${modules - 1}.res` };
   },
 };
+
+/**
+ * The project the wall-time benchmark builds: a long chain of modules, each
+ * using the one before it, and a module beside each that uses it. A build
+ * spends most of its time on the chain with most of its worker domains
+ * idle, which is what a change to the build's scheduling would improve.
+ *
+ * @returns {GeneratedProject}
+ */
+export function chainProject() {
+  const length = 150;
+  /** @type {Record<string, string>} */
+  const files = { "rescript.json": projectConfig("bench-chain") };
+  for (let i = 0; i < length; i++) {
+    const lines =
+      i === 0
+        ? [
+            "type t = {depth: int, items: array<int>}",
+            "let base = {depth: 0, items: []}",
+          ]
+        : [
+            `type t = {depth: int, items: array<int>, prev: Chain${i - 1}.t}`,
+            `let base = {depth: ${i}, items: [${i}], prev: Chain${i - 1}.base}`,
+          ];
+    // Bodies with some work for the type checker and code generation.
+    for (let f = 0; f < 20; f++) {
+      lines.push(
+        `let f${f} = (r: t, x: int) =>`,
+        "  switch mod(x, 4) {",
+        `  | 0 => r.items->Array.map(y => y + x + ${f})->Array.length`,
+        `  | 1 => r.depth * ${f + 1} + x`,
+        `  | 2 => r.items->Array.reduce(0, (acc, y) => acc + y * ${f})`,
+        "  | _ => -1",
+        "  }",
+      );
+    }
+    files[`src/Chain${i}.res`] = `${lines.join("\n")}\n`;
+    files[`src/Side${i}.res`] = [
+      `let total = Chain${i}.f0(Chain${i}.base, ${i}) + Chain${i}.f1(Chain${i}.base, 1)`,
+      "",
+    ].join("\n");
+  }
+  return { files, edit: `src/Chain${length - 1}.res` };
+}
 
 /**
  * The runtime and Belt sources of a checkout, by package.
@@ -836,6 +889,175 @@ export function measure(checkout, { instructions, project, playground }) {
 }
 
 /**
+ * How many times the wall-time benchmark builds its project with each
+ * compiler, after one build with each that isn't counted.
+ */
+const timingRounds = 10;
+
+/**
+ * How long one of the wall-time benchmark's builds may take, in
+ * milliseconds, many times as long as a build takes, so that a build that
+ * hangs, as it could with a deadlock in the scheduling, ends the benchmark.
+ */
+const timingBuildTimeout = 2 * 60 * 1000;
+
+/**
+ * The wall-clock times of the wall-time benchmark's builds, in
+ * milliseconds, by benchmark: round i built with the base's compiler and
+ * the head's, one right after the other.
+ *
+ * @typedef {Record<string, { base: number[], head: number[] }>} Timings
+ */
+
+/**
+ * Builds the wall-time benchmark's project clean with the build systems of
+ * two checkouts in turn, on as many worker domains as the build system
+ * chooses, and returns how long each build took. The two compilers take
+ * turns going first, so that a machine that gets slower or faster during
+ * the run changes both alike.
+ *
+ * Wall-clock time on a loaded machine varies by several percent from one
+ * build to the next, and more over minutes, so this only indicates the
+ * effect of a change that counting doesn't show, such as starting a module
+ * earlier: building the same modules with idle domains doing less is
+ * faster, but allocates and executes as much or more.
+ *
+ * Each checkout builds a copy of the project of its own, with its own
+ * runtime, both under paths of the same length.
+ *
+ * @param {string} baseCheckout
+ * @param {string} headCheckout
+ * @param {number} rounds
+ * @returns {Timings}
+ */
+export function timeBuilds(baseCheckout, headCheckout, rounds) {
+  const workDir = path.join(os.tmpdir(), "compiler-bench-time");
+  fs.rmSync(workDir, { recursive: true, force: true });
+  try {
+    const project = chainProject();
+    const sides = [
+      { name: "base", checkout: baseCheckout },
+      { name: "head", checkout: headCheckout },
+    ].map(side => {
+      const dir = path.join(workDir, side.name);
+      writeProject(project, dir, side.checkout);
+      return {
+        ...side,
+        dir,
+        rescript: path.join(side.checkout, relativeBinDir, "rescript.exe"),
+        /** @type {number[]} */
+        times: [],
+      };
+    });
+    /** @param {(typeof sides)[number]} side */
+    const build = side => {
+      fs.rmSync(path.join(side.dir, "lib"), { recursive: true, force: true });
+      const start = process.hrtime.bigint();
+      execFileSync(side.rescript, ["build"], {
+        cwd: side.dir,
+        stdio: "pipe",
+        timeout: timingBuildTimeout,
+        killSignal: "SIGKILL",
+      });
+      return Number(process.hrtime.bigint() - start) / 1e6;
+    };
+    for (const side of sides) build(side);
+    for (let round = 0; round < rounds; round++) {
+      const order = round % 2 === 0 ? sides : [...sides].reverse();
+      for (const side of order) side.times.push(build(side));
+    }
+    return {
+      "time/Chain/clean": { base: sides[0].times, head: sides[1].times },
+    };
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The median of numbers.
+ *
+ * @param {number[]} values
+ */
+export function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+/**
+ * A pseudo-random number generator (mulberry32), so that the confidence
+ * interval of the same times is the same in every run.
+ *
+ * @param {number} seed
+ * @returns {() => number} numbers in [0, 1)
+ */
+function randomNumbers(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * The median of the head's time divided by the base's time in the same
+ * round, with a 95% confidence interval from a percentile bootstrap: the
+ * medians of `resamples` samples of the rounds drawn with replacement, of
+ * which 2.5% are below `low` and 2.5% above `high`. Pairing the rounds
+ * leaves out a drift that slows both builds of a round alike.
+ *
+ * @param {number[]} base
+ * @param {number[]} head
+ * @param {number} [resamples]
+ * @returns {{ ratio: number, low: number, high: number, rounds: number }}
+ */
+export function timeRatio(base, head, resamples = 2000) {
+  if (base.length !== head.length || base.length === 0) {
+    throw new Error("The base and the head need the same rounds.");
+  }
+  const ratios = base.map((time, i) => head[i] / time);
+  const random = randomNumbers(1);
+  const medians = Array.from({ length: resamples }, () =>
+    median(ratios.map(() => ratios[Math.floor(random() * ratios.length)])),
+  ).sort((a, b) => a - b);
+  /** @param {number} q */
+  const quantile = q =>
+    medians[Math.min(resamples - 1, Math.floor(q * resamples))];
+  return {
+    ratio: median(ratios),
+    low: quantile(0.025),
+    high: quantile(0.975),
+    rounds: ratios.length,
+  };
+}
+
+/**
+ * Summarizes the wall-time benchmarks as lines of text: for each, the
+ * base's and the head's median times, and the median of each round's head
+ * time over its base time, which isn't the ratio of the two medians, with
+ * its 95% confidence interval.
+ *
+ * @param {Timings} timings
+ * @returns {string[]}
+ */
+export function renderTimings(timings) {
+  return Object.entries(timings).map(([name, { base, head }]) => {
+    const { ratio, low, high, rounds } = timeRatio(base, head);
+    return [
+      `${name} (${rounds} ${rounds === 1 ? "round" : "rounds"}):`,
+      `base ${median(base).toFixed(0)} ms, head ${median(head).toFixed(0)} ms (medians),`,
+      `head / base ${ratio.toFixed(3)} (95% CI ${low.toFixed(3)} to ${high.toFixed(3)})`,
+    ].join(" ");
+  });
+}
+
+/**
  * @typedef {{
  *   name: string,
  *   base: number,
@@ -1105,7 +1327,11 @@ export function compareAll(base, head, threshold) {
   );
 }
 
-/** @param {string[]} args */
+/**
+ * Runs a command and returns its exit status.
+ *
+ * @param {string[]} args
+ */
 function main(args) {
   const [command, ...rest] = args;
   if (command === "prepare" && rest.length === 1) {
@@ -1133,6 +1359,25 @@ function main(args) {
     console.log(`Measured ${Object.keys(results).length} benchmarks.`);
     return 0;
   }
+  if (command === "time" && rest.length >= 3) {
+    const [baseCheckout, headCheckout, out, ...options] = rest;
+    let rounds = timingRounds;
+    for (let i = 0; i < options.length; i += 2) {
+      if (options[i] === "--rounds") rounds = Number(options[i + 1]);
+      else throw new Error(`Unknown option ${options[i]}`);
+    }
+    if (!Number.isInteger(rounds) || rounds < 1) {
+      throw new Error("--rounds takes a positive integer.");
+    }
+    const timings = timeBuilds(
+      path.resolve(baseCheckout),
+      path.resolve(headCheckout),
+      rounds,
+    );
+    fs.writeFileSync(out, `${JSON.stringify(timings, null, 2)}\n`);
+    for (const line of renderTimings(timings)) console.log(line);
+    return 0;
+  }
   if (command === "compare" && rest.length >= 2) {
     const [basePath, headPath, ...options] = rest;
     let threshold = 1;
@@ -1154,6 +1399,8 @@ function main(args) {
     "Usage: compilerBenchmarks.js prepare <checkout>\n" +
       "       compilerBenchmarks.js measure <checkout> <out.json> [--instructions]\n" +
       "         [--project <checkout>] [--playground]\n" +
+      "       compilerBenchmarks.js time <base checkout> <head checkout> <out.json>\n" +
+      "         [--rounds <n>]\n" +
       "       compilerBenchmarks.js compare <base.json> <head.json> [--threshold <percent>]\n" +
       "         [--summary <file.md>]",
   );

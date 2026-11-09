@@ -1,1 +1,2 @@
 - Count the words the build allocates on generated projects in the CI benchmarks: many modules using little of a few large dependencies, and a namespaced package of 1,000 modules.
+- Add a `time` command to the compiler benchmarks script for local use: it times clean builds of a generated chain of modules with two checkouts' build systems in turn and prints the median ratio with a 95% confidence interval.
