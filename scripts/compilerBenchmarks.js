@@ -155,7 +155,7 @@ export function parseInstructions(stderr) {
  * @param {boolean} instructions
  * @param {{ env?: Record<string, string>, runtimeParams?: string }} [options]
  *   extra environment variables, and the runtime parameters under cachegrind
- * @returns {{ allocated: number, instructions?: number }}
+ * @returns {{ allocated: number, instructions?: number, workersReported?: boolean }}
  */
 function measureRun(
   exe,
@@ -201,9 +201,13 @@ function measureRun(
       `${command} ${commandArgs.join(" ")} failed in ${cwd} (${reason}):\n${stderr}`,
     );
   }
-  return executed === undefined
-    ? { allocated }
-    : { allocated, instructions: executed };
+  const counts =
+    executed === undefined
+      ? { allocated }
+      : { allocated, instructions: executed };
+  return /^worker_allocated_words: /m.test(stderr)
+    ? { ...counts, workersReported: true }
+    : counts;
 }
 
 /**
@@ -529,15 +533,30 @@ function measureProjectBuild(checkout, projectCheckout, instructions, results) {
       throw new Error(`The modules to edit are missing from ${projectDir}.`);
     }
 
+    // A build system that doesn't report its workers' allocations, such as
+    // the base of the pull request that added the report, counts only the
+    // main domain's: the counts measure something else, so they are marked
+    // as having other inputs and not alerted on.
     /** @param {boolean} cachegrind */
-    const build = cachegrind =>
-      measureRun(rescript, ["build"], workDir, cachegrind, {
-        env: {
-          REWATCH_COMPILER_DOMAINS: "1",
-          REWATCH_REPORT_WORKER_ALLOCATIONS: "1",
+    const build = cachegrind => {
+      const { workersReported, ...counts } = measureRun(
+        rescript,
+        ["build"],
+        workDir,
+        cachegrind,
+        {
+          env: {
+            REWATCH_COMPILER_DOMAINS: "1",
+            REWATCH_REPORT_WORKER_ALLOCATIONS: "1",
+          },
+          runtimeParams: cachegrindBuildRuntimeParams,
         },
-        runtimeParams: cachegrindBuildRuntimeParams,
-      });
+      );
+      return {
+        ...counts,
+        inputs: workersReported ? inputs : `${inputs}-main-domain-only`,
+      };
+    };
     /** @param {string} file */
     const edit = file => fs.appendFileSync(file, "\nlet benchmarkEdit = 1\n");
 
@@ -546,16 +565,16 @@ function measureProjectBuild(checkout, projectCheckout, instructions, results) {
     // work, and with two domains collecting, their instructions depend on
     // how the domains interleave: the shared edit's differed by 9.5% in a
     // pull request that didn't change what it compiles.
-    results["build/clean"] = { ...build(false), inputs };
+    results["build/clean"] = build(false);
     const outputs = outputSizes(workDir);
     for (const ext of outputExtensions) {
       results[`output/tests/*${ext}`] = { bytes: outputs[ext], inputs };
     }
-    results["build/no-op"] = { ...build(instructions), inputs };
+    results["build/no-op"] = build(instructions);
     edit(leafModule);
-    results["build/leaf-edit"] = { ...build(instructions), inputs };
+    results["build/leaf-edit"] = build(instructions);
     edit(path.join(workDir, sharedModule));
-    results["build/shared-edit"] = { ...build(false), inputs };
+    results["build/shared-edit"] = build(false);
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
   }
@@ -884,7 +903,7 @@ function renderSection(comparison, threshold, visibleRows) {
     if (listed.some(c => c.inputsChanged)) {
       lines.push(
         "",
-        "(inputs changed): this pull request changes runtime or Belt sources, so these benchmarks compile different code than on the base, and their changes don't count as regressions.",
+        "(inputs changed): this pull request changes runtime or Belt sources, or the base's build system doesn't report its workers' allocations, so these benchmarks measure something different than on the base, and their changes don't count as regressions.",
       );
     }
   }
