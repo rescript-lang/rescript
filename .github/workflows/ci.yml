@@ -184,6 +184,10 @@ jobs:
         if: matrix.test_commit_records
         run: yarn test-commit-records
 
+      - name: Test the pull request comment action
+        if: matrix.test_commit_records
+        run: yarn test-upsert-comment
+
       - name: Run tests
         run: node scripts/test.js -all
 
@@ -496,12 +500,11 @@ jobs:
         if: >-
           !cancelled() &&
           github.event.pull_request.head.repo.full_name == github.repository
-        uses: thollander/actions-comment-pull-request@v3
+        uses: ./.github/actions/upsert-comment
         with:
           pr-number: ${{ github.event.pull_request.number }}
-          comment-tag: compiler-benchmarks
-          mode: upsert
-          file-path: ${{ runner.temp }}/benchmarks-report.md
+          tag: compiler-benchmarks
+          body-path: ${{ runner.temp }}/benchmarks-report.md
 
   dev-playground:
     needs:
