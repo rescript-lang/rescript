@@ -77,7 +77,7 @@ let tests =
               ~dependencies:state.Build_state.dependencies ~source ~state
               ~cmi_path
               ~prepare:(fun () -> ())
-              ~compile:(fun ~source_kind:_ _path ->
+              ~compile:(fun ~hooks:_ ~source_kind:_ _path ->
                 if key = "B" then incr b_compilations;
                 if key = "C" then (
                   check (not !fail_a_publication)
@@ -187,7 +187,7 @@ let tests =
                   ~source:(source "Interrupted") ~state:interrupted_module
                   ~cmi_path:interrupted_cmi
                   ~prepare:(fun () -> ())
-                  ~compile:(fun ~source_kind:_ _path ->
+                  ~compile:(fun ~hooks:_ ~source_kind:_ _path ->
                     Process.task (process_job ()))
                   ~publish:(fun ~source_kind:_ _path _result ->
                     write_file interrupted_cmi "published CMI";

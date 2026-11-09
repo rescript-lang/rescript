@@ -1,0 +1,1 @@
+- Build: start type checking a module as soon as the interfaces of its dependencies are final, instead of waiting for their JavaScript generation, which shortens builds limited by long dependency chains.
