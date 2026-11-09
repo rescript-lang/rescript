@@ -1,0 +1,3 @@
+- Evaluate a `unit` or `@ignore` argument of an external in source order, as in `setX(t, f(), g())`.
+- Call an external whose arguments are all `@ignore` without them, like other externals.
+- Keep the effects of the `@ignore` arguments of a `@module` external that is the module itself.
