@@ -11,6 +11,10 @@ val is_managed_basename : string -> bool
     which cleanup removes when no current module expects them. *)
 
 val create : string list -> t
+
+val directories : t -> string list
+(** The directories indexed, in which the build publishes interfaces. *)
+
 val files : t -> string -> string list
 val ast_sources : t -> string -> ast_source list
 val ast_dependencies : t -> string -> string list
