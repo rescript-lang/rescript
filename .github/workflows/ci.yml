@@ -60,13 +60,14 @@ jobs:
             dune-profile: release
 
           # Verify that the compiler still builds with the oldest OCaml version we support.
-          # The build system's snapshot tests are skipped on this job; the
-          # first linux-x64 job runs them. OCaml 5.0 does not build with GCC 15
-          # (C23 by default), so this job stays on Ubuntu 24.04.
+          # It runs only the build system's unit tests; the other build system
+          # tests repeat the linux-x64 job's. OCaml 5.0 does not build with
+          # GCC 15 (C23 by default), so this job stays on Ubuntu 24.04.
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
             node-target: linux-x64
             dune-profile: static
+            skip_rewatch_integration_tests: true
 
     runs-on: ${{matrix.os}}
 
@@ -224,7 +225,7 @@ jobs:
         shell: bash
 
       - name: Run rewatch snapshot tests
-        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
+        if: ${{ !matrix.skip_rewatch_integration_tests }}
         timeout-minutes: 20
         run: |
           . rewatch-ocaml/tests/process_watchdog.sh
@@ -248,7 +249,7 @@ jobs:
         shell: bash
 
       - name: Run rewatch verbose output tests
-        if: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
+        if: ${{ !matrix.skip_rewatch_integration_tests }}
         timeout-minutes: 10
         run: |
           bash rewatch-ocaml/tests/check_verbose_output.sh \
@@ -270,6 +271,7 @@ jobs:
       # process runs its executable as it starts, so it runs a copy. Its
       # output is shown once both are done.
       - name: Run rewatch focused integration and canonical tests
+        if: ${{ !matrix.skip_rewatch_integration_tests }}
         timeout-minutes: 30
         run: |
           bin=packages/@rescript/${{ matrix.node-target }}/bin
