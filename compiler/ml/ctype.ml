@@ -1430,18 +1430,23 @@ let spend budget =
 (* Must follow the same edges as [occur_rec] in expression mode. Finishing
    proves [occur_rec] would neither meet [ty0] nor find a [Tconstr] cycle,
    its only ways to raise, and it expands types only after raising. *)
-let rec occur_reaches budget ty0 ty =
-  match ty.desc with
-  | Tlink ty -> occur_reaches budget ty0 ty
-  | _ -> (
-    if ty == ty0 then raise Occur;
-    spend budget;
+let occur_reaches ty0 ty =
+  let budget = ref walk_budget in
+  (* One closure for the whole walk, not a partial application per node. *)
+  let rec walk ty =
     match ty.desc with
-    | Tobject _ | Tvariant _ -> ()
-    | _ -> iter_type_expr (occur_reaches budget ty0) ty)
+    | Tlink ty -> walk ty
+    | _ -> (
+      if ty == ty0 then raise Occur;
+      spend budget;
+      match ty.desc with
+      | Tobject _ | Tvariant _ -> ()
+      | _ -> iter_type_expr walk ty)
+  in
+  walk ty
 
 let occur_cannot_fail ty0 ty =
-  match occur_reaches (ref walk_budget) ty0 ty with
+  match occur_reaches ty0 ty with
   | () -> true
   | exception (Occur | Give_up) -> false
 
