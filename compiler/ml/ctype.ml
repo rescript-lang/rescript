@@ -1423,27 +1423,41 @@ exception Give_up
 
 let walk_budget = 256
 
-let spend budget =
-  decr budget;
-  if !budget < 0 then raise Give_up
-
 (* Must follow the same edges as [occur_rec] in expression mode. Finishing
    proves [occur_rec] would neither meet [ty0] nor find a [Tconstr] cycle,
-   its only ways to raise, and it expands types only after raising. *)
-let occur_reaches ty0 ty =
-  let budget = ref walk_budget in
-  (* One closure for the whole walk, not a partial application per node. *)
-  let rec walk ty =
-    match ty.desc with
-    | Tlink ty -> walk ty
-    | _ -> (
-      if ty == ty0 then raise Occur;
-      spend budget;
-      match ty.desc with
-      | Tobject _ | Tvariant _ -> ()
-      | _ -> iter_type_expr walk ty)
-  in
-  walk ty
+   its only ways to raise, and it expands types only after raising. The
+   edges are those of [iter_type_expr], spelled out so that the walk
+   allocates nothing: it returns the budget left instead of keeping it in a
+   ref that a closure captures. *)
+let rec occur_reaches_budget ty0 budget ty =
+  match ty.desc with
+  | Tlink ty -> occur_reaches_budget ty0 budget ty
+  | desc -> (
+    if ty == ty0 then raise Occur;
+    let budget = budget - 1 in
+    if budget < 0 then raise Give_up;
+    match desc with
+    | Tobject _ | Tvariant _ | Tvar _ | Tnil | Tunivar _ -> budget
+    | Tarrow (params, ret) ->
+      occur_reaches_budget ty0 (occur_reaches_params ty0 budget params) ret
+    | Ttuple l | Tconstr (_, l, _) | Tpackage (_, _, l) ->
+      occur_reaches_list ty0 budget l
+    | Tfield {typ; rest} ->
+      occur_reaches_budget ty0 (occur_reaches_budget ty0 budget typ) rest
+    | Tlink ty | Tsubst ty -> occur_reaches_budget ty0 budget ty
+    | Tpoly (ty, tyl) ->
+      occur_reaches_list ty0 (occur_reaches_budget ty0 budget ty) tyl)
+
+and occur_reaches_list ty0 budget = function
+  | [] -> budget
+  | ty :: l -> occur_reaches_list ty0 (occur_reaches_budget ty0 budget ty) l
+
+and occur_reaches_params ty0 budget = function
+  | [] -> budget
+  | {typ} :: l ->
+    occur_reaches_params ty0 (occur_reaches_budget ty0 budget typ) l
+
+let occur_reaches ty0 ty = ignore (occur_reaches_budget ty0 walk_budget ty)
 
 let occur_cannot_fail ty0 ty =
   match occur_reaches ty0 ty with
@@ -1703,19 +1717,41 @@ let mkvariant fields closed =
 (* Must follow the same edges as [deep_occur_marked]. Answers only "absent":
    it gives up on meeting [t0] (where the marked walk stops early) and on a
    node an enclosing walk marked (which the marked walk skips but then
-   unmarks in [unmark_type]), so it never leaves marks that differ. *)
+   unmarks in [unmark_type]), so it never leaves marks that differ. Like
+   [occur_reaches_budget], it spells out the edges of [iter_type_expr] so
+   that it allocates nothing, except at a [Tvariant]. *)
+let rec deep_occur_budget t0 budget ty =
+  let ty = repr ty in
+  if ty.level < lowest_level then raise Give_up;
+  if ty == t0 then raise Occur;
+  let budget = budget - 1 in
+  if budget < 0 then raise Give_up;
+  match ty.desc with
+  | Tvar _ | Tnil | Tunivar _ -> budget
+  | Tarrow (params, ret) ->
+    deep_occur_budget t0 (deep_occur_params t0 budget params) ret
+  | Ttuple l | Tconstr (_, l, _) | Tpackage (_, _, l) ->
+    deep_occur_list t0 budget l
+  | Tobject ty | Tlink ty | Tsubst ty -> deep_occur_budget t0 budget ty
+  | Tfield {typ; rest} ->
+    deep_occur_budget t0 (deep_occur_budget t0 budget typ) rest
+  | Tpoly (ty, tyl) -> deep_occur_list t0 (deep_occur_budget t0 budget ty) tyl
+  | Tvariant _ ->
+    let budget = ref budget in
+    iter_type_expr (fun ty -> budget := deep_occur_budget t0 !budget ty) ty;
+    !budget
+
+and deep_occur_list t0 budget = function
+  | [] -> budget
+  | ty :: l -> deep_occur_list t0 (deep_occur_budget t0 budget ty) l
+
+and deep_occur_params t0 budget = function
+  | [] -> budget
+  | {typ} :: l -> deep_occur_params t0 (deep_occur_budget t0 budget typ) l
+
 let deep_occur_fast_absent t0 ty =
-  let budget = ref walk_budget in
-  let rec walk ty =
-    let ty = repr ty in
-    if ty.level < lowest_level then raise Give_up
-    else (
-      if ty == t0 then raise Occur;
-      spend budget;
-      iter_type_expr walk ty)
-  in
-  match walk ty with
-  | () -> true
+  match deep_occur_budget t0 walk_budget ty with
+  | _ -> true
   | exception (Occur | Give_up) -> false
 
 (* [deep_occur_fast_absent] must follow the same edges. *)
