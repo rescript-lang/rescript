@@ -640,87 +640,11 @@ jobs:
           push: never
           runCmd: make
 
-  test-installation-npm:
-    needs:
-      - pkg-pr-new
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-26
-          - os: ubuntu-26.04
-          - os: ubuntu-26.04-arm
-          - os: windows-2025
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Use Node.js
-        uses: actions/setup-node@v7
-        with:
-          # Run integration tests with the oldest supported node version.
-          node-version: 22
-
-      - name: Make test directory
-        id: tmp-dir
-        shell: bash
-        run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
-            mkdir -p "$dir"
-          else
-            dir=$(mktemp -d)
-          fi
-          echo "path=$dir" >> "$GITHUB_OUTPUT"
-          cp -r tests/package_tests/installation_test/* "$dir"
-          # The compiled stdlib tests run against the installed runtime. Their
-          # Test.mjs imports @babel/code-frame, which tests/tests depends on.
-          cp -r tests/tests/src/stdlib "$dir/stdlib"
-          echo "code-frame=$(node -p 'require("./tests/tests/package.json").dependencies["@babel/code-frame"]')" >> "$GITHUB_OUTPUT"
-
-      - name: Install ReScript package
-        run: |
-          COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
-          npm i --no-audit \
-            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
-            "https://pkg.pr.new/rescript-lang/rescript/@rescript/runtime@${COMMIT_SHA}" \
-            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}" \
-            "@babel/code-frame@${{ steps.tmp-dir.outputs.code-frame }}"
-        shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
-
-      - name: Test installation
-        run: |
-          npx rescript -h
-          npx rescript build
-          cp src/BeltTest.res.txt src/BeltTest.res
-          if npx rescript build; then
-            echo "Belt unexpectedly compiled without being listed as a dependency" >&2
-            exit 1
-          fi
-          cp rescript-with-belt.json rescript.json
-          npx rescript build
-          node src/BeltTest.mjs
-        shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
-
-      - name: Test packaged CLI subcommands and watch shutdown
-        run: node packaged-cli-smoke.mjs
-        shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
-
-      # build-compiler runs the stdlib tests on the Node.js version in .nvmrc,
-      # this job on the oldest supported one, so tests of APIs missing there
-      # must stay out of Stdlib_TestSuite and Stdlib_TempTests.
-      - name: Run stdlib tests
-        run: |
-          node stdlib/Stdlib_TestSuite.mjs
-          node stdlib/Stdlib_TempTests.mjs
-        shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
-
-  test-installation-pnpm:
+  # Installs the packages published by pkg-pr-new with npm, then with pnpm,
+  # each in a directory of its own. One job per OS rather than one per
+  # package manager halves the jobs that wait for a runner, macOS runners
+  # in particular.
+  test-installation:
     needs:
       - pkg-pr-new
     strategy:
@@ -747,24 +671,71 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Make test directory
+      - name: Make test directories
         id: tmp-dir
         shell: bash
         run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
-            mkdir -p "$dir"
-          else
-            dir=$(mktemp -d)
-          fi
-          echo "path=$dir" >> "$GITHUB_OUTPUT"
-          cp -r tests/package_tests/installation_test/* "$dir"
-          # The compiled stdlib tests run against the installed runtime. Their
-          # Test.mjs imports @babel/code-frame, which tests/tests depends on.
-          cp -r tests/tests/src/stdlib "$dir/stdlib"
+          for manager in npm pnpm; do
+            if [[ "$RUNNER_OS" == "Windows" ]]; then
+              dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
+              mkdir -p "$dir"
+            else
+              dir=$(mktemp -d)
+            fi
+            echo "$manager=$dir" >> "$GITHUB_OUTPUT"
+            cp -r tests/package_tests/installation_test/* "$dir"
+            # The compiled stdlib tests run against the installed runtime. Their
+            # Test.mjs imports @babel/code-frame, which tests/tests depends on.
+            cp -r tests/tests/src/stdlib "$dir/stdlib"
+          done
           echo "code-frame=$(node -p 'require("./tests/tests/package.json").dependencies["@babel/code-frame"]')" >> "$GITHUB_OUTPUT"
 
-      - name: Install ReScript package
+      - name: "npm: Install ReScript package"
+        run: |
+          COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
+          npm i --no-audit \
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/runtime@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}" \
+            "@babel/code-frame@${{ steps.tmp-dir.outputs.code-frame }}"
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.npm }}
+
+      - name: "npm: Test installation"
+        run: |
+          npx rescript -h
+          npx rescript build
+          cp src/BeltTest.res.txt src/BeltTest.res
+          if npx rescript build; then
+            echo "Belt unexpectedly compiled without being listed as a dependency" >&2
+            exit 1
+          fi
+          cp rescript-with-belt.json rescript.json
+          npx rescript build
+          node src/BeltTest.mjs
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.npm }}
+
+      - name: "npm: Test packaged CLI subcommands and watch shutdown"
+        run: node packaged-cli-smoke.mjs
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.npm }}
+
+      # build-compiler runs the stdlib tests on the Node.js version in .nvmrc,
+      # this job on the oldest supported one, so tests of APIs missing there
+      # must stay out of Stdlib_TestSuite and Stdlib_TempTests.
+      - name: "npm: Run stdlib tests"
+        run: |
+          node stdlib/Stdlib_TestSuite.mjs
+          node stdlib/Stdlib_TempTests.mjs
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.npm }}
+
+      # The pnpm steps run even when an npm step failed, so that one run
+      # reports both package managers.
+      - name: "pnpm: Install ReScript package"
+        id: pnpm-install
+        if: ${{ !cancelled() && steps.tmp-dir.outcome == 'success' }}
         run: |
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           # pnpm 10 blocks pkg.pr.new's URL-based platform subdependencies unless block-exotic-subdeps is disabled.
@@ -774,9 +745,11 @@ jobs:
             "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}" \
             "@babel/code-frame@${{ steps.tmp-dir.outputs.code-frame }}"
         shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
+        working-directory: ${{ steps.tmp-dir.outputs.pnpm }}
 
-      - name: Test installation
+      - name: "pnpm: Test installation"
+        id: pnpm-test
+        if: ${{ !cancelled() && steps.pnpm-install.outcome == 'success' }}
         run: |
           pnpm rescript -h
           pnpm rescript build
@@ -789,17 +762,15 @@ jobs:
           pnpm rescript build
           node src/BeltTest.mjs
         shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
+        working-directory: ${{ steps.tmp-dir.outputs.pnpm }}
 
-      # build-compiler runs the stdlib tests on the Node.js version in .nvmrc,
-      # this job on the oldest supported one, so tests of APIs missing there
-      # must stay out of Stdlib_TestSuite and Stdlib_TempTests.
-      - name: Run stdlib tests
+      - name: "pnpm: Run stdlib tests"
+        if: ${{ !cancelled() && steps.pnpm-test.outcome == 'success' }}
         run: |
           node stdlib/Stdlib_TestSuite.mjs
           node stdlib/Stdlib_TempTests.mjs
         shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
+        working-directory: ${{ steps.tmp-dir.outputs.pnpm }}
 
   # The single CI check that the master ruleset requires. Matrix job names
   # contain runner labels, so requiring this job instead keeps the ruleset
@@ -812,8 +783,7 @@ jobs:
       - pkg-pr-new
       - api-docs
       - test-devcontainer
-      - test-installation-npm
-      - test-installation-pnpm
+      - test-installation
     runs-on: ubuntu-26.04
     steps:
       - name: Check that all needed jobs succeeded
