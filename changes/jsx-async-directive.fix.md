@@ -1,0 +1,1 @@
+- JSX v4: keep `@directive` on an async component's own function instead of its generated sync wrapper, so `@react.component let make = @directive("'use cache'") async (...) => ...` compiles to an async function starting with `'use cache'`, which Next.js accepts.
