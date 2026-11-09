@@ -64,8 +64,18 @@ let run = function
   | command ->
     with_termination_handlers (fun ~poll -> run_command ~poll command)
 
+(* For the compiler benchmarks (scripts/compilerBenchmarks.js): the runtime's
+   report at exit only counts the main domain's allocations, and the compiler
+   runs on worker domains. *)
+let report_worker_allocations () =
+  if Option.is_some (Sys.getenv_opt "REWATCH_REPORT_WORKER_ALLOCATIONS") then
+    at_exit (fun () ->
+        Printf.eprintf "worker_allocated_words: %d\n%!"
+          (Process.worker_allocated_words ()))
+
 let main () =
   Platform.configure_standard_streams ();
+  report_worker_allocations ();
   try
     match Cli.eval Sys.argv with
     | Cli.Run command -> run command
