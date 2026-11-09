@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   compareAll,
   compareResults,
+  generatedProjects,
   parseAllocatedWords,
   parseInstructions,
   renderSummary,
@@ -347,4 +348,60 @@ test("generates the same stress inputs every time", () => {
   for (const generate of Object.values(stressInputs)) {
     assert.equal(generate(), generate());
   }
+});
+
+test("adds up the generated projects apart from the total", () => {
+  const base = {
+    a: { allocated: 1000, inputs: "x" },
+    "build/clean": { allocated: 2000, inputs: "x" },
+    "build/Namespace/clean": { allocated: 100000, inputs: "x" },
+    "build/WideDeps/edit": { allocated: 50000, inputs: "x" },
+  };
+  const head = {
+    a: { allocated: 1000, inputs: "x" },
+    "build/clean": { allocated: 2000, inputs: "x" },
+    "build/Namespace/clean": { allocated: 40000, inputs: "x" },
+    "build/WideDeps/edit": { allocated: 50000, inputs: "x" },
+  };
+  const comparison = compareResults(base, head, 1);
+  assert.deepEqual(comparison.total, { base: 3000, head: 3000 });
+  assert.deepEqual(comparison.generated, { base: 150000, head: 90000 });
+  // The generated projects still have rows and thresholds of their own.
+  assert.deepEqual(
+    comparison.improvements.map(c => c.name),
+    ["build/Namespace/clean"],
+  );
+  const summary = renderSummary([comparison], 1);
+  assert.match(summary, /^In total: 3,000 → 3,000 \(±0\.00%\)\.$/m);
+  assert.match(
+    summary,
+    /^Generated projects: 150,000 → 90,000 \(-40\.00%\)\.$/m,
+  );
+  // Without generated projects, there is no subtotal.
+  assert.doesNotMatch(
+    renderSummary([compareResults({ a: base.a }, { a: head.a }, 1)], 1),
+    /Generated projects/,
+  );
+});
+
+test("generates the same projects every time", () => {
+  for (const generate of Object.values(generatedProjects)) {
+    const project = generate();
+    assert.deepEqual(generate(), project);
+    // The edit changes one of the project's sources.
+    assert.ok(project.edit.endsWith(".res"));
+    assert.ok(project.edit in project.files);
+    const config = JSON.parse(project.files["rescript.json"]);
+    // JavaScript goes to lib/, which a clean build removes.
+    assert.equal(config["package-specs"]["in-source"], false);
+  }
+});
+
+test("namespaces only the namespace benchmark's project", () => {
+  const { files } = generatedProjects.Namespace();
+  assert.equal(JSON.parse(files["rescript.json"]).namespace, true);
+  // Modules use others through the namespace's map.
+  assert.match(files["src/Mod10.res"], /^let value = Mod4\.value \+ 10$/m);
+  const wide = generatedProjects.WideDeps();
+  assert.equal(JSON.parse(wide.files["rescript.json"]).namespace, undefined);
 });

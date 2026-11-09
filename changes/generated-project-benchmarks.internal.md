@@ -1,0 +1,1 @@
+- Count the words the build allocates on generated projects in the CI benchmarks: many modules using little of a few large dependencies, and a namespaced package of 1,000 modules.
