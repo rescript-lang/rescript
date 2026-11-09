@@ -27,46 +27,14 @@ module S = Js_stmt_make
 
 type arg_expression = Splice0 | Splice1 of E.t | Splice2 of E.t * E.t
 
-(* Whether evaluating [e] may await, other than in a function it contains.
-   Raw JS code may, unless it is a function or a literal: the compiler does not
-   see what else it does. *)
-let awaits (e : J.expression) =
-  let super = Js_record_iter.super in
-  let iter =
-    {
-      super with
-      expression =
-        (fun self e ->
-          match e.expression_desc with
-          | Await _ | Raw_js_code {code_info = Exp Js_exp_unknown | Stmt _} ->
-            raise_notrace Exit
-          | Fun _ | Raw_js_code {code_info = Exp (Js_function _ | Js_literal _)}
-            ->
-            ()
-          | _ -> super.expression self e);
-    }
-  in
-  match iter.expression iter e with
-  | () -> false
-  | exception Exit -> true
-
-(* [eval] and [eval_as_int] read an argument other than a literal once,
-   inside an arrow function that dispatches on it and is called where the
-   argument is. That is the same as evaluating the argument in place, side
-   effects included, since an arrow function shares [this] and [arguments]
-   with the code around it, and an expression cannot [break], [continue] or
-   [return] other than in a function of its own. Only an [await] cannot move
-   there: it is a syntax error in the arrow function. *)
-let eval_in_place (arg : J.expression) = not (awaits arg)
-
 (* [eval_as_event] reads an argument other than a literal twice, for the tag
-   (inside the function that dispatches on it, with [@as]) and for the
-   payload. That is the same as reading it once, in place, for constants,
-   variables, and fields, array elements and conditionals of them. A JS global
-   ([@val]) counts as a variable, like a value of a JS module ([@module]),
-   though either may be a getter. A JS property read does not count: a [@get]
-   external is there to run a getter, and a [@val] or [@module] value with
-   [@scope] is a property read as well, which cannot be told from it. *)
+   and for the payload. That is the same as reading it once, in place, for
+   constants, variables, and fields, array elements and conditionals of them.
+   A JS global ([@val]) counts as a variable, like a value of a JS module
+   ([@module]), though either may be a getter. A JS property read does not
+   count: a [@get] external is there to run a getter, and a [@val] or
+   [@module] value with [@scope] is a property read as well, which cannot be
+   told from it. *)
 let eval_as_event_in_place (arg : J.expression) =
   let rec duplicable (e : J.expression) =
     match e.expression_desc with
@@ -81,6 +49,31 @@ let eval_as_event_in_place (arg : J.expression) =
   | Caml_block ([{expression_desc = Str _}; _], _, Blk_poly_var) -> true
   | _ -> duplicable arg
 
+(* [(x => { switch (x) { case s: return r; ... } })(arg)]: the result [r] for
+   the case [s] that [arg] matches. [arg] is an argument of the call, so it is
+   evaluated once and in its place, and an [await] in it belongs to the code
+   around it. The function captures no variable of that code, so it keeps
+   none of them alive for the closures that code creates. *)
+let dispatch (arg : J.expression) (cases : (string * 'a) list)
+    (result : 'a -> J.expression) : J.expression =
+  let x = Ident.create "x" in
+  E.call ~info:Js_call_info.ml_full_call
+    (E.ocaml_fun ~return_unit:false ~async:false ~one_unit_arg:false [x]
+       [
+         S.string_switch (E.var x)
+           (Ext_list.map cases (fun (s, r) ->
+                ( Variant_runtime.Literal (String s),
+                  J.
+                    {
+                      switch_body = [S.return_stmt (result r)];
+                      should_break = false;
+                      (* FIXME: if true, still print break*)
+                      comment = None;
+                      source_loc = None;
+                    } )));
+       ])
+    [arg]
+
 (* we need destruct [undefined] when input is optional *)
 let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
   if arg == E.undefined then E.undefined
@@ -89,21 +82,7 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
     | Str txt ->
       let s = Ext_list.assoc_by_string dispatches txt None in
       E.str s
-    | _ ->
-      E.of_block
-        [
-          S.string_switch arg
-            (Ext_list.map dispatches (fun (s, r) ->
-                 ( Variant_runtime.Literal (String s),
-                   J.
-                     {
-                       switch_body = [S.return_stmt (E.str r)];
-                       should_break = false;
-                       (* FIXME: if true, still print break*)
-                       comment = None;
-                       source_loc = None;
-                     } )));
-        ]
+    | _ -> dispatch arg dispatches E.str
 
 (* invariant: optional is not allowed in this case *)
 (* arg is a polyvar *)
@@ -125,21 +104,7 @@ let eval_as_event (arg : J.expression)
     Splice2
       ( (match dispatches with
         | Some dispatches ->
-          E.of_block
-            [
-              S.string_switch
-                (E.poly_var_tag_access arg)
-                (Ext_list.map dispatches (fun (s, r) ->
-                     ( Variant_runtime.Literal (String s),
-                       J.
-                         {
-                           switch_body = [S.return_stmt (E.str r)];
-                           should_break = false;
-                           (* FIXME: if true, still print break*)
-                           comment = None;
-                           source_loc = None;
-                         } )));
-            ]
+          dispatch (E.poly_var_tag_access arg) dispatches E.str
         | None -> E.poly_var_tag_access arg),
         E.poly_var_value_access arg )
 
@@ -150,21 +115,7 @@ let eval_as_int (arg : J.expression) (dispatches : (string * int) list) : E.t =
     match arg.expression_desc with
     | Str txt ->
       E.int (Int32.of_int (Ext_list.assoc_by_string dispatches txt None))
-    | _ ->
-      E.of_block
-        [
-          S.string_switch arg
-            (Ext_list.map dispatches (fun (s, r) ->
-                 ( Variant_runtime.Literal (String s),
-                   J.
-                     {
-                       switch_body = [S.return_stmt (E.int (Int32.of_int r))];
-                       should_break = false;
-                       (* FIXME: if true, still print break*)
-                       comment = None;
-                       source_loc = None;
-                     } )));
-        ]
+    | _ -> dispatch arg dispatches (fun r -> E.int (Int32.of_int r))
 
 let eval_as_unwrap (arg : J.expression) : E.t =
   match arg.expression_desc with

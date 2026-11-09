@@ -29,19 +29,19 @@ type arg_expression =
   | Splice1 of J.expression
   | Splice2 of J.expression * J.expression
 
-val eval_in_place : J.expression -> bool
-(** Whether [eval] and [eval_as_int] can be given the argument as it is,
-    rather than a variable bound to it: they may read it inside a function *)
-
 val eval_as_event_in_place : J.expression -> bool
 (** Whether [eval_as_event] can be given the argument as it is, rather than a
     variable bound to it: it may read it twice *)
 
 val eval : J.expression -> (string * string) list -> J.expression
+(** The string that a [@string] argument stands for. The argument is
+    evaluated once, in its place: a function that switches on it is called
+    with it. *)
 
 val eval_as_event :
   J.expression -> (string * string) list option -> arg_expression
 
 val eval_as_int : J.expression -> (string * int) list -> J.expression
+(** The integer that an [@int] argument stands for, evaluated like [eval] *)
 
 val eval_as_unwrap : J.expression -> J.expression

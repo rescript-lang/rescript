@@ -1767,30 +1767,6 @@ let bigint_mod ~checked (e0 : t) (e1 : t) =
   if checked then runtime_call Primitive_modules.bigint "mod_" [e0; e1]
   else bigint_op Mod e0 e1
 
-(* TODO -- alpha conversion
-    remember to add parens..
-*)
-let of_block block : t =
-  let return_unit = false in
-  (* This case is not hit that much*)
-  call ~info:Js_call_info.ml_full_call
-    {
-      comment = None;
-      source_loc = None;
-      expression_desc =
-        Fun
-          {
-            is_method = false;
-            params = [];
-            body = block;
-            env = Js_fun_env.make 0;
-            return_unit;
-            async = false;
-            directive = None;
-          };
-    }
-    []
-
 let is_null (x : t) = triple_equal x nil
 
 let is_null_undefined_constant (x : t) =

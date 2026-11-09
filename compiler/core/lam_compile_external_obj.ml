@@ -78,13 +78,11 @@ let rec hold_obj_args ~(delay_safe : J.expression -> bool)
   | {obj_arg_label = Obj_empty} :: labels, arg :: args ->
     arg :: hold_obj_args ~delay_safe labels args
   | {obj_arg_label = Obj_label _; obj_arg_type} :: labels, arg :: args ->
-    Lam_compile_external_call.hold_arg ~arg_label:Arg_label
-      ~arg_type:obj_arg_type arg
+    Lam_compile_external_call.hold_arg ~arg_type:obj_arg_type arg
     :: hold_obj_args ~delay_safe labels args
   | {obj_arg_label = Obj_optional _; obj_arg_type} :: labels, arg :: args ->
     let ((block, value) as held) =
-      Lam_compile_external_call.hold_arg ~arg_label:Arg_optional
-        ~arg_type:obj_arg_type arg
+      Lam_compile_external_call.hold_arg ~arg_type:obj_arg_type arg
     in
     let order_matters (later : J.expression) =
       not

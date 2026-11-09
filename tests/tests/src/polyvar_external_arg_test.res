@@ -8,10 +8,11 @@ external testAsync: (string, unit => promise<unit>) => unit = "test"
 // place among the arguments. An event-style argument is passed as its tag and
 // its payload, so an argument with side effects is read from a temporary, as
 // is a JS property read such as a @get getter, while a JS global is read in
-// place, like a value of a JS module. An @as or @int dispatch switches on the
-// argument in an arrow function called in its place, so the argument is read
-// from a temporary only if it awaits. In a while condition, the temporary is
-// bound inside the loop.
+// place, like a value of a JS module. An @as or @int dispatch is a function
+// that switches on the argument and is called with it, so the argument, an
+// await in it included, is evaluated where it is. Like any argument, it is
+// read from a temporary only if an argument after it has statements to run
+// first. In a while condition, the temporary is bound inside the loop.
 
 type target
 
@@ -131,6 +132,28 @@ let keydown = x => "keydown " ++ Int.toString(x)
 
 let lastEvent = ref(opaque(#keydown(keydown)))
 
+type weakRef<'a>
+@new external makeWeakRef: 'a => weakRef<'a> = "WeakRef"
+@send external deref: weakRef<'a> => option<'a> = "deref"
+@module("node:v8") external setV8Flags: string => unit = "setFlagsFromString"
+@module("node:vm") external runInNewContext: string => unit => unit = "runInNewContext"
+
+type levels = {level: [#low | #high], data: array<int>}
+
+// The function that switches on the argument is called with it and captures
+// no variable, so the closure returned does not keep [levels] alive.
+let setLevelAndKeep = (t, levels) => {
+  setLevel(t, levels.level)
+  () => t
+}
+
+let keepClosure = t => {
+  let levels = {level: opaque(#high), data: [1, 2, 3]}
+  (makeWeakRef(levels), setLevelAndKeep(t, levels))
+}
+
+let nextTask = () => Promise.make((resolve, _) => setTimeout(() => resolve(), 0)->ignore)
+
 describe(__MODULE__, () => {
   test("an event-style argument with side effects", () => {
     let t = makeTarget()
@@ -196,7 +219,7 @@ describe(__MODULE__, () => {
     eq(__LOC__, (0, None), (noMode["level"], noMode["mode"]->toOption))
   })
 
-  test("@string and @int arguments that hold an async function or raw code", () => {
+  test("an @int argument that holds an async function", () => {
     let t = makeTarget()
     let pending = []
     let defer = (f, v) => {
@@ -205,10 +228,21 @@ describe(__MODULE__, () => {
     }
     // An await in a function of the argument stays there
     setLevel(t, defer(async () => await Promise.resolve(), opaque(#high)))
-    // Raw JS code that is a literal cannot await
-    setMode(t, %raw(`"light"`))
     eq(__LOC__, 1, Array.length(pending))
-    eq(__LOC__, ["10", "light-mode"], calls(t))
+    eq(__LOC__, ["10"], calls(t))
+  })
+
+  testAsync("a closure created next to an @int argument does not keep it alive", async () => {
+    setV8Flags("--expose-gc")
+    let gc = runInNewContext("gc")
+    let t = makeTarget()
+    let (levels, keep) = keepClosure(t)
+    // A WeakRef keeps its target until the end of the current task
+    await nextTask()
+    gc()
+    ok(__LOC__, levels->deref == None)
+    ok(__LOC__, keep() === t)
+    eq(__LOC__, ["10"], calls(t))
   })
 
   test("the arguments around @string and @int arguments run in order", () => {
@@ -316,7 +350,7 @@ describe(__MODULE__, () => {
       await mark("level", Promise.resolve(opaque(#low))),
       mark("fourth", "d"),
     )
-    // Raw JS code may await
+    // Raw JS code that awaits is evaluated in its place as well
     setLevel(t, %raw(`await Promise.resolve("high")`))
     eq(__LOC__, ["first", "mode", "second", "third", "level", "fourth"], log)
     eq(__LOC__, ["a dark-mode b", "c 0 d", "10"], calls(t))
