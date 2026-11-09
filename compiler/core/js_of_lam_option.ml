@@ -74,7 +74,7 @@ let get_default_undefined_from_optional (arg : J.expression) : J.expression =
     match desc with
     | Optional_block (x, _) -> x (* invariant: option encoding *)
     | _ ->
-      if Js_analyzer.is_okay_to_duplicate arg then
+      if Js_analyzer.is_okay_to_duplicate ~property_reads:false arg then
         (* FIXME: no need do such inlining*)
         E.econd (is_not_none arg) (val_from_option arg) E.undefined
       else

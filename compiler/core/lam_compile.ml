@@ -282,7 +282,8 @@ let rec delay_safe ~assignable (e : J.expression) =
    Building an array, block or object literal is pure, so a literal stays in
    place and its elements are evaluated now instead. That also keeps the
    literal visible to translations that look into their arguments, such as
-   the rows of a dict literal or a [@variadic] array. *)
+   the rows of a dict literal or a [@variadic] array. So does an
+   [Optional_block], which keeps an optional argument known to be present. *)
 let rec evaluate_now ~assignable (e : J.expression) : J.block * J.expression =
   match e.expression_desc with
   | _ when delay_safe ~assignable e -> ([], e)
@@ -291,6 +292,9 @@ let rec evaluate_now ~assignable (e : J.expression) : J.block * J.expression =
     if Js_analyzer.no_side_effect_expression a then (rest, b)
     else
       ({J.statement_desc = Exp a; comment = None; source_loc = None} :: rest, b)
+  | Optional_block (a, identity) ->
+    let held, a = evaluate_now ~assignable a in
+    (held, {e with expression_desc = Optional_block (a, identity)})
   | Array xs ->
     let held, xs = evaluate_all_now ~assignable xs in
     (held, {e with expression_desc = Array xs})
@@ -327,12 +331,29 @@ and evaluate_all_now ~assignable (xs : J.expression list) :
   let blocks, xs = Ext_list.split_map xs (evaluate_now ~assignable) in
   (List.concat blocks, xs)
 
+(* Whether evaluating [e] runs no code: it has no side effects and reads no JS
+   property, which may run a getter. A record field counts. *)
+let runs_no_code (e : J.expression) =
+  Js_analyzer.is_okay_to_duplicate ~property_reads:false e
+
+(* Whether [block] only defines variables as values that run no code, as a
+   temporary bound to a record field does *)
+let defines_pure_values (block : J.block) =
+  Ext_list.for_all block (fun (s : J.statement) ->
+      match s.statement_desc with
+      | Variable {value = None} -> true
+      | Variable {value = Some e} -> runs_no_code e
+      | _ -> false)
+
 (* Assembles compiled arguments for a call or a literal that evaluates them
    left to right. Each argument comes with the statements that have to run
    before its value is read. Putting all statements first and then the
    values would move the statements of an argument in front of the values of
    the arguments to its left, so when an argument has statements, every
-   argument to its left is evaluated before them with [evaluate_now].
+   argument to its left is evaluated before them with [evaluate_now]. An
+   argument that runs no code stays in place when the statements after it
+   only define values that run none either, since then neither can change
+   the other.
 
    With [~method_callee:true], the first argument is a JS method read
    [obj.m] being called: the object is held and the property read stays in
@@ -351,7 +372,8 @@ let sequence_arguments ?(method_callee = false) ~assignable
       Ext_list.fold_right args (last, [], [])
         (fun (block, value) (i, code, values) ->
           let held, value =
-            if code = [] then ([], value)
+            if code = [] || (runs_no_code value && defines_pure_values code)
+            then ([], value)
             else
               match value.expression_desc with
               | Static_index (obj, name, pos) when method_callee && i = 0 ->
@@ -1908,7 +1930,10 @@ let compile output_prefix =
     | {primitive = Pjs_object_create labels; args} ->
       let args_code, args_expr =
         compile_arguments
-          ~hold:(Lam_compile_external_obj.hold_obj_args labels)
+          ~hold:
+            (Lam_compile_external_obj.hold_obj_args
+               ~delay_safe:(delay_safe ~assignable:lambda_cxt.meta.assignable)
+               labels)
           lambda_cxt args
       in
       let block, exp =

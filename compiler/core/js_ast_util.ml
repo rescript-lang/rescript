@@ -26,8 +26,9 @@
 
 module S = Js_stmt_make
 
-let named_expression (e : J.expression) : (J.statement * Ident.t) option =
-  if Js_analyzer.is_okay_to_duplicate e then None
+let named_expression ?property_reads (e : J.expression) :
+    (J.statement * Ident.t) option =
+  if Js_analyzer.is_okay_to_duplicate ?property_reads e then None
   else
     let obj = Ext_ident.create_tmp () in
     let obj_code = S.define_variable ~kind:Strict obj e in
