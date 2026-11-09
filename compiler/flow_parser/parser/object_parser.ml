@@ -30,7 +30,7 @@ module Object
         else
           trailing_and_remover_after_last_loc env
       in
-      remove_trailing expression (fun remover expression -> remover#expression expression)
+      remove_trailing expression
     in
     let decorator env =
       let leading = Peek.comments env in
@@ -202,7 +202,6 @@ module Object
               let tparams =
                 type_params_remove_trailing
                   env
-                  ~kind:Flow_ast_mapper.FunctionTP
                   (Type.type_params env)
               in
               let params =
@@ -581,7 +580,7 @@ module Object
             expr
           else
             let { remove_trailing; _ } = trailing_and_remover env in
-            remove_trailing expr (fun remover expr -> remover#expression expr)
+            remove_trailing expr
         in
         let targs = Type.type_args env in
         { Class.Extends.expr; targs; comments = Flow_ast_utils.mk_comments_opt ~leading () }
@@ -595,7 +594,7 @@ module Object
         let (loc, extends) = class_extends ~leading env in
         let { remove_trailing; _ } = trailing_and_remover env in
         Some
-          (loc, remove_trailing extends (fun remover extends -> remover#class_extends loc extends))
+          (loc, remove_trailing extends)
       else
         None
     in
@@ -784,7 +783,6 @@ module Object
               let tparams =
                 type_params_remove_trailing
                   env
-                  ~kind:Flow_ast_mapper.FunctionTP
                   (Type.type_params env)
               in
               let params =
@@ -955,7 +953,7 @@ module Object
           match Peek.token env with
           | T_EOF
           | T_RCURLY ->
-            { trailing = []; remove_trailing = (fun x _ -> x) }
+            { trailing = []; remove_trailing = (fun x -> x) }
           | _ when Peek.is_line_terminator env ->
             Comment_attachment.trailing_and_remover_after_last_line env
           | _ -> Comment_attachment.trailing_and_remover_after_last_loc env
@@ -968,18 +966,18 @@ module Object
             ( key,
               annot,
               Class.Property.Initialized
-                (remover.remove_trailing expr (fun remover expr -> remover#expression expr))
+                (remover.remove_trailing expr)
             )
           (* prop: annot *)
           | (Ast.Type.Available annot, _) ->
             ( key,
               Ast.Type.Available
-                (remover.remove_trailing annot (fun remover annot -> remover#type_annotation annot)),
+                (remover.remove_trailing annot),
               value
             )
           (* prop *)
           | _ ->
-            (remover.remove_trailing key (fun remover key -> remover#object_key key), annot, value)
+            (remover.remove_trailing key, annot, value)
         in
         (key, annot, value, [])
     in
@@ -1158,7 +1156,6 @@ module Object
               let tparams =
                 type_params_remove_trailing
                   env
-                  ~kind:Flow_ast_mapper.FunctionTP
                   (Type.type_params env)
               in
               let params =
@@ -1269,7 +1266,6 @@ module Object
               let tparams =
                 type_params_remove_trailing
                   env
-                  ~kind:Flow_ast_mapper.FunctionTP
                   (Type.type_params env)
               in
               let params =
@@ -1890,7 +1886,7 @@ module Object
       | _ when Peek.is_identifier env ->
         let id = Parse.identifier tmp_env in
         let { remove_trailing; _ } = trailing_and_remover env in
-        let id = remove_trailing id (fun remover id -> remover#identifier id) in
+        let id = remove_trailing id in
         Some id
       | _ ->
         (* error, but don't consume a token like Parse.identifier does. this helps
@@ -1905,9 +1901,7 @@ module Object
       | Some tparams ->
         let { remove_trailing; _ } = trailing_and_remover env in
         Some
-          (remove_trailing tparams (fun remover tparams ->
-               remover#type_params ~kind:Flow_ast_mapper.ClassTP tparams
-           )
+          (remove_trailing tparams
           )
     in
     let (extends, implements) = class_heritage env in
@@ -2140,9 +2134,7 @@ module Object
           | Some tparams ->
             let { remove_trailing; _ } = trailing_and_remover env in
             Some
-              (remove_trailing tparams (fun remover tparams ->
-                   remover#type_params ~kind:Flow_ast_mapper.RecordTP tparams
-               )
+              (remove_trailing tparams
               )
         in
         let invalid_syntax =

@@ -815,7 +815,7 @@ module Expression
     let left = member_cover ~allow_optional_chain ~in_optional_chain env start_loc left in
     let left_to_callee env =
       let { remove_trailing; _ } = trailing_and_remover env in
-      remove_trailing (as_expression env left) (fun remover left -> remover#expression left)
+      remove_trailing (as_expression env left)
     in
     let optional =
       match last_token env with
@@ -946,7 +946,7 @@ module Expression
             if Peek.token env = T_LPAREN || (should_parse_types env && Peek.token env = T_LESS_THAN)
             then
               let { remove_trailing; _ } = trailing_and_remover env in
-              remove_trailing callee (fun remover callee -> remover#expression callee)
+              remove_trailing callee
             else
               callee
           in
@@ -1275,7 +1275,6 @@ module Expression
                   let tparams =
                     type_params_remove_trailing
                       env
-                      ~kind:Flow_ast_mapper.FunctionTP
                       (Type.type_params env)
                   in
                   (id, tparams)
@@ -1948,7 +1947,7 @@ module Expression
         with_loc
           (fun env ->
             let tparams =
-              type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTP (Type.type_params env)
+              type_params_remove_trailing env (Type.type_params env)
             in
             (* Disallow all fancy features for identifier => body *)
             if Peek.is_identifier env && tparams = None then

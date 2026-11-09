@@ -1,0 +1,1 @@
+- Start the compiler with less work: the Flow parser for `%raw` code no longer creates AST mapper classes at startup.

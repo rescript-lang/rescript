@@ -475,7 +475,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
           let leading = Peek.comments env in
           Expect.identifier env "component";
           let tparams =
-            type_params_remove_trailing env ~kind:Flow_ast_mapper.ComponentTypeTP (type_params env)
+            type_params_remove_trailing env (type_params env)
           in
           let params = component_param_list env in
           let (params, renders) =
@@ -1298,7 +1298,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
   and _function env =
     let start_loc = Peek.loc env in
     let tparams =
-      type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTP (type_params env)
+      type_params_remove_trailing env (type_params env)
     in
     let params = function_param_list env in
     function_with_params ~effect_:Function.Arbitrary env start_loc tparams params
@@ -1317,7 +1317,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
     let start_loc = Peek.loc env in
     Eat.token env;
     let tparams =
-      type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTP (type_params env)
+      type_params_remove_trailing env (type_params env)
     in
     let params = function_param_list env in
     function_with_params ~effect_:Function.Hook env start_loc tparams params
@@ -1327,7 +1327,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
     if abstract_ then Eat.token env;
     Eat.token env;
     let tparams =
-      type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTP (type_params env)
+      type_params_remove_trailing env (type_params env)
     in
     let params = function_param_list env in
     (match params with
@@ -1420,7 +1420,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
         env start_loc static ~abstract ~override key ~optional ~ts_accessibility ~leading =
       let key = object_key_remove_trailing env key in
       let tparams =
-        type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTypeTP (type_params env)
+        type_params_remove_trailing env (type_params env)
       in
       let value = methodish env start_loc tparams in
       let value = (fst value, Type.Function (snd value)) in
@@ -1451,7 +1451,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
           (fun env ->
             let start_loc = Peek.loc env in
             let tparams =
-              type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTypeTP (type_params env)
+              type_params_remove_trailing env (type_params env)
             in
             let value = methodish env start_loc tparams in
             Type.Object.CallProperty.
@@ -1693,7 +1693,6 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
                 let tparams =
                   type_params_remove_trailing
                     env
-                    ~kind:Flow_ast_mapper.FunctionTypeTP
                     (type_params env)
                 in
                 let value =
@@ -2700,7 +2699,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
         id
       else
         let { remove_trailing; _ } = trailing_and_remover env in
-        remove_trailing id (fun remover id -> remover#generic_identifier_type id)
+        remove_trailing id
     in
     let targs = type_args env in
     { Type.Generic.id; targs; comments = None }
