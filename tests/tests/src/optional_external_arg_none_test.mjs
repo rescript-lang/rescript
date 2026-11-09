@@ -89,38 +89,38 @@ Mocha.describe("Optional_external_arg_none_test", () => {
     let t = makeTarget();
     let levels = ["high"];
     let modes = ["dark"];
-    t.setLevel((() => {
-      switch (Primitive_option.valFromOption(levels[0])) {
+    t.setLevel((x => {
+      switch (x) {
         case "low" :
           return 0;
         case "high" :
           return 10;
       }
-    })());
-    t.setLevel((() => {
-      switch (Primitive_option.valFromOption(levels[1])) {
+    })(Primitive_option.valFromOption(levels[0])));
+    t.setLevel((x => {
+      switch (x) {
         case "low" :
           return 0;
         case "high" :
           return 10;
       }
-    })());
-    t.setMode((() => {
-      switch (Primitive_option.valFromOption(modes[0])) {
+    })(Primitive_option.valFromOption(levels[1])));
+    t.setMode((x => {
+      switch (x) {
         case "light" :
           return "light-mode";
         case "dark" :
           return "dark-mode";
       }
-    })());
-    t.setMode((() => {
-      switch (Primitive_option.valFromOption(modes[1])) {
+    })(Primitive_option.valFromOption(modes[0])));
+    t.setMode((x => {
+      switch (x) {
         case "light" :
           return "light-mode";
         case "dark" :
           return "dark-mode";
       }
-    })());
+    })(Primitive_option.valFromOption(modes[1])));
     Test_utils.eq("File \"optional_external_arg_none_test.res\", line 97, characters 7-14", [
       "10",
       "undefined",

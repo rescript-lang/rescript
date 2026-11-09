@@ -30,13 +30,13 @@ val ocaml_to_js_eff :
 (** Compile ocaml external function call to JS IR. *)
 
 val hold_arg :
-  arg_label:External_arg_spec.label_noname ->
   arg_type:External_arg_spec.attr ->
   J.block * J.expression ->
   J.block * J.expression
-(** Binds a compiled argument, after its statements, to a temporary unless
-    [ocaml_to_js_eff] can read it in place: it reads a polymorphic variant
-    argument twice, or inside a function it builds *)
+(** Binds a compiled argument, after its statements, to a temporary when
+    [ocaml_to_js_eff] would otherwise read it twice: an event-style
+    polymorphic variant argument, unless reading it twice is the same as
+    reading it once *)
 
 val hold_args :
   External_arg_spec.params ->
