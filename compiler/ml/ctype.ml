@@ -1106,9 +1106,28 @@ let instance_label fixed lbl =
 
 (**** Instantiation with parameter substitution ****)
 
-let unify' =
+let unify_var' =
   (* Forward declaration *)
-  ref (fun _env _ty1 _ty2 -> raise (Unify []))
+  ref (fun ~fresh:_ _env _ty1 _ty2 -> raise (Unify []))
+
+(* Whether the instantiated parameters [params'] of [params] are
+   distinct variables created by the instantiation, which no other type
+   can contain yet. A parameter that is not generic is not copied, and a
+   constrained parameter can be a type that contains another one. *)
+let fresh_params params params' =
+  let rec distinct = function
+    | [] -> true
+    | p :: rest -> (not (List.memq p rest)) && distinct rest
+  in
+  List.for_all2
+    (fun p p' ->
+      p' != repr p
+      &&
+      match p'.desc with
+      | Tvar _ -> true
+      | _ -> false)
+    params params'
+  && distinct params'
 
 let subst env level priv abbrev ty params args body =
   if List.length params <> List.length args then raise (Unify []);
@@ -1126,8 +1145,13 @@ let subst env level priv abbrev ty params args body =
     abbreviations () := abbrev;
     let params', body' = instance_parameterized_type params body in
     abbreviations () := ref Mnil;
-    !unify' env body0 body';
-    List.iter2 (!unify' env) params' args;
+    !unify_var' ~fresh:false env body0 body';
+    (* Fresh parameters can't occur in the arguments, so binding them
+       needs no occur check. The check would traverse each argument, and
+       expanding a chain of aliases whose arguments grow at each step
+       would become quadratic. *)
+    let fresh = fresh_params params params' in
+    List.iter2 (!unify_var' ~fresh env) params' args;
     current_level () := old_level;
     body'
   with Unify _ as exn ->
@@ -2648,16 +2672,19 @@ let unify_gadt ~newtype_level:lev (env : Env.t ref) ty1 ty2 =
     Type_pairs.clear (unify_eq_set ());
     raise e
 
-let unify_var env t1 t2 =
+(* [fresh]: [t1] is a variable that [t2] can't contain, so the occur
+   checks are skipped. *)
+let unify_var ~fresh env t1 t2 =
   let t1 = repr t1 and t2 = repr t2 in
   if t1 == t2 then ()
   else
     match (t1.desc, t2.desc) with
-    | Tvar _, Tconstr _ when deep_occur t1 t2 -> unify (ref env) t1 t2
+    | Tvar _, Tconstr _ when (not fresh) && deep_occur t1 t2 ->
+      unify (ref env) t1 t2
     | Tvar _, _ -> (
       let reset_tracing = check_trace_gadt_instances env in
       try
-        occur env t1 t2;
+        if not fresh then occur env t1 t2;
         update_level env t1.level t2;
         link_type t1 t2;
         reset_trace_gadt_instances reset_tracing
@@ -2667,7 +2694,9 @@ let unify_var env t1 t2 =
         raise (Unify expanded_trace))
     | _ -> unify (ref env) t1 t2
 
-let _ = unify' := unify_var
+let _ = unify_var' := unify_var
+
+let unify_var env t1 t2 = unify_var ~fresh:false env t1 t2
 
 let unify_pairs env ty1 ty2 pairs =
   current_univar_pairs () := pairs;
@@ -4167,14 +4196,20 @@ let cyclic_abbrev env id ty =
       (match p with
         | Path.Pident p -> Ident.same p id
         | _ -> false)
-      || List.memq ty seen
+      || Type_set.mem ty seen
       ||
-      try check_cycle (ty :: seen) (expand_abbrev_opt env ty) with
+      try check_cycle (Type_set.add ty seen) (expand_abbrev_opt env ty) with
       | Cannot_expand -> false
       | Unify _ -> true)
     | _ -> false
   in
-  check_cycle [] ty
+  let cyclic = check_cycle Type_set.empty ty in
+  (* The check expands the whole chain of abbreviations, and all the
+     expansions would stay memorized in the types of the declaration,
+     making each later traversal of them (generalization, for example)
+     go over the whole chain again. *)
+  cleanup_abbrev ();
+  cyclic
 
 (* Check for non-generalizable type variables *)
 exception Non_closed0
