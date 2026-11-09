@@ -40,8 +40,8 @@
 // cachegrind. The generated inputs and the data files come from the checkout
 // of this script, so both measurements use the same ones. With `--project`,
 // it also builds tests/tests of the given checkout with the build system,
-// clean, with nothing to do and after two edits (see measureProjectBuild);
-// the no-op and leaf-edit builds run under cachegrind with `--instructions`.
+// clean, with nothing to do and after two edits (see measureProjectBuild),
+// counting allocated words only.
 // With `--playground`, it measures the size of the playground's compiler.
 //
 // `compare` reports the changes between two measurements as Markdown,
@@ -92,14 +92,6 @@ const instructionPackageFiles = 15;
  * so the runs allow only the one domain bsc uses (d=1).
  */
 const cachegrindRuntimeParams = "v=0x400,d=1,s=64M";
-
-/**
- * The runtime parameters of the builds under cachegrind: as above, but the
- * build compiles on a worker domain besides its main one (d=2). The worker
- * sets a minor heap of its own, so the collector runs there; both
- * measurements build from the same paths, so it runs at the same points.
- */
-const cachegrindBuildRuntimeParams = "v=0x400,d=2,s=64M";
 
 /**
  * `inputs` is a hash of everything besides the compiler that the counts
@@ -153,17 +145,11 @@ export function parseInstructions(stderr) {
  * @param {string[]} args
  * @param {string} cwd
  * @param {boolean} instructions
- * @param {{ env?: Record<string, string>, runtimeParams?: string }} [options]
- *   extra environment variables, and the runtime parameters under cachegrind
+ * @param {{ env?: Record<string, string> }} [options] extra environment
+ *   variables
  * @returns {{ allocated: number, instructions?: number }}
  */
-function measureRun(
-  exe,
-  args,
-  cwd,
-  instructions,
-  { env = {}, runtimeParams = cachegrindRuntimeParams } = {},
-) {
+function measureRun(exe, args, cwd, instructions, { env = {} } = {}) {
   const [command, commandArgs] = instructions
     ? [
         "valgrind",
@@ -183,7 +169,7 @@ function measureRun(
     env: {
       ...process.env,
       ...env,
-      OCAMLRUNPARAM: instructions ? runtimeParams : "v=0x400",
+      OCAMLRUNPARAM: instructions ? cachegrindRuntimeParams : "v=0x400",
     },
   });
   const stderr = result.stderr ?? "";
@@ -475,12 +461,16 @@ const sharedModule = path.join("src", "test_utils.res");
  * compiler builds already; warnings are no errors there, so that a new
  * warning doesn't fail the build.
  *
+ * The builds don't run under cachegrind: a ticker wakes the build's
+ * scheduler every 5 ms of wall-clock time, so their instructions depend on
+ * how fast the machine runs them; the leaf-edit build's grew by 348% in a
+ * pull request that didn't change its allocations.
+ *
  * @param {string} checkout
  * @param {string} projectCheckout
- * @param {boolean} instructions
  * @param {Results} results
  */
-function measureProjectBuild(checkout, projectCheckout, instructions, results) {
+function measureProjectBuild(checkout, projectCheckout, results) {
   const rescript = path.join(checkout, relativeBinDir, "rescript.exe");
   const projectDir = path.join(projectCheckout, benchmarkProject);
   const workDir = path.join(os.tmpdir(), "compiler-bench-project");
@@ -529,33 +519,28 @@ function measureProjectBuild(checkout, projectCheckout, instructions, results) {
       throw new Error(`The modules to edit are missing from ${projectDir}.`);
     }
 
-    /** @param {boolean} cachegrind */
-    const build = cachegrind =>
-      measureRun(rescript, ["build"], workDir, cachegrind, {
+    const build = () => ({
+      ...measureRun(rescript, ["build"], workDir, false, {
         env: {
           REWATCH_COMPILER_DOMAINS: "1",
           REWATCH_REPORT_WORKER_ALLOCATIONS: "1",
         },
-        runtimeParams: cachegrindBuildRuntimeParams,
-      });
+      }),
+      inputs,
+    });
     /** @param {string} file */
     const edit = file => fs.appendFileSync(file, "\nlet benchmarkEdit = 1\n");
 
-    // Only the builds that compile little run under cachegrind. The others
-    // would take minutes, the replayed builds above cover their compiler
-    // work, and with two domains collecting, their instructions depend on
-    // how the domains interleave: the shared edit's differed by 9.5% in a
-    // pull request that didn't change what it compiles.
-    results["build/clean"] = { ...build(false), inputs };
+    results["build/clean"] = build();
     const outputs = outputSizes(workDir);
     for (const ext of outputExtensions) {
       results[`output/tests/*${ext}`] = { bytes: outputs[ext], inputs };
     }
-    results["build/no-op"] = { ...build(instructions), inputs };
+    results["build/no-op"] = build();
     edit(leafModule);
-    results["build/leaf-edit"] = { ...build(instructions), inputs };
+    results["build/leaf-edit"] = build();
     edit(path.join(workDir, sharedModule));
-    results["build/shared-edit"] = { ...build(false), inputs };
+    results["build/shared-edit"] = build();
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
   }
@@ -680,7 +665,7 @@ export function measure(checkout, { instructions, project, playground }) {
   }
 
   if (project) {
-    measureProjectBuild(checkout, project, instructions, results);
+    measureProjectBuild(checkout, project, results);
   }
 
   return results;
