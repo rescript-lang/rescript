@@ -1980,9 +1980,9 @@ let compile output_prefix =
       Js_output.output_of_block_and_expression lambda_cxt.continuation
         (List.append args_code block)
         exp
-    | {primitive = Pjs_call {arg_types} as primitive; args; loc} ->
+    | {primitive = Pjs_call {arg_types; ffi} as primitive; args; loc} ->
       compile_primitive_default
-        ~hold:(Lam_compile_external_call.hold_args arg_types)
+        ~hold:(Lam_compile_external_call.hold_args ffi arg_types)
         primitive args loc
     | {primitive; args; loc} -> compile_primitive_default primitive args loc
   (* The fields set on the copy [copy_id] of a record right after it is made, in

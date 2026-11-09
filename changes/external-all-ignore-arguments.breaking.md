@@ -1,0 +1,1 @@
+- An external whose arguments are all `@ignore` is called without them, like other externals: `f(g())` compiles to `g(); f()` instead of `f(g())`. Remove `@ignore` from an argument that the JS function reads.
