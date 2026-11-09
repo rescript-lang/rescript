@@ -1504,9 +1504,10 @@ let speculation_hook_tests _context =
           {
             no_hooks with
             interface_computed =
-              (fun path bytes ->
-                events := "computed" :: !events;
-                computed := (path, bytes) :: !computed);
+              Some
+                (fun path bytes ->
+                  events := "computed" :: !events;
+                  computed := (path, bytes) :: !computed);
             before_effect =
               (fun () ->
                 if !first_build && not (List.mem "gate" !events) then
@@ -1655,7 +1656,7 @@ let speculation_gate_tests _context =
         Compiler_request_state.
           {
             no_hooks with
-            interface_computed = (fun _ _ -> announced := true);
+            interface_computed = Some (fun _ _ -> announced := true);
             before_effect = (fun () -> raise Exit);
           }
       in
@@ -1753,7 +1754,7 @@ let speculation_gate_tests _context =
             Compiler_request_state.
               {
                 no_hooks with
-                interface_computed = (fun _ _ -> announced := true);
+                interface_computed = Some (fun _ _ -> announced := true);
               }
           "Warned.res"
       in
