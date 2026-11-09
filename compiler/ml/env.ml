@@ -1821,20 +1821,23 @@ and components_of_module_maker
     let key = Option.map (fun crc -> (crc, Path.name path)) origin in
     let state = Compiler_request_state.current () in
     let item_count = List.length sg in
+    (* Whether [counts] fit this signature: one for every value. *)
+    let counts_fit counts =
+      Array.length counts = item_count
+      &&
+      let rec fit index = function
+        | [] -> true
+        | Sig_value _ :: _ when counts.(index) < 0 -> false
+        | ( Sig_value _ | Sig_type _ | Sig_typext _ | Sig_module _
+          | Sig_modtype _ )
+          :: rest ->
+          fit (index + 1) rest
+      in
+      fit 0 sg
+    in
     let counts =
       match Option.bind key find_component_counts with
-      | Some counts
-        when Array.length counts = item_count
-             && List.for_all2
-                  (fun item count ->
-                    match item with
-                    | Sig_value _ -> count >= 0
-                    | Sig_type _ | Sig_typext _ | Sig_module _ | Sig_modtype _
-                      ->
-                      true)
-                  sg (Array.to_list counts) ->
-        (* The counts fit this signature: one for every value. *)
-        Some counts
+      | Some counts when counts_fit counts -> Some counts
       | Some _ | None -> None
     in
     (* The type ids each value takes, when the counts of these
@@ -1846,21 +1849,23 @@ and components_of_module_maker
     in
     let stamps_taken = ref false in
     let deferred = ref 0 in
-    let make_cell index compute =
+    (* The copy is a closure only when it is deferred. *)
+    let make_cell index sub decl =
       match (counts, recorded) with
       | Some counts, _ ->
         let base = state.type_node_id and count = counts.(index) in
         state.type_node_id <- base + count;
         incr deferred;
         Comp_cell.pending (fun () ->
-            with_reserved_type_ids ~base ~count compute)
+            with_reserved_type_ids ~base ~count (fun () ->
+                Subst.value_description sub decl))
       | None, Some recorded ->
         let type0 = state.type_node_id and stamp0 = Ident.current_time () in
-        let result = compute () in
+        let result = Subst.value_description sub decl in
         recorded.(index) <- state.type_node_id - type0;
         if Ident.current_time () <> stamp0 then stamps_taken := true;
         Comp_cell.ready result
-      | None, None -> Comp_cell.ready (compute ())
+      | None, None -> Comp_cell.ready (Subst.value_description sub decl)
     in
     let pl, sub = prefix_idents path sub sg in
     let env = ref env in
@@ -1870,9 +1875,7 @@ and components_of_module_maker
       (fun item path ->
         (match item with
         | Sig_value (id, decl) -> (
-          let decl' =
-            make_cell !index (fun () -> Subst.value_description sub decl)
-          in
+          let decl' = make_cell !index sub decl in
           c.comp_values <- Tbl.add (Ident.name id) (decl', !pos) c.comp_values;
           match decl.val_kind with
           | Val_prim _ -> ()
