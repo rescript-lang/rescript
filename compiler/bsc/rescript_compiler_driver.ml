@@ -592,7 +592,6 @@ let with_fresh_request_states ~cwd action =
 let run_argv ?run_external ~capture ~cwd argv =
   with_fresh_request_states ~cwd (fun () ->
       start_request ();
-      Cmt_format.set_args argv;
       let execute () =
         try
           Bsc_args.parse_exn ~argv (command_line_flags ()) anonymous ~usage;

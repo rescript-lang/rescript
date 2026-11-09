@@ -1,0 +1,1 @@
+- Write smaller `.cmt` files by dropping data no tool reads: full value descriptions in the value dependencies, the command line and environment summaries.

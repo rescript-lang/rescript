@@ -493,7 +493,6 @@ module Compile = struct
         Cmt_format.cmt_modname = modulename;
         cmt_annots;
         cmt_value_dependencies = [];
-        cmt_args = [||];
         cmt_source_digest = None;
         cmt_extra_info = {Cmt_utils.deprecated_used = []};
       }
