@@ -2,14 +2,10 @@
 
 let is_braced_expr = Res_parsetree_viewer.is_braced_expr
 
-let extract_type_from_expr ~state expr ~debug ~source ~kind_file ~full ~pos =
-  match
-    expr.Parsetree.pexp_loc
-    |> Completion_front_end.find_type_of_expression_at_loc ~debug ~source
-         ~kind_file
-         ~pos_cursor:(Pos.of_lexing expr.Parsetree.pexp_loc.loc_start)
-  with
-  | Some (completable, scope) -> (
+(* Runs [f] with the type of [expr], in the scope at [pos], so that the
+   code action names extension constructors as written there. *)
+let with_type_of_expr ~state expr ~debug ~source ~kind_file ~full ~pos f =
+  let extract_type completable scope =
     let env = Shared_types.Query_env.from_file full.Shared_types.file in
     let completions =
       completable
@@ -37,8 +33,18 @@ let extract_type_from_expr ~state expr ~debug ~source ~kind_file ~full ~pos =
         in
         extracted_type
       | None -> None)
-    | _ -> None)
-  | _ -> None
+    | _ -> None
+  in
+  match
+    expr.Parsetree.pexp_loc
+    |> Completion_front_end.find_type_of_expression_at_loc ~debug ~source
+         ~kind_file
+         ~pos_cursor:(Pos.of_lexing expr.Parsetree.pexp_loc.loc_start)
+  with
+  | Some (completable, scope) ->
+    Type_utils.with_completion_scope ~file:full.file ~pos ~scope (fun () ->
+        f (extract_type completable scope))
+  | None -> f None
 
 module If_then_else = struct
   (* Convert if-then-else to switch *)
@@ -440,12 +446,11 @@ module Expand_catch_all_for_variants = struct
         |> List.flatten
       in
       let current_constructor_names = get_current_constructor_names cases in
-      match
+      with_type_of_expr ~state ~debug ~source ~kind_file ~full
+        ~pos:(Pos.of_lexing switch_expr.pexp_loc.loc_end)
         switch_expr
-        |> extract_type_from_expr ~state ~debug ~source ~kind_file ~full
-             ~pos:(Pos.of_lexing switch_expr.pexp_loc.loc_end)
-      with
-      | Some (Tvariant {constructors}) ->
+      @@ function
+      | Some (Tvariant {constructors; variant_decl}) ->
         let missing_constructors =
           constructors
           |> List.filter (fun (c : Shared_types.Constructor.t) ->
@@ -453,13 +458,14 @@ module Expand_catch_all_for_variants = struct
         in
         if List.length missing_constructors > 0 then
           let new_text =
-            missing_constructors
+            (missing_constructors
             |> List.map (fun (c : Shared_types.Constructor.t) ->
                 c.cname.txt
                 ^
                 match c.args with
                 | Args [] -> ""
-                | Args _ | InlineRecord _ -> "(_)")
+                | Args _ | InlineRecord _ -> "(_)"))
+            @ Type_utils.open_type_catch_all variant_decl
             |> String.concat " | "
           in
           let range = Loc.range_of_loc catch_all_case.pc_lhs.ppat_loc in
@@ -549,9 +555,14 @@ module Expand_catch_all_for_variants = struct
           if List.length missing_constructors > 0 || not has_none_case then
             let new_text =
               "Some("
-              ^ (missing_constructors
-                |> List.map (fun (name, has_args) ->
-                    name ^ if has_args then "(_)" else "")
+              ^ (((missing_constructors
+                  |> List.map (fun (name, has_args) ->
+                      name ^ if has_args then "(_)" else ""))
+                 @
+                 match variant with
+                 | Tvariant {variant_decl} ->
+                   Type_utils.open_type_catch_all variant_decl
+                 | _ -> [])
                 |> String.concat " | ")
               ^ ")"
             in
@@ -637,11 +648,10 @@ module Exhaustive_switch = struct
     match !result with
     | None -> ()
     | Some (Selection {expr}) -> (
-      match
+      with_type_of_expr ~state ~debug ~source ~kind_file ~full
+        ~pos:(Pos.of_lexing expr.pexp_loc.loc_start)
         expr
-        |> extract_type_from_expr ~state ~debug ~source ~kind_file ~full
-             ~pos:(Pos.of_lexing expr.pexp_loc.loc_start)
-      with
+      @@ function
       | None -> ()
       | Some extracted_type -> (
         let open Type_utils.Codegen in
@@ -663,10 +673,9 @@ module Exhaustive_switch = struct
           in
           code_actions := code_action :: !code_actions))
     | Some (Switch {switch_expr; completion_expr; pos}) -> (
-      match
+      with_type_of_expr ~state ~debug ~source ~kind_file ~full ~pos
         completion_expr
-        |> extract_type_from_expr ~state ~debug ~source ~kind_file ~full ~pos
-      with
+      @@ function
       | None -> ()
       | Some extracted_type -> (
         let open Type_utils.Codegen in

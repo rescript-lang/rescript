@@ -1,0 +1,24 @@
+Complete src/ExtensibleUse.res 2:17
+XXX Not found!
+Completable: CexhaustiveSwitch Value[importe]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder MyNamespace.place holder
+Resolved opens 2 MyNamespace Stdlib
+ContextPath Value[importe]
+Path importe
+[
+  {
+    "detail": "MyNamespace.ExtensibleBase.attr",
+    "kind": 12,
+    "label": "imported",
+    "tags": []
+  },
+  {
+    "detail": "insert exhaustive switch for value",
+    "filterText": "imported",
+    "insertText": "imported {\n   | MyNamespace.ExtensibleBase.Flag => ${1:%todo}\n   | MyNamespace.ExtensibleBase.Size(_) => ${2:%todo}\n   | _ => ${3:%todo}\n   }",
+    "insertTextFormat": 2,
+    "kind": 15,
+    "label": "imported (exhaustive switch)",
+    "tags": []
+  }
+]

@@ -1,0 +1,1 @@
+- Editor completion offers the constructors of an extensible variant declared in the current file or in the type's file, and the exhaustive switch snippet for one ends with a `_` case.

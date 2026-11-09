@@ -361,6 +361,283 @@ let extract_function_type2 ?type_arg_context ~state ~env ~package typ =
   in
   loop ?type_arg_context ~env [] typ
 
+(* The file being edited, the module path at the cursor and the scope there,
+   while a completion request or a code action runs. Extension constructors are named
+   relative to it: unlike ordinary constructors they can't be found from the
+   expected type, so they have to be written so that they are in scope
+   there. *)
+let completion_scope :
+    (File.t * string list * Pos.t * Scope_types.item list) option ref =
+  ref None
+
+(* The names of the modules around [pos] in [file], outermost first. *)
+let module_path_at ~(file : File.t) ~pos =
+  let rec in_items (items : Module.item list) =
+    match
+      items
+      |> List.find_opt (fun (item : Module.item) ->
+          Loc.has_pos ~pos item.loc
+          &&
+          match item.kind with
+          | Module _ -> true
+          | _ -> false)
+    with
+    | Some {name; kind = Module {type_}} -> name :: in_module type_
+    | _ -> []
+  and in_module (m : Module.t) =
+    match m with
+    | Structure {items} -> in_items items
+    | Constraint (implementation, _) -> in_module implementation
+    | Ident _ -> []
+  in
+  in_items file.structure.items
+
+let with_completion_scope ~file ~pos ~scope f =
+  let previous = !completion_scope in
+  completion_scope := Some (file, module_path_at ~file ~pos, pos, scope);
+  Fun.protect ~finally:(fun () -> completion_scope := previous) f
+
+(* The constructor written [path] in a payload position, with the
+   environment its payload is typed in. An ordinary constructor is found by
+   its name. An extension constructor is named by its module path from the
+   cursor, so [path] is looked up in the scope at the cursor as the compiler
+   does: the most recent declaration of the constructor, of the path's first
+   module, or open naming it decides. *)
+let find_payload_constructor ~(env : Query_env.t) ~constructors ~extension_envs
+    path =
+  let with_env c =
+    (c, List.assq_opt c extension_envs |> Option.value ~default:env)
+  in
+  let parts (c : Constructor.t) = String.split_on_char '.' c.cname.txt in
+  let exact path = constructors |> List.find_opt (fun c -> parts c = path) in
+  let rec ends_with l suffix =
+    l = suffix
+    ||
+    match l with
+    | _ :: l -> ends_with l suffix
+    | [] -> false
+  in
+  (* Written from further out than the cursor, a path names its modules
+     from there. *)
+  let from_further_out path =
+    constructors |> List.find_opt (fun c -> ends_with path (parts c))
+  in
+  let qualified path =
+    match exact path with
+    | Some c -> Some c
+    | None -> from_further_out path
+  in
+  let found =
+    match (extension_envs, !completion_scope) with
+    | [], _ ->
+      let name = List.nth_opt (List.rev path) 0 in
+      constructors
+      |> List.find_opt (fun (c : Constructor.t) -> Some c.cname.txt = name)
+    | _, None -> qualified path
+    | _, Some ((file : File.t), _, _, scope) ->
+      let declared_at loc (c : Constructor.t) =
+        (snd (with_env c) : Query_env.t).file.uri = file.uri
+        && Loc.has_pos ~pos:(Loc.start c.cname.loc) loc
+      in
+      let aliased m loc =
+        let found = ref None in
+        file.stamps
+        |> Stamps.iter_modules (fun _ (declared : Module.t Declared.t) ->
+            match declared.item with
+            | Ident p
+              when declared.name.txt = m
+                   && Loc.start declared.extent_loc = Loc.start loc ->
+              found := Some (String.split_on_char '.' (Path.name p))
+            | _ -> ());
+        !found
+      in
+      (* [path] with its leading module aliases resolved. *)
+      let rec unalias (scope : Scope_types.item list) path =
+        match (scope, path) with
+        | Module (n, loc) :: scope, m :: (_ :: _ as rest) when n = m -> (
+          match aliased m loc with
+          | Some p -> unalias scope (p @ rest)
+          | None -> path)
+        | _ :: scope, _ -> unalias scope path
+        | [], _ -> path
+      in
+      let rec lookup (scope : Scope_types.item list) path =
+        match (scope, path) with
+        | [], _ -> qualified path
+        | Constructor (n, loc) :: scope, [name] when n = name -> (
+          match constructors |> List.find_opt (declared_at loc) with
+          | Some c -> Some c
+          | None -> lookup scope path)
+        | Module (n, _) :: _, m :: _ :: _ when n = m ->
+          qualified (unalias scope path)
+        | Open opened :: scope, _ -> (
+          (* A raw open ends in a placeholder for the name it qualifies. *)
+          let opened =
+            List.filteri (fun i _ -> i < List.length opened - 1) opened
+          in
+          match exact (unalias scope (opened @ path)) with
+          (* A constructor named without a module path is declared around
+             the cursor, so no open brings it into scope. *)
+          | Some c when List.length (parts c) > 1 -> Some c
+          | _ -> lookup scope path)
+        | _ :: scope, _ -> lookup scope path
+      in
+      lookup scope path
+  in
+  found |> Option.map with_env
+
+(* Other files can extend an open type, so a switch on it or the expansion
+   of its catch-all keeps a catch-all case after the constructors known
+   here. *)
+let open_type_catch_all (decl : Types.type_declaration) =
+  match decl.type_kind with
+  | Type_open -> ["_"]
+  | Type_abstract | Type_record _ | Type_variant _ -> []
+
+(* The stamp under which [typ] is declared in [file]. *)
+let type_stamp (file : File.t) (typ : Type.t) =
+  let found = ref None in
+  file.stamps
+  |> Stamps.iter_types (fun stamp (declared : Type.t Declared.t) ->
+      if declared.item == typ then found := Some stamp);
+  !found
+
+(* The constructors of an open type are those of its extensions, here the
+   ones in the type's file and in the current file. An extension names the
+   type it extends by its path where it is declared: an identifier of the
+   type's own file, or a path resolved from the extension's file. The
+   constructors are named by their module path, since an extension
+   constructor can't be found from the expected type alone, and come with
+   the environment of their file, where their payloads are typed. *)
+let extension_constructors ~state ~package ~(current_file : File.t)
+    ~(type_file : File.t) ~type_stamp ~type_name ~decl =
+  let current_file, scope_path, cursor, scope =
+    match !completion_scope with
+    | Some (file, module_path, pos, scope) ->
+      (file, module_path, Some pos, scope)
+    | None -> (current_file, [], None, [])
+  in
+  (* An extension in a module type declares no constructor. *)
+  let rec in_module_type (path : Module_path.t) =
+    match path with
+    | ExportedModule {is_type = true} -> true
+    | ExportedModule {module_path} | IncludedModule (_, module_path) ->
+      in_module_type module_path
+    | File _ | NotVisible -> false
+  in
+  (* An extension of the edited file is in scope from its declaration on. *)
+  let declared_before_cursor (file : File.t) (declared : _ Declared.t) =
+    match cursor with
+    | Some pos when file.uri = current_file.uri ->
+      Loc.start declared.extent_loc <= pos
+    | _ -> true
+  in
+  (* An extension in an expression-local module, whose module path starts
+     out of sight, is in scope in the module's block: where the scope's
+     most recent module of that name is the local module declared before
+     the extension. *)
+  let rec local_module (path : Module_path.t) =
+    match path with
+    | ExportedModule {name; module_path = NotVisible} -> Some name
+    | ExportedModule {module_path} | IncludedModule (_, module_path) ->
+      local_module module_path
+    | File _ | NotVisible -> None
+  in
+  let local_module_in_scope (file : File.t) (declared : _ Declared.t) =
+    match local_module declared.module_path with
+    | None -> true
+    | Some name -> (
+      let is_local_module loc =
+        let found = ref false in
+        file.stamps
+        |> Stamps.iter_modules (fun _ (m : Module.t Declared.t) ->
+            if
+              m.module_path = NotVisible && m.name.txt = name
+              && Loc.start m.extent_loc = Loc.start loc
+            then found := true);
+        !found
+      in
+      file.uri = current_file.uri
+      &&
+      match
+        scope
+        |> List.find_map (fun (item : Scope_types.item) ->
+            match item with
+            | Module (n, loc) when n = name -> Some loc
+            | _ -> None)
+      with
+      | Some loc ->
+        is_local_module loc && Loc.start loc <= Loc.start declared.extent_loc
+      | None -> false)
+  in
+  let extends (file : File.t) (ext_decl : Types.type_declaration) =
+    match (type_stamp, ext_decl.type_manifest) with
+    | None, _ -> true
+    | Some stamp, Some {desc = Tconstr (Pident id, _, _)} ->
+      file.uri = type_file.uri && Ident.binding_time id = stamp
+    | Some stamp, Some {desc = Tconstr (path, _, _)} -> (
+      match
+        References.dig_constructor ~state ~env:(Query_env.from_file file)
+          ~package path
+      with
+      | Some (env, declared) ->
+        env.file.uri = type_file.uri && declared.stamp = stamp
+      | None -> false)
+    | Some _, _ -> false
+  in
+  let found = Hashtbl.create 8 in
+  let files =
+    if current_file.uri = type_file.uri then [type_file]
+    else [type_file; current_file]
+  in
+  files
+  |> List.iter (fun (file : File.t) ->
+      file.stamps
+      |> Stamps.iter_constructors
+           (fun stamp (declared : Constructor.t Declared.t) ->
+             let name, ext_decl = declared.item.type_decl in
+             if
+               name = type_name
+               && ext_decl.type_kind = Type_open
+               && declared_before_cursor file declared
+               && local_module_in_scope file declared
+               && (not (in_module_type declared.module_path))
+               && extends file ext_decl
+             then Hashtbl.replace found (file.uri, stamp) (file, declared)));
+  Hashtbl.to_seq_values found
+  |> List.of_seq
+  |> List.sort
+       (fun
+         ((_, a) : File.t * Constructor.t Declared.t)
+         ((_, b) : File.t * Constructor.t Declared.t)
+       ->
+         compare
+           ( a.item.cname.loc.loc_start.pos_fname,
+             a.item.cname.loc.loc_start.pos_cnum )
+           ( b.item.cname.loc.loc_start.pos_fname,
+             b.item.cname.loc.loc_start.pos_cnum ))
+  |> List.map (fun ((file : File.t), (declared : Constructor.t Declared.t)) ->
+      let path =
+        Module_path.to_path declared.module_path declared.item.cname.txt
+      in
+      (* Inside a module, its own name and those of the modules around it
+         are not in scope: drop the module path shared with the cursor. *)
+      let rec relative path scope =
+        match (path, scope) with
+        | p :: (_ :: _ as path), s :: scope when p = s -> relative path scope
+        | _ -> path
+      in
+      let path =
+        if file.uri = current_file.uri then relative path scope_path
+        else Utils.flatten_any_namespace_in_path (file.module_name :: path)
+      in
+      ( {
+          declared.item with
+          cname = {declared.item.cname with txt = String.concat "." path};
+          type_decl = (type_name, decl);
+        },
+        Query_env.from_file file ))
+
 let rec extract_type ?(print_opening_debug = true)
     ?(type_arg_context : type_arg_context option)
     ?(type_arg_context_from_type_manifest : type_arg_context option) ~env ~state
@@ -441,10 +718,35 @@ let rec extract_type ?(print_opening_debug = true)
             {
               env = env_from_item;
               constructors;
+              extension_envs = [];
               variant_name = name.txt;
               variant_decl = decl;
             },
           type_arg_context )
+    | Some (env_from_item, {name; stamp; item = {decl; kind = Type.Open}})
+      when decl.type_manifest = None -> (
+      let type_arg_context =
+        maybe_set_type_arg_ctx ~type_params:decl.type_params ~type_args env
+      in
+      match
+        extension_constructors ~state ~package ~current_file:env.file
+          ~type_file:env_from_item.file ~type_stamp:(Some stamp)
+          ~type_name:name.txt ~decl
+      with
+      | [] when name.txt = "t" ->
+        Some (TtypeT {env = env_from_item; path}, type_arg_context)
+      | [] -> None
+      | extension_envs ->
+        Some
+          ( Tvariant
+              {
+                env = env_from_item;
+                constructors = List.map fst extension_envs;
+                extension_envs;
+                variant_name = name.txt;
+                variant_decl = decl;
+              },
+            type_arg_context ))
     | Some (env_from_declaration, {item = {kind = Record fields; decl}}) ->
       if Debug.verbose () then print_endline "[extract_type]--> found record";
       (* Need to create a new type arg context here because we're sending along a type expr that might have type vars. *)
@@ -600,7 +902,30 @@ let extract_type_from_resolved_type (typ : Type.t) ~env ~full ~state =
   | Variant constructors ->
     Some
       (Tvariant
-         {env; constructors; variant_name = typ.name; variant_decl = typ.decl})
+         {
+           env;
+           constructors;
+           extension_envs = [];
+           variant_name = typ.name;
+           variant_decl = typ.decl;
+         })
+  | Open when typ.decl.type_manifest = None -> (
+    match
+      extension_constructors ~state ~package:full.package
+        ~current_file:full.file ~type_file:env.file
+        ~type_stamp:(type_stamp env.file typ) ~type_name:typ.name ~decl:typ.decl
+    with
+    | [] -> None
+    | extension_envs ->
+      Some
+        (Tvariant
+           {
+             env;
+             constructors = List.map fst extension_envs;
+             extension_envs;
+             variant_name = typ.name;
+             variant_decl = typ.decl;
+           }))
   | Abstract _ | Open -> (
     match typ.decl.type_manifest with
     | None -> None
@@ -760,19 +1085,19 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
       |> extract_type ~env ~state ~package:full.package
       |> Utils.Option.flat_map (fun (t, type_arg_context) ->
           t |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
-    | ( NVariantPayload {constructor_name; item_num; source_arity},
-        Tvariant {env; constructors} ) -> (
+    | ( NVariantPayload
+          {constructor_name; constructor_path; item_num; source_arity},
+        Tvariant {env; constructors; extension_envs} ) -> (
       if Debug.verbose () then
         Printf.printf
           "[nested]--> trying to move into variant payload $%i of constructor \
            '%s'\n"
           item_num constructor_name;
       match
-        constructors
-        |> List.find_opt (fun (c : Constructor.t) ->
-            c.cname.txt = constructor_name)
+        find_payload_constructor ~env ~constructors ~extension_envs
+          constructor_path
       with
-      | Some {args = Args args} -> (
+      | Some ({args = Args args}, env) -> (
         if Debug.verbose () then
           print_endline "[nested]--> found constructor (Args type)";
         let item_num, nested =
@@ -799,7 +1124,7 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
                   (List.length nested);
               typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
         )
-      | Some {args = InlineRecord fields} when item_num = 0 ->
+      | Some ({args = InlineRecord fields}, env) when item_num = 0 ->
         if Debug.verbose () then
           print_endline "[nested]--> found constructor (inline record)";
         TinlineRecord {env; fields}
@@ -901,14 +1226,13 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
         | None -> None
         | Some typ ->
           TypeExpr typ |> resolve_nested_pattern_path ~env ~state ~full ~nested)
-      | ( NVariantPayload {constructor_name; item_num; source_arity},
-          Tvariant {env; constructors} ) -> (
+      | ( NVariantPayload {constructor_path; item_num; source_arity},
+          Tvariant {env; constructors; extension_envs} ) -> (
         match
-          constructors
-          |> List.find_opt (fun (constructor : Constructor.t) ->
-              constructor.cname.txt = constructor_name)
+          find_payload_constructor ~env ~constructors ~extension_envs
+            constructor_path
         with
-        | Some {args = Args args} -> (
+        | Some ({args = Args args}, env) -> (
           let item_num, nested =
             normalize_constructor_payload_path
               ~argument_count:(List.length args) ~source_arity ~item_num ~nested
@@ -918,10 +1242,10 @@ let rec resolve_nested_pattern_path (typ : inner_type) ~env ~full ~state ~nested
             TypeExpr typ
             |> resolve_nested_pattern_path ~env ~state ~full ~nested
           | None -> None)
-        | Some {args = InlineRecord fields} when item_num = 0 ->
+        | Some ({args = InlineRecord fields}, env) when item_num = 0 ->
           ExtractedType (TinlineRecord {env; fields})
           |> resolve_nested_pattern_path ~env ~state ~full ~nested
-        | Some {args = InlineRecord _} | None -> None)
+        | Some ({args = InlineRecord _}, _) | None -> None)
       | ( NPolyvariantPayload {constructor_name; item_num; source_arity},
           Tpolyvariant {env; constructors} ) -> (
         match
@@ -1061,15 +1385,23 @@ module Codegen = struct
       =
     match extracted_type with
     | Tvariant v ->
+      (* Other files can extend an open type, so only a catch-all case
+         makes the switch exhaustive. *)
+      let catch_all =
+        match v.variant_decl.type_kind with
+        | Type_open -> [any ()]
+        | Type_abstract | Type_record _ | Type_variant _ -> []
+      in
       Some
-        (v.constructors
-        |> List.map (fun (c : Shared_types.Constructor.t) ->
-            mk_construct_pat
-              ?payload:
-                (match c.args with
-                | Args [] -> None
-                | _ -> Some (any ()))
-              c.cname.txt))
+        ((v.constructors
+         |> List.map (fun (c : Shared_types.Constructor.t) ->
+             mk_construct_pat
+               ?payload:
+                 (match c.args with
+                 | Args [] -> None
+                 | _ -> Some (any ()))
+               c.cname.txt))
+        @ catch_all)
     | Tpolyvariant v ->
       Some
         (v.constructors
