@@ -406,8 +406,6 @@ let rec seq ?comment (e0 : t) (e1 : t) : t =
   | (Number _ | Var _ | Undefined _), _ -> e1
   | _ -> {expression_desc = Seq (e0, e1); comment; source_loc = None}
 
-let fuse_to_seq x xs = if xs = [] then x else Ext_list.fold_left xs x seq
-
 let zero_int_literal : t =
   {
     expression_desc = Number (Int {i = 0l; c = None});

@@ -269,8 +269,6 @@ val make_block :
 
 val seq : ?comment:string -> t -> t -> t
 
-val fuse_to_seq : t -> t list -> t
-
 val object_entries : ?dup:J.expression -> J.property_map -> J.object_entry list
 
 val obj : ?dup:J.expression -> J.property_map -> t

@@ -80,6 +80,29 @@ external onBefore: (
   string,
 ) => unit = "onBefore"
 
+@send
+external onThen: (target, @string [#click(int => string) | #keydown(int => string)], unit) => unit =
+  "on"
+
+@send
+external setModeThen: (
+  target,
+  @string [@as("light-mode") #light | @as("dark-mode") #dark],
+  unit,
+) => unit = "setMode"
+
+@send
+external setLevelThen: (target, @int [#low | @as(10) #high], unit) => unit = "setLevel"
+
+@send
+external setLevelIgnoring: (target, @int [#low | @as(10) #high], @ignore int) => unit = "setLevel"
+
+@send
+external setLevelLabelled: (target, ~level: @int [#low | @as(10) #high], unit) => unit = "setLevel"
+
+@send
+external setLevelOptThen: (target, ~level: @int [#low | @as(10) #high]=?, unit) => unit = "setLevel"
+
 @obj
 external makeOptions: (
   ~level: @int [#low | @as(10) #high],
@@ -120,6 +143,14 @@ let defineGlobalEvent: unit => unit => int = %raw(`() => {
     }
   })
   return () => reads
+}`)
+
+@val
+external currentEvent: [#click(int => string) | #keydown(int => string)] =
+  "polyvarExternalArgCurrentEvent"
+
+let setCurrentEvent: [#click(int => string) | #keydown(int => string)] => unit = %raw(`e => {
+  globalThis.polyvarExternalArgCurrentEvent = e
 }`)
 
 // Opaque, so that the optimizer cannot tell the argument is a literal.
@@ -243,6 +274,55 @@ describe(__MODULE__, () => {
     ok(__LOC__, levels->deref == None)
     ok(__LOC__, keep() === t)
     eq(__LOC__, ["10"], calls(t))
+  })
+
+  test("the effects of unit and @ignore arguments after @string and @int arguments", () => {
+    let t = makeTarget()
+    let log = []
+    let mark = (s, v) => {
+      log->Array.push(s)
+      v
+    }
+    setModeThen(t, mark("mode", opaque(#dark)), mark("unit", ()))
+    setLevelThen(t, mark("level", opaque(#high)), mark("unit", ()))
+    setLevelIgnoring(t, mark("level", opaque(#low)), mark("ignored", 1))
+    setLevelLabelled(t, ~level=mark("labelled", opaque(#high)), mark("unit", ()))
+    setLevelOptThen(t, ~level=mark("optional", opaque(#low)), mark("unit", ()))
+    let options = makeModeFirst(
+      ~mode=mark("mode field", opaque(#dark)),
+      ~level=mark("level field", opaque(#high)),
+      mark("unit", ()),
+    )
+    eq(
+      __LOC__,
+      [
+        "mode",
+        "unit",
+        "level",
+        "unit",
+        "level",
+        "ignored",
+        "labelled",
+        "unit",
+        "optional",
+        "unit",
+        "mode field",
+        "level field",
+        "unit",
+      ],
+      log,
+    )
+    eq(__LOC__, ["dark-mode", "10", "0", "10", "0"], calls(t))
+    // The optional field is known to be present, so it stays in the literal
+    eq(__LOC__, ["mode", "level"], Object.keysToArray(Obj.magic(options)))
+    eq(__LOC__, (10, Some("dark-mode")), (options["level"], options["mode"]->toOption))
+  })
+
+  test("a later argument that changes an event-style JS global", () => {
+    let t = makeTarget()
+    setCurrentEvent(#click(click))
+    onThen(t, currentEvent, setCurrentEvent(#keydown(keydown)))
+    eq(__LOC__, ["click click 1"], calls(t))
   })
 
   test("the arguments around @string and @int arguments run in order", () => {

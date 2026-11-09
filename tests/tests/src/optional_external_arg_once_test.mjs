@@ -197,7 +197,8 @@ Mocha.describe("Optional_external_arg_once_test", () => {
       return v;
     };
     let tmp = mark("size", 2);
-    let tmp$1 = (mark("unit", undefined), {});
+    mark("unit", undefined);
+    let tmp$1 = {};
     if (tmp !== undefined) {
       tmp$1.size = tmp;
     }
