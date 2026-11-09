@@ -154,6 +154,40 @@ let get = (h, key: key) => {
   }
 }
 
+let rec getWithDefaultAux = (key: key, buckets, default) =>
+  switch C.toOpt(buckets) {
+  | None => default
+  | Some(cell) =>
+    if key == cell.N.key {
+      cell.N.value
+    } else {
+      getWithDefaultAux(key, cell.N.next, default)
+    }
+  }
+
+let getWithDefault = (h, key: key, default) => {
+  let h_buckets = h.C.buckets
+  let nid = Int.bitwiseAnd(hash(key), A.length(h_buckets) - 1)
+  getWithDefaultAux(key, A.getUnsafe(h_buckets, nid), default)
+}
+
+let rec getOrThrowAux = (key: key, buckets) =>
+  switch C.toOpt(buckets) {
+  | None => throw(Not_found)
+  | Some(cell) =>
+    if key == cell.N.key {
+      cell.N.value
+    } else {
+      getOrThrowAux(key, cell.N.next)
+    }
+  }
+
+let getOrThrow = (h, key: key) => {
+  let h_buckets = h.C.buckets
+  let nid = Int.bitwiseAnd(hash(key), A.length(h_buckets) - 1)
+  getOrThrowAux(key, A.getUnsafe(h_buckets, nid))
+}
+
 let rec memInBucket = (key: key, cell) =>
   cell.N.key == key ||
     switch C.toOpt(cell.next) {
