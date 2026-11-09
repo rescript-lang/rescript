@@ -10,14 +10,17 @@ depends: [
   "ocaml" {>= "5.0.0"}
   "dune" {>= "3.17"}
   "ppxlib" {>= "0.38.0"}
-  "ppx_deriving" {build}
+  "ppx_deriving" {build & = "6.2.0"}
   "ppx_gen_rec" {build}
-  "wtf8"
+  "wtf8" {= "1.0.2"}
   "ocamlformat" {with-test & = "0.29.0"}
   "yojson" {= "3.0.0"}
   "spawn" {= "v0.17.0"}
   "cmdliner" {= "2.1.1"}
   "luv" {= "0.5.14+rescript.1"}
+  "ctypes" {= "0.24.0"}
+  "integers" {= "0.8.0"}
+  "stdlib-shims" {= "0.3.0"}
   "re" {= "1.14.0"}
   "ounit2" {with-test & = "2.2.7"}
   "odoc" {with-doc}
