@@ -428,6 +428,12 @@ jobs:
           git worktree add --detach "$RUNNER_TEMP/base" HEAD^1
           opam exec -- dune build --root "$RUNNER_TEMP/base" --display quiet
 
+      # For the size of the bundle only; the playground is tested elsewhere.
+      - name: Build the playground compilers
+        run: |
+          opam exec -- make playground-compiler
+          opam exec -- make -C "$RUNNER_TEMP/base" playground-compiler
+
       - name: Measure and compare
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -437,12 +443,14 @@ jobs:
           # little, and the instructions of the runtime and Belt files by up
           # to 0.2%. The runtime and Belt are built there too, since the
           # replayed builds would otherwise write interfaces that don't
-          # match those of the files they don't replay yet.
+          # match those of the files they don't replay yet. Both build the
+          # base's tests/tests, which the base's compiler builds already.
           measure() {
             sudo mkdir -p /bench
             sudo mount --bind "$1" /bench
             node scripts/compilerBenchmarks.js prepare /bench
-            node scripts/compilerBenchmarks.js measure /bench "$2" --instructions
+            node scripts/compilerBenchmarks.js measure /bench "$2" --instructions \
+              --project "$RUNNER_TEMP/base" --playground
             sudo umount /bench
           }
           measure "$RUNNER_TEMP/base" "$RUNNER_TEMP/base.json"

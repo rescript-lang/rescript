@@ -20,9 +20,12 @@
 //   benchmarks, since valgrind runs a program 20 to 50 times slower. This
 //   catches slowdowns that don't allocate, such as a scan of a list that
 //   already exists.
+// - the sizes of the compiler's outputs (.cmi, .cmti, .cmt and .cmj files,
+//   and the playground's compiler), which are exact.
 //
 //   node scripts/compilerBenchmarks.js prepare <checkout>
 //   node scripts/compilerBenchmarks.js measure <checkout> <out.json> [--instructions]
+//     [--project <checkout>] [--playground]
 //   node scripts/compilerBenchmarks.js compare <base.json> <head.json>
 //     [--threshold <percent>] [--summary <file.md>]
 //
@@ -35,7 +38,11 @@
 // (the build never runs the formatter). With `--instructions`, the generated
 // inputs, the data files and the largest runtime and Belt files run under
 // cachegrind. The generated inputs and the data files come from the checkout
-// of this script, so both measurements use the same ones.
+// of this script, so both measurements use the same ones. With `--project`,
+// it also builds tests/tests of the given checkout with the build system,
+// clean, with nothing to do and after two edits (see measureProjectBuild);
+// the no-op and leaf-edit builds run under cachegrind with `--instructions`.
+// With `--playground`, it measures the size of the playground's compiler.
 //
 // `compare` reports the changes between two measurements as Markdown,
 // improvements and regressions alike, one section per count, and exits with
@@ -87,12 +94,26 @@ const instructionPackageFiles = 15;
 const cachegrindRuntimeParams = "v=0x400,d=1,s=64M";
 
 /**
+ * The runtime parameters of the builds under cachegrind: as above, but the
+ * build compiles on a worker domain besides its main one (d=2). The worker
+ * sets a minor heap of its own, so the collector runs there; both
+ * measurements build from the same paths, so it runs at the same points.
+ */
+const cachegrindBuildRuntimeParams = "v=0x400,d=2,s=64M";
+
+/**
  * `inputs` is a hash of everything besides the compiler that the counts
- * depend on. `instructions` is only measured for some benchmarks.
+ * depend on. `instructions` is only measured for some benchmarks, and
+ * `bytes`, the size of an output, only for outputs.
  *
- * @typedef {{ allocated: number, instructions?: number, inputs: string }} Measurement
+ * @typedef {{
+ *   allocated?: number,
+ *   instructions?: number,
+ *   bytes?: number,
+ *   inputs: string,
+ * }} Measurement
  * @typedef {Record<string, Measurement>} Results
- * @typedef {"allocated" | "instructions"} Metric
+ * @typedef {"allocated" | "instructions" | "bytes"} Metric
  */
 
 /**
@@ -104,7 +125,12 @@ const cachegrindRuntimeParams = "v=0x400,d=1,s=64M";
  */
 export function parseAllocatedWords(stderr) {
   const match = /^allocated_words: (\d+)$/m.exec(stderr);
-  return match ? Number(match[1]) : undefined;
+  if (!match) return undefined;
+  // The build system compiles on worker domains, whose allocations the
+  // runtime leaves out; it reports them itself when asked to
+  // (REWATCH_REPORT_WORKER_ALLOCATIONS).
+  const workers = /^worker_allocated_words: (\d+)$/m.exec(stderr);
+  return Number(match[1]) + (workers ? Number(workers[1]) : 0);
 }
 
 /**
@@ -127,9 +153,17 @@ export function parseInstructions(stderr) {
  * @param {string[]} args
  * @param {string} cwd
  * @param {boolean} instructions
+ * @param {{ env?: Record<string, string>, runtimeParams?: string }} [options]
+ *   extra environment variables, and the runtime parameters under cachegrind
  * @returns {{ allocated: number, instructions?: number }}
  */
-function measureRun(exe, args, cwd, instructions) {
+function measureRun(
+  exe,
+  args,
+  cwd,
+  instructions,
+  { env = {}, runtimeParams = cachegrindRuntimeParams } = {},
+) {
   const [command, commandArgs] = instructions
     ? [
         "valgrind",
@@ -148,7 +182,8 @@ function measureRun(exe, args, cwd, instructions) {
     maxBuffer: 256 * 1024 * 1024,
     env: {
       ...process.env,
-      OCAMLRUNPARAM: instructions ? cachegrindRuntimeParams : "v=0x400",
+      ...env,
+      OCAMLRUNPARAM: instructions ? runtimeParams : "v=0x400",
     },
   });
   const stderr = result.stderr ?? "";
@@ -357,11 +392,184 @@ export function prepare(checkout) {
 }
 
 /**
+ * The playground's compiler that `make playground-compiler` builds, relative
+ * to a checkout's root.
+ */
+const playgroundCompiler = path.join("packages", "playground", "compiler.js");
+
+/** The interface and artifact files whose sizes are measured. */
+const outputExtensions = [".cmi", ".cmti", ".cmt", ".cmj"];
+
+/**
+ * The files in a directory and its subdirectories, sorted. Symbolic links
+ * aren't followed: the projects link to the runtime, whose outputs are
+ * measured on their own.
+ *
+ * @param {string} dir
+ * @returns {string[]}
+ */
+function listFiles(dir) {
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .flatMap(entry => {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) return listFiles(file);
+      return entry.isFile() ? [file] : [];
+    });
+}
+
+/**
+ * The total size of the files in a directory and its subdirectories, by
+ * extension.
+ *
+ * @param {string} dir
+ * @returns {Record<string, number>}
+ */
+function outputSizes(dir) {
+  /** @type {Record<string, number>} */
+  const sizes = Object.fromEntries(outputExtensions.map(ext => [ext, 0]));
+  for (const file of listFiles(dir)) {
+    const ext = path.extname(file);
+    if (ext in sizes) sizes[ext] += fs.statSync(file).size;
+  }
+  return sizes;
+}
+
+/**
+ * Copies the ReScript sources of a directory and its subdirectories, and
+ * nothing else: the outputs the tests check in are written by the builds.
+ *
+ * @param {string} from
+ * @param {string} to
+ */
+function copySources(from, to) {
+  fs.cpSync(from, to, {
+    recursive: true,
+    filter: source =>
+      fs.statSync(source).isDirectory() ||
+      source.endsWith(".res") ||
+      source.endsWith(".resi"),
+  });
+}
+
+/** The project the build benchmarks build, relative to a checkout. */
+const benchmarkProject = path.join("tests", "tests");
+
+/**
+ * The module of the project that about 200 others use, and that has no
+ * interface file, so that an edit changes its interface.
+ */
+const sharedModule = path.join("src", "test_utils.res");
+
+/**
+ * Builds tests/tests of `projectCheckout` with the build system of
+ * `checkout`, on one worker domain so that the counts don't depend on how
+ * the work is shared: a clean build, a build with nothing to do, and the
+ * builds after an edit of a module that nothing uses and of one that many
+ * do. Adds the sizes of the outputs of the clean build.
+ *
+ * The project is copied to a directory of its own, with the same name in
+ * every measurement, so that no path of the checkout enters the counts.
+ * Both measurements build the same sources, those of the base, which its
+ * compiler builds already; warnings are no errors there, so that a new
+ * warning doesn't fail the build.
+ *
  * @param {string} checkout
- * @param {{ instructions: boolean }} options
+ * @param {string} projectCheckout
+ * @param {boolean} instructions
+ * @param {Results} results
+ */
+function measureProjectBuild(checkout, projectCheckout, instructions, results) {
+  const rescript = path.join(checkout, relativeBinDir, "rescript.exe");
+  const projectDir = path.join(projectCheckout, benchmarkProject);
+  const workDir = path.join(os.tmpdir(), "compiler-bench-project");
+  fs.rmSync(workDir, { recursive: true, force: true });
+  try {
+    copySources(path.join(projectDir, "src"), path.join(workDir, "src"));
+    const config = JSON.parse(
+      fs.readFileSync(path.join(projectDir, "rescript.json"), "utf8"),
+    );
+    config["compiler-flags"] = (config["compiler-flags"] ?? []).filter(
+      (/** @type {string} */ flag) => !flag.startsWith("-warn-error"),
+    );
+    fs.writeFileSync(
+      path.join(workDir, "rescript.json"),
+      `${JSON.stringify(config, null, 2)}\n`,
+    );
+    const scope = path.join(workDir, "node_modules", "@rescript");
+    const react = path.join(
+      projectCheckout,
+      "tests",
+      "dependencies",
+      "rescript-react",
+    );
+    copySources(path.join(react, "src"), path.join(scope, "react", "src"));
+    fs.copyFileSync(
+      path.join(react, "rescript.json"),
+      path.join(scope, "react", "rescript.json"),
+    );
+    fs.symlinkSync(
+      path.join(checkout, "packages", "@rescript", "runtime"),
+      path.join(scope, "runtime"),
+      "junction",
+    );
+
+    const sources = listFiles(workDir).filter(
+      file => file.endsWith(".res") || file.endsWith(".resi"),
+    );
+    const inputs = hashFiles(sources);
+    // The largest test, which no other module uses.
+    const leafModule = sources
+      .filter(file => path.dirname(file) === path.join(workDir, "src"))
+      .filter(file => file.endsWith("_test.res"))
+      .map(file => ({ file, size: fs.statSync(file).size }))
+      .sort((a, b) => b.size - a.size || a.file.localeCompare(b.file))[0]?.file;
+    if (!leafModule || !fs.existsSync(path.join(workDir, sharedModule))) {
+      throw new Error(`The modules to edit are missing from ${projectDir}.`);
+    }
+
+    /** @param {boolean} cachegrind */
+    const build = cachegrind =>
+      measureRun(rescript, ["build"], workDir, cachegrind, {
+        env: {
+          REWATCH_COMPILER_DOMAINS: "1",
+          REWATCH_REPORT_WORKER_ALLOCATIONS: "1",
+        },
+        runtimeParams: cachegrindBuildRuntimeParams,
+      });
+    /** @param {string} file */
+    const edit = file => fs.appendFileSync(file, "\nlet benchmarkEdit = 1\n");
+
+    // Only the builds that compile little run under cachegrind. The others
+    // would take minutes, the replayed builds above cover their compiler
+    // work, and with two domains collecting, their instructions depend on
+    // how the domains interleave: the shared edit's differed by 9.5% in a
+    // pull request that didn't change what it compiles.
+    results["build/clean"] = { ...build(false), inputs };
+    const outputs = outputSizes(workDir);
+    for (const ext of outputExtensions) {
+      results[`output/tests/*${ext}`] = { bytes: outputs[ext], inputs };
+    }
+    results["build/no-op"] = { ...build(instructions), inputs };
+    edit(leafModule);
+    results["build/leaf-edit"] = { ...build(instructions), inputs };
+    edit(path.join(workDir, sharedModule));
+    results["build/shared-edit"] = { ...build(false), inputs };
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * @param {string} checkout
+ * @param {{ instructions: boolean, project?: string, playground?: boolean }} options
+ *   `project` is the checkout whose tests/tests the build benchmarks build;
+ *   without it, there are none. `playground` adds the size of the
+ *   playground's compiler, which must be built.
  * @returns {Results}
  */
-export function measure(checkout, { instructions }) {
+export function measure(checkout, { instructions, project, playground }) {
   const bins = path.join(checkout, relativeBinDir);
   const bsc = path.join(bins, "bsc.exe");
   const rescript = path.join(bins, "rescript.exe");
@@ -448,6 +656,31 @@ export function measure(checkout, { instructions }) {
     }
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
+  }
+
+  // The outputs of the runtime and Belt, which the replayed builds wrote
+  // again.
+  for (const pkg of packages) {
+    const outputs = outputSizes(
+      path.join(checkout, pkg.dir, "lib", "rescript"),
+    );
+    for (const ext of outputExtensions) {
+      results[`output/${path.basename(pkg.dir)}/*${ext}`] = {
+        bytes: outputs[ext],
+        inputs: packageInputs,
+      };
+    }
+  }
+
+  if (playground) {
+    results["output/playground/compiler.js"] = {
+      bytes: fs.statSync(path.join(checkout, playgroundCompiler)).size,
+      inputs: "",
+    };
+  }
+
+  if (project) {
+    measureProjectBuild(checkout, project, instructions, results);
   }
 
   return results;
@@ -547,6 +780,13 @@ const metricWords = {
       `${n === 1 ? "1 benchmark executes" : `${n} benchmarks execute`} more than ${threshold}% more instructions`,
     less: (n, threshold) =>
       `${n === 1 ? "1 benchmark executes" : `${n} benchmarks execute`} more than ${threshold}% fewer instructions`,
+  },
+  bytes: {
+    title: "Output size",
+    more: (n, threshold) =>
+      `${n === 1 ? "1 output is" : `${n} outputs are`} more than ${threshold}% larger`,
+    less: (n, threshold) =>
+      `${n === 1 ? "1 output is" : `${n} outputs are`} more than ${threshold}% smaller`,
   },
 };
 
@@ -681,8 +921,8 @@ export function renderSummary(comparisons, threshold, visibleRows = 10) {
  * @param {number} threshold
  */
 export function compareAll(base, head, threshold) {
-  return /** @type {Metric[]} */ (["allocated", "instructions"]).map(metric =>
-    compareResults(base, head, threshold, metric),
+  return /** @type {Metric[]} */ (["allocated", "instructions", "bytes"]).map(
+    metric => compareResults(base, head, threshold, metric),
   );
 }
 
@@ -693,13 +933,22 @@ function main(args) {
     prepare(path.resolve(rest[0]));
     return 0;
   }
-  if (
-    command === "measure" &&
-    (rest.length === 2 || (rest.length === 3 && rest[2] === "--instructions"))
-  ) {
-    const [checkout, out] = rest;
+  if (command === "measure" && rest.length >= 2) {
+    const [checkout, out, ...options] = rest;
+    let instructions = false;
+    let playground = false;
+    let project;
+    for (let i = 0; i < options.length; i++) {
+      if (options[i] === "--instructions") instructions = true;
+      else if (options[i] === "--playground") playground = true;
+      else if (options[i] === "--project" && i + 1 < options.length) {
+        project = path.resolve(options[++i]);
+      } else throw new Error(`Unknown option ${options[i]}`);
+    }
     const results = measure(path.resolve(checkout), {
-      instructions: rest.length === 3,
+      instructions,
+      project,
+      playground,
     });
     fs.writeFileSync(out, `${JSON.stringify(results, null, 2)}\n`);
     console.log(`Measured ${Object.keys(results).length} benchmarks.`);
@@ -725,6 +974,7 @@ function main(args) {
   console.error(
     "Usage: compilerBenchmarks.js prepare <checkout>\n" +
       "       compilerBenchmarks.js measure <checkout> <out.json> [--instructions]\n" +
+      "         [--project <checkout>] [--playground]\n" +
       "       compilerBenchmarks.js compare <base.json> <head.json> [--threshold <percent>]\n" +
       "         [--summary <file.md>]",
   );
