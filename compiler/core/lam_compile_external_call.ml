@@ -115,35 +115,22 @@ let ocaml_to_js_eff ~(arg_label : External_arg_spec.label_noname)
     (Splice1 single_arg, [])
   | Nothing -> (Splice1 arg, [])
 
-(* The translation of a polymorphic variant argument other than a literal
-   reads it twice, as [e.NAME] and [e.VAL], or inside the function that a
-   dispatch on its tag builds, where an [await] is a syntax error. So unless
-   the translation can read it in place, the argument is bound to a temporary
+(* The translation of an event-style polymorphic variant argument other than
+   a literal reads it twice, as [e.NAME] and [e.VAL]. So unless reading it
+   twice is the same as reading it once, the argument is bound to a temporary
    after its statements, which keeps it in its place among the arguments (see
-   [sequence_arguments] in [Lam_compile]). Of an optional argument known to be
-   present, only the payload is bound, so that the translation still knows it
-   is present. *)
-let hold_arg ~(arg_label : External_arg_spec.label_noname)
-    ~(arg_type : External_arg_spec.attr)
+   [sequence_arguments] in [Lam_compile]). An [@int] or [@as] argument is
+   passed, in its place, to a function that switches on it. *)
+let hold_arg ~(arg_type : External_arg_spec.attr)
     ((block, arg) as compiled : J.block * E.t) : J.block * E.t =
-  let needs_temporary (e : E.t) =
-    match arg_type with
-    | Poly_var _ -> not (Js_of_lam_variant.eval_as_event_in_place e)
-    | Poly_var_string _ | Int _ -> not (Js_of_lam_variant.eval_in_place e)
-    | Arg_cst _ | Extern_unit | Nothing | Ignore | Unwrap -> false
-  in
-  let hold (e : E.t) =
+  match arg_type with
+  | Poly_var _ when not (Js_of_lam_variant.eval_as_event_in_place arg) ->
     let tmp = Ext_ident.create_tmp () in
-    (Ext_list.append_one block (S.define_variable ~kind:Strict tmp e), E.var tmp)
-  in
-  match (arg_label, arg.expression_desc) with
-  | Arg_optional, Optional_block (x, identity) ->
-    if needs_temporary x then
-      let block, x = hold x in
-      (block, {arg with expression_desc = Optional_block (x, identity)})
-    else compiled
-  | (Arg_optional | Arg_label | Arg_empty), _ ->
-    if needs_temporary arg then hold arg else compiled
+    ( Ext_list.append_one block (S.define_variable ~kind:Strict tmp arg),
+      E.var tmp )
+  | Poly_var _ | Poly_var_string _ | Int _ | Arg_cst _ | Extern_unit | Nothing
+  | Ignore | Unwrap ->
+    compiled
 
 (* [hold_arg] for the compiled arguments of a call, which have the
    statements that run before their values are read. The specs pair with the
@@ -154,8 +141,8 @@ let hold_args (arg_types : External_arg_spec.params)
   let rec aux (arg_types : External_arg_spec.params) args =
     match (arg_types, args) with
     | {arg_type = Arg_cst _; _} :: arg_types, args -> aux arg_types args
-    | {arg_label; arg_type} :: arg_types, arg :: args ->
-      hold_arg ~arg_label ~arg_type arg :: aux arg_types args
+    | {arg_type; _} :: arg_types, arg :: args ->
+      hold_arg ~arg_type arg :: aux arg_types args
     | [], args -> args
     | _ :: _, [] -> assert false
   in

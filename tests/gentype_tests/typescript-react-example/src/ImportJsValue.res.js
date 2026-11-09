@@ -48,21 +48,21 @@ function useColor(prim) {
 }
 
 function useEscapedInlineVariant(prim) {
-  return ImportJsValueGen.useEscapedInlineVariant((() => {
-    switch (prim) {
+  return ImportJsValueGen.useEscapedInlineVariant((x => {
+    switch (x) {
       case "illegalName" :
         return "Illegal\"Name";
     }
-  })());
+  })(prim));
 }
 
 function useUtf8InlineVariant(prim) {
-  return ImportJsValueGen.useUtf8InlineVariant((() => {
-    switch (prim) {
+  return ImportJsValueGen.useUtf8InlineVariant((x => {
+    switch (x) {
       case "utf8" :
         return "café\npath\\name";
     }
-  })());
+  })(prim));
 }
 
 function higherOrder(prim) {
