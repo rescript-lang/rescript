@@ -58,7 +58,7 @@ jobs:
         run: |
           prefix="coverage-build-state-v1-${{ env.OS }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ env.OCAML_COMPILER }}-"
           echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
-          echo "value=$prefix${{ hashFiles('*.opam') }}" >> "$GITHUB_OUTPUT"
+          echo "value=${prefix}${{ hashFiles('*.opam') }}" >> "$GITHUB_OUTPUT"
 
       - name: Restore coverage build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
