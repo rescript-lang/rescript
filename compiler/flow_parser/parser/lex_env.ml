@@ -49,23 +49,11 @@ let clone env =
   let lex_lb = Sedlexing.lexbuf_clone env.lex_lb in
   { env with lex_lb }
 
-let set_lexbuf_pos env pos =
-  let lexbuf = env.lex_lb in
-  let start = Sedlexing.lexeme_start lexbuf in
-  Sedlexing.rollback lexbuf;
-  Sedlexing.bump lexbuf (pos - start);
-  Sedlexing.set_lexeme_start lexbuf pos;
-  env
-
 let set_last_loc env loc = { env with lex_last_loc = loc }
 
 let lex_last_loc env = env.lex_last_loc
 
-let lexbuf env = env.lex_lb
-
 let source env = env.lex_source
-
-let state env = env.lex_state
 
 let line env = env.lex_bol.line
 
@@ -81,19 +69,3 @@ let in_comment_syntax is_in env =
   else
     env
 
-(* TODO *)
-let debug_string_of_lexbuf _lb = ""
-
-let debug_string_of_lex_env (env : t) =
-  let source =
-    match source env with
-    | None -> "None"
-    | Some x -> Printf.sprintf "Some %S" (File_key.to_string x)
-  in
-  Printf.sprintf
-    "{\n  lex_source = %s\n  lex_lb = %s\n  lex_in_comment_syntax = %b\n  lex_enable_comment_syntax = %b\n  lex_state = {errors = (count = %d)}\n}"
-    source
-    (debug_string_of_lexbuf env.lex_lb)
-    (is_in_comment_syntax env)
-    (is_comment_syntax_enabled env)
-    (List.length (state env).lex_errors_acc)

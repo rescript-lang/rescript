@@ -1,6 +1,10 @@
 # Vendored Flow parser
 
 This directory contains the OCaml Flow parser used by the ReScript compiler.
+It is a pruned fork: Flow's parser has moved to Rust, so there are no further
+OCaml releases to sync with, and code ReScript does not use is removed like
+dead code anywhere else in the repository (`make dead-code` covers it, except
+the AST in `parser/flow_ast.ml`).
 
 - Upstream repository: https://github.com/facebook/flow
 - Flow parser version: `0.320.0`
@@ -31,8 +35,21 @@ omitted. The core statement, declaration, type, JSX, pattern, comment, and AST
 modules remain because the parser connects them transitively and `%raw`
 validates both complete JavaScript programs and individual expressions.
 
+Beyond that, everything reanalyze reports as dead was removed: unused
+functions, optional arguments, parse options and the token sink, debug
+printers (`[@@deriving show]`), the file-key variants (ReScript parses only
+strings), error variants that are never raised, and AST fields that the parser
+fills in but nothing reads (template literal quasi values, tolerated-syntax
+records, JSX text and fragment locations, comment `on_newline`, accessibility
+comments). The AST mapper classes that moved trailing comments between nodes
+(`Flow_ast_mapper` and its subclasses in `Comment_attachment`) are gone too:
+ReScript never reads trailing comments, and creating the classes was most of
+the compiler's startup work. They were also what read every AST field, so most
+fields of `flow_ast.ml` are now only written; `make dead-code` does not check
+that file.
+
 Vendored sources are excluded from the repository-wide OCamlformat check so
-that they remain comparable with their upstream versions.
+that they keep Flow's formatting.
 
 The Flow parser and retained collection sources are licensed under the MIT
 licence in `LICENSE` and their source headers. Vendored Sedlex and collection

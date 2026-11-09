@@ -44,7 +44,7 @@ type core_type_lit = Parsetree.core_type lit
 
 val type_string : core_type_lit
 
-val type_bool : core_type_lit
+val type_bool : unit -> Parsetree.core_type
 
 val type_int : core_type_lit
 

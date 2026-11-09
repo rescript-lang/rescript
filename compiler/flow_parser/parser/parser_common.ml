@@ -212,7 +212,7 @@ module type STATEMENT = sig
 
   val debugger : env -> (Loc.t, Loc.t) Statement.t
 
-  val declare : ?in_module_or_namespace:bool -> env -> (Loc.t, Loc.t) Statement.t
+  val declare : env -> (Loc.t, Loc.t) Statement.t
 
   val declare_export_declaration : env -> (Loc.t, Loc.t) Statement.t
 
@@ -313,8 +313,7 @@ module type DECLARATION = sig
 
   val _function : env -> (Loc.t, Loc.t) Statement.t
 
-  val enum_declaration :
-    ?leading:Loc.t Comment.t list -> const_:bool -> env -> (Loc.t, Loc.t) Statement.t
+  val enum_declaration : const_:bool -> env -> (Loc.t, Loc.t) Statement.t
 
   val component_params : env -> (Loc.t, Loc.t) Statement.ComponentDeclaration.Params.t
 
@@ -520,13 +519,13 @@ let with_loc ?start_loc fn env =
   in
   (loc, result)
 
-let with_loc_opt ?start_loc fn env =
-  match with_loc ?start_loc fn env with
+let with_loc_opt fn env =
+  match with_loc fn env with
   | (loc, Some x) -> Some (loc, x)
   | (_, None) -> None
 
-let with_loc_extra ?start_loc fn env =
-  let (loc, (x, extra)) = with_loc ?start_loc fn env in
+let with_loc_extra fn env =
+  let (loc, (x, extra)) = with_loc fn env in
   ((loc, x), extra)
 
 let is_start_of_type_guard env =

@@ -1473,9 +1473,8 @@ module Object
           let leading = Peek.comments env in
           let start = Peek.loc env in
           Eat.token env;
-          let trailing = Eat.trailing_comments env in
-          let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
-          (Some (start, { Ast.Class.TSAccessibility.kind; comments }), leading)
+          ignore (Eat.trailing_comments env);
+          (Some (start, kind), leading)
         | _ -> (None, [])
       in
       let static =
@@ -1672,7 +1671,7 @@ module Object
                Reject modifiers that are not valid on index signatures. *)
             error_unsupported_declare env declare;
             (match ts_accessibility with
-            | Some (loc, { Ast.Class.TSAccessibility.kind; _ }) ->
+            | Some (loc, kind) ->
               let keyword =
                 match kind with
                 | Ast.Class.TSAccessibility.Public -> "public"
@@ -1995,45 +1994,14 @@ module Object
               (key_loc, Parse_error.RecordInvalidPropertyName { name = key_name; static; method_ })
           | _ -> ()
         in
-        let empty_invalid_syntax =
-          {
-            InvalidPropertySyntax.invalid_suffix_semicolon = None;
-            invalid_optional = None;
-            invalid_variance = None;
-          }
-        in
-        let invalid_syntax =
-          Option.map
-            (fun variance ->
-              { empty_invalid_syntax with InvalidPropertySyntax.invalid_variance = Some variance })
-            variance
-        in
-        let invalid_syntax =
-          if Peek.token env = T_PLING then (
-            let error_loc = Peek.loc env in
-            Eat.token env;
-            let invalid_syntax = Option.value invalid_syntax ~default:empty_invalid_syntax in
-            Some { invalid_syntax with InvalidPropertySyntax.invalid_optional = Some error_loc }
-          ) else
-            invalid_syntax
-        in
+        if Peek.token env = T_PLING then Eat.token env;
         let end_property () =
           match Peek.token env with
           | T_EOF
           | T_RCURLY ->
-            invalid_syntax
-          | T_SEMICOLON ->
-            let semicolon_loc = Peek.loc env in
-            Eat.token env;
-            let invalid_syntax = Option.value invalid_syntax ~default:empty_invalid_syntax in
-            Some
-              {
-                invalid_syntax with
-                InvalidPropertySyntax.invalid_suffix_semicolon = Some semicolon_loc;
-              }
-          | _ ->
-            Expect.token env T_COMMA;
-            invalid_syntax
+            ()
+          | T_SEMICOLON -> Eat.token env
+          | _ -> Expect.token env T_COMMA
         in
         (match Peek.token env with
         | T_COLON when static ->
@@ -2045,9 +2013,9 @@ module Object
                 let annot = Type.annotation env in
                 Expect.token env T_ASSIGN;
                 let value = Expression.assignment env in
-                let invalid_syntax = end_property () in
+                end_property ();
                 let comments = Flow_ast_utils.mk_comments_opt ~leading () in
-                { StaticProperty.key; annot; value; comments; invalid_syntax })
+                { StaticProperty.key; annot; value; comments })
               env
           in
           elements env (Body.StaticProperty prop :: acc)
@@ -2064,9 +2032,9 @@ module Object
                   else
                     None
                 in
-                let invalid_syntax = end_property () in
+                end_property ();
                 let comments = Flow_ast_utils.mk_comments_opt ~leading () in
-                { Property.key; annot; default_value; comments; invalid_syntax })
+                { Property.key; annot; default_value; comments })
               env
           in
           elements env (Body.Property prop :: acc)
@@ -2137,19 +2105,7 @@ module Object
               (remove_trailing tparams
               )
         in
-        let invalid_syntax =
-          if Peek.token env = T_ASSIGN then (
-            let invalid_syntax =
-              {
-                Ast.Statement.RecordDeclaration.InvalidSyntax.invalid_infix_equals =
-                  Some (Peek.loc env);
-              }
-            in
-            Eat.token env;
-            Some invalid_syntax
-          ) else
-            None
-        in
+        if Peek.token env = T_ASSIGN then Eat.token env;
         if Peek.token env = T_EXTENDS then (
           error_at env (Peek.loc env, Parse_error.RecordExtendsUnsupported);
           let leading = Peek.comments env in
@@ -2171,7 +2127,6 @@ module Object
             implements;
             body;
             comments;
-            invalid_syntax;
           }
     )
 end

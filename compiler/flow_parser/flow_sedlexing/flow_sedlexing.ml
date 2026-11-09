@@ -6,8 +6,6 @@ external ( .!() ) : int array -> int -> int = "%array_unsafe_get"
 external ( .![] ) : string -> int -> char = "%string_unsafe_get"
 external ( .![]<- ) : bytes -> int -> char -> unit = "%bytes_unsafe_set"
 
-exception InvalidCodepoint of int
-
 exception MalFormed
 
 (* Absolute position from the beginning of the stream *)
@@ -39,7 +37,6 @@ type lexbuf = {
   mutable marked_line: int;
   mutable marked_val: int;
 }
-
 
 let lexbuf_clone (x : lexbuf) : lexbuf =
   {
@@ -84,15 +81,6 @@ let new_line lexbuf =
   if lexbuf.curr_line != 0 then lexbuf.curr_line <- lexbuf.curr_line + 1;
   lexbuf.curr_bol <- lexbuf.pos
 
-let next lexbuf : Stdlib.Uchar.t option =
-  if lexbuf.pos = lexbuf.len then
-    None
-  else
-    let ret = lexbuf.buf.!(lexbuf.pos) in
-    lexbuf.pos <- lexbuf.pos + 1;
-    if ret = 10 then new_line lexbuf;
-    Some (Stdlib.Uchar.unsafe_of_int ret)
-
 let __private__next_int lexbuf : int =
   if lexbuf.pos = lexbuf.len then
     -1
@@ -129,11 +117,7 @@ let lexeme_start lexbuf = lexbuf.start_pos
 let set_lexeme_start lexbuf pos = lexbuf.start_pos <- pos
 let lexeme_end lexbuf = lexbuf.pos
 
-let loc lexbuf = (lexbuf.start_pos , lexbuf.pos )
-
 let lexeme_length lexbuf = lexbuf.pos - lexbuf.start_pos
-
-let sub_lexeme lexbuf pos len = Array.sub lexbuf.buf (lexbuf.start_pos + pos) len
 
 let lexeme lexbuf = Array.sub lexbuf.buf lexbuf.start_pos (lexbuf.pos - lexbuf.start_pos)
 
