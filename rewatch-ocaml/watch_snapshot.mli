@@ -5,8 +5,10 @@
 type change_kind = Added | Removed | Modified
 type change = {path: string; kind: change_kind}
 
-type file = {modified: float; size: int; digest: string}
-type dependency = {modified: float; size: int}
+(* [modified] and [size] are read by the structural equality of entries,
+   which reanalyze does not count as reading a field. *)
+type file = {modified: float; size: int; digest: string} [@@live]
+type dependency = {modified: float; size: int} [@@live]
 
 (** Dependency candidates need states distinct from ordinary files: a missing
     candidate is meaningful and must remain observable, whereas [Unreadable]

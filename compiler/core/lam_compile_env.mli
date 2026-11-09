@@ -68,8 +68,7 @@ val register_ml_module : dynamic_import:bool -> Ident.t -> unit
 (** Register a dependency on a ReScript module (loading its cmj), e.g. as a
     dynamic import. *)
 
-val query_external_id_info :
-  ?dynamic_import:bool -> Ident.t -> string -> Js_cmj_format.keyed_cmj_value
+val query_external_id_info : Ident.t -> string -> Js_cmj_format.keyed_cmj_value
 (**
    [query_external_id_info id pos env found]
    will raise if not found

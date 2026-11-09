@@ -159,8 +159,7 @@ newText:
    | Some(Three(_)) => %todo
    }
 
-
-Complete src/ExhaustiveSwitch.res 40:24
+Complete src/ExhaustiveSwitch.res 39:24
 XXX Not found!
 Completable: CexhaustiveSwitch Value[withSomeVarian]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -188,5 +187,4 @@ Path withSomeVarian
     "tags": []
   }
 ]
-
 

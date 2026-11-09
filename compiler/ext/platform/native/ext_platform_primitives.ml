@@ -1,9 +1,6 @@
 (* Native optimized compiler primitives. *)
 external hash_string : string -> int = "caml_bs_hash_string" [@@noalloc]
 
-external hash_string_int : string -> int -> int = "caml_bs_hash_string_and_int"
-[@@noalloc]
-
 external hash_stamp_and_name : int -> string -> int
   = "caml_bs_hash_stamp_and_name"
 [@@noalloc]

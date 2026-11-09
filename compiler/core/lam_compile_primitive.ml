@@ -151,7 +151,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       | _ :: _ -> wrap_then_path import path))
   | Pobjsize -> E.obj_length (Ext_list.singleton_exn args)
   | Pis_null -> E.is_null (Ext_list.singleton_exn args)
-  | Pis_undefined -> E.is_undef (Ext_list.singleton_exn args)
   | Pis_null_undefined -> E.is_null_undefined (Ext_list.singleton_exn args)
   | Ptypeof -> E.typeof (Ext_list.singleton_exn args)
   | Pjs_object_get _ | Pjs_object_set _ | Pdebugger | Pjs_fn_method ->

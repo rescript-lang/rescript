@@ -267,47 +267,6 @@ let partition_adjacent_trailing_before_next_token_on_same_line
   in
   loop [] comments
 
-(* Extracts comments that appear between two specified line numbers in a source file.
- *
- * This function is particularly useful for handling comments that should be preserved
- * between two syntax elements that appear on different lines, such as comments between
- * opening and closing tags in JSX elements.
- *
- * For example, given code:
- *   <div>
- *     // comment 1
- *     // comment 2
- *   </div>
- *
- * When calling partition_between_lines with the line numbers of the opening and closing tags:
- * - between_comments: [comment 1, comment 2]
- * - rest: any comments that appear before or after the specified lines
- *
- * Parameters:
- * - start_line: the line number after which to start collecting comments
- * - end_line: the line number before which to stop collecting comments
- * - comments: list of comments to partition
- *
- * Returns: (between_comments, rest) where between_comments contains all comments
- * entirely between the start_line and end_line, and rest contains all other comments.
- *)
-let partition_between_lines start_line end_line comments =
-  let open Location in
-  let open Lexing in
-  let rec loop between_comments comments =
-    match comments with
-    | [] -> (List.rev between_comments, [])
-    | comment :: rest ->
-      (* Check if the comment is between the start_line and end_line *)
-      let cmt_loc = Comment.loc comment in
-      if
-        cmt_loc.loc_start.pos_lnum > start_line
-        && cmt_loc.loc_end.pos_lnum < end_line
-      then loop (comment :: between_comments) rest
-      else (List.rev between_comments, comments)
-  in
-  loop [] comments
-
 let rec collect_list_patterns acc pattern =
   let open Parsetree in
   match pattern.ppat_desc with

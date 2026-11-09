@@ -34,7 +34,7 @@ val newty2 : int -> type_desc -> type_expr
 val newgenty : type_desc -> type_expr
 (* Create a generic type *)
 
-val newgenvar : ?name:string -> unit -> type_expr
+val newgenvar : unit -> type_expr
 (* Return a fresh generic variable *)
 
 (**** Types ****)

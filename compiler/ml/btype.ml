@@ -43,7 +43,7 @@ let newty2 level desc =
   state.type_node_id <- state.type_node_id + 1;
   {desc; level; id = state.type_node_id}
 let newgenty desc = newty2 generic_level desc
-let newgenvar ?name () = newgenty (Tvar name)
+let newgenvar () = newgenty (Tvar None)
 
 (**** Check some types ****)
 

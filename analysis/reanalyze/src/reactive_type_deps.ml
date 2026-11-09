@@ -9,12 +9,7 @@
 
 (** {1 Helper types} *)
 
-type decl_info = {
-  pos: Lexing.position;
-  pos_end: Lexing.position;
-  path: Dce_path.t;
-  is_interface: bool;
-}
+type decl_info = {pos: Lexing.position; path: Dce_path.t; is_interface: bool}
 (** Simplified decl info for type-label processing *)
 
 let decl_to_info (decl : Decl.t) : decl_info option =
@@ -26,21 +21,12 @@ let decl_to_info (decl : Decl.t) : decl_info option =
       | module_name_tag :: _ -> (
         try (module_name_tag |> Name.to_string).[0] <> '+' with _ -> true)
     in
-    Some
-      {pos = decl.pos; pos_end = decl.pos_end; path = decl.path; is_interface}
+    Some {pos = decl.pos; path = decl.path; is_interface}
   | _ -> None
 
 (** {1 Reactive Collections} *)
 
 type t = {
-  decl_by_path: (Dce_path.t, decl_info list) Reactive.t;
-  (* refs_to direction: target -> sources *)
-  same_path_refs: (Lexing.position, Pos_set.t) Reactive.t;
-  cross_file_refs: (Lexing.position, Pos_set.t) Reactive.t;
-  manifest_refs: (Lexing.position, Pos_set.t) Reactive.t;
-  all_type_refs: (Lexing.position, Pos_set.t) Reactive.t;
-  impl_to_intf_refs_path2: (Lexing.position, Pos_set.t) Reactive.t;
-  intf_to_impl_refs: (Lexing.position, Pos_set.t) Reactive.t;
   (* refs_from direction: source -> targets (for forward solver) *)
   all_type_refs_from: (Lexing.position, Pos_set.t) Reactive.t;
 }
@@ -204,23 +190,13 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~merge:Pos_set.union ()
   in
 
-  (* Cross-file refs are the combination of:
-     - impl_to_intf_refs (path1 matches)
-     - impl_to_intf_refs_path2 (path2 fallback)
-     - intf_to_impl_refs *)
-  let cross_file_refs = impl_to_intf_refs in
-
-  (* All type refs = same_path_refs + all cross-file sources.
-     We expose these separately and combine them here. *)
-  let all_type_refs = same_path_refs in
-
   (* Create refs_from by combining and inverting all refs_to sources.
      We use a single flatMap that iterates all sources once. *)
   let all_type_refs_from =
     (* Combine all refs_to sources using union *)
     let combined_refs_to =
       let u1 =
-        Reactive.union ~name:"type_deps.u1" same_path_refs cross_file_refs
+        Reactive.union ~name:"type_deps.u1" same_path_refs impl_to_intf_refs
           ~merge:Pos_set.union ()
       in
       let u2 =
@@ -242,13 +218,4 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~merge:Pos_set.union ()
   in
 
-  {
-    decl_by_path;
-    same_path_refs;
-    cross_file_refs;
-    manifest_refs;
-    all_type_refs;
-    impl_to_intf_refs_path2;
-    intf_to_impl_refs;
-    all_type_refs_from;
-  }
+  {all_type_refs_from}

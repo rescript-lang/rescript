@@ -1270,8 +1270,8 @@ let make_additional_text_edits_for_removing_dot pos_of_dot =
   ]
 
 (** Turns a completion into a pipe completion. *)
-let transform_completion_to_pipe_completion ?(synthetic = false) ~env
-    ?pos_of_dot (completion : Completion.t) =
+let transform_completion_to_pipe_completion ~synthetic ~env ?pos_of_dot
+    (completion : Completion.t) =
   let name = completion.name in
   let name_with_pipe = "->" ^ name in
   Some
@@ -1338,33 +1338,23 @@ let rec find_root_type_id ~full ~env ~state (t : Types.type_expr) =
   | _ -> None
 
 (** Filters out completions that are not pipeable from a list of completions. *)
-let filter_pipeable_functions ~env ~state ~full ?synthetic ?target_type_id
-    ?pos_of_dot completions =
-  match target_type_id with
-  | None -> completions
-  | Some target_type_id ->
-    completions
-    |> List.filter_map (fun (completion : Completion.t) ->
-        let this_completion_item_type_id =
-          match completion.kind with
-          | Value t -> (
-            match
-              get_first_fn_unlabelled_arg_type ~full ~env:completion.env ~state
-                t
-            with
-            | None -> None
-            | Some (t, env_from_labelled_arg) ->
-              find_root_type_id ~full ~env:env_from_labelled_arg ~state t)
-          | _ -> None
-        in
-        match this_completion_item_type_id with
-        | Some main_type_id when main_type_id = target_type_id -> (
-          match pos_of_dot with
-          | None -> Some completion
-          | Some pos_of_dot ->
-            transform_completion_to_pipe_completion ?synthetic ~env ~pos_of_dot
-              completion)
-        | _ -> None)
+let filter_pipeable_functions ~state ~full ~target_type_id completions =
+  completions
+  |> List.filter_map (fun (completion : Completion.t) ->
+      let this_completion_item_type_id =
+        match completion.kind with
+        | Value t -> (
+          match
+            get_first_fn_unlabelled_arg_type ~full ~env:completion.env ~state t
+          with
+          | None -> None
+          | Some (t, env_from_labelled_arg) ->
+            find_root_type_id ~full ~env:env_from_labelled_arg ~state t)
+        | _ -> None
+      in
+      match this_completion_item_type_id with
+      | Some main_type_id when main_type_id = target_type_id -> Some completion
+      | _ -> None)
 
 let remove_current_module_if_needed ~env_completion_is_made_from completion_path
     =

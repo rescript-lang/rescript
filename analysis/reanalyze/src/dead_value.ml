@@ -169,8 +169,8 @@ let add_coercion ~cross_file ~file ~module_path ~source ~target =
       Cross_file_items.add_coercion cross_file ~source_type_paths
         ~target_type_paths
 
-let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~direct_callees
-    ~file ~module_path ~(last_binding : Location.t) super self
+let rec collect_expr ~config ~decls ~refs ~cross_file ~direct_callees ~file
+    ~module_path ~(last_binding : Location.t) super self
     (e : Typedtree.expression) =
   let loc_from = e.exp_loc in
   let binding = last_binding in
@@ -201,8 +201,7 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~direct_callees
       References.add_value_ref refs ~pos_to:loc_to.loc_start
         ~pos_from:Location.none.loc_start)
     else (
-      add_value_reference ~config ~refs ~file_deps ~binding
-        ~add_file_reference:true ~loc_from ~loc_to;
+      add_value_reference ~config ~refs ~binding ~loc_from ~loc_to;
       if not (Expression_table.mem direct_callees e) then
         let pos_from =
           (* [Location.none] identifies a top-level [Tstr_eval], which executes
@@ -280,8 +279,8 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~direct_callees
     (match cstr_kind with
     | Extension_constructor path ->
       path
-      |> Dead_exception.mark_as_used ~config ~refs ~file_deps ~cross_file
-           ~binding ~loc_from ~loc_to
+      |> Dead_exception.mark_as_used ~config ~refs ~cross_file ~binding
+           ~loc_from ~loc_to
     | _ -> ());
     if !Config.analyze_types && not loc_ghost then
       Dead_type.add_type_reference ~config ~refs ~pos_to
@@ -293,8 +292,8 @@ let rec collect_expr ~config ~decls ~refs ~file_deps ~cross_file ~direct_callees
         | {exp_loc} when exp_loc.loc_ghost ->
           (* Punned field in OCaml projects has ghost location in expression *)
           let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-          collect_expr ~config ~decls ~refs ~file_deps ~cross_file
-            ~direct_callees ~file ~module_path ~last_binding super self e
+          collect_expr ~config ~decls ~refs ~cross_file ~direct_callees ~file
+            ~module_path ~last_binding super self e
           |> ignore
         | _ -> ())
   | _ -> ());
@@ -442,8 +441,8 @@ let rec process_signature_item ~config ~decls ~file ~do_types ~do_values
   | _ -> ()
 
 (* Traverse the AST *)
-let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
-    ~do_types ~do_externals (structure : Typedtree.structure) : unit =
+let traverse_structure ~config ~decls ~refs ~cross_file ~file ~do_types
+    ~do_externals (structure : Typedtree.structure) : unit =
   let direct_callees = Expression_table.create 16 in
   let rec create_mapper (last_binding : Location.t)
       (module_path : Module_path.t) =
@@ -454,8 +453,8 @@ let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
         expr =
           (fun _self e ->
             e
-            |> collect_expr ~config ~decls ~refs ~file_deps ~cross_file
-                 ~direct_callees ~file ~module_path ~last_binding super mapper);
+            |> collect_expr ~config ~decls ~refs ~cross_file ~direct_callees
+                 ~file ~module_path ~last_binding super mapper);
         pat =
           (fun _self p ->
             p
@@ -593,33 +592,27 @@ let traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
   mapper.structure mapper structure |> ignore
 
 (* Merge a location's references to another one's *)
-let process_value_dependency ~config ~refs ~file_deps ~cross_file
+let process_value_dependency ~config ~refs ~cross_file
     ( ({
-         val_loc =
-           {loc_start = {pos_fname = fn_to} as pos_to; loc_ghost = ghost1} as
-           loc_to;
+         val_loc = {loc_start = pos_to; loc_ghost = ghost1} as loc_to;
          val_type = type_to;
        } :
         Types.value_description),
       ({
-         val_loc =
-           {loc_start = {pos_fname = fn_from} as pos_from; loc_ghost = ghost2}
-           as loc_from;
+         val_loc = {loc_start = pos_from; loc_ghost = ghost2} as loc_from;
          val_type = type_from;
        } :
         Types.value_description) ) =
   if (not ghost1) && (not ghost2) && pos_to <> pos_from then (
-    let add_file_reference = file_is_implementation_of fn_to fn_from in
-    add_value_reference ~config ~refs ~file_deps ~binding:Location.none
-      ~add_file_reference ~loc_from ~loc_to;
+    add_value_reference ~config ~refs ~binding:Location.none ~loc_from ~loc_to;
     Dead_optional_args.add_function_reference ~config ~cross_file ~loc_from
       ~loc_to ~type_from ~type_to)
 
-let process_structure ~config ~decls ~refs ~file_deps ~cross_file ~file
+let process_structure ~config ~decls ~refs ~cross_file ~file
     ~cmt_value_dependencies ~do_types ~do_externals
     (structure : Typedtree.structure) =
-  traverse_structure ~config ~decls ~refs ~file_deps ~cross_file ~file ~do_types
+  traverse_structure ~config ~decls ~refs ~cross_file ~file ~do_types
     ~do_externals structure;
   let value_dependencies = cmt_value_dependencies |> List.rev in
   value_dependencies
-  |> List.iter (process_value_dependency ~config ~refs ~file_deps ~cross_file)
+  |> List.iter (process_value_dependency ~config ~refs ~cross_file)

@@ -669,11 +669,6 @@ let rec exists_snd l p =
   | [] -> false
   | (_, a) :: l -> p a || exists_snd l p
 
-let rec concat_append (xss : 'a list list) (xs : 'a list) : 'a list =
-  match xss with
-  | [] -> xs
-  | l :: r -> append l (concat_append r xs)
-
 let rec fold_left l accu f =
   match l with
   | [] -> accu

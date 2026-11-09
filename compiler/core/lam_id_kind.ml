@@ -33,13 +33,12 @@ type rec_flag = Lam_rec | Lam_non_rec | Lam_self_rec
 
 type element = NA | SimpleForm of Lambda.t
 
-type boxed_nullable = Undefined | Null | Null_undefined
+type boxed_nullable = Null | Null_undefined
 
 type t =
   | Normal_optional of Lambda.t (* Some [x] *)
   | OptionalBlock of Lambda.t * boxed_nullable
   | ImmutableBlock of element array
-  | MutableBlock of element array
   | Constant of Lambda.structured_constant
   | Module of Ident.t  (** TODO: static module vs first class module *)
   | FunctionId of {
@@ -49,7 +48,6 @@ type t =
       *)
       lambda: (Lambda.t * rec_flag) option;
     }
-  | Exception
   | Parameter
       (** For this case, it can help us determine whether it should be inlined or not *)
   | NA
@@ -65,12 +63,9 @@ let print fmt (kind : t) =
   | ImmutableBlock arr -> pp fmt "Imm(%d)" (Array.length arr)
   | Normal_optional _ -> pp fmt "Some"
   | OptionalBlock (_, Null) -> pp fmt "?Null"
-  | OptionalBlock (_, Undefined) -> pp fmt "?Undefined"
   | OptionalBlock (_, Null_undefined) -> pp fmt "?Nullable"
-  | MutableBlock arr -> pp fmt "Mutable(%d)" (Array.length arr)
   | Constant _ -> pp fmt "Constant"
   | Module id -> pp fmt "%s/%d" id.name id.stamp
   | FunctionId _ -> pp fmt "FunctionID"
-  | Exception -> pp fmt "Exception"
   | Parameter -> pp fmt "Parameter"
   | NA -> pp fmt "NA"

@@ -27,8 +27,8 @@ type attrs = attribute list
 let default_loc = ref Location.none
 
 module Const = struct
-  let integer ?suffix i = Pconst_integer (i, suffix)
-  let int ?suffix i = integer ?suffix (string_of_int i)
+  let integer i = Pconst_integer (i, None)
+  let int i = integer (string_of_int i)
   let string semantic =
     Pconst_string (String_literal.string_from_semantic semantic)
 end
@@ -47,7 +47,7 @@ module Typ = struct
   let object_ ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_object (a, b))
   let alias ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_alias (a, b))
   let variant ?loc ?attrs a b c = mk ?loc ?attrs (Ptyp_variant (a, b, c))
-  let poly ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_poly (a, b))
+  let poly ~loc ?attrs a b = mk ~loc ?attrs (Ptyp_poly (a, b))
   let package ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_package (a, b))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Ptyp_extension a)
 
@@ -157,8 +157,8 @@ module Exp = struct
     assert (params <> []);
     mk ?loc ?attrs (Pexp_fun {newtypes; params; body; async})
 
-  let fun_param ?(attrs = []) ?default lbl pat =
-    {p_attrs = attrs; p_lbl = lbl; p_default = default; p_pat = pat}
+  let fun_param ?(attrs = []) lbl pat =
+    {p_attrs = attrs; p_lbl = lbl; p_default = None; p_pat = pat}
   let apply ?loc ?attrs ?(partial = false) ?(transformed_jsx = false) funct args
       =
     mk ?loc ?attrs (Pexp_apply {funct; args; partial; transformed_jsx})
@@ -500,26 +500,23 @@ module Type = struct
       :: decl.ptype_attributes
 
   let constructor ?(loc = !default_loc) ?(attrs = []) ?(args = Pcstr_tuple [])
-      ?res ?runtime_tag name =
+      ?res name =
     let runtime_tag, attrs =
-      match runtime_tag with
-      | Some tag -> (Some {Asttypes.txt = tag; loc = name.loc}, attrs)
-      | None -> (
-        (* Only the first [@as] can name the constructor. Leave an invalid
-           first annotation, and everything after it, for the type checker so
-           formatting an invalid file does not change its diagnostics. *)
-        let rec take seen (attrs : Parsetree.attributes) =
-          match attrs with
-          | [] -> (None, [])
-          | (({txt = "as"; loc}, payload) : Parsetree.attribute) :: rest -> (
-            match Ast_payload.constructor_tag_of_payload payload with
-            | Some txt -> (Some {Asttypes.txt; loc}, List.rev_append seen rest)
-            | None -> (None, attrs))
-          | attr :: rest -> take (attr :: seen) rest
-        in
-        match take [] attrs with
-        | None, _ -> (None, attrs)
-        | found -> found)
+      (* Only the first [@as] can name the constructor. Leave an invalid
+         first annotation, and everything after it, for the type checker so
+         formatting an invalid file does not change its diagnostics. *)
+      let rec take seen (attrs : Parsetree.attributes) =
+        match attrs with
+        | [] -> (None, [])
+        | (({txt = "as"; loc}, payload) : Parsetree.attribute) :: rest -> (
+          match Ast_payload.constructor_tag_of_payload payload with
+          | Some txt -> (Some {Asttypes.txt; loc}, List.rev_append seen rest)
+          | None -> (None, attrs))
+        | attr :: rest -> take (attr :: seen) rest
+      in
+      match take [] attrs with
+      | None, _ -> (None, attrs)
+      | found -> found
     in
     {
       pcd_name = name;
@@ -566,36 +563,27 @@ module Type = struct
      AST bridge - agrees on what the field is called without re-reading the
      payload. *)
   let field ?(loc = !default_loc) ?(attrs = []) ?(mut = Immutable)
-      ?(optional = false) ?runtime_name name typ =
+      ?(optional = false) name typ =
     let runtime_name, attrs =
-      match runtime_name with
-      | Some txt ->
-        ( Some
-            {
-              txt = String_literal.string_from_semantic txt;
-              loc = name.Asttypes.loc;
-            },
-          attrs )
-      | None -> (
-        (* Take out the first [@as] that denotes a name. One whose payload is
-           not a name is left alone: it does not rename the field, and dropping
-           it here would make the printer delete it from the source. *)
-        let rec take seen (attrs : Parsetree.attributes) =
-          match attrs with
-          | [] -> (None, [])
-          | ((({txt = "as"; loc}, payload) : Parsetree.attribute) as attr)
-            :: rest -> (
-            match Ast_payload.string_literal_of_payload payload with
-            | Some txt ->
-              (* A second [@as] is left in the attributes for the type checker
-                 to reject, so that an invalid file can still be printed. *)
-              (Some {Asttypes.txt; loc}, List.rev_append seen rest)
-            | None -> take (attr :: seen) rest)
-          | attr :: rest -> take (attr :: seen) rest
-        in
-        match take [] attrs with
-        | None, _ -> (None, attrs)
-        | found -> found)
+      (* Take out the first [@as] that denotes a name. One whose payload is
+         not a name is left alone: it does not rename the field, and dropping
+         it here would make the printer delete it from the source. *)
+      let rec take seen (attrs : Parsetree.attributes) =
+        match attrs with
+        | [] -> (None, [])
+        | ((({txt = "as"; loc}, payload) : Parsetree.attribute) as attr) :: rest
+          -> (
+          match Ast_payload.string_literal_of_payload payload with
+          | Some txt ->
+            (* A second [@as] is left in the attributes for the type checker
+               to reject, so that an invalid file can still be printed. *)
+            (Some {Asttypes.txt; loc}, List.rev_append seen rest)
+          | None -> take (attr :: seen) rest)
+        | attr :: rest -> take (attr :: seen) rest
+      in
+      match take [] attrs with
+      | None, _ -> (None, attrs)
+      | found -> found
     in
     {
       pld_name = name;

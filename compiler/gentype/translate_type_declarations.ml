@@ -92,8 +92,8 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     in
     {Code_item.import_types; export_from_type_declaration}
   in
-  let translate_label_declarations ?(inline = false) ?(unboxed = false)
-      label_declarations =
+  let translate_label_declarations ?(inline = false) ~unboxed label_declarations
+      =
     let field_translations =
       label_declarations
       |> List.map

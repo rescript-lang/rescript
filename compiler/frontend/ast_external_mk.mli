@@ -24,11 +24,8 @@
 
 val local_external_apply :
   Location.t ->
-  ?pval_attributes:Parsetree.attributes ->
   pval_prim:Parsetree.primitive_repr ->
   pval_type:Parsetree.core_type ->
-  ?local_module_name:string ->
-  ?local_fun_name:string ->
   Parsetree.expression list ->
   Parsetree.expression_desc
 (**

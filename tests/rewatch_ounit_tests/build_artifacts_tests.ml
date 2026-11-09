@@ -11,8 +11,8 @@ let cleanup_stale ~artifact_files ~ast_sources ?(present_source_files = [])
   Build_artifacts.cleanup_stale ~artifact_files ~ast_sources
     ~present_source_files ~on_removed_module ~root config modules
 
-let module_ ?interface name implementation : Source.module_ =
-  {name; implementation; interface; is_dev = false}
+let module_ name implementation : Source.module_ =
+  {name; implementation; interface = None; is_dev = false}
 
 let tests =
   "build_artifacts_tests" >:: fun _context ->

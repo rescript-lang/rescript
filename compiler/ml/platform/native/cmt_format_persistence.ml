@@ -25,27 +25,18 @@ let read_source_file path =
 
 (* Unlike OCaml, no copy of the .cmi is written in front of the cmt infos:
    tools read the .cmi itself. *)
-let save_cmt filename modname binary_annots sourcefile initial_env =
+let save_cmt filename modname binary_annots sourcefile =
   if !((Clflags.current ()).binary_annotations) then
     let cmt =
       {
         cmt_modname = modname;
         cmt_annots = clear_env binary_annots;
         cmt_value_dependencies = value_dependencies ();
-        cmt_comments = [];
         cmt_args = (Compiler_request_state.current ()).cmt_args;
-        cmt_sourcefile = sourcefile;
-        cmt_builddir = Compiler_request_state.cwd ();
-        cmt_loadpath = Config.get_load_path ();
         cmt_source_digest =
           Misc.may_map
             (fun path -> Digest.string (read_source_file path))
             sourcefile;
-        cmt_initial_env =
-          (if need_to_clear_env then keep_only_summary initial_env
-           else initial_env);
-        cmt_imports = List.sort compare (Env.imports ());
-        cmt_use_summaries = need_to_clear_env;
         cmt_extra_info = {deprecated_used = deprecated_uses ()};
       }
     in
