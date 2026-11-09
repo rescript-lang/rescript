@@ -75,26 +75,34 @@ let read_cmi filename =
          (Compiler_request_state.resolve_path filename
          ^ ": No such file or directory"))
 
+(* The signature part of the .cmi file for [cmi], whose digest is its CRC. *)
+let signature_contents (cmi : cmi_infos) =
+  (* beware: the provided signature must have been substituted for saving;
+     checkout [output_value] in {!Pervasives} module *)
+  Config.cmi_magic_number ^ Marshal.to_string (cmi.cmi_name, cmi.cmi_sign) []
+
+let file_contents (cmi : cmi_infos) signature crc =
+  let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
+  String.concat ""
+    [signature; Marshal.to_string crcs []; Marshal.to_string cmi.cmi_flags []]
+
 (* The contents of the .cmi file for [cmi], and its CRC. *)
 let cmi_contents (cmi : cmi_infos) =
-  (* beware: the provided signature must have been substituted for saving *)
-  let content =
-    Config.cmi_magic_number ^ Marshal.to_string (cmi.cmi_name, cmi.cmi_sign) []
-    (* checkout [output_value] in {!Pervasives} module *)
-  in
-  let crc = Digest.string content in
-  let crcs = (cmi.cmi_name, Some crc) :: cmi.cmi_crcs in
-  ( String.concat ""
-      [content; Marshal.to_string crcs []; Marshal.to_string cmi.cmi_flags []],
-    crc )
+  let signature = signature_contents cmi in
+  let crc = Digest.string signature in
+  (file_contents cmi signature crc, crc)
 
 (* Writes the .cmi file, keeping an existing one with the same contents
    when [check_exists] is given *)
 let create_cmi ?check_exists ?contents filename (cmi : cmi_infos) =
+  (* Without [contents], the whole file is only built when it is written. *)
   let contents, crc =
     match contents with
-    | Some contents -> contents
-    | None -> cmi_contents cmi
+    | Some (contents, crc) -> (lazy contents, crc)
+    | None ->
+      let signature = signature_contents cmi in
+      let crc = Digest.string signature in
+      (lazy (file_contents cmi signature crc), crc)
   in
   let cmi_infos =
     if check_exists = None then None
@@ -123,7 +131,7 @@ let create_cmi ?check_exists ?contents filename (cmi : cmi_infos) =
   | _ ->
     Build_file_store.write
       (Compiler_request_state.resolve_path filename)
-      contents;
+      (Lazy.force contents);
     crc
 
 (* Error report *)

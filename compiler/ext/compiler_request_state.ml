@@ -1,13 +1,13 @@
 type hooks = {
   before_effect: unit -> unit;
-  interface_computed: string -> string -> unit;
+  interface_computed: (string -> string -> unit) option;
   redirect_cmi: string -> string option;
 }
 
 let no_hooks =
   {
     before_effect = ignore;
-    interface_computed = (fun _ _ -> ());
+    interface_computed = None;
     redirect_cmi = (fun _ -> None);
   }
 
@@ -61,8 +61,7 @@ let resolve_path path =
   else path
 
 let before_effect () = (current ()).hooks.before_effect ()
-let interface_computed path bytes =
-  (current ()).hooks.interface_computed path bytes
+let interface_computed () = (current ()).hooks.interface_computed
 let redirect_cmi path = (current ()).hooks.redirect_cmi path
 
 let with_fresh ?cwd:requested_cwd ?hooks action =

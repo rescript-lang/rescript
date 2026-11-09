@@ -171,15 +171,14 @@ let task ?(hooks = Compiler_scheduler.no_compile_hooks) request =
       {
         before_effect = wait_for_adoption;
         interface_computed =
-          (match hooks.on_interface_computed with
-          | None -> fun _ _ -> ()
-          | Some computed ->
-            fun path bytes ->
+          Option.map
+            (fun computed path bytes ->
               computed
                 (if Filename.is_relative path then
                    Filename.concat request.cwd path
                  else path)
-                bytes);
+                bytes)
+            hooks.on_interface_computed;
         redirect_cmi =
           (match gate with
           | None -> redirect
