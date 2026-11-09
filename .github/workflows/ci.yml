@@ -275,6 +275,13 @@ jobs:
         if: matrix.build_playground
         run: opam exec -- make playground
 
+      # Runs after the playground build, whose browser-profile tree it
+      # analyzes together with the native one. reanalyze is a test
+      # dependency, installed with the switch.
+      - name: Check for dead code
+        if: matrix.build_playground
+        run: opam exec -- make dead-code
+
       - name: Test playground compiler
         if: matrix.build_playground
         run: yarn workspace playground test
