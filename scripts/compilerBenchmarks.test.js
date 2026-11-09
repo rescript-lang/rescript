@@ -28,6 +28,13 @@ test("reads the allocated words from the runtime's statistics", () => {
   assert.equal(parseAllocatedWords("minor_words: 1\n"), undefined);
 });
 
+test("adds the words the build system's workers allocated", () => {
+  assert.equal(
+    parseAllocatedWords(`worker_allocated_words: 1000\n${stats}`),
+    629461,
+  );
+});
+
 test("reads the instructions from cachegrind's report", () => {
   assert.equal(parseInstructions(`${stats}${cachegrind}`), 1234567890);
   assert.equal(parseInstructions(stats), undefined);
@@ -283,6 +290,33 @@ test("words an improvement in instructions", () => {
   assert.match(
     renderSummary([instructions], 1),
     /\*\*🎉 Improvement: 2 benchmarks execute more than 1% fewer instructions\.\*\*/,
+  );
+});
+
+test("compares output sizes in a section of their own", () => {
+  const base = {
+    a: { allocated: 1000, inputs: "x" },
+    "output/runtime/*.cmt": { bytes: 2000, inputs: "x" },
+    "output/runtime/*.cmi": { bytes: 1000, inputs: "x" },
+  };
+  const head = {
+    a: { allocated: 1000, inputs: "x" },
+    "output/runtime/*.cmt": { bytes: 2100, inputs: "x" },
+    "output/runtime/*.cmi": { bytes: 1000, inputs: "x" },
+  };
+  const [allocated, , bytes] = compareAll(base, head, 1);
+  assert.equal(allocated.compared, 1);
+  assert.equal(bytes.compared, 2);
+  const summary = renderSummary(compareAll(base, head, 1), 1);
+  assert.match(summary, /^### Output size$/m);
+  assert.doesNotMatch(summary, /Instructions/);
+  assert.match(
+    summary,
+    /\*\*⚠️ Regression: 1 output is more than 1% larger\.\*\*/,
+  );
+  assert.match(
+    summary,
+    /\| `output\/runtime\/\*\.cmt` \| 2,000 \| 2,100 \| \+5\.00% \|/,
   );
 });
 
