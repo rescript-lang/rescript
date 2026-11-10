@@ -34,11 +34,12 @@ let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
   | Some ({txt; loc}, payload) -> (
     let open Parsetree in
     (* the 'inline' attribute can be used as
-       [@inline], [@inline never] or [@inline always].
+       [@inline], [@inline never], [@inline always] or
+       [@inline(crossModule)].
        [@inline] is equivalent to [@inline always] *)
     let warning txt =
       Warnings.Attribute_payload
-        (txt, "It must be either empty, 'always' or 'never'")
+        (txt, "It must be empty, 'always', 'never' or 'crossModule'")
     in
     match payload with
     | PStr [] -> Always_inline
@@ -46,6 +47,7 @@ let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
       match (Ast_payload.unwrap_braces expression).pexp_desc with
       | Pexp_ident {txt = Longident.Lident "never"} -> Never_inline
       | Pexp_ident {txt = Longident.Lident "always"} -> Always_inline
+      | Pexp_ident {txt = Longident.Lident "crossModule"} -> Cross_module_inline
       | _ ->
         Location.prerr_warning loc (warning txt);
         Default_inline)
@@ -62,14 +64,11 @@ let add_inline_attribute (expr : Lambda.t) loc attributes =
   | Lfunction ({attr} as funct), inline ->
     (match attr.inline with
     | Default_inline -> ()
-    | Always_inline | Never_inline ->
+    | Always_inline | Cross_module_inline | Never_inline ->
       Location.prerr_warning loc (Warnings.Duplicated_attribute "inline"));
     let attr = {attr with inline} in
     Lambda.function_ ~loc:funct.loc ~attr ~params:funct.params ~body:funct.body
-  | expr, Always_inline ->
-    Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
-    expr
-  | expr, Never_inline ->
+  | expr, (Always_inline | Cross_module_inline | Never_inline) ->
     Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
     expr
 

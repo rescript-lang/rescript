@@ -117,7 +117,11 @@ let free_variables (export_idents : Set_ident.t) (params : stats Map_ident.t)
       iter sink_pos e1;
       local_add_list vars;
       iter sink_pos e2
-    | Ltrywith (e1, _, e2) | Ltryfinally (e1, e2) ->
+    | Ltrywith (e1, exn, e2) ->
+      iter top e1;
+      local_add exn;
+      iter sink_pos e2
+    | Ltryfinally (e1, e2) ->
       iter top e1;
       iter sink_pos e2
     | Lifthenelse (e1, e2, e3) ->

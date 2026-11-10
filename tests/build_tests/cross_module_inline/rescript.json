@@ -1,0 +1,5 @@
+{
+  "name": "cross-module-inline-build-test",
+  "sources": [{ "dir": "src" }],
+  "package-specs": { "module": "commonjs", "in-source": true }
+}
