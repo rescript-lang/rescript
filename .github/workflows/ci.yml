@@ -99,17 +99,21 @@ jobs:
           compiler: ${{ matrix.ocaml_compiler }}
           os: ${{ matrix.os }}
           cache-prefix: opam-env-v9
+          # This job resolves every change of the dependencies from scratch,
+          # as master will after the merge.
+          restore-earlier: ${{ !contains(matrix.ocaml_compiler, '5.0.0') }}
 
+      # The key doesn't change with the dependencies: dune rebuilds what they
+      # change. Master deletes the state and saves it again.
       - name: Compiler build state key
         id: compiler-build-state-key
         shell: bash
         run: |
-          prefix="compiler-build-state-v1-${{ matrix.os }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ matrix.ocaml_compiler }}-"
-          echo "prefix=${prefix//,/-}" >> "$GITHUB_OUTPUT"
-          echo "value=${prefix//,/-}${{ hashFiles('*.opam') }}" >> "$GITHUB_OUTPUT"
+          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ matrix.ocaml_compiler }}" \
+            | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
 
-      # After a change of the dependencies, the state built with the previous
-      # ones still saves most of the build.
+      # The prefix also restores the states saved under the earlier keys,
+      # which ended in a hash of the opam files.
       - name: Restore compiler build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
         id: compiler-build-state
@@ -120,7 +124,7 @@ jobs:
             ~/.cache/dune
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
-          restore-keys: ${{ steps.compiler-build-state-key.outputs.prefix }}
+          restore-keys: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Build compiler
         run: opam exec -- dune build --display quiet
@@ -465,9 +469,8 @@ jobs:
       - name: Compiler build state key
         id: compiler-build-state-key
         run: |
-          prefix="compiler-build-state-v1-ubuntu-26.04-${{ steps.setup_ocaml.outputs.setup_version }}-$OCAML_COMPILER-"
-          echo "prefix=${prefix//,/-}" >> "$GITHUB_OUTPUT"
-          echo "value=${prefix//,/-}${{ hashFiles('*.opam') }}" >> "$GITHUB_OUTPUT"
+          echo "value=compiler-build-state-v1-ubuntu-26.04-${{ steps.setup_ocaml.outputs.setup_version }}-$OCAML_COMPILER" \
+            | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
 
       - name: Restore compiler build state
         uses: actions/cache/restore@v6
@@ -479,7 +482,7 @@ jobs:
             ~/.cache/dune
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
-          restore-keys: ${{ steps.compiler-build-state-key.outputs.prefix }}
+          restore-keys: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Build the compiler
         run: opam exec -- dune build --display quiet

@@ -51,16 +51,15 @@ jobs:
       # The bisect_ppx-instrumented dune build is a separate artifact from
       # the main CI build, so it gets its own key. Only save on master
       # pushes — PRs share the master cache to stay fast but won't poison
-      # it. The key changes only with the dependencies, so master keeps one
-      # state per set of dependencies, deleting it and saving it again,
-      # rather than adding a new one with every change of the compiler.
+      # it. The key changes with neither the compiler nor the dependencies:
+      # dune rebuilds what they change, and master deletes the state and
+      # saves it again, so it keeps one.
       - name: Coverage build state key
         id: coverage-build-state-key
-        run: |
-          prefix="coverage-build-state-v1-${{ env.OS }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ env.OCAML_COMPILER }}-"
-          echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
-          echo "value=${prefix}${{ hashFiles('*.opam') }}" >> "$GITHUB_OUTPUT"
+        run: echo "value=coverage-build-state-v1-${{ env.OS }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ env.OCAML_COMPILER }}" >> "$GITHUB_OUTPUT"
 
+      # The prefix also restores the states saved under the earlier keys,
+      # which ended in a hash of the sources.
       - name: Restore coverage build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
         id: coverage-build-state
@@ -70,7 +69,8 @@ jobs:
             ~/.cache/dune
             _build
           key: ${{ steps.coverage-build-state-key.outputs.value }}
-          restore-keys: ${{ steps.coverage-build-state-key.outputs.prefix }}
+          restore-keys: ${{ steps.coverage-build-state-key.outputs.value }}
+
 
       - name: Run coverage
         run: opam exec -- make coverage

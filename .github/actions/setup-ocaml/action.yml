@@ -15,6 +15,13 @@ inputs:
     description: Flags passed to opam install after the package path.
     required: false
     default: --deps-only --with-test
+  restore-earlier:
+    description: >-
+      Whether a pull request may restore and update the environment of
+      earlier dependencies when its own is not cached. A job that never does
+      resolves every change of the dependencies from scratch, as master will.
+    required: false
+    default: "true"
 outputs:
   setup_version:
     description: Version of ocaml/setup-ocaml used by this action.
@@ -103,7 +110,7 @@ runs:
           C:\cygwin
           C:\.opam
         key: ${{ steps.cache-key.outputs.value }}
-        restore-keys: ${{ github.event_name == 'pull_request' && steps.cache-key.outputs.prefix || '' }}
+        restore-keys: ${{ github.event_name == 'pull_request' && inputs.restore-earlier == 'true' && steps.cache-key.outputs.prefix || '' }}
 
     - name: Use OCaml ${{ inputs.compiler }}
       if: steps.cache.outputs.cache-matched-key == ''
@@ -113,6 +120,8 @@ runs:
         # Use the HTTP repository to prevent intermittent CI setup failures:
         # the Git-backed default can race with detached Git maintenance while
         # OPAM scans it (https://github.com/ocaml/opam/issues/7031).
+        # A restored environment keeps its repositories, so a change here
+        # needs a new cache-prefix.
         opam-repositories: |
           default: https://opam.ocaml.org
         opam-pin: false
@@ -174,16 +183,29 @@ runs:
         RESTORED: ${{ steps.cache.outputs.cache-matched-key != '' }}
       run: |
         read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
+        if [[ "$RUNNER_OS" != "Windows" ]]; then
+          # setup-linux-dependencies unpacks musl-tools without dpkg, and
+          # Binaryen is installed above, so opam needn't install either.
+          # Without this, a restored environment takes both for removed and
+          # rebuilds the whole switch.
+          opam option --global 'depext-bypass=["binaryen" "musl-tools"]'
+        fi
         if [[ "$RESTORED" == "true" ]]; then
+          # Pins of earlier dependencies would hide every other version of
+          # their packages; the install pins what the opam files still pin.
+          for package in $(opam pin list --short | tr -d '\r'); do
+            opam unpin --no-action "$package"
+          done
           # The restored environment may predate packages the dependencies
           # now need. The update leaves the installed packages as they are,
           # as on an exact cache hit.
           opam update --repositories
           opam reinstall --forget-pending
-          # setup-linux-dependencies unpacks musl-tools without dpkg, and
-          # Binaryen is installed by hand, so opam takes both for removed and
-          # would rebuild the whole switch.
-          opam option --global 'depext-bypass=["binaryen" "musl-tools"]'
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            # Where ocaml/setup-ocaml points it; the cached environment's
+            # setting names a file that doesn't exist.
+            export BASH_ENV='C:\.opam\.cygwin\root\bash_env'
+          fi
         fi
         if [[ "$RUNNER_OS" == "Windows" ]]; then
           export AR=x86_64-w64-mingw32-ar
@@ -198,7 +220,8 @@ runs:
     - name: Cache OPAM environment
       # Caches created by pull_request runs are scoped to that PR's merge ref
       # and cannot seed other PRs or branches, so only push runs save them.
-      if: steps.cache.outputs.cache-hit != 'true' && github.event_name == 'push'
+      # Only environments resolved from scratch are saved.
+      if: steps.cache.outputs.cache-matched-key == '' && github.event_name == 'push'
       uses: actions/cache/save@v6
       with:
         path: |
