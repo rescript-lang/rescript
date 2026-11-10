@@ -13,12 +13,18 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type ('k, 'v) t = Empty | Node of ('k, 'v) t * 'k * 'v * ('k, 'v) t * int
+type ('k, 'v) t =
+  | Empty
+  | Node of ('k, 'v) t * 'k * 'v * ('k, 'v) t * int
+  | Source of 'k array * ('k -> 'v)
+      (** The keys, sorted by [compare], and the lookup of their values. *)
 
 let empty = Empty
 
+let of_source ~keys ~find = Source (keys, find)
+
 let height = function
-  | Empty -> 0
+  | Empty | Source _ -> 0
   | Node (_, _, _, _, h) -> h
 
 let create l x d r =
@@ -44,6 +50,8 @@ let bal l x d r =
   else create l x d r
 
 let rec add x data = function
+  | Source (keys, find) ->
+    add x data (Array.fold_left (fun t k -> add k (find k) t) Empty keys)
   | Empty -> Node (Empty, x, data, Empty, 1)
   | Node (l, v, d, r, h) ->
     let c = compare x v in
@@ -52,18 +60,21 @@ let rec add x data = function
     else bal l v d (add x data r)
 
 let rec find x = function
+  | Source (_, find) -> find x
   | Empty -> raise Not_found
   | Node (l, v, d, r, _) ->
     let c = compare x v in
     if c = 0 then d else find x (if c < 0 then l else r)
 
 let rec find_str (x : string) = function
+  | Source (_, find) -> find x
   | Empty -> raise Not_found
   | Node (l, v, d, r, _) ->
     let c = compare x v in
     if c = 0 then d else find_str x (if c < 0 then l else r)
 
 let rec iter f = function
+  | Source (keys, find) -> Array.iter (fun k -> f k (find k)) keys
   | Empty -> ()
   | Node (l, v, d, r, _) ->
     iter f l;
@@ -72,5 +83,7 @@ let rec iter f = function
 
 let rec fold f m accu =
   match m with
+  | Source (keys, find) ->
+    Array.fold_left (fun accu k -> f k (find k) accu) accu keys
   | Empty -> accu
   | Node (l, v, d, r, _) -> fold f r (f v d (fold f l accu))
