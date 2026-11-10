@@ -158,7 +158,7 @@ let process_cmt_file cmt =
     let resolver =
       Module_resolver.create_lazy_resolver ~config
         ~extensions:[".res"; ".shim.ts"] ~exclude_file:(fun fname ->
-          fname = "React.res" || fname = "ReasonReact.res")
+          fname = "React.res")
     in
     if has_gentype_annotations then
       input_cmt
