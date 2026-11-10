@@ -137,6 +137,19 @@ let topLevel = () => {
   (a, topLevelRef.contents)
 }
 
+// A JS global named like the variable that the element of [t] gets, [t_0].
+// The binding must not capture the global it reads.
+@val external tZero: int = "t_0"
+let setTZero: int => unit = %raw(`n => { globalThis.t_0 = n }`)
+let () = setTZero(1)
+%%private(let t = (tZero, "b"))
+let () = setTZero(2)
+
+let globalNamedLikeElement = () => {
+  let (a, _) = t
+  (a, tZero)
+}
+
 describe(__MODULE__, () => {
   test("a tuple element read from a ref", () => {
     eq(__LOC__, (1, 5, 2), tuple(5))
@@ -184,5 +197,9 @@ describe(__MODULE__, () => {
 
   test("a tuple element read from a top-level ref", () => {
     eq(__LOC__, (1, 2), topLevel())
+  })
+
+  test("a tuple element read from a global named like its variable", () => {
+    eq(__LOC__, (1, 2), globalNamedLikeElement())
   })
 })

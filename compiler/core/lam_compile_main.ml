@@ -405,11 +405,14 @@ let compile ?on_optimized_lambda (output_prefix : string)
   let export_set = Set_ident.of_list meta_exports in
   let js : J.program = {exports = meta_exports; export_set; block = body} in
   js |> j "initial" |> Js_pass_flatten.program |> j "flatten"
-  |> Js_pass_external_shadow.program |> j "external_shadow"
   |> Js_pass_tailcall_inline.tailcall_inline ~assignable:meta.assignable
   |> j "inline_and_shake" |> Js_pass_record_rest.program |> j "record_rest"
   |> Js_pass_flatten_and_mark_dead.program ~assignable:meta.assignable
   |> j "flatten_and_mark_dead"
+  (* After the passes that add bindings, so that a JS global read in one of
+     them, as in [let t_0 = t_0], is not captured by the binding *)
+  |> Js_pass_external_shadow.program
+  |> j "external_shadow"
   |> (fun js ->
   ignore @@ Js_pass_scope.program js;
   js)

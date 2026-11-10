@@ -168,60 +168,79 @@ function topLevel() {
   ];
 }
 
+let setTZero = (n => { globalThis.t_0 = n });
+
+setTZero(1);
+
+let t_0 = globalThis.t_0;
+
+setTZero(2);
+
+function globalNamedLikeElement() {
+  return [
+    t_0,
+    globalThis.t_0
+  ];
+}
+
 Mocha.describe("Assigned_variable_read_test", () => {
-  Mocha.test("a tuple element read from a ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 142, characters 7-14", [
+  Mocha.test("a tuple element read from a ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 155, characters 7-14", [
     1,
     5,
     2
   ], tuple(5)));
-  Mocha.test("a record field read from a ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 146, characters 7-14", [
+  Mocha.test("a record field read from a ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 159, characters 7-14", [
     1,
     "p",
     2
   ], record("p")));
-  Mocha.test("a constructor payload read from a ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 150, characters 7-14", [
+  Mocha.test("a constructor payload read from a ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 163, characters 7-14", [
     1,
     2
   ], variant()));
-  Mocha.test("a tuple element read from a ref before a call that assigns the ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 154, characters 7-14", [
+  Mocha.test("a tuple element read from a ref before a call that assigns the ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 167, characters 7-14", [
     1,
     20,
     2
   ], elementThenCall()));
-  Mocha.test("tuple elements read from a ref by closures created in a loop", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 158, characters 7-14", [
+  Mocha.test("tuple elements read from a ref by closures created in a loop", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 171, characters 7-14", [
     0,
     1,
     2
   ], closuresInLoop()));
-  Mocha.test("an argument read from a ref that the inlined body assigns", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 162, characters 7-14", [
+  Mocha.test("an argument read from a ref that the inlined body assigns", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 175, characters 7-14", [
     0,
     3
   ], inlinedCall(3)));
-  Mocha.test("an argument read from a ref that a function called in the inlined body assigns", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 166, characters 7-14", [
+  Mocha.test("an argument read from a ref that a function called in the inlined body assigns", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 179, characters 7-14", [
     0,
     1
   ], inlinedCallThroughFunction()));
-  Mocha.test("an argument read from a ref before a later argument's call assigns it", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 170, characters 7-14", [
+  Mocha.test("an argument read from a ref before a later argument's call assigns it", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 183, characters 7-14", [
     0,
     10,
     1
   ], argumentThenCall()));
-  Mocha.test("a field of a rest pattern parameter whose argument is read from a ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 174, characters 7-14", [
+  Mocha.test("a field of a rest pattern parameter whose argument is read from a ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 187, characters 7-14", [
     "1",
     "b"
   ], inlinedRestPattern()));
-  Mocha.test("a tuple element read from a JS global", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 178, characters 7-14", [
+  Mocha.test("a tuple element read from a JS global", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 191, characters 7-14", [
     1,
     2
   ], globalTuple()));
-  Mocha.test("an argument read from a JS global that the inlined body assigns", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 182, characters 7-14", [
+  Mocha.test("an argument read from a JS global that the inlined body assigns", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 195, characters 7-14", [
     0,
     1
   ], globalInlinedCall()));
-  Mocha.test("a tuple element read from a top-level ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 186, characters 7-14", [
+  Mocha.test("a tuple element read from a top-level ref", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 199, characters 7-14", [
     1,
     2
   ], topLevel()));
+  Mocha.test("a tuple element read from a global named like its variable", () => Test_utils.eq("File \"assigned_variable_read_test.res\", line 203, characters 7-14", [
+    1,
+    2
+  ], globalNamedLikeElement()));
 });
 
 export {
@@ -238,5 +257,7 @@ export {
   globalTuple,
   globalInlinedCall,
   topLevel,
+  setTZero,
+  globalNamedLikeElement,
 }
 /*  Not a pure module */
