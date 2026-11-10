@@ -44,6 +44,19 @@ let split_by ?(keep_empty = false) is_delim str =
 let split ?keep_empty str on =
   if str = "" then [] else split_by ?keep_empty (fun x -> (x : char) = on) str
 
+(* Unlike String.starts_with, this allocates no closure for its loop, which
+   matters on paths that run for every external or identifier. *)
+let starts_with s beg =
+  let beg_len = String.length beg in
+  let s_len = String.length s in
+  beg_len <= s_len
+  &&
+  let i = ref 0 in
+  while !i < beg_len && String.unsafe_get s !i = String.unsafe_get beg !i do
+    incr i
+  done;
+  !i = beg_len
+
 let rec unsafe_for_all_range s ~start ~finish p =
   start > finish
   || p (String.unsafe_get s start)

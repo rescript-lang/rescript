@@ -33,6 +33,10 @@ val split_by : ?keep_empty:bool -> (char -> bool) -> string -> string list
 val split : ?keep_empty:bool -> string -> char -> string list
 (** default is false *)
 
+val starts_with : string -> string -> bool
+(** [starts_with s prefix]. Unlike [String.starts_with], it allocates
+    nothing. *)
+
 (**
    [ends_with_then_chop name ext]
    @example:
