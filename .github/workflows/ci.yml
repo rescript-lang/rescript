@@ -121,6 +121,12 @@ jobs:
       - name: Build compiler
         run: opam exec -- dune build --display quiet
 
+      # Reads the linked libraries, versions, and license texts from this
+      # job's opam switch, the one the linux-x64 release binaries come from.
+      - name: Check third-party licenses
+        if: matrix.upload_libs
+        run: opam exec -- node scripts/generateThirdPartyLicenses.js --check
+
       - name: Delete stable compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         shell: bash

@@ -58,6 +58,8 @@
     "format": "biome check --no-errors-on-unmatched . --fix",
     "typecheck": "tsc",
     "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate",
+    "licenses:generate": "node scripts/generateThirdPartyLicenses.js",
+    "licenses:check": "node scripts/generateThirdPartyLicenses.js --check",
     "changelog:check": "node scripts/changelog.js check",
     "changelog:preview": "node scripts/changelog.js preview",
     "changelog:release": "node scripts/changelog.js release",

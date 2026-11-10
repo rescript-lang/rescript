@@ -1,0 +1,1418 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: GNU C Library
+Source: https://sourceware.org/git/glibc.git
+
+Files: *
+Copyright: 1991-2026 Free Software Foundation, Inc.
+License: LGPL-2.1+
+
+Files: manual/*
+License: GFDL-1.3
+ Copyright (C) 1993-2017 Free Software Foundation, Inc.
+ .
+ Permission is granted to copy, distribute and/or modify this document
+ under the terms of the GNU Free Documentation License, Version 1.3 or
+ any later version published by the Free Software Foundation; with the
+ Invariant Sections being "Free Software Needs Free Documentation" and
+ "GNU Lesser General Public License", the Front-Cover texts being "A
+ GNU Manual", and with the Back-Cover Texts as in (a) below. A copy of
+ the license is included in the section entitled "GNU Free
+ Documentation License".
+ .
+ (a) The FSF’s Back-Cover Text is: "You have the freedom to copy and
+ modify this GNU manual. Buying copies from the FSF supports it in
+ developing GNU and promoting software freedom."
+ .
+ On Debian systems, the complete text of the GNU Free Documentation
+ License Version 1.3 can be found in `/usr/share/common-licenses/GFDL-1.3'.
+
+Files:
+ nptl/default-sched.h
+ nss/nss_db/db-initgroups.c
+ sysdeps/powerpc/fpu/round_to_integer.h
+ sysdeps/powerpc/fpu/s_ceil.c
+ sysdeps/powerpc/fpu/s_ceilf.c
+ sysdeps/powerpc/fpu/s_floor.c
+ sysdeps/powerpc/fpu/s_floorf.c
+ sysdeps/powerpc/fpu/s_nearbyint.c
+ sysdeps/powerpc/fpu/s_nearbyintf.c
+ sysdeps/powerpc/fpu/s_round.c
+ sysdeps/powerpc/fpu/s_roundf.c
+ sysdeps/powerpc/fpu/s_trunc.c
+ sysdeps/powerpc/fpu/s_truncf.c
+ sysdeps/powerpc/powerpc32/fpu/s_lrint.c
+ sysdeps/powerpc/powerpc64/dl-machine.c
+ sysdeps/powerpc/powerpc64/dl-machine.h
+ sysdeps/powerpc/powerpc64/fpu/s_llrint.c
+ sysdeps/powerpc/powerpc64/fpu/s_llround.c
+ sysdeps/powerpc/powerpc64/fpu/s_llroundf.c
+ sysdeps/sparc/backtrace.c
+ sysdeps/unix/sysv/linux/alpha/bits/pthread_stack_min.h
+ sysdeps/unix/sysv/linux/default-sched.h
+ sysdeps/unix/sysv/linux/sparc/bits/pthread_stack_min.h
+Copyright: 1995-2026 Free Software Foundation, Inc.
+License: LGPL-2+
+
+Files:
+ soft-fp/*.c
+ soft-fp/*.h
+ sysdeps/ieee754/soft-fp/s_fma*.c
+ sysdeps/powerpc/nofpu/sqrt*f2.c
+ sysdeps/powerpc/powerpc64/le/fpu/e_sqrtf128.c
+ sysdeps/x86/fpu/e_sqrtf128.c
+Copyright: 1997-2026 Free Software Foundation, Inc.
+License: LGPL-2.1+-with-link-exception
+
+Files: sysdeps/htl/raise.c
+Copyright: 2008-2026 Free Software Foundation, Inc.
+License: LGPL-3+
+
+Files:
+ catgets/gencat.c
+ catgets/xopen-msg.awk
+ elf/cache.c
+ elf/chroot_canon.c
+ elf/endswith.h
+ elf/ldconfig.c
+ elf/readlib.c
+ elf/stringtable.c
+ elf/stringtable.h
+ elf/stringtable_free.c
+ elf/tst-stringtable.c
+ iconv/dummy-repertoire.c
+ iconv/iconv_charmap.c
+ iconv/iconv_prog.c
+ iconv/iconvconfig.c
+ iconv/strtab.c
+ include/programs/xasprintf.h
+ include/programs/xmalloc.h
+ intl/locale.alias
+ intl/po2test.awk
+ io/tst-fcntl-lock.c
+ io/tst-lockf.c
+ locale/programs/3level.h
+ locale/programs/charmap-dir.c
+ locale/programs/charmap-dir.h
+ locale/programs/charmap-kw.gperf
+ locale/programs/charmap-kw.h
+ locale/programs/charmap.c
+ locale/programs/charmap.h
+ locale/programs/config.h
+ locale/programs/ld-address.c
+ locale/programs/ld-collate.c
+ locale/programs/ld-ctype.c
+ locale/programs/ld-identification.c
+ locale/programs/ld-measurement.c
+ locale/programs/ld-messages.c
+ locale/programs/ld-monetary.c
+ locale/programs/ld-name.c
+ locale/programs/ld-numeric.c
+ locale/programs/ld-paper.c
+ locale/programs/ld-telephone.c
+ locale/programs/ld-time.c
+ locale/programs/linereader.c
+ locale/programs/linereader.h
+ locale/programs/locale-spec.c
+ locale/programs/locale.c
+ locale/programs/localedef.c
+ locale/programs/localedef.h
+ locale/programs/locarchive.c
+ locale/programs/locfile-kw.gperf
+ locale/programs/locfile-kw.h
+ locale/programs/locfile-token.h
+ locale/programs/locfile.c
+ locale/programs/locfile.h
+ locale/programs/record-status.c
+ locale/programs/record-status.h
+ locale/programs/repertoire.c
+ locale/programs/repertoire.h
+ locale/programs/simple-hash.c
+ locale/programs/simple-hash.h
+ locale/programs/xasprintf.c
+ locale/programs/xmalloc.c
+ locale/programs/xstrdup.c
+ localedata/tst-rpmatch.sh
+ malloc/memusagestat.c
+ nscd/aicache.c
+ nscd/cache.c
+ nscd/cachedumper.c
+ nscd/connections.c
+ nscd/dbg_log.c
+ nscd/getgrgid_r.c
+ nscd/getgrnam_r.c
+ nscd/gethstbyad_r.c
+ nscd/gethstbynm3_r.c
+ nscd/getpwnam_r.c
+ nscd/getpwuid_r.c
+ nscd/getsrvbynm_r.c
+ nscd/getsrvbypt_r.c
+ nscd/grpcache.c
+ nscd/hstcache.c
+ nscd/initgrcache.c
+ nscd/mem.c
+ nscd/netgroupcache.c
+ nscd/nscd.c
+ nscd/nscd_conf.c
+ nscd/nscd_setup_thread.c
+ nscd/pwdcache.c
+ nscd/servicescache.c
+ posix/getconf.c
+ scripts/rellns-sh
+ sysdeps/unix/sysv/linux/nscd_setup_thread.c
+ sysdeps/unix/sysv/linux/tst-ofdlocks-compat.c
+ sysdeps/unix/sysv/linux/tst-ofdlocks.c
+Copyright: 1991-2026 Free Software Foundation, Inc.
+License: GPL-2+
+
+Files: sysdeps/arm/unwind.h
+Copyright: 2003-2026 Free Software Foundation, Inc.
+License: GPL-2+-with-link-exception
+
+Files: sysdeps/unix/sysv/linux/mips/sys/user.h
+Copyright:
+ 1995, 1999 by Ralf Baechle
+ 2002-2026 Free Software Foundation
+License: LGPL-2.1+ and GPL-2
+
+Files: scripts/move-if-change
+Copyright: 2002-2022 Free Software Foundation, Inc.
+License: GPL-3+
+
+Files:
+ libio/tst-fgetc-after-eof.c
+ malloc/tst-malloc-stats-cancellation.c
+ wcsmbs/tst-fgetwc-after-eof.c
+Copyright: 2018 Free Software Foundation
+License: FSFAP
+
+Files:
+ hurd/hurdmalloc.c
+ mach/err_boot.sub
+ mach/err_ipc.sub
+ mach/err_kern.sub
+ mach/err_mach.sub
+ mach/err_server.sub
+ mach/err_us.sub
+ mach/error_compat.c
+ mach/errorlib.h
+ mach/errstring.c
+ mach/mach/error.h
+ mach/mach_error.c
+ mach/mach_error.h
+ mach/msg-destroy.c
+ mach/msg.c
+ sysdeps/mach/sys/reboot.h
+Copyright: 1987-1982 Carnegie Mellon University
+License: Carnegie
+
+Files:
+ mach/msgserver.c
+Copyright:
+ 1991,1990,1989 Carnegie Mellon University
+ 1993-2026 Free Software Foundation, Inc.
+License: Carnegie and LGPL-2.1+
+
+Files:
+ nss/getaddrinfo.c
+ nss/getnameinfo.c
+Copyright:
+ 1996 by Craig Metz
+ 1997-2026 Free Software Foundation, Inc.
+License: Inner-Net and LGPL-2.1+
+
+Files: posix/runtests.c
+Copyright: 1995 by Tom Lord
+License: MIT-like-Lord
+ Permission to use, copy, modify, and distribute this software and its
+ documentation for any purpose and without fee is hereby granted,
+ provided that the above copyright notice appear in all copies and that
+ both that copyright notice and this permission notice appear in
+ supporting documentation, and that the name of the copyright holder not be
+ used in advertising or publicity pertaining to distribution of the
+ software without specific, written prior permission.
+ .
+ Tom Lord DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+ INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+ EVENT SHALL TOM LORD BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+ CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+ USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ PERFORMANCE OF THIS SOFTWARE.
+
+Files: posix/rxspencer/*
+Copyright: 1992, 1993, 1994, 1997 Henry Spencer
+License: BSD-like-Spencer
+ This software is not subject to any license of the American Telephone
+ and Telegraph Company or of the Regents of the University of California.
+ .
+ Permission is granted to anyone to use this software for any purpose on
+ any computer system, and to alter it and redistribute it, subject
+ to the following restrictions:
+ .
+ 1. The author is not responsible for the consequences of use of this
+    software, no matter how awful, even if they arise from flaws in it.
+ .
+ 2. The origin of this software must not be misrepresented, either by
+    explicit claim or by omission.  Since few users ever read sources,
+    credits must appear in the documentation.
+ .
+ 3. Altered versions must be plainly marked as such, and must not be
+    misrepresented as being the original software.  Since few users
+    ever read sources, credits must appear in the documentation.
+ .
+ 4. This notice may not be removed or altered.
+
+Files: posix/PCRE.tests
+Copyright: 1997-2003 University of Cambridge
+License: PCRE
+
+Files: sysdeps/unix/sysv/linux/net/if_ppp.h
+Copyright: 1989 Carnegie Mellon University
+License: BSD-3-clause-Carnegie
+
+Files:
+ localedata/unicode-gen/unicode-license.txt
+ localedata/unicode-gen/UnicodeData.txt
+Copyright: 1991-2024 Unicode, Inc.
+License: Unicode-DFS-2016
+
+Files: posix/BOOST.tests
+License: BSL-1.0
+Copyright: 2004 John Maddock
+Comment: Tests taken from BOOST testsuite and adapted to glibc regex.
+
+Files:
+ math/s_ldexp_template.c
+ math/s_nextafter.c
+ math/s_nexttowardf.c
+ math/w_cosh_compat.c
+ math/w_coshf_compat.c
+ math/w_coshl_compat.c
+ math/w_expl_compat.c
+ math/w_hypot_compat.c
+ math/w_hypotf_compat.c
+ math/w_hypotl_compat.c
+ math/w_jnl_compat.c
+ math/w_lgamma_main.c
+ math/w_lgamma_r_compat.c
+ math/w_lgammaf_main.c
+ math/w_lgammaf_r_compat.c
+ math/w_lgammal_main.c
+ math/w_lgammal_r_compat.c
+ math/w_sinh_compat.c
+ math/w_sinhf_compat.c
+ math/w_sinhl_compat.c
+ math/w_tgamma_compat.c
+ math/w_tgammaf_compat.c
+ math/w_tgammal_compat.c
+ sysdeps/generic/math_private.h
+ sysdeps/i386/fpu/s_nextafterl.c
+ sysdeps/i386/fpu/s_nexttoward.c
+ sysdeps/i386/fpu/s_nexttowardf.c
+ sysdeps/ieee754/dbl-64/e_cosh.c
+ sysdeps/ieee754/dbl-64/e_ilogb.c
+ sysdeps/ieee754/dbl-64/e_j0.c
+ sysdeps/ieee754/dbl-64/e_j1.c
+ sysdeps/ieee754/dbl-64/e_jn.c
+ sysdeps/ieee754/dbl-64/e_log10.c
+ sysdeps/ieee754/dbl-64/e_sinh.c
+ sysdeps/ieee754/dbl-64/k_rem_pio2.c
+ sysdeps/ieee754/dbl-64/s_ceil.c
+ sysdeps/ieee754/dbl-64/s_copysign.c
+ sysdeps/ieee754/dbl-64/s_expm1.c
+ sysdeps/ieee754/dbl-64/s_fabs.c
+ sysdeps/ieee754/dbl-64/s_finite.c
+ sysdeps/ieee754/dbl-64/s_isnan.c
+ sysdeps/ieee754/dbl-64/s_log1p.c
+ sysdeps/ieee754/dbl-64/s_modf.c
+ sysdeps/ieee754/dbl-64/s_nearbyint.c
+ sysdeps/ieee754/dbl-64/s_rint.c
+ sysdeps/ieee754/dbl-64/s_scalbln.c
+ sysdeps/ieee754/dbl-64/s_scalbn.c
+ sysdeps/ieee754/dbl-64/s_tanh.c
+ sysdeps/ieee754/flt-32/e_ilogbf.c
+ sysdeps/ieee754/flt-32/e_j0f.c
+ sysdeps/ieee754/flt-32/e_j1f.c
+ sysdeps/ieee754/flt-32/e_jnf.c
+ sysdeps/ieee754/flt-32/e_remainderf.c
+ sysdeps/ieee754/flt-32/e_sqrtf.c
+ sysdeps/ieee754/flt-32/s_ceilf.c
+ sysdeps/ieee754/flt-32/s_copysignf.c
+ sysdeps/ieee754/flt-32/s_fabsf.c
+ sysdeps/ieee754/flt-32/s_finitef.c
+ sysdeps/ieee754/flt-32/s_floorf.c
+ sysdeps/ieee754/flt-32/s_frexpf.c
+ sysdeps/ieee754/flt-32/s_isnanf.c
+ sysdeps/ieee754/flt-32/s_logbf.c
+ sysdeps/ieee754/flt-32/s_modff.c
+ sysdeps/ieee754/flt-32/s_nearbyintf.c
+ sysdeps/ieee754/flt-32/s_nextafterf.c
+ sysdeps/ieee754/flt-32/s_rintf.c
+ sysdeps/ieee754/flt-32/s_scalblnf.c
+ sysdeps/ieee754/flt-32/s_scalbnf.c
+ sysdeps/ieee754/k_standard.c
+ sysdeps/ieee754/ldbl-128/e_atan2l.c
+ sysdeps/ieee754/ldbl-128/e_atanhl.c
+ sysdeps/ieee754/ldbl-128/e_fmodl.c
+ sysdeps/ieee754/ldbl-128/e_ilogbl.c
+ sysdeps/ieee754/ldbl-128/e_remainderl.c
+ sysdeps/ieee754/ldbl-128/s_asinhl.c
+ sysdeps/ieee754/ldbl-128/s_ceill.c
+ sysdeps/ieee754/ldbl-128/s_copysignl.c
+ sysdeps/ieee754/ldbl-128/s_cosl.c
+ sysdeps/ieee754/ldbl-128/s_fabsl.c
+ sysdeps/ieee754/ldbl-128/s_finitel.c
+ sysdeps/ieee754/ldbl-128/s_floorl.c
+ sysdeps/ieee754/ldbl-128/s_frexpl.c
+ sysdeps/ieee754/ldbl-128/s_isnanl.c
+ sysdeps/ieee754/ldbl-128/s_logbl.c
+ sysdeps/ieee754/ldbl-128/s_modfl.c
+ sysdeps/ieee754/ldbl-128/s_nearbyintl.c
+ sysdeps/ieee754/ldbl-128/s_nextafterl.c
+ sysdeps/ieee754/ldbl-128/s_nexttoward.c
+ sysdeps/ieee754/ldbl-128/s_nexttowardf.c
+ sysdeps/ieee754/ldbl-128/s_rintl.c
+ sysdeps/ieee754/ldbl-128/s_scalblnl.c
+ sysdeps/ieee754/ldbl-128/s_scalbnl.c
+ sysdeps/ieee754/ldbl-128/s_sinl.c
+ sysdeps/ieee754/ldbl-128/s_tanhl.c
+ sysdeps/ieee754/ldbl-128/s_tanl.c
+ sysdeps/ieee754/ldbl-128ibm/e_acoshl.c
+ sysdeps/ieee754/ldbl-128ibm/e_atan2l.c
+ sysdeps/ieee754/ldbl-128ibm/e_atanhl.c
+ sysdeps/ieee754/ldbl-128ibm/e_coshl.c
+ sysdeps/ieee754/ldbl-128ibm/e_fmodl.c
+ sysdeps/ieee754/ldbl-128ibm/e_hypotl.c
+ sysdeps/ieee754/ldbl-128ibm/e_ilogbl.c
+ sysdeps/ieee754/ldbl-128ibm/e_remainderl.c
+ sysdeps/ieee754/ldbl-128ibm/e_sinhl.c
+ sysdeps/ieee754/ldbl-128ibm/s_asinhl.c
+ sysdeps/ieee754/ldbl-128ibm/s_copysignl.c
+ sysdeps/ieee754/ldbl-128ibm/s_cosl.c
+ sysdeps/ieee754/ldbl-128ibm/s_fabsl.c
+ sysdeps/ieee754/ldbl-128ibm/s_finitel.c
+ sysdeps/ieee754/ldbl-128ibm/s_frexpl.c
+ sysdeps/ieee754/ldbl-128ibm/s_isnanl.c
+ sysdeps/ieee754/ldbl-128ibm/s_logbl.c
+ sysdeps/ieee754/ldbl-128ibm/s_modfl.c
+ sysdeps/ieee754/ldbl-128ibm/s_nextafterl.c
+ sysdeps/ieee754/ldbl-128ibm/s_nexttoward.c
+ sysdeps/ieee754/ldbl-128ibm/s_nexttowardf.c
+ sysdeps/ieee754/ldbl-128ibm/s_scalblnl.c
+ sysdeps/ieee754/ldbl-128ibm/s_scalbnl.c
+ sysdeps/ieee754/ldbl-128ibm/s_sinl.c
+ sysdeps/ieee754/ldbl-128ibm/s_tanhl.c
+ sysdeps/ieee754/ldbl-128ibm/s_tanl.c
+ sysdeps/ieee754/ldbl-96/e_acoshl.c
+ sysdeps/ieee754/ldbl-96/e_atanhl.c
+ sysdeps/ieee754/ldbl-96/e_coshl.c
+ sysdeps/ieee754/ldbl-96/e_sinhl.c
+ sysdeps/ieee754/ldbl-96/s_asinhl.c
+ sysdeps/ieee754/ldbl-96/s_copysignl.c
+ sysdeps/ieee754/ldbl-96/s_cosl.c
+ sysdeps/ieee754/ldbl-96/s_frexpl.c
+ sysdeps/ieee754/ldbl-96/s_modfl.c
+ sysdeps/ieee754/ldbl-96/s_nexttoward.c
+ sysdeps/ieee754/ldbl-96/s_nexttowardf.c
+ sysdeps/ieee754/ldbl-96/s_scalblnl.c
+ sysdeps/ieee754/ldbl-96/s_sinl.c
+ sysdeps/ieee754/ldbl-96/s_tanhl.c
+ sysdeps/ieee754/ldbl-96/s_tanl.c
+ sysdeps/ieee754/ldbl-opt/s_nexttowardfd.c
+ sysdeps/ieee754/s_lib_version.c
+ sysdeps/ieee754/s_matherr.c
+ sysdeps/m68k/m680x0/fpu/s_logbl.c
+ sysdeps/m68k/m680x0/fpu/s_nextafterl.c
+ sysdeps/x86/fpu/s_isnanl.c
+Copyright: 1993 by Sun Microsystems, Inc.
+License: SunPro
+Comment: Files from Sun fdlibm
+
+Files:
+ sysdeps/ieee754/dbl-64/s_floor.c
+ sysdeps/ieee754/k_standardl.c
+ sysdeps/ieee754/ldbl-128/e_acosl.c
+ sysdeps/ieee754/ldbl-128/e_asinl.c
+ sysdeps/ieee754/ldbl-128/e_coshl.c
+ sysdeps/ieee754/ldbl-128/e_jnl.c
+ sysdeps/ieee754/ldbl-128/e_powl.c
+ sysdeps/ieee754/ldbl-128/e_sinhl.c
+ sysdeps/ieee754/ldbl-128/k_tanl.c
+ sysdeps/ieee754/ldbl-128/s_erfl.c
+ sysdeps/ieee754/ldbl-128ibm/e_acosl.c
+ sysdeps/ieee754/ldbl-128ibm/e_asinl.c
+ sysdeps/ieee754/ldbl-128ibm/e_jnl.c
+ sysdeps/ieee754/ldbl-128ibm/e_powl.c
+ sysdeps/ieee754/ldbl-128ibm/k_tanl.c
+ sysdeps/ieee754/ldbl-128ibm/s_erfl.c
+ sysdeps/ieee754/ldbl-96/e_asinl.c
+ sysdeps/ieee754/ldbl-96/e_j0l.c
+ sysdeps/ieee754/ldbl-96/e_j1l.c
+ sysdeps/ieee754/ldbl-96/e_jnl.c
+ sysdeps/ieee754/ldbl-96/e_lgammal_r.c
+ sysdeps/ieee754/ldbl-96/k_tanl.c
+ sysdeps/ieee754/ldbl-96/s_erfl.c
+Copyright:
+ 1993 by Sun Microsystems, Inc.
+ 1984, 1991, 2001 by Stephen L. Moshier
+ 2011-2026 Free Software Foundation, Inc.
+ 2012-2026 Free Software Foundation, Inc.
+License: LGPL-2.1+ and SunPro
+
+Files:
+ sysdeps/ieee754/dbl-64/ddcoremath.h
+ sysdeps/ieee754/dbl-64/e_acosh.c
+ sysdeps/ieee754/dbl-64/e_atanh.c
+ sysdeps/ieee754/dbl-64/e_gamma_r.c
+ sysdeps/ieee754/dbl-64/e_lgamma_r.c
+ sysdeps/ieee754/dbl-64/s_asincosh_data.c
+ sysdeps/ieee754/dbl-64/s_asincosh_data.h
+ sysdeps/ieee754/dbl-64/s_asinh.c
+ sysdeps/ieee754/dbl-64/s_atanh_data.c
+ sysdeps/ieee754/dbl-64/s_atanh_data.h
+ sysdeps/ieee754/dbl-64/s_erf.c
+ sysdeps/ieee754/dbl-64/s_erf_common.c
+ sysdeps/ieee754/dbl-64/s_erf_common.h
+ sysdeps/ieee754/dbl-64/s_erf_data.c
+ sysdeps/ieee754/dbl-64/s_erf_data.h
+ sysdeps/ieee754/dbl-64/s_erfc.c
+ sysdeps/ieee754/dbl-64/s_erfc_data.c
+ sysdeps/ieee754/dbl-64/s_erfc_data.h
+ sysdeps/ieee754/flt-32/e_acosf.c
+ sysdeps/ieee754/flt-32/e_acoshf.c
+ sysdeps/ieee754/flt-32/e_asinf.c
+ sysdeps/ieee754/flt-32/e_atan2f.c
+ sysdeps/ieee754/flt-32/e_atanhf.c
+ sysdeps/ieee754/flt-32/e_coshf.c
+ sysdeps/ieee754/flt-32/e_gammaf_r.c
+ sysdeps/ieee754/flt-32/e_lgammaf_r.c
+ sysdeps/ieee754/flt-32/e_log10f.c
+ sysdeps/ieee754/flt-32/e_sincoshf_data.c
+ sysdeps/ieee754/flt-32/e_sincoshf_data.h
+ sysdeps/ieee754/flt-32/e_sinhf.c
+ sysdeps/ieee754/flt-32/s_acospif.c
+ sysdeps/ieee754/flt-32/s_asincosf_data.c
+ sysdeps/ieee754/flt-32/s_asincosf_data.h
+ sysdeps/ieee754/flt-32/s_asincoshf_data.c
+ sysdeps/ieee754/flt-32/s_asincoshf_data.h
+ sysdeps/ieee754/flt-32/s_asincospif_data.c
+ sysdeps/ieee754/flt-32/s_asincospif_data.h
+ sysdeps/ieee754/flt-32/s_asinhf.c
+ sysdeps/ieee754/flt-32/s_asinpif.c
+ sysdeps/ieee754/flt-32/s_atan2pif.c
+ sysdeps/ieee754/flt-32/s_atanf.c
+ sysdeps/ieee754/flt-32/s_atanpif.c
+ sysdeps/ieee754/flt-32/s_cbrtf.c
+ sysdeps/ieee754/flt-32/s_cospif.c
+ sysdeps/ieee754/flt-32/s_erfcf.c
+ sysdeps/ieee754/flt-32/s_erff.c
+ sysdeps/ieee754/flt-32/s_exp10m1f.c
+ sysdeps/ieee754/flt-32/s_exp2m1f.c
+ sysdeps/ieee754/flt-32/s_expm1f.c
+ sysdeps/ieee754/flt-32/s_log10p1f.c
+ sysdeps/ieee754/flt-32/s_log1pf.c
+ sysdeps/ieee754/flt-32/s_log2p1f.c
+ sysdeps/ieee754/flt-32/s_sincospif_data.c
+ sysdeps/ieee754/flt-32/s_sincospif_data.h
+ sysdeps/ieee754/flt-32/s_sinpif.c
+ sysdeps/ieee754/flt-32/s_tanf.c
+ sysdeps/ieee754/flt-32/s_tanhf.c
+ sysdeps/ieee754/flt-32/s_tanpif.c
+Copyright: 2022-2026 Alexei Sibidanov and Paul Zimmermann
+License: CORE-MATH
+
+Files:
+ gmon/gmon.c
+ gmon/mcount.c
+ gmon/prof-freq.c
+ gmon/sys/gmon.h
+ inet/arpa/ftp.h
+ inet/arpa/telnet.h
+ inet/arpa/tftp.h
+ inet/inet_lnaof.c
+ inet/inet_mkadr.c
+ inet/inet_netof.c
+ inet/protocols/routed.h
+ inet/protocols/rwhod.h
+ inet/protocols/talkd.h
+ inet/protocols/timed.h
+ inet/rexec.c
+ inet/ruserpass.c
+ login/login_tty.c
+ misc/daemon.c
+ misc/fstab.h
+ misc/getttyent.c
+ misc/getusershell.c
+ misc/sys/queue.h
+ misc/sys/syslog.h
+ misc/sysexits.h
+ misc/syslog.c
+ misc/ttyent.h
+ misc/ttyslot.c
+ resolv/arpa/nameser_compat.h
+ sysdeps/generic/netinet/tcp.h
+ sysdeps/generic/paths.h
+ sysdeps/generic/sys/ttydefaults.h
+ sysdeps/gnu/netinet/tcp.h
+ sysdeps/unix/sysv/linux/paths.h
+ sysdeps/unix/sysv/linux/sys/ttydefaults.h
+ termios/sys/ttychars.h
+Copyright: 1980-2011 Regents of the University of California
+License: BSD-3-clause-Berkeley
+Comment: Code incorporated from 4.4 BSD
+
+Files: inet/rcmd.c
+Copyright:
+ 1998 WIDE Project
+ 1983, 1993, 1994 The Regents of the University of California
+License: BSD-3-clause-Berkeley and BSD-3-clause-WIDE
+
+Files:
+ inet/inet_net.c
+ inet/netinet/igmp.h
+ io/fts.c
+ io/fts.h
+ libio/filedoalloc.c
+ libio/wfiledoalloc.c
+ stdlib/div.c
+ stdlib/random.c
+ stdlib/random_r.c
+ sysdeps/gnu/netinet/udp.h
+ sysdeps/mach/hurd/bits/param.h
+ sysdeps/unix/sysv/linux/netinet/if_ether.h
+ sysdeps/unix/sysv/linux/sys/quota.h
+Copyright:
+ 1982-1994 Regents of the University of California
+ 1991-2026 Free Software Foundation, Inc.
+ 1988 Stephen Deering
+License: BSD-3-clause-Berkeley and LGPL-2.1+
+Comment: Code incorporated from 4.4 BSD
+
+Files: support/bundled/linux/include/uapi/linux/fuse.h
+Copyright: 2001-2007 Miklos Szeredi
+License: BSD-2-clause or GPL-2
+
+Files:
+ inet/bindresvport.c
+ inet/rpc/netdb.h
+ nis/rpcsvc/nis.h
+ nis/rpcsvc/nis_callback.h
+ nis/rpcsvc/nis_tags.h
+ nis/rpcsvc/yp.h
+ nis/rpcsvc/ypupd.h
+ nis/yp_xdr.c
+ nis/ypupdate_xdr.c
+ sunrpc/auth_des.c
+ sunrpc/auth_none.c
+ sunrpc/auth_unix.c
+ sunrpc/authdes_prot.c
+ sunrpc/authuxprot.c
+ sunrpc/clnt_gen.c
+ sunrpc/clnt_perr.c
+ sunrpc/clnt_raw.c
+ sunrpc/clnt_simp.c
+ sunrpc/clnt_tcp.c
+ sunrpc/clnt_udp.c
+ sunrpc/clnt_unix.c
+ sunrpc/des_crypt.c
+ sunrpc/des_soft.c
+ sunrpc/get_myaddr.c
+ sunrpc/getrpcport.c
+ sunrpc/key_call.c
+ sunrpc/key_prot.c
+ sunrpc/openchild.c
+ sunrpc/pm_getmaps.c
+ sunrpc/pm_getport.c
+ sunrpc/pmap_clnt.c
+ sunrpc/pmap_prot.c
+ sunrpc/pmap_prot2.c
+ sunrpc/pmap_rmt.c
+ sunrpc/rpc/auth.h
+ sunrpc/rpc/auth_unix.h
+ sunrpc/rpc/clnt.h
+ sunrpc/rpc/des_crypt.h
+ sunrpc/rpc/key_prot.h
+ sunrpc/rpc/pmap_clnt.h
+ sunrpc/rpc/pmap_prot.h
+ sunrpc/rpc/pmap_rmt.h
+ sunrpc/rpc/rpc.h
+ sunrpc/rpc/rpc_des.h
+ sunrpc/rpc/rpc_msg.h
+ sunrpc/rpc/svc.h
+ sunrpc/rpc/svc_auth.h
+ sunrpc/rpc/types.h
+ sunrpc/rpc/xdr.h
+ sunrpc/rpc_cmsg.c
+ sunrpc/rpc_common.c
+ sunrpc/rpc_dtable.c
+ sunrpc/rpc_prot.c
+ sunrpc/rtime.c
+ sunrpc/svc.c
+ sunrpc/svc_auth.c
+ sunrpc/svc_authux.c
+ sunrpc/svc_raw.c
+ sunrpc/svc_run.c
+ sunrpc/svc_simple.c
+ sunrpc/svc_tcp.c
+ sunrpc/svc_udp.c
+ sunrpc/svc_unix.c
+ sunrpc/svcauth_des.c
+ sunrpc/xcrypt.c
+ sunrpc/xdr.c
+ sunrpc/xdr_array.c
+ sunrpc/xdr_float.c
+ sunrpc/xdr_mem.c
+ sunrpc/xdr_rec.c
+ sunrpc/xdr_ref.c
+ sunrpc/xdr_sizeof.c
+ sunrpc/xdr_stdio.c
+Copyright: 2010, Oracle America, Inc.
+License: BSD-3-clause-Oracle
+Comment: Sun RPC support (from rpcsrc-4.0)
+
+Files:
+ resolv/compat-gethnamaddr.c
+ resolv/mapv4v6addr.h
+Copyright:
+ 1985, 1988, 1993 The Regents of the University of California
+ 1993 by Digital Equipment Corporation
+License: BSD-3-clause-Berkeley and DEC
+Comment: DNS resolver code, taken from BIND 4.9.5
+
+Files: resolv/res_debug.c
+Copyright:
+ 1985 The Regents of the University of California
+ 1993 by Digital Equipment Corporation
+ 1995 IBM Corporation
+ 1996-1999 by Internet Software Consortium
+License: BSD-3-clause-Berkeley and DEC and IBM and ISC
+Comment: DNS resolver code, taken from BIND 4.9.5
+
+Files: resolv/res_query.c
+Copyright:
+ 1988, 1993 The Regents of the University of California
+ 1993 by Digital Equipment Corporation
+ 1996-1999 by Internet Software Consortium
+License: BSD-3-clause-Berkeley and DEC and ISC
+Comment: DNS resolver code, taken from BIND 4.9.5
+
+Files:
+ resolv/dn_comp.c
+ resolv/dn_expand.c
+ resolv/dn_skipname.c
+ resolv/inet_addr.c
+ resolv/res-close.c
+ resolv/res-name-checking.c
+ resolv/res-putget.c
+ resolv/res_context_hostalias.c
+ resolv/res_init.c
+ resolv/res_isourserver.c
+ resolv/res_mkquery.c
+ resolv/res_nameinquery.c
+ resolv/res_queriesmatch.c
+ resolv/res_randomid.c
+ resolv/res_send.c
+Copyright:
+ 1983, 1985, 1988, 1989, 1990, 1993 The Regents of the University of California
+ 1993 by Digital Equipment Corporation.
+ 1995-2026 Free Software Foundation, Inc.
+ 1996-1999 by Internet Software Consortium.
+License: BSD-3-clause-Berkeley and DEC and ISC and LGPL-2.1+
+Comment: DNS resolver code, taken from BIND 4.9.5
+
+Files: resolv/nss_dns/dns-host.c
+Copyright:
+ 1996-2026 Free Software Foundation, Inc.
+ 1985, 1988, 1993 The Regents of the University of California
+ 1993 by Digital Equipment Corporation
+License: BSD-3-clause-Berkeley and DEC and LGPL-2.1+
+Comment: DNS resolver code, taken from BIND 4.9.5
+
+Files:
+ resolv/arpa/nameser.h
+ resolv/herror.c
+ resolv/resolv.h
+Copyright:
+ 1983, 1987, 1989, 1993 The Regents of the University of California
+ 1996-1999 by Internet Software Consortium.
+ 2004 by Internet Systems Consortium, Inc. ("ISC")
+License: BSD-3-clause-Berkeley and ISC
+Comment: DNS resolver code, taken from BIND 4.9.5
+
+Files: resolv/nss_dns/dns-network.c
+Copyright:
+ 1993 Carlos Leandro and Rui Salgueiro Dep. Matematica Universidade de Coimbra, Portugal, Europe
+ 1983, 1993 The Regents of the University of California
+ 1996-2026 Free Software Foundation, Inc.
+License: BSD-3-clause-Berkeley and LGPL-2.1+ and Univ-Coimbra
+Comment: DNS resolver code, taken from BIND 4.9.5
+
+Files: resolv/base64.c
+Copyright:
+ 1995 IBM Corporation
+ 1996-1999 by Internet Software Consortium
+License: IBM and ISC
+Comment: DNS resolver code, taken from BIND 4.9.5
+
+Files:
+ resolv/inet_net_ntop.c
+ resolv/inet_net_pton.c
+ resolv/inet_neta.c
+ resolv/inet_ntop.c
+ resolv/ns_date.c
+ resolv/ns_makecanon.c
+ resolv/ns_name.c
+ resolv/ns_name_compress.c
+ resolv/ns_name_ntop.c
+ resolv/ns_name_pack.c
+ resolv/ns_name_pton.c
+ resolv/ns_name_skip.c
+ resolv/ns_name_uncompress.c
+ resolv/ns_name_unpack.c
+ resolv/ns_netint.c
+ resolv/ns_parse.c
+ resolv/ns_print.c
+ resolv/ns_samedomain.c
+ resolv/ns_samename.c
+ resolv/ns_ttl.c
+ resolv/nsap_addr.c
+Copyright:
+ 1995-1999 by Internet Software Consortium.
+ 2004 by Internet Systems Consortium, Inc. ("ISC")
+License: ISC
+Comment: DNS resolver code, taken from BIND 4.9.5
+
+Files:
+ hesiod/hesiod.c
+ hesiod/hesiod.h
+ hesiod/hesiod_p.h
+ resolv/compat-hooks.c
+ resolv/inet_pton.c
+ resolv/res_data.c
+ resolv/res_libc.c
+Copyright:
+ 1996-2026 Free Software Foundation, Inc.
+ 1995-1999 by Internet Software Consortium
+License: ISC and LGPL-2.1+
+Comment: DNS resolver code, taken from BIND 4.9.5
+
+Files:
+ localedata/locales/eo
+ localedata/locales/kk_KZ
+ localedata/locales/syr
+ localedata/locales/tok
+Copyright: None
+License: public-domain
+ These files are in Public Domain.
+
+Files:
+ timezone/africa
+ timezone/antarctica
+ timezone/asia
+ timezone/australasia
+ timezone/backward
+ timezone/etcetera
+ timezone/europe
+ timezone/factory
+ timezone/iso3166.tab
+ timezone/leapseconds
+ timezone/northamerica
+ timezone/pacificnew
+ timezone/private.h
+ timezone/simplebackw
+ timezone/solar87
+ timezone/solar88
+ timezone/solar89
+ timezone/southamerica
+ timezone/systemv
+ timezone/tzfile.h
+ timezone/tzselect.ksh
+ timezone/yearistype
+ timezone/zdump.c
+ timezone/zic.c
+ timezone/zone.tab
+Copyright: The Internet Assigned Numbers Authority (IANA)
+Comment: tzcode and tzdata packages by Arthur David Olson et.al.
+License: public-domain
+ This database is in the public domain.
+
+Files: debian/*
+Copyright:
+ 2000-2004 Ben Collins <bcollins@debian.org>
+ 2002-2004 Jeff Bailey <jbailey@debian.org>
+ 2002-2005 Philip Blundell <pb@debian.org>
+ 2002-2006 Daniel Jacobowitz <dan@debian.org>
+ 2002-2006 GOTO Masanori <gotom@debian.org>
+ 2006 Denis Barbier <barbier@debian.org>
+ 2006-2026 Aurelien Jarno <aurel32@debian.org>
+ 2007-2008 Pierre Habouzit <madcoder@debian.org>
+ 2010-2013 Clint Adams <clint@debian.org>
+ 2012-2019 Adam Conrad <adconrad@0c3.net>
+ 2016-2026 Samuel Thibault <sthibault@debian.org>
+License: GPL-2+
+
+License: BSD-2-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ .
+ THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ SUCH DAMAGE.
+
+License: BSD-3-clause-Berkeley
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ .
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. [This condition was removed.]
+ 4. Neither the name of the University nor the names of its contributors
+    may be used to endorse or promote products derived from this software
+    without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ SUCH DAMAGE.
+
+License: BSD-3-clause-Carnegie
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. Neither the name of the University nor the names of its contributors
+    may be used to endorse or promote products derived from this software
+    without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY CARNEGIE MELLON UNIVERSITY AND
+ CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ IN NO EVENT SHALL THE UNIVERSITY OR CONTRIBUTORS BE LIABLE FOR ANY
+ DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+License: BSD-3-clause-Oracle
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are
+ met:
+ .
+     * Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+     * Redistributions in binary form must reproduce the above
+       copyright notice, this list of conditions and the following
+       disclaimer in the documentation and/or other materials
+       provided with the distribution.
+     * Neither the name of the "Oracle America, Inc." nor the names of its
+       contributors may be used to endorse or promote products derived
+       from this software without specific prior written permission.
+ .
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+   COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+   INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+   GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+License: BSD-3-clause-WIDE
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 3. Neither the name of the project nor the names of its contributors
+    may be used to endorse or promote products derived from this software
+    without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ SUCH DAMAGE.
+
+License: BSL-1.0
+ Boost Software License - Version 1.0 - August 17th, 2003
+ .
+ Permission is hereby granted, free of charge, to any person or organization
+ obtaining a copy of the software and accompanying documentation covered by
+ this license (the "Software") to use, reproduce, display, distribute,
+ execute, and transmit the Software, and to prepare derivative works of the
+ Software, and to permit third-parties to whom the Software is furnished to
+ do so, all subject to the following:
+ .
+ The copyright notices in the Software and this entire statement, including
+ the above license grant, this restriction and the following disclaimer,
+ must be included in all copies of the Software, in whole or in part, and
+ all derivative works of the Software, unless such copies or derivative
+ works are solely in the form of machine-executable object code generated by
+ a source language processor.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT
+ SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE
+ FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
+ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ DEALINGS IN THE SOFTWARE.
+
+License: Carnegie
+ Permission to use, copy, modify and distribute this software and its
+ documentation is hereby granted, provided that both the copyright
+ notice and this permission notice appear in all copies of the
+ software, derivative works or modified versions, and any portions
+ thereof, and that both notices appear in supporting documentation.
+ .
+ CARNEGIE MELLON ALLOWS FREE USE OF THIS SOFTWARE IN ITS "AS IS"
+ CONDITION.  CARNEGIE MELLON DISCLAIMS ANY LIABILITY OF ANY KIND FOR
+ ANY DAMAGES WHATSOEVER RESULTING FROM THE USE OF THIS SOFTWARE.
+ .
+ Carnegie Mellon requests users of this software to return to
+ .
+  Software Distribution Coordinator  or  Software.Distribution@CS.CMU.EDU
+  School of Computer Science
+  Carnegie Mellon University
+  Pittsburgh PA 15213-3890
+ .
+ any improvements or extensions that they make and grant Carnegie Mellon
+ the rights to redistribute these changes.
+
+License: Univ-Coimbra
+ Permission to use, copy, modify, and distribute this software for any
+ purpose with or without fee is hereby granted, provided that the above
+ copyright notice and this permission notice appear in all copies.
+
+License: CORE-MATH
+ This file is part of the CORE-MATH project
+ .
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+
+License: DEC
+ Permission to use, copy, modify, and distribute this software for any
+ purpose with or without fee is hereby granted, provided that the above
+ copyright notice and this permission notice appear in all copies, and
+ that the name of Digital Equipment Corporation not be used in
+ advertising or publicity pertaining to distribution of the document or
+ software without specific, written prior permission.
+ .
+ THE SOFTWARE IS PROVIDED ``AS IS'' AND DIGITAL EQUIPMENT CORP.
+ DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL
+ DIGITAL EQUIPMENT CORPORATION BE LIABLE FOR ANY SPECIAL, DIRECT,
+ INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING
+ FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION
+ WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+License: FSFAP
+ Copying and distribution of this file, with or without modification,
+ are permitted in any medium without royalty provided the copyright
+ notice and this notice are preserved. This file is offered as-is,
+ without any warranty.
+
+License: GPL-2
+ This file is free software; you can redistribute it and/or modify it
+ under the terms of the GNU General Public License version 2 as published
+ by the Free Software Foundation.
+ .
+ This file is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public
+ License along with the GNU C Library; if not, see
+ <https://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in `/usr/share/common-licenses/GPL-2'.
+
+License: GPL-2+
+ This file is part of the GNU C Library.
+ .
+ This file is free software; you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the
+ Free Software Foundation; either version 2, or (at your option) any
+ later version.
+ .
+ The GNU C Library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public
+ License along with the GNU C Library; if not, see
+ <https://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in `/usr/share/common-licenses/GPL-2'.
+
+License: GPL-2+-with-link-exception
+ This file is free software; you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the
+ Free Software Foundation; either version 2, or (at your option) any
+ later version.
+ .
+ In addition to the permissions in the GNU General Public License, the
+ Free Software Foundation gives you unlimited permission to link the
+ compiled version of this file into combinations with other programs,
+ and to distribute those combinations without any restriction coming
+ from the use of this file.  (The General Public License restrictions
+ do apply in other respects; for example, they cover modification of
+ the file, and distribution when not linked into a combine
+ executable.)
+ .
+ This file is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see
+ <https://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in `/usr/share/common-licenses/GPL-2'.
+
+License: GPL-3+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in `/usr/share/common-licenses/GPL-3'.
+
+License: IBM
+ Permission is hereby granted, free of charge, to any person obtaining
+ a copy of this software and associated documentation files (the
+ 'Software'), to deal in the Software without restriction, including
+ without limitation the rights to use, copy, modify, merge, publish,
+ distribute, sublicense, and/or sell copies of the Software, and to
+ permit persons to whom the Software is furnished to do so, subject to
+ the following conditions:
+ .
+ The above copyright notice and this permission notice shall be
+ included in all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+License: Inner-Net
+ The Inner Net License, Version 2.00
+ .
+   The author(s) grant permission for redistribution and use in source and
+ binary forms, with or without modification, of the software and documentation
+ provided that the following conditions are met:
+ .
+ 0. If you receive a version of the software that is specifically labelled
+    as not being for redistribution (check the version message and/or README),
+    you are not permitted to redistribute that version of the software in any
+    way or form.
+ 1. All terms of the all other applicable copyrights and licenses must be
+    followed.
+ 2. Redistributions of source code must retain the authors' copyright
+    notice(s), this list of conditions, and the following disclaimer.
+ 3. Redistributions in binary form must reproduce the authors' copyright
+    notice(s), this list of conditions, and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ 4. [The copyright holder has authorized the removal of this clause.]
+ 5. Neither the name(s) of the author(s) nor the names of its contributors
+    may be used to endorse or promote products derived from this software
+    without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY ITS AUTHORS AND CONTRIBUTORS ``AS IS'' AND ANY
+ EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE FOR ANY
+ DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ .
+   If these license terms cause you a real problem, contact the author.
+
+License: ISC
+ Permission to use, copy, modify, and distribute this software for any
+ purpose with or without fee is hereby granted, provided that the above
+ copyright notice and this permission notice appear in all copies.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS" AND INTERNET SOFTWARE CONSORTIUM DISCLAIMS
+ ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES
+ OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL INTERNET SOFTWARE
+ CONSORTIUM BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+ ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+ SOFTWARE.
+
+License: LGPL-2+
+ This file is part of the GNU C Library.
+ .
+ The GNU C Library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Library General Public License as
+ published by the Free Software Foundation; either version 2 of the
+ License, or (at your option) any later version.
+ .
+ The GNU C Library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Library General Public License for more details.
+ .
+ You should have received a copy of the GNU Library General Public
+ License along with the GNU C Library.  If not, see
+ <https://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU Library General Public
+ License version 2 can be found in `/usr/share/common-licenses/LGPL-2'.
+
+License: LGPL-2.1+
+ This file is part of the GNU C Library.
+ .
+ The GNU C Library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
+ .
+ The GNU C Library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public
+ License along with the GNU C Library; if not, see
+ <https://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU Library General Public
+ License version 2.1 can be found in `/usr/share/common-licenses/LGPL-2.1'.
+
+License: LGPL-2.1+-with-link-exception
+ This file is part of the GNU C Library.
+ .
+ The GNU C Library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
+ .
+ In addition to the permissions in the GNU Lesser General Public
+ License, the Free Software Foundation gives you unlimited
+ permission to link the compiled version of this file into
+ combinations with other programs, and to distribute those
+ combinations without any restriction coming from the use of this
+ file.  (The Lesser General Public License restrictions do apply in
+ other respects; for example, they cover modification of the file,
+ and distribution when not linked into a combine executable.)
+ .
+ The GNU C Library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public
+ License along with the GNU C Library; if not, see
+ <https://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU Library General Public
+ License version 2.1 can be found in `/usr/share/common-licenses/LGPL-2.1'.
+
+License: LGPL-3+
+ This file is part of the GNU Hurd.
+ .
+ The GNU Hurd is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public License
+ as published by the Free Software Foundation; either version 3 of
+ the License, or (at your option) any later version.
+ .
+ The GNU Hurd is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public
+ License along with this program.  If not, see
+ <https://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU Library General Public
+ License version 3 can be found in `/usr/share/common-licenses/LGPL-3'.
+
+License: PCRE
+ PCRE LICENCE
+ ------------
+ .
+ PCRE is a library of functions to support regular expressions whose syntax
+ and semantics are as close as possible to those of the Perl 5 language.
+ .
+ Written by: Philip Hazel <ph10@cam.ac.uk>
+ .
+ University of Cambridge Computing Service,
+ Cambridge, England. Phone: +44 1223 334714.
+ .
+ Copyright (c) 1997-2003 University of Cambridge
+ .
+ Permission is granted to anyone to use this software for any purpose on any
+ computer system, and to redistribute it freely, subject to the following
+ restrictions:
+ .
+ 1. This software is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ .
+ 2. The origin of this software must not be misrepresented, either by
+    explicit claim or by omission. In practice, this means that if you use
+    PCRE in software that you distribute to others, commercially or
+    otherwise, you must put a sentence like this
+ .
+      Regular expression support is provided by the PCRE library package,
+      which is open source software, written by Philip Hazel, and copyright
+      by the University of Cambridge, England.
+ .
+    somewhere reasonably visible in your documentation and in any relevant
+    files or online help data or similar. A reference to the ftp site for
+    the source, that is, to
+ .
+      ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/
+ .
+    should also be given in the documentation. However, this condition is not
+    intended to apply to whole chains of software. If package A includes PCRE,
+    it must acknowledge it, but if package B is software that includes package
+    A, the condition is not imposed on package B (unless it uses PCRE
+    independently).
+ .
+ 3. Altered versions must be plainly marked as such, and must not be
+    misrepresented as being the original software.
+ .
+ 4. If PCRE is embedded in any software that is released under the GNU
+   General Purpose Licence (GPL), or Lesser General Purpose Licence (LGPL),
+   then the terms of that licence shall supersede any condition above with
+   which it is incompatible.
+ .
+ The documentation for PCRE, supplied in the "doc" directory, is distributed
+ under the same terms as the software itself.
+ .
+ End
+
+License: SunPro
+ Developed at SunPro, a Sun Microsystems, Inc. business.
+ Permission to use, copy, modify, and distribute this
+ software is freely granted, provided that this notice
+ is preserved.
+
+License: Unicode-DFS-2016
+ UNICODE LICENSE V3
+ .
+ COPYRIGHT AND PERMISSION NOTICE
+ .
+ Copyright © 1991-2024 Unicoe, Inc.
+ .
+ NOTICE TO USER: Carefully read the following legal agreement. BY
+ DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+ SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+ TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+ DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
+ .
+ Permission is hereby granted, free of charge, to any person obtaining a
+ copy of data files and any associated documentation (the "Data Files") or
+ software and any associated documentation (the "Software") to deal in the
+ Data Files or Software without restriction, including without limitation
+ the rights to use, copy, modify, merge, publish, distribute, and/or sell
+ copies of the Data Files or Software, and to permit persons to whom the
+ Data Files or Software are furnished to do so, provided that either (a)
+ this copyright and permission notice appear with all copies of the Data
+ Files or Software, or (b) this copyright and permission notice appear in
+ associated Documentation.
+ .
+ THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+ KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+ THIRD PARTY RIGHTS.
+ .
+ IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+ BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+ OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+ FILES OR SOFTWARE.
+ .
+ Except as contained in this notice, the name of a copyright holder shall
+ not be used in advertising or otherwise to promote the sale, use or other
+ dealings in these Data Files or Software without prior written
+ authorization of the copyright holder.

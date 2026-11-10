@@ -173,6 +173,8 @@ To make sure that no files are added to or removed from the `rescript`, `@rescri
 
 After adding a new file to the repository that should go into one of the npm packages - e.g., a new stdlib module -, run `make artifacts`.
 
+The native platform packages also contain a generated `THIRD_PARTY_LICENSES` file. When a vendored component, an OCaml library linked into the binaries, or a platform toolchain changes, update the inventory as described in [`licenses/README.md`](licenses/README.md) and run `yarn licenses:generate`.
+
 ## Adding a New npm Package
 
 npm trusted publishing can only be configured after a package exists in the
@@ -619,7 +621,7 @@ Then attempt to rebuild your project as you would normally.
 
 ## Contribution Licensing
 
-ReScript is distributed under the [LGPL Version 3](LICENSE), and contributions are licensed under the same terms. To confirm that you can contribute under these terms, sign off every commit to certify the [Developer Certificate of Origin](https://developercertificate.org), as the Linux kernel and many other projects do:
+ReScript contains components under multiple licenses, as documented in [`LICENSE`](LICENSE). Contributions are made under the license of the component being changed. To confirm that you can contribute under these terms, sign off every commit to certify the [Developer Certificate of Origin](https://developercertificate.org), as the Linux kernel and many other projects do:
 
     Signed-off-by: Random J. Developer <random@developer.example.org>
 
