@@ -69,9 +69,10 @@ there directly; dependencies are on its include path as their
 
 - Freshness is timestamp-based: an AST newer than its source is current, a
   `.cmt` records the last compile, and a `.cmi` the last change of an
-  interface.
-- ASTs, interfaces and typed trees are held in memory until their request
-  finished (`Build_file_store.set_held_writes`), so a failed request leaves
+  interface. A `.cmj` counts like the `.cmi`, since dependents also inline
+  what it exports, which can change without the interface.
+- ASTs, interfaces, `.cmj` files and typed trees are held in memory until
+  their request finished (`Build_file_store.set_held_writes`), so a failed request leaves
   the previous AST and interface on disk. An interface is written only when
   it changed, which keeps the modification time that dependents compare
   with, and before the typed tree that marks the module compiled, so a build

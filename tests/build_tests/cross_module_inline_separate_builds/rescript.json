@@ -1,0 +1,6 @@
+{
+  "name": "cross-module-inline-separate-builds",
+  "sources": [{ "dir": "src" }],
+  "package-specs": { "module": "commonjs", "in-source": true },
+  "dependencies": ["inline-exporter"]
+}
