@@ -15,6 +15,7 @@ type module_ = {
   mutable dependents: String_set.t;
   mutable compile_dirty: bool;
   mutable last_compiled_cmi: float option;
+      (** See {!Compile_assets.published}. *)
   mutable last_compiled_cmt: float option;
 }
 

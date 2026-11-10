@@ -8,6 +8,7 @@ type t = {
   ast_by_source: (string, entry) Hashtbl.t;
   cmi_by_module: (string, entry) Hashtbl.t;
   cmt_by_module: (string, entry) Hashtbl.t;
+  cmj_by_module: (string, entry) Hashtbl.t;
 }
 
 let ast_header path =
@@ -24,7 +25,7 @@ let is_managed_basename basename =
   || String.starts_with ~prefix:File_util.atomic_write_prefix basename
 
 let state_extension = function
-  | ".ast" | ".iast" | ".cmi" | ".cmt" -> true
+  | ".ast" | ".iast" | ".cmi" | ".cmj" | ".cmt" -> true
   | _ -> false
 
 let read_directory directory =
@@ -66,6 +67,7 @@ let add_module_artifact state (entry, name) =
   match Filename.extension name with
   | ".cmi" -> Hashtbl.replace state.cmi_by_module (module_key name) entry
   | ".cmt" -> Hashtbl.replace state.cmt_by_module (module_key name) entry
+  | ".cmj" -> Hashtbl.replace state.cmj_by_module (module_key name) entry
   | _ -> ()
 
 let create directories =
@@ -77,6 +79,7 @@ let create directories =
       ast_by_source = Hashtbl.create 64;
       cmi_by_module = Hashtbl.create 64;
       cmt_by_module = Hashtbl.create 64;
+      cmj_by_module = Hashtbl.create 64;
     }
   in
   let directories =
@@ -146,6 +149,12 @@ let ast state source = Hashtbl.find_opt state.ast_by_source (source_key source)
 let cmi state key = Hashtbl.find_opt state.cmi_by_module key
 let cmt state key = Hashtbl.find_opt state.cmt_by_module key
 
+let published state key =
+  match (cmi state key, Hashtbl.find_opt state.cmj_by_module key) with
+  | None, _ -> None
+  | Some cmi, None -> Some cmi.modified
+  | Some cmi, Some cmj -> Some (Float.max cmi.modified cmj.modified)
+
 let replace_from_path table key path =
   try
     Hashtbl.replace table key {path; modified = (Unix.stat path).Unix.st_mtime}
@@ -153,7 +162,9 @@ let replace_from_path table key path =
     Hashtbl.remove table key
 
 let refresh_cmi state ~key ~path =
-  replace_from_path state.cmi_by_module key path
+  replace_from_path state.cmi_by_module key path;
+  replace_from_path state.cmj_by_module key
+    (Filename.remove_extension path ^ ".cmj")
 
 let refresh_cmt state ~key ~path =
   replace_from_path state.cmt_by_module key path

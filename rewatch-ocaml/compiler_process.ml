@@ -112,8 +112,8 @@ let run_tasks ?poll ?on_complete tasks =
 
 let run_requests requests = requests |> List.map task |> run_tasks
 
-(* A request writes its ASTs, interfaces and typed trees into the artifact
-   directory that later requests and builds read. They are held in memory
+(* A request writes its ASTs, interfaces, .cmj files and typed trees into the
+   artifact directory that later requests and builds read. They are held in memory
    until the request finished (Build_file_store.set_held_writes, which the
    build installs with this predicate), so a failed request leaves the
    previous AST and interface on disk, and a build killed before it published
@@ -121,7 +121,7 @@ let run_requests requests = requests |> List.map task |> run_tasks
 let is_held path =
   List.exists
     (Filename.check_suffix path)
-    [".ast"; ".iast"; ".cmi"; ".cmt"; ".cmti"]
+    [".ast"; ".iast"; ".cmi"; ".cmj"; ".cmt"; ".cmti"]
 
 (* Renamed into place, so that neither a reader nor a build killed while
    writing sees part of a file. On Windows the rename fails while another
@@ -174,7 +174,16 @@ let run_parses ?poll ?on_complete parses =
           result))
   |> run_tasks ?poll ?on_complete
 
-type compiler_artifact = Cmi | Required of string | Typed_tree of string
+type compiler_artifact = Cmi | Cmj | Typed_tree of string
+
+(* Publishes a held interface or .cmj only when it changed, and tells whether
+   it did. The compiler does not write one identical to the file on disk
+   (Cmi_format.create_cmi, Js_cmj_format.to_file). *)
+let publish_if_changed path =
+  try Build_file_store.publish_held ~if_changed:true ~write:write_held path
+  with Not_found ->
+    if Build_file_store.exists path then false
+    else raise (Unix.Unix_error (Unix.ENOENT, "open", path))
 
 (* A typed tree marks its module compiled, so it is published last. Not every
    compile writes one (-bs-no-bin-annot). *)
@@ -197,26 +206,24 @@ let publish_compiler_artifacts ~artifact_dir ~basename artifacts =
       (fun artifact ->
         match artifact with
         | Cmi ->
-          let path = Filename.concat artifact_dir (basename ^ ".cmi") in
-          let changed =
-            try
-              Build_file_store.publish_held ~if_changed:true ~write:write_held
-                path
-            with Not_found ->
-              (* The compiler does not write an interface identical to the
-                 one on disk (Cmi_format.create_cmi). *)
-              if Build_file_store.exists path then false
-              else raise (Unix.Unix_error (Unix.ENOENT, "open", path))
-          in
           cmi_change :=
-            if changed then Compiler_scheduler.Cmi_changed
+            if
+              publish_if_changed
+                (Filename.concat artifact_dir (basename ^ ".cmi"))
+            then Compiler_scheduler.Cmi_changed
             else Compiler_scheduler.Cmi_unchanged
-        | Required extension ->
-          let path =
-            Filename.concat artifact_dir (basename ^ "." ^ extension)
-          in
-          if not (Build_file_store.exists path) then
-            raise (Unix.Unix_error (Unix.ENOENT, "open", path))
+        | Cmj -> (
+          (* Dependents also inline what the .cmj exports, which can change
+             without the interface. *)
+          match
+            ( publish_if_changed
+                (Filename.concat artifact_dir (basename ^ ".cmj")),
+              !cmi_change )
+          with
+          | true, _ -> cmi_change := Compiler_scheduler.Cmi_changed
+          | false, Compiler_scheduler.Cmi_change_unknown ->
+            cmi_change := Compiler_scheduler.Cmi_unchanged
+          | false, (Compiler_scheduler.Cmi_changed | Cmi_unchanged) -> ())
         | Typed_tree extension ->
           publish_typed_tree
             (Filename.concat artifact_dir (basename ^ "." ^ extension)))
@@ -285,13 +292,13 @@ let namespace_task ~runtime ~artifact_dir ~entry ~package_dirty ~force namespace
                   (fun extension ->
                     Build_file_store.forget
                       (Filename.concat artifact_dir (namespace ^ extension)))
-                  [".cmi"; ".cmt"];
+                  [".cmi"; ".cmj"; ".cmt"];
                 raise
                   (Compiler_scheduler.Build_failure
                      (result.Process.stderr ^ result.stdout)));
               let cmi_change =
                 publish_compiler_artifacts ~artifact_dir ~basename:namespace
-                  [Cmi; Required "cmj"; Typed_tree "cmt"]
+                  [Cmi; Cmj; Typed_tree "cmt"]
               in
               Compiler_scheduler.{stderr = result.stderr; cmi_change});
         })
@@ -340,6 +347,7 @@ let discard_compile ~artifact_dir ~(config : Config.t) path =
       (Source.compiler_asset_basename config path ^ extension)
   in
   Build_file_store.forget (artifact ".cmi");
+  Build_file_store.forget (artifact ".cmj");
   (try
      Build_artifacts.invalidate_ast
        (Build_artifacts.ast_path ~artifact_dir path)
@@ -367,13 +375,11 @@ let publish ~artifact_dir ~is_local ~(config : Config.t) ~has_interface
        | Source.Implementation when has_interface ->
          (* The implementation is compiled with -bs-read-cmi, so its .cmi is
            the one published after compiling the interface. *)
-         ignore
-           (publish_compiler_artifacts ~artifact_dir ~basename
-              [Required "cmj"; Typed_tree "cmt"]);
-         Compiler_scheduler.Cmi_unchanged
+         publish_compiler_artifacts ~artifact_dir ~basename
+           [Cmj; Typed_tree "cmt"]
        | Source.Implementation ->
          publish_compiler_artifacts ~artifact_dir ~basename
-           [Cmi; Required "cmj"; Typed_tree "cmt"]);
+           [Cmi; Cmj; Typed_tree "cmt"]);
     (* The parse and the typed tree's source digest read the source through
        the store. *)
     List.iter Build_file_store.evict

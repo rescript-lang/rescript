@@ -109,11 +109,25 @@ let tests =
       check
         (Option.is_none (Compile_assets.cmi state "Nested"))
         "the compiler asset directory is scanned non-recursively";
+      Unix.utimes first 100. 100.;
+      Unix.utimes cleanup_only 200. 200.;
+      Compile_assets.refresh_cmi state ~key:"Example" ~path:first;
+      check
+        (Compile_assets.published state "Example" = Some 200.)
+        "a CMJ newer than its CMI counts as a publication";
+      Unix.utimes first 300. 300.;
+      Compile_assets.refresh_cmi state ~key:"Example" ~path:first;
+      check
+        (Compile_assets.published state "Example" = Some 300.)
+        "an older CMJ leaves the CMI publication time";
       Sys.remove first;
       Compile_assets.refresh_cmi state ~key:"Example" ~path:first;
       check
         (Option.is_none (Compile_assets.cmi state "Example"))
         "refresh removes a deleted CMI";
+      check
+        (Option.is_none (Compile_assets.published state "Example"))
+        "a CMJ without a CMI is not a complete publication";
       let replacement_ast = Filename.concat root "Replacement.ast" in
       write replacement_ast "replacement";
       Compile_assets.refresh_ast state ~source ~path:replacement_ast;
