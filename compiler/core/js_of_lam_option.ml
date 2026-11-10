@@ -77,7 +77,9 @@ let get_default_undefined_from_optional (arg : J.expression) : J.expression =
       if Js_analyzer.is_okay_to_duplicate arg then
         (* FIXME: no need do such inlining*)
         E.econd (is_not_none arg) (val_from_option arg) E.undefined
-      else E.runtime_call Primitive_modules.option "valFromOption" [arg]
+      else
+        (* [valFromOption] returns [undefined] for [None] as well *)
+        E.runtime_call Primitive_modules.option "valFromOption" [arg]
 
 let option_unwrap (arg : J.expression) : J.expression =
   let desc = arg.expression_desc in
