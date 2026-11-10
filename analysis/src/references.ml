@@ -46,27 +46,6 @@ let get_loc_item ~full ~pos ~debug =
     | _ -> "NotFound"
   in
   match loc_items with
-  | li1 :: li2 :: li3 :: ({loc_type = Typed ("makeProps", _, _)} as li4) :: _
-    when full.file.uri |> Uri.is_interface ->
-    log 1 "heuristic for makeProps in interface files";
-    if debug then
-      Printf.printf "n1:%s n2:%s n3:%s\n" (name_of li1) (name_of li2)
-        (name_of li3);
-    Some li4
-  | [
-   {loc_type = Constant _};
-   ({loc_type = Typed ("createDOMElementVariadic", _, _)} as li2);
-  ] ->
-    log 3 "heuristic for <div>";
-    Some li2
-  | {loc_type = Typed ("makeProps", _, _)}
-    :: ({loc_type = Typed ("make", _, _)} as li2)
-    :: _ ->
-    log 4
-      "heuristic for </Comp> within fragments: take make as makeProps does not \
-       work\n\
-       the type is not great but jump to definition works";
-    Some li2
   | [
    ({loc_type = Typed (_, _, LocalReference _)} as li1);
    ({loc_type = Typed (_, _, _)} as li2);
