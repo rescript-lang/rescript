@@ -456,6 +456,14 @@ let get_loc node =
   | ValueBinding vb -> vb.pvb_loc
   | JsxProp prop -> Parsetree_viewer.get_jsx_prop_loc prop
 
+(* Attach the comments before and after [loc] to it, and walk [node], which
+   spans [loc], with the comments inside. *)
+let walk_around ~loc walk node t comments =
+  let before, inside, after = partition_by_loc comments loc in
+  attach t.leading loc before;
+  walk node t inside;
+  attach t.trailing loc after
+
 let rec walk_structure s t comments =
   match s with
   | _ when comments = [] -> ()
@@ -502,10 +510,7 @@ and walk_value_description vd t comments =
     partition_adjacent_trailing vd.pval_name.loc trailing
   in
   attach t.trailing vd.pval_name.loc after_name;
-  let before, inside, after = partition_by_loc rest vd.pval_type.ptyp_loc in
-  attach t.leading vd.pval_type.ptyp_loc before;
-  walk_core_type vd.pval_type t inside;
-  attach t.trailing vd.pval_type.ptyp_loc after
+  walk_around ~loc:vd.pval_type.ptyp_loc walk_core_type vd.pval_type t rest
 
 and walk_type_extension te t comments =
   let leading, trailing =
@@ -531,12 +536,8 @@ and walk_type_extension te t comments =
     t rest
 
 and walk_include_declaration incl_decl t comments =
-  let before, inside, after =
-    partition_by_loc comments incl_decl.pincl_mod.pmod_loc
-  in
-  attach t.leading incl_decl.pincl_mod.pmod_loc before;
-  walk_module_expr incl_decl.pincl_mod t inside;
-  attach t.trailing incl_decl.pincl_mod.pmod_loc after
+  walk_around ~loc:incl_decl.pincl_mod.pmod_loc walk_module_expr
+    incl_decl.pincl_mod t comments
 
 and walk_module_type_declaration mtd t comments =
   let leading, trailing =
@@ -550,10 +551,7 @@ and walk_module_type_declaration mtd t comments =
       partition_adjacent_trailing mtd.pmtd_name.loc trailing
     in
     attach t.trailing mtd.pmtd_name.loc after_name;
-    let before, inside, after = partition_by_loc rest mod_type.pmty_loc in
-    attach t.leading mod_type.pmty_loc before;
-    walk_mod_type mod_type t inside;
-    attach t.trailing mod_type.pmty_loc after
+    walk_around ~loc:mod_type.pmty_loc walk_mod_type mod_type t rest
 
 and walk_module_binding mb t comments =
   let leading, trailing = partition_leading_trailing comments mb.pmb_name.loc in
@@ -602,20 +600,14 @@ and walk_signature_item (si : Parsetree.signature_item) t comments =
   | Psig_extension (extension, _) -> walk_extension extension t comments
 
 and walk_include_description id t comments =
-  let before, inside, after = partition_by_loc comments id.pincl_mod.pmty_loc in
-  attach t.leading id.pincl_mod.pmty_loc before;
-  walk_mod_type id.pincl_mod t inside;
-  attach t.trailing id.pincl_mod.pmty_loc after
+  walk_around ~loc:id.pincl_mod.pmty_loc walk_mod_type id.pincl_mod t comments
 
 and walk_module_declaration md t comments =
   let leading, trailing = partition_leading_trailing comments md.pmd_name.loc in
   attach t.leading md.pmd_name.loc leading;
   let after_name, rest = partition_adjacent_trailing md.pmd_name.loc trailing in
   attach t.trailing md.pmd_name.loc after_name;
-  let leading, inside, trailing = partition_by_loc rest md.pmd_type.pmty_loc in
-  attach t.leading md.pmd_type.pmty_loc leading;
-  walk_mod_type md.pmd_type t inside;
-  attach t.trailing md.pmd_type.pmty_loc trailing
+  walk_around ~loc:md.pmd_type.pmty_loc walk_mod_type md.pmd_type t rest
 
 and walk_node node tbl comments =
   match node with
@@ -843,12 +835,7 @@ and walk_label_declaration ld t comments =
   attach t.leading ld.pld_name.loc before_name;
   let after_name, rest = partition_adjacent_trailing ld.pld_name.loc rest in
   attach t.trailing ld.pld_name.loc after_name;
-  let before_typ, inside_typ, after_typ =
-    partition_by_loc rest ld.pld_type.ptyp_loc
-  in
-  attach t.leading ld.pld_type.ptyp_loc before_typ;
-  walk_core_type ld.pld_type t inside_typ;
-  attach t.trailing ld.pld_type.ptyp_loc after_typ
+  walk_around ~loc:ld.pld_type.ptyp_loc walk_core_type ld.pld_type t rest
 
 and walk_constructor_declarations cds t comments =
   visit_list_but_continue_with_remaining_comments
@@ -1023,10 +1010,7 @@ and walk_expression expr t comments =
   | Pexp_braces {expr = inner} when is_block_expr inner ->
     walk_expression inner t comments
   | Pexp_braces {expr = inner} ->
-    let before, inside, after = partition_by_loc comments inner.pexp_loc in
-    attach t.leading inner.pexp_loc before;
-    walk_expression inner t inside;
-    attach t.trailing inner.pexp_loc after
+    walk_around ~loc:inner.pexp_loc walk_expression inner t comments
   | Pexp_regexp _ | Pexp_constant _ ->
     let leading, trailing = partition_leading_trailing comments expr.pexp_loc in
     attach t.leading expr.pexp_loc leading;
@@ -1051,13 +1035,7 @@ and walk_expression expr t comments =
         comments
     in
     if is_block_expr expr2 then walk_expression expr2 t comments
-    else
-      let leading, inside, trailing =
-        partition_by_loc comments expr2.pexp_loc
-      in
-      attach t.leading expr2.pexp_loc leading;
-      walk_expression expr2 t inside;
-      attach t.trailing expr2.pexp_loc trailing
+    else walk_around ~loc:expr2.pexp_loc walk_expression expr2 t comments
   | Pexp_sequence (expr1, expr2) ->
     let leading, inside, trailing = partition_by_loc comments expr1.pexp_loc in
     let comments =
@@ -1077,13 +1055,7 @@ and walk_expression expr t comments =
         comments)
     in
     if is_block_expr expr2 then walk_expression expr2 t comments
-    else
-      let leading, inside, trailing =
-        partition_by_loc comments expr2.pexp_loc
-      in
-      attach t.leading expr2.pexp_loc leading;
-      walk_expression expr2 t inside;
-      attach t.trailing expr2.pexp_loc trailing
+    else walk_around ~loc:expr2.pexp_loc walk_expression expr2 t comments
   | Pexp_open (_override, longident, expr2) ->
     let leading, comments = partition_leading_trailing comments expr.pexp_loc in
     attach t.leading
@@ -1096,11 +1068,7 @@ and walk_expression expr t comments =
     in
     attach t.trailing longident.loc after_longident;
     if is_block_expr expr2 then walk_expression expr2 t rest
-    else
-      let leading, inside, trailing = partition_by_loc rest expr2.pexp_loc in
-      attach t.leading expr2.pexp_loc leading;
-      walk_expression expr2 t inside;
-      attach t.trailing expr2.pexp_loc trailing
+    else walk_around ~loc:expr2.pexp_loc walk_expression expr2 t rest
   | Pexp_object_literal fields ->
     walk_list
       (Ext_list.map fields (fun ((s : string Asttypes.loc), e) ->
@@ -1130,11 +1098,7 @@ and walk_expression expr t comments =
     in
     attach t.trailing extension_constructor.pext_loc after_ext_constr;
     if is_block_expr expr2 then walk_expression expr2 t rest
-    else
-      let leading, inside, trailing = partition_by_loc rest expr2.pexp_loc in
-      attach t.leading expr2.pexp_loc leading;
-      walk_expression expr2 t inside;
-      attach t.trailing expr2.pexp_loc trailing
+    else walk_around ~loc:expr2.pexp_loc walk_expression expr2 t rest
   | Pexp_letmodule (string_loc, mod_expr, expr2) ->
     let leading, comments = partition_leading_trailing comments expr.pexp_loc in
     attach t.leading
@@ -1158,38 +1122,24 @@ and walk_expression expr t comments =
     in
     attach t.trailing mod_expr.pmod_loc after_mod_expr;
     if is_block_expr expr2 then walk_expression expr2 t rest
-    else
-      let leading, inside, trailing = partition_by_loc rest expr2.pexp_loc in
-      attach t.leading expr2.pexp_loc leading;
-      walk_expression expr2 t inside;
-      attach t.trailing expr2.pexp_loc trailing
+    else walk_around ~loc:expr2.pexp_loc walk_expression expr2 t rest
   | Pexp_assert expr ->
     if is_block_expr expr then walk_expression expr t comments
-    else
-      let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
-      attach t.leading expr.pexp_loc leading;
-      walk_expression expr t inside;
-      attach t.trailing expr.pexp_loc trailing
+    else walk_around ~loc:expr.pexp_loc walk_expression expr t comments
   | Pexp_coerce (expr, typexpr) ->
     let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
     attach t.leading expr.pexp_loc leading;
     walk_expression expr t inside;
     let after_expr, rest = partition_adjacent_trailing expr.pexp_loc trailing in
     attach t.trailing expr.pexp_loc after_expr;
-    let leading, inside, trailing = partition_by_loc rest typexpr.ptyp_loc in
-    attach t.leading typexpr.ptyp_loc leading;
-    walk_core_type typexpr t inside;
-    attach t.trailing typexpr.ptyp_loc trailing
+    walk_around ~loc:typexpr.ptyp_loc walk_core_type typexpr t rest
   | Pexp_constraint (expr, typexpr) ->
     let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
     attach t.leading expr.pexp_loc leading;
     walk_expression expr t inside;
     let after_expr, rest = partition_adjacent_trailing expr.pexp_loc trailing in
     attach t.trailing expr.pexp_loc after_expr;
-    let leading, inside, trailing = partition_by_loc rest typexpr.ptyp_loc in
-    attach t.leading typexpr.ptyp_loc leading;
-    walk_core_type typexpr t inside;
-    attach t.trailing typexpr.ptyp_loc trailing
+    walk_around ~loc:typexpr.ptyp_loc walk_core_type typexpr t rest
   | Pexp_tuple []
   | Pexp_array []
   | Pexp_break | Pexp_continue
@@ -1281,11 +1231,7 @@ and walk_expression expr t comments =
     in
     attach t.trailing longident.loc after_longident;
     if is_block_expr expr2 then walk_expression expr2 t rest
-    else
-      let leading, inside, trailing = partition_by_loc rest expr2.pexp_loc in
-      attach t.leading expr2.pexp_loc leading;
-      walk_expression expr2 t inside;
-      attach t.trailing expr2.pexp_loc trailing
+    else walk_around ~loc:expr2.pexp_loc walk_expression expr2 t rest
   | (Pexp_ifthenelse _ | Pexp_ternary _) as conditional -> (
     let if_expr, then_expr, else_expr =
       match conditional with
@@ -1338,13 +1284,7 @@ and walk_expression expr t comments =
     | Some expr ->
       if is_block_expr expr || is_conditional_expr expr then
         walk_expression expr t comments
-      else
-        let leading, inside, trailing =
-          partition_by_loc comments expr.pexp_loc
-        in
-        attach t.leading expr.pexp_loc leading;
-        walk_expression expr t inside;
-        attach t.trailing expr.pexp_loc trailing)
+      else walk_around ~loc:expr.pexp_loc walk_expression expr t comments)
   | Pexp_while (expr1, expr2) ->
     let leading, inside, trailing = partition_by_loc comments expr1.pexp_loc in
     let rest =
@@ -1364,11 +1304,7 @@ and walk_expression expr t comments =
         rest)
     in
     if is_block_expr expr2 then walk_expression expr2 t rest
-    else
-      let leading, inside, trailing = partition_by_loc rest expr2.pexp_loc in
-      attach t.leading expr2.pexp_loc leading;
-      walk_expression expr2 t inside;
-      attach t.trailing expr2.pexp_loc trailing
+    else walk_around ~loc:expr2.pexp_loc walk_expression expr2 t rest
   | Pexp_for (pat, expr1, expr2, _, expr3) ->
     let leading, inside, trailing = partition_by_loc comments pat.ppat_loc in
     attach t.leading pat.ppat_loc leading;
@@ -1390,16 +1326,9 @@ and walk_expression expr t comments =
     in
     attach t.trailing expr2.pexp_loc after_expr;
     if is_block_expr expr3 then walk_expression expr3 t rest
-    else
-      let leading, inside, trailing = partition_by_loc rest expr3.pexp_loc in
-      attach t.leading expr3.pexp_loc leading;
-      walk_expression expr3 t inside;
-      attach t.trailing expr3.pexp_loc trailing
+    else walk_around ~loc:expr3.pexp_loc walk_expression expr3 t rest
   | Pexp_pack mod_expr ->
-    let before, inside, after = partition_by_loc comments mod_expr.pmod_loc in
-    attach t.leading mod_expr.pmod_loc before;
-    walk_module_expr mod_expr t inside;
-    attach t.trailing mod_expr.pmod_loc after
+    walk_around ~loc:mod_expr.pmod_loc walk_module_expr mod_expr t comments
   | Pexp_match (expr, cases) | Pexp_try (expr, cases, None) ->
     let rest = walk_switch_or_try_head expr t comments in
     walk_list (cases |> List.map (fun case -> Case case)) t rest
@@ -1475,10 +1404,7 @@ and walk_expression expr t comments =
           };
         args = [(Nolabel, arg_expr)];
       } ->
-    let before, inside, after = partition_by_loc comments arg_expr.pexp_loc in
-    attach t.leading arg_expr.pexp_loc before;
-    walk_expression arg_expr t inside;
-    attach t.trailing arg_expr.pexp_loc after
+    walk_around ~loc:arg_expr.pexp_loc walk_expression arg_expr t comments
   (* binary expression *)
   | Pexp_apply
       {
@@ -1573,22 +1499,12 @@ and walk_expression expr t comments =
       in
       attach t.trailing typ.ptyp_loc after_typ;
       if is_block_expr expr then walk_expression expr t comments
-      else
-        let leading, inside, trailing =
-          partition_by_loc comments expr.pexp_loc
-        in
-        attach t.leading expr.pexp_loc leading;
-        walk_expression expr t inside;
-        attach t.trailing expr.pexp_loc trailing
+      else walk_around ~loc:expr.pexp_loc walk_expression expr t comments
     | _ ->
       if is_block_expr return_expr then walk_expression return_expr t comments
       else
-        let leading, inside, trailing =
-          partition_by_loc comments return_expr.pexp_loc
-        in
-        attach t.leading return_expr.pexp_loc leading;
-        walk_expression return_expr t inside;
-        attach t.trailing return_expr.pexp_loc trailing)
+        walk_around ~loc:return_expr.pexp_loc walk_expression return_expr t
+          comments)
   | Pexp_jsx_element
       (Jsx_fragment
          {
@@ -1728,11 +1644,7 @@ and walk_expression expr t comments =
     in
     attach t.trailing expr1.pexp_loc after_expr;
     if is_block_expr expr2 then walk_expression expr2 t rest
-    else
-      let leading, inside, trailing = partition_by_loc rest expr2.pexp_loc in
-      attach t.leading expr2.pexp_loc leading;
-      walk_expression expr2 t inside;
-      attach t.trailing expr2.pexp_loc trailing
+    else walk_around ~loc:expr2.pexp_loc walk_expression expr2 t rest
   | Pexp_object_get (e1, _) -> walk_expression e1 t comments
   | Pexp_object_set (e1, _, e2) ->
     let leading, inside, trailing = partition_by_loc comments e1.pexp_loc in
@@ -1740,10 +1652,7 @@ and walk_expression expr t comments =
     walk_expression e1 t inside;
     let after_lhs, rest = partition_adjacent_trailing e1.pexp_loc trailing in
     attach t.trailing e1.pexp_loc after_lhs;
-    let before, inside, after = partition_by_loc rest e2.pexp_loc in
-    attach t.leading e2.pexp_loc before;
-    walk_expression e2 t inside;
-    attach t.trailing e2.pexp_loc after
+    walk_around ~loc:e2.pexp_loc walk_expression e2 t rest
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
   let leading, inside, trailing = partition_by_loc comments pattern.ppat_loc in
@@ -1756,11 +1665,7 @@ and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
     in
     attach t.trailing pattern.ppat_loc after_pat;
     if is_block_expr expr then walk_expression expr t rest
-    else
-      let leading, inside, trailing = partition_by_loc rest expr.pexp_loc in
-      attach t.leading expr.pexp_loc leading;
-      walk_expression expr t inside;
-      attach t.trailing expr.pexp_loc trailing
+    else walk_around ~loc:expr.pexp_loc walk_expression expr t rest
   | None -> attach t.trailing pattern.ppat_loc trailing
 
 and walk_expr_argument expr loc t comments =
@@ -1768,10 +1673,7 @@ and walk_expr_argument expr loc t comments =
   attach t.leading loc leading;
   let after_label, rest = partition_adjacent_trailing loc trailing in
   attach t.trailing loc after_label;
-  let before, inside, after = partition_by_loc rest expr.pexp_loc in
-  attach t.leading expr.pexp_loc before;
-  walk_expression expr t inside;
-  attach t.trailing expr.pexp_loc after
+  walk_around ~loc:expr.pexp_loc walk_expression expr t rest
 
 and walk_case (case : Parsetree.case) t comments =
   let before, inside, after = partition_by_loc comments case.pc_lhs.ppat_loc in
@@ -1798,12 +1700,7 @@ and walk_case (case : Parsetree.case) t comments =
   in
   if is_block_expr case.pc_rhs then walk_expression case.pc_rhs t comments
   else
-    let before, inside, after =
-      partition_by_loc comments case.pc_rhs.pexp_loc
-    in
-    attach t.leading case.pc_rhs.pexp_loc before;
-    walk_expression case.pc_rhs t inside;
-    attach t.trailing case.pc_rhs.pexp_loc after
+    walk_around ~loc:case.pc_rhs.pexp_loc walk_expression case.pc_rhs t comments
 
 and walk_expr_record_row (longident, expr) t comments =
   let before_longident, after_longident =
@@ -1814,10 +1711,7 @@ and walk_expr_record_row (longident, expr) t comments =
     partition_adjacent_trailing longident.loc after_longident
   in
   attach t.trailing longident.loc after_longident;
-  let leading, inside, trailing = partition_by_loc rest expr.pexp_loc in
-  attach t.leading expr.pexp_loc leading;
-  walk_expression expr t inside;
-  attach t.trailing expr.pexp_loc trailing
+  walk_around ~loc:expr.pexp_loc walk_expression expr t rest
 
 and walk_extension_constructor ext_constr t comments =
   let leading, trailing =
@@ -1841,10 +1735,7 @@ and walk_extension_constructor_kind kind t comments =
     match maybe_typ_expr with
     | None -> ()
     | Some typexpr ->
-      let before, inside, after = partition_by_loc rest typexpr.ptyp_loc in
-      attach t.leading typexpr.ptyp_loc before;
-      walk_core_type typexpr t inside;
-      attach t.trailing typexpr.ptyp_loc after)
+      walk_around ~loc:typexpr.ptyp_loc walk_core_type typexpr t rest)
 
 and walk_module_expr mod_expr t comments =
   match mod_expr.pmod_desc with
@@ -1857,10 +1748,7 @@ and walk_module_expr mod_expr t comments =
   | Pmod_extension extension -> walk_extension extension t comments
   | Pmod_await mod_expr -> walk_module_expr mod_expr t comments
   | Pmod_unpack expr ->
-    let before, inside, after = partition_by_loc comments expr.pexp_loc in
-    attach t.leading expr.pexp_loc before;
-    walk_expression expr t inside;
-    attach t.trailing expr.pexp_loc after
+    walk_around ~loc:expr.pexp_loc walk_expression expr t comments
   | Pmod_constraint (modexpr, modtype) ->
     if modtype.pmty_loc.loc_start >= modexpr.pmod_loc.loc_end then (
       let before, inside, after = partition_by_loc comments modexpr.pmod_loc in
@@ -1868,20 +1756,14 @@ and walk_module_expr mod_expr t comments =
       walk_module_expr modexpr t inside;
       let after, rest = partition_adjacent_trailing modexpr.pmod_loc after in
       attach t.trailing modexpr.pmod_loc after;
-      let before, inside, after = partition_by_loc rest modtype.pmty_loc in
-      attach t.leading modtype.pmty_loc before;
-      walk_mod_type modtype t inside;
-      attach t.trailing modtype.pmty_loc after)
+      walk_around ~loc:modtype.pmty_loc walk_mod_type modtype t rest)
     else
       let before, inside, after = partition_by_loc comments modtype.pmty_loc in
       attach t.leading modtype.pmty_loc before;
       walk_mod_type modtype t inside;
       let after, rest = partition_adjacent_trailing modtype.pmty_loc after in
       attach t.trailing modtype.pmty_loc after;
-      let before, inside, after = partition_by_loc rest modexpr.pmod_loc in
-      attach t.leading modexpr.pmod_loc before;
-      walk_module_expr modexpr t inside;
-      attach t.trailing modexpr.pmod_loc after
+      walk_around ~loc:modexpr.pmod_loc walk_module_expr modexpr t rest
   | Pmod_apply (_callModExpr, _argModExpr) ->
     let mod_exprs = mod_expr_apply mod_expr in
     walk_list (mod_exprs |> List.map (fun me -> ModuleExpr me)) t comments
@@ -1894,7 +1776,7 @@ and walk_module_expr mod_expr t comments =
           | None -> lbl.Asttypes.loc
           | Some mod_type ->
             {lbl.loc with loc_end = mod_type.Parsetree.pmty_loc.loc_end})
-        ~walk_node:walk_mod_expr_parameter ~newline_delimited:false parameters t
+        ~walk_node:walk_functor_parameter ~newline_delimited:false parameters t
         comments
     in
     match return_mod_expr.pmod_desc with
@@ -1906,19 +1788,12 @@ and walk_module_expr mod_expr t comments =
       walk_mod_type mod_type t inside;
       let after, rest = partition_adjacent_trailing mod_type.pmty_loc after in
       attach t.trailing mod_type.pmty_loc after;
-      let before, inside, after = partition_by_loc rest mod_expr.pmod_loc in
-      attach t.leading mod_expr.pmod_loc before;
-      walk_module_expr mod_expr t inside;
-      attach t.trailing mod_expr.pmod_loc after
+      walk_around ~loc:mod_expr.pmod_loc walk_module_expr mod_expr t rest
     | _ ->
-      let before, inside, after =
-        partition_by_loc comments return_mod_expr.pmod_loc
-      in
-      attach t.leading return_mod_expr.pmod_loc before;
-      walk_module_expr return_mod_expr t inside;
-      attach t.trailing return_mod_expr.pmod_loc after)
+      walk_around ~loc:return_mod_expr.pmod_loc walk_module_expr return_mod_expr
+        t comments)
 
-and walk_mod_expr_parameter parameter t comments =
+and walk_functor_parameter parameter t comments =
   let _attrs, lbl, mod_type_option = parameter in
   let leading, trailing = partition_leading_trailing comments lbl.loc in
   attach t.leading lbl.loc leading;
@@ -1927,10 +1802,7 @@ and walk_mod_expr_parameter parameter t comments =
   | Some mod_type ->
     let after_lbl, rest = partition_adjacent_trailing lbl.loc trailing in
     attach t.trailing lbl.loc after_lbl;
-    let before, inside, after = partition_by_loc rest mod_type.pmty_loc in
-    attach t.leading mod_type.pmty_loc before;
-    walk_mod_type mod_type t inside;
-    attach t.trailing mod_type.pmty_loc after
+    walk_around ~loc:mod_type.pmty_loc walk_mod_type mod_type t rest
 
 and walk_mod_type mod_type t comments =
   match mod_type.pmty_desc with
@@ -1942,15 +1814,9 @@ and walk_mod_type mod_type t comments =
   | Pmty_signature signature -> walk_signature signature t comments
   | Pmty_extension extension -> walk_extension extension t comments
   | Pmty_typeof mod_expr ->
-    let before, inside, after = partition_by_loc comments mod_expr.pmod_loc in
-    attach t.leading mod_expr.pmod_loc before;
-    walk_module_expr mod_expr t inside;
-    attach t.trailing mod_expr.pmod_loc after
+    walk_around ~loc:mod_expr.pmod_loc walk_module_expr mod_expr t comments
   | Pmty_with (mod_type, _withConstraints) ->
-    let before, inside, after = partition_by_loc comments mod_type.pmty_loc in
-    attach t.leading mod_type.pmty_loc before;
-    walk_mod_type mod_type t inside;
-    attach t.trailing mod_type.pmty_loc after
+    walk_around ~loc:mod_type.pmty_loc walk_mod_type mod_type t comments
     (* TODO: withConstraints*)
   | Pmty_functor _ ->
     let parameters, return_mod_type = functor_type mod_type in
@@ -1962,28 +1828,11 @@ and walk_mod_type mod_type t comments =
           | Some mod_type ->
             if lbl.txt = "_" then mod_type.Parsetree.pmty_loc
             else {lbl.loc with loc_end = mod_type.Parsetree.pmty_loc.loc_end})
-        ~walk_node:walk_mod_type_parameter ~newline_delimited:false parameters t
+        ~walk_node:walk_functor_parameter ~newline_delimited:false parameters t
         comments
     in
-    let before, inside, after =
-      partition_by_loc comments return_mod_type.pmty_loc
-    in
-    attach t.leading return_mod_type.pmty_loc before;
-    walk_mod_type return_mod_type t inside;
-    attach t.trailing return_mod_type.pmty_loc after
-
-and walk_mod_type_parameter (_, lbl, mod_type_option) t comments =
-  let leading, trailing = partition_leading_trailing comments lbl.loc in
-  attach t.leading lbl.loc leading;
-  match mod_type_option with
-  | None -> attach t.trailing lbl.loc trailing
-  | Some mod_type ->
-    let after_lbl, rest = partition_adjacent_trailing lbl.loc trailing in
-    attach t.trailing lbl.loc after_lbl;
-    let before, inside, after = partition_by_loc rest mod_type.pmty_loc in
-    attach t.leading mod_type.pmty_loc before;
-    walk_mod_type mod_type t inside;
-    attach t.trailing mod_type.pmty_loc after
+    walk_around ~loc:return_mod_type.pmty_loc walk_mod_type return_mod_type t
+      comments
 
 and walk_pattern pat t comments =
   let open Location in
@@ -2025,10 +1874,7 @@ and walk_pattern pat t comments =
       partition_adjacent_trailing constr.loc trailing
     in
     attach t.trailing constr.loc after_constructor;
-    let leading, inside, trailing = partition_by_loc rest pat.ppat_loc in
-    attach t.leading pat.ppat_loc leading;
-    walk_pattern pat t inside;
-    attach t.trailing pat.ppat_loc trailing
+    walk_around ~loc:pat.ppat_loc walk_pattern pat t rest
   | Ppat_construct (constr, {txt = pats}) ->
     let leading, trailing = partition_leading_trailing comments constr.loc in
     attach t.leading constr.loc leading;
@@ -2071,19 +1917,9 @@ and walk_pattern pat t comments =
       partition_adjacent_trailing pattern.ppat_loc after_pattern
     in
     attach t.trailing pattern.ppat_loc after_pattern;
-    let before_typ, inside_typ, after_typ =
-      partition_by_loc rest typ.ptyp_loc
-    in
-    attach t.leading typ.ptyp_loc before_typ;
-    walk_core_type typ t inside_typ;
-    attach t.trailing typ.ptyp_loc after_typ
+    walk_around ~loc:typ.ptyp_loc walk_core_type typ t rest
   | Ppat_exception pattern ->
-    let leading, inside, trailing =
-      partition_by_loc comments pattern.ppat_loc
-    in
-    attach t.leading pattern.ppat_loc leading;
-    walk_pattern pattern t inside;
-    attach t.trailing pattern.ppat_loc trailing
+    walk_around ~loc:pattern.ppat_loc walk_pattern pattern t comments
   | Ppat_unpack string_loc ->
     let leading, trailing =
       partition_leading_trailing comments string_loc.loc
@@ -2131,10 +1967,7 @@ and walk_pattern_record_row row t comments =
     attach t.leading longident.loc before_lbl;
     let after_lbl, rest = partition_adjacent_trailing longident.loc after_lbl in
     attach t.trailing longident.loc after_lbl;
-    let leading, inside, trailing = partition_by_loc rest pattern.ppat_loc in
-    attach t.leading pattern.ppat_loc leading;
-    walk_pattern pattern t inside;
-    attach t.trailing pattern.ppat_loc trailing
+    walk_around ~loc:pattern.ppat_loc walk_pattern pattern t rest
 
 (* Unlike a record row, a dict row is never punned: [dict{"a": a}] keeps its
    key, so comments around the key stay on the key *)
@@ -2143,10 +1976,7 @@ and walk_pattern_dict_row {pdp_key = key; pdp_pattern = pattern} t comments =
   attach t.leading key.loc before_key;
   let after_key, rest = partition_adjacent_trailing key.loc after_key in
   attach t.trailing key.loc after_key;
-  let leading, inside, trailing = partition_by_loc rest pattern.ppat_loc in
-  attach t.leading pattern.ppat_loc leading;
-  walk_pattern pattern t inside;
-  attach t.trailing pattern.ppat_loc trailing
+  walk_around ~loc:pattern.ppat_loc walk_pattern pattern t rest
 
 and walk_row_field (row_field : Parsetree.row_field) t comments =
   match row_field with
@@ -2164,12 +1994,7 @@ and walk_core_type typ t comments =
   | Ptyp_extension extension -> walk_extension extension t comments
   | Ptyp_package package_type -> walk_package_type package_type t comments
   | Ptyp_alias (typexpr, _alias) ->
-    let before_typ, inside_typ, after_typ =
-      partition_by_loc comments typexpr.ptyp_loc
-    in
-    attach t.leading typexpr.ptyp_loc before_typ;
-    walk_core_type typexpr t inside_typ;
-    attach t.trailing typexpr.ptyp_loc after_typ
+    walk_around ~loc:typexpr.ptyp_loc walk_core_type typexpr t comments
   | Ptyp_poly (strings, typexpr) ->
     let comments =
       visit_list_but_continue_with_remaining_comments
@@ -2182,12 +2007,7 @@ and walk_core_type typ t comments =
           attach t.trailing longident.loc after_longident)
         ~newline_delimited:false strings t comments
     in
-    let before_typ, inside_typ, after_typ =
-      partition_by_loc comments typexpr.ptyp_loc
-    in
-    attach t.leading typexpr.ptyp_loc before_typ;
-    walk_core_type typexpr t inside_typ;
-    attach t.trailing typexpr.ptyp_loc after_typ
+    walk_around ~loc:typexpr.ptyp_loc walk_core_type typexpr t comments
   | Ptyp_variant (row_fields, _, _) ->
     walk_list (row_fields |> List.map (fun rf -> RowField rf)) t comments
   | Ptyp_constr (longident, typexprs) ->
@@ -2203,12 +2023,7 @@ and walk_core_type typ t comments =
   | Ptyp_arrow _ ->
     let _, parameters, typexpr = arrow_type typ in
     let comments = walk_type_parameters parameters t comments in
-    let before_typ, inside_typ, after_typ =
-      partition_by_loc comments typexpr.ptyp_loc
-    in
-    attach t.leading typexpr.ptyp_loc before_typ;
-    walk_core_type typexpr t inside_typ;
-    attach t.trailing typexpr.ptyp_loc after_typ
+    walk_around ~loc:typexpr.ptyp_loc walk_core_type typexpr t comments
   | Ptyp_object (fields, _) -> walk_typ_object_fields fields t comments
   | _ -> ()
 
@@ -2222,12 +2037,7 @@ and walk_object_field field t comments =
     attach t.leading lbl.loc before_lbl;
     let after_lbl, rest = partition_adjacent_trailing lbl.loc after_lbl in
     attach t.trailing lbl.loc after_lbl;
-    let before_typ, inside_typ, after_typ =
-      partition_by_loc rest typexpr.ptyp_loc
-    in
-    attach t.leading typexpr.ptyp_loc before_typ;
-    walk_core_type typexpr t inside_typ;
-    attach t.trailing typexpr.ptyp_loc after_typ
+    walk_around ~loc:typexpr.ptyp_loc walk_core_type typexpr t rest
   | _ -> ()
 
 and walk_type_parameters type_parameters t comments =
@@ -2248,12 +2058,7 @@ and walk_type_parameters type_parameters t comments =
 and walk_type_parameter parameter t comments =
   match parameter with
   | Parsetree.Parg_type {typ = typexpr} ->
-    let before_typ, inside_typ, after_typ =
-      partition_by_loc comments typexpr.ptyp_loc
-    in
-    attach t.leading typexpr.ptyp_loc before_typ;
-    walk_core_type typexpr t inside_typ;
-    attach t.trailing typexpr.ptyp_loc after_typ
+    walk_around ~loc:typexpr.ptyp_loc walk_core_type typexpr t comments
   | Parsetree.Parg_fixed {loc} ->
     (* Like the [_] it is written with, which is where its comments go. *)
     let loc = Ast_fixed_arg.underscore_loc loc in
@@ -2289,12 +2094,7 @@ and walk_package_constraint package_constraint t comments =
     partition_adjacent_trailing longident.loc after_longident
   in
   attach t.trailing longident.loc after_longident;
-  let before_typ, inside_typ, after_typ =
-    partition_by_loc rest typexpr.ptyp_loc
-  in
-  attach t.leading typexpr.ptyp_loc before_typ;
-  walk_core_type typexpr t inside_typ;
-  attach t.trailing typexpr.ptyp_loc after_typ
+  walk_around ~loc:typexpr.ptyp_loc walk_core_type typexpr t rest
 
 and walk_extension extension t comments =
   let id, payload = extension in
