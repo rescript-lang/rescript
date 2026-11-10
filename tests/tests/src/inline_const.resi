@@ -24,6 +24,12 @@ let hh: string
 
 @inline(1) let f6: int
 
+@inline(10n) let big: bigint
+
+@inline(-3n) let negBig: bigint
+
+let bigs: (bigint, bigint)
+
 module BigintConsts: (
   X: {
     @inline(12n) let pos: bigint

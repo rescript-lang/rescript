@@ -93,7 +93,8 @@ and out_type_extension = {
 and out_val_decl = {
   oval_name: string;
   oval_type: out_type;
-  oval_prim: Parsetree.primitive_repr option;
+  oval_prim: Primitive.description option;
+      (* resolved, so the printer can render its FFI attributes *)
   oval_attributes: out_attribute list;
 }
 and out_rec_status = Orec_not | Orec_first | Orec_next

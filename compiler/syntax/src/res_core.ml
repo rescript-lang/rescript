@@ -6287,7 +6287,7 @@ and parse_external_def ~attrs ~start_pos p =
         match Parser.peek p with
         | String s ->
           Parser.next p;
-          Some (Parsetree.Prim_name s)
+          Some s
         | _ ->
           Parser.err ~start_pos:equal_start ~end_pos:equal_end p
             (Diagnostics.message

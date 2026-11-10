@@ -38,6 +38,12 @@ let (a, b, c, d, e) = (f, f1, f2, f3, f4)
 
 @inline let f6 = 1
 
+@inline let big = 10n
+
+@inline let negBig = -3n
+
+let bigs = (big, negBig)
+
 let () = Console.log((xx, xx0))
 
 module BigintConsts = (

@@ -1,0 +1,44 @@
+Hover src/RelativeExternal.res 1:30
+{
+  "contents": { "kind": "markdown", "value": "```rescript\nint => int\n```" }
+}
+
+Hover src/RelativeExternal.res 4:9
+{
+  "contents": { "kind": "markdown", "value": "```rescript\nint => int\n```" }
+}
+
+References src/RelativeExternal.res 7:10
+[
+  {
+    "range": {
+      "end": { "character": 61, "line": 1 },
+      "start": { "character": 0, "line": 1 }
+    },
+    "uri": "file:///RelativeExternal.res"
+  },
+  {
+    "range": {
+      "end": { "character": 16, "line": 4 },
+      "start": { "character": 8, "line": 4 }
+    },
+    "uri": "file:///RelativeExternal.res"
+  },
+  {
+    "range": {
+      "end": { "character": 16, "line": 7 },
+      "start": { "character": 8, "line": 7 }
+    },
+    "uri": "file:///RelativeExternal.res"
+  }
+]
+
+Definition src/RelativeExternal.res 14:17
+{
+  "range": {
+    "end": { "character": 59, "line": 11 },
+    "start": { "character": 2, "line": 11 }
+  },
+  "uri": "file:///RelativeExternal.res"
+}
+

@@ -1,0 +1,1 @@
+- Inline `@inline let` bigint constants like other literals, instead of warning that `@inline` cannot appear there. Like other inline constants, they are no longer emitted or exported as bindings.
