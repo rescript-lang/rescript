@@ -85,7 +85,7 @@ Mocha.describe("Optional_external_arg_once_test", () => {
       "first",
       1
     ], [
-      (key == null) ? undefined : Primitive_option.some(key),
+      key == null ? undefined : Primitive_option.some(key),
       s$2.reads
     ]);
     let s$3 = makeSource();
