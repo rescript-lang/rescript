@@ -25,6 +25,6 @@
 include Hashtbl.Make (struct
   type t = int
 
-  let equal = Ext_int.equal
+  let equal = Int.equal
   let hash = Ext_platform_primitives.hash_int
 end)

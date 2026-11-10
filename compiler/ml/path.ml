@@ -44,8 +44,7 @@ let rec isfree id = function
 let rec binding_time = function
   | Pident id -> Ident.binding_time id
   | Pdot (p, _s, _pos) -> binding_time p
-  | Papply (p1, p2) ->
-    Ext_pervasives.max_int (binding_time p1) (binding_time p2)
+  | Papply (p1, p2) -> Int.max (binding_time p1) (binding_time p2)
 
 let kfalse _ = false
 

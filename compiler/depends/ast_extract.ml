@@ -35,7 +35,12 @@ type 'a kind = 'a Ml_binary.kind
 
 let read_parse_and_extract (type t) (k : t kind) (ast : t) : Set_string.t =
   Depend.free_structure_names () := Set_string.empty;
-  Ext_ref.protect (Clflags.current ()).transparent_modules false (fun _ ->
+  let transparent_modules = (Clflags.current ()).transparent_modules in
+  let old = !transparent_modules in
+  transparent_modules := false;
+  Fun.protect
+    ~finally:(fun () -> transparent_modules := old)
+    (fun () ->
       List.iter (* check *)
         (fun modname ->
           ignore @@ Depend.open_module bound_vars (Longident.Lident modname))
