@@ -83,6 +83,155 @@ let spellings_share_an_entry_tests _ =
           Build_file_store.write published "new";
           read_all "new"))
 
+(* [key] returns a path that has no [.], [..] or empty segment, nor a
+   backslash on Windows, as it is, without normalizing it. This is the
+   normalization it skips, as [key] did it for every path, so the two must
+   agree on every path. *)
+let normalized_key path =
+  let is_separator c = c = '/' || (Sys.win32 && c = '\\') in
+  let length = String.length path in
+  let rec segments start index acc =
+    if index = length then
+      List.rev (String.sub path start (index - start) :: acc)
+    else if is_separator path.[index] then
+      segments (index + 1) (index + 1)
+        (String.sub path start (index - start) :: acc)
+    else segments start (index + 1) acc
+  in
+  match segments 0 0 [] with
+  | [] -> path
+  | first :: rest ->
+    let rec normalize acc = function
+      | [] -> List.rev acc
+      | ("" | ".") :: rest -> normalize acc rest
+      | ".." :: rest -> (
+        match acc with
+        | previous :: acc when previous <> ".." -> normalize acc rest
+        | _ -> normalize (".." :: acc) rest)
+      | segment :: rest -> normalize (segment :: acc) rest
+    in
+    String.concat "/" (first :: normalize [] rest)
+
+let assert_key path =
+  assert_equal ~msg:(String.escaped path) ~printer:String.escaped
+    (normalized_key path)
+    (Build_file_store.key path)
+
+let key_edge_cases_tests _ =
+  List.iter assert_key
+    [
+      "";
+      "/";
+      "//";
+      "///";
+      ".";
+      "..";
+      "...";
+      ".a";
+      "a.";
+      "..a";
+      "a..";
+      "a";
+      "A.cmi";
+      "/A.cmi";
+      "//A.cmi";
+      "lib/rescript/A.cmi";
+      "/home/user/project/lib/rescript/A.cmi";
+      "lib/rescript/";
+      "/lib/rescript/";
+      "lib//rescript/A.cmi";
+      "lib/rescript//";
+      "./A.cmi";
+      "./lib/rescript/A.cmi";
+      "../A.cmi";
+      "../../src/A.res";
+      "lib/rescript/./A.cmi";
+      "lib/rescript/../../src/A.res";
+      "lib/rescript/..";
+      "lib/rescript/.";
+      "a/..";
+      "a/../..";
+      "/..";
+      "/../a";
+      "/./a";
+      "/a/./b/../c";
+      "lib/.../A.cmi";
+      "lib/.rescript/A.cmi";
+      "lib/rescript./A.cmi";
+      "lib/..rescript/A.cmi";
+      "lib/rescript../A.cmi";
+      ".../a";
+      ".a/b";
+      "a/...";
+      "a/.b";
+      "a\\b";
+      "a\\.\\b";
+      "a\\..\\b";
+      "lib\\rescript\\A.cmi";
+      "lib/rescript\\A.cmi";
+      "lib\\";
+      "\\";
+      "\\a";
+      "C:";
+      "C:/";
+      "C:/a/b";
+      "C:/a/./b";
+      "C:/a/../b";
+      "C:\\a\\b";
+      "C:\\a\\..\\b";
+      "c:/Users/A.cmi";
+      "C:a";
+      "//server/share/a";
+      "\\\\server\\share\\a";
+      "\\\\server\\share\\..\\a";
+      "\\\\?\\C:\\a";
+      "//?/C:/a";
+    ]
+
+(* Every path of up to 8 characters from the characters that matter, then
+   longer paths made of segments, which the first set cannot reach. *)
+let key_generated_paths_tests _ =
+  let alphabet = "/.a\\" in
+  let rec all_paths prefix length =
+    assert_key prefix;
+    if length > 0 then
+      String.iter
+        (fun c -> all_paths (prefix ^ String.make 1 c) (length - 1))
+        alphabet
+  in
+  all_paths "" 8;
+  let segments =
+    [|
+      ""; "."; ".."; "..."; ".a"; "a."; "a"; "src"; "A.cmi"; "C:"; "\\"; "a\\b";
+    |]
+  in
+  let separators = [|"/"; "/"; "/"; "\\"; "//"|] in
+  let random = Random.State.make [|9|] in
+  for _ = 1 to 20_000 do
+    let count = Random.State.int random 9 in
+    let path = Buffer.create 64 in
+    for index = 0 to count do
+      if index > 0 then
+        Buffer.add_string path
+          separators.(Random.State.int random (Array.length separators));
+      Buffer.add_string path
+        segments.(Random.State.int random (Array.length segments))
+    done;
+    assert_key (Buffer.contents path)
+  done
+
+(* A path that is already normal is its own key, not a copy of it. *)
+let key_of_normal_path_tests _ =
+  List.iter
+    (fun path -> assert_bool path (Build_file_store.key path == path))
+    [
+      "A.cmi";
+      "lib/rescript/A.cmi";
+      "/home/user/project/lib/rescript/A.cmi";
+      "C:/Users/project/lib/rescript/A.cmi";
+      "lib/.../.a/a./A.cmi";
+    ]
+
 let kept_and_evicted_tests _ =
   with_temp_dir (fun root ->
       let missing = Filename.concat root "Missing.cmj" in
@@ -436,6 +585,9 @@ let suites =
          "disabled_reads_disk" >:: disabled_reads_disk_tests;
          "build_reads_once" >:: build_reads_once_tests;
          "spellings_share_an_entry" >:: spellings_share_an_entry_tests;
+         "key_edge_cases" >:: key_edge_cases_tests;
+         "key_generated_paths" >:: key_generated_paths_tests;
+         "key_of_normal_path" >:: key_of_normal_path_tests;
          "kept_and_evicted" >:: kept_and_evicted_tests;
          "held_writes" >:: held_writes_tests;
          "held_write_compares_read_contents"

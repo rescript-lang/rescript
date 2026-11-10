@@ -11,6 +11,14 @@
     the default and the case in [bsc], every function goes to the file
     system. *)
 
+val key : string -> string
+(** [key path] is the path the store keeps [path] under: [path] with the [.]
+    and empty segments after its first segment removed, each later [..]
+    removed with the segment before it unless that is the first segment or
+    [..], and on Windows backslash separators written [/]. So
+    [lib/rescript/./A.cmi] and [lib/rescript/../rescript/A.cmi] have the key
+    [lib/rescript/A.cmi], but [./A.cmi] keeps its first segment. *)
+
 val with_build : (unit -> 'a) -> 'a
 (** [with_build f] enables an empty store while [f] runs, and empties and
     disables it afterwards. A build starts with an empty store, so that it

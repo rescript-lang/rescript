@@ -77,35 +77,61 @@ let with_build f =
           state.enabled <- false;
           empty ()))
 
+(* Whether the segment of [path] from [start] to [index] is [.] or [..]. *)
+let is_dot_segment path start index =
+  match index - start with
+  | 1 -> String.unsafe_get path start = '.'
+  | 2 ->
+    String.unsafe_get path start = '.'
+    && String.unsafe_get path (start + 1) = '.'
+  | _ -> false
+
+(* Whether [path], from the segment that starts at [start], has no [.], [..]
+   or empty segment, nor a separator other than [/]: then [key] gives back
+   [path] itself. Most paths are such, and checking takes no allocation. *)
+let rec is_normal_from path start index =
+  if index = String.length path then
+    index > start && not (is_dot_segment path start index)
+  else
+    match String.unsafe_get path index with
+    | '/' ->
+      (index > start || start = 0)
+      && (not (is_dot_segment path start index))
+      && is_normal_from path (index + 1) (index + 1)
+    | '\\' when Sys.win32 -> false
+    | _ -> is_normal_from path start (index + 1)
+
 (* Requests spell paths relative to their own working directory, such as
    [lib/rescript/./A.cmi] or [lib/rescript/../../src/A.res], and the build
    system as [lib/rescript/A.cmi]. Both must find the same entry. Build
    directories are never symbolic links, so removing [..] lexically is sound
    for the paths the store sees. *)
 let key path =
-  let is_separator c = c = '/' || (Sys.win32 && c = '\\') in
-  let length = String.length path in
-  let rec segments start index acc =
-    if index = length then
-      List.rev (String.sub path start (index - start) :: acc)
-    else if is_separator path.[index] then
-      segments (index + 1) (index + 1)
-        (String.sub path start (index - start) :: acc)
-    else segments start (index + 1) acc
-  in
-  match segments 0 0 [] with
-  | [] -> path
-  | first :: rest ->
-    let rec normalize acc = function
-      | [] -> List.rev acc
-      | ("" | ".") :: rest -> normalize acc rest
-      | ".." :: rest -> (
-        match acc with
-        | previous :: acc when previous <> ".." -> normalize acc rest
-        | _ -> normalize (".." :: acc) rest)
-      | segment :: rest -> normalize (segment :: acc) rest
+  if is_normal_from path 0 0 then path
+  else
+    let is_separator c = c = '/' || (Sys.win32 && c = '\\') in
+    let length = String.length path in
+    let rec segments start index acc =
+      if index = length then
+        List.rev (String.sub path start (index - start) :: acc)
+      else if is_separator path.[index] then
+        segments (index + 1) (index + 1)
+          (String.sub path start (index - start) :: acc)
+      else segments start (index + 1) acc
     in
-    String.concat "/" (first :: normalize [] rest)
+    match segments 0 0 [] with
+    | [] -> path
+    | first :: rest ->
+      let rec normalize acc = function
+        | [] -> List.rev acc
+        | ("" | ".") :: rest -> normalize acc rest
+        | ".." :: rest -> (
+          match acc with
+          | previous :: acc when previous <> ".." -> normalize acc rest
+          | _ -> normalize (".." :: acc) rest)
+        | segment :: rest -> normalize (segment :: acc) rest
+      in
+      String.concat "/" (first :: normalize [] rest)
 
 let find key = locked (fun () -> Hashtbl.find_opt state.entries key)
 
