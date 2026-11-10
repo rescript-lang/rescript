@@ -547,19 +547,21 @@ let get_items_from_opens ~opens ~local_tables ~prefix ~exact ~completion_context
          completions_from_this_open @ results)
        []
 
-let find_local_completions_for_values_and_constructors
+(* Local values and modules, and constructors when [constructors] is set *)
+let find_local_completions_for_values ~constructors
     ~(local_tables : Local_tables.t) ~env ~prefix ~exact ~opens ~scope =
   local_tables |> Local_tables.populate_values ~env;
   local_tables |> Local_tables.populate_included_values ~env;
-  local_tables |> Local_tables.populate_constructors ~env;
+  if constructors then local_tables |> Local_tables.populate_constructors ~env;
   local_tables |> Local_tables.populate_modules ~env;
 
   scope
   |> Scope.iter_values_before_first_open
        (process_local_value ~prefix ~exact ~env ~local_tables);
-  scope
-  |> Scope.iter_constructors_before_first_open
-       (process_local_constructor ~prefix ~exact ~env ~local_tables);
+  if constructors then
+    scope
+    |> Scope.iter_constructors_before_first_open
+         (process_local_constructor ~prefix ~exact ~env ~local_tables);
   scope
   |> Scope.iter_modules_before_first_open
        (process_local_module ~prefix ~exact ~env ~local_tables);
@@ -572,39 +574,10 @@ let find_local_completions_for_values_and_constructors
   scope
   |> Scope.iter_values_after_first_open
        (process_local_value ~prefix ~exact ~env ~local_tables);
-  scope
-  |> Scope.iter_constructors_after_first_open
-       (process_local_constructor ~prefix ~exact ~env ~local_tables);
-  scope
-  |> Scope.iter_modules_after_first_open
-       (process_local_module ~prefix ~exact ~env ~local_tables);
-
-  scope
-  |> Scope.iter_includes
-       (process_local_include ~prefix ~exact ~env ~local_tables);
-
-  List.rev_append local_tables.result_rev values_from_opens
-
-let find_local_completions_for_values ~(local_tables : Local_tables.t) ~env
-    ~prefix ~exact ~opens ~scope =
-  local_tables |> Local_tables.populate_values ~env;
-  local_tables |> Local_tables.populate_included_values ~env;
-  local_tables |> Local_tables.populate_modules ~env;
-  scope
-  |> Scope.iter_values_before_first_open
-       (process_local_value ~prefix ~exact ~env ~local_tables);
-  scope
-  |> Scope.iter_modules_before_first_open
-       (process_local_module ~prefix ~exact ~env ~local_tables);
-
-  let values_from_opens =
-    get_items_from_opens ~opens ~local_tables ~prefix ~exact
-      ~completion_context:Value
-  in
-
-  scope
-  |> Scope.iter_values_after_first_open
-       (process_local_value ~prefix ~exact ~env ~local_tables);
+  if constructors then
+    scope
+    |> Scope.iter_constructors_after_first_open
+         (process_local_constructor ~prefix ~exact ~env ~local_tables);
   scope
   |> Scope.iter_modules_after_first_open
        (process_local_module ~prefix ~exact ~env ~local_tables);
@@ -665,7 +638,7 @@ let find_local_completions_with_opens ~pos ~(env : Query_env.t) ~prefix ~exact
   let local_tables = Local_tables.create () in
   match completion_context with
   | Value | ValueOrField ->
-    find_local_completions_for_values_and_constructors ~local_tables ~env
+    find_local_completions_for_values ~constructors:true ~local_tables ~env
       ~prefix ~exact ~opens ~scope
   | Type ->
     find_local_completions_for_types ~local_tables ~env ~prefix ~exact ~opens
@@ -682,8 +655,8 @@ let get_complementary_completions_for_typed_value ~opens ~all_files ~scope ~env
   let exact = false in
   let local_completions_with_opens =
     let local_tables = Local_tables.create () in
-    find_local_completions_for_values ~local_tables ~env ~prefix ~exact ~opens
-      ~scope
+    find_local_completions_for_values ~constructors:false ~local_tables ~env
+      ~prefix ~exact ~opens ~scope
   in
   let file_modules =
     all_files |> File_set.elements
