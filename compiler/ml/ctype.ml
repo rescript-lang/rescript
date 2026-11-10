@@ -1380,6 +1380,7 @@ let is_contractive env p =
 
 exception Occur
 
+(* [occur_reaches] must follow the same edges in expression mode. *)
 let rec occur_rec env allow_recursive visited ty0 = function
   | {desc = Tlink ty} -> occur_rec env allow_recursive visited ty0 ty
   | ty -> (
@@ -1413,7 +1414,57 @@ let type_changed () = Domain.DLS.get type_changed_key
 
 let merge r b = if b then r := true
 
-let occur env ty0 ty =
+(* Cheap first passes for [occur] and [deep_occur]: walks with no visited
+   set and no marks that give up (raise [Give_up]) after [walk_budget]
+   nodes, which also stops cycles and heavy sharing, or when they cannot
+   decide; the caller then runs the full walk. A pass that finishes has
+   visited every node the full walk would. *)
+exception Give_up
+
+let walk_budget = 256
+
+(* Must follow the same edges as [occur_rec] in expression mode. Finishing
+   proves [occur_rec] would neither meet [ty0] nor find a [Tconstr] cycle,
+   its only ways to raise, and it expands types only after raising. The
+   edges are those of [iter_type_expr], spelled out so that the walk
+   allocates nothing: it returns the budget left instead of keeping it in a
+   ref that a closure captures. *)
+let rec occur_reaches_budget ty0 budget ty =
+  match ty.desc with
+  | Tlink ty -> occur_reaches_budget ty0 budget ty
+  | desc -> (
+    if ty == ty0 then raise Occur;
+    let budget = budget - 1 in
+    if budget < 0 then raise Give_up;
+    match desc with
+    | Tobject _ | Tvariant _ | Tvar _ | Tnil | Tunivar _ -> budget
+    | Tarrow (params, ret) ->
+      occur_reaches_budget ty0 (occur_reaches_params ty0 budget params) ret
+    | Ttuple l | Tconstr (_, l, _) | Tpackage (_, _, l) ->
+      occur_reaches_list ty0 budget l
+    | Tfield {typ; rest} ->
+      occur_reaches_budget ty0 (occur_reaches_budget ty0 budget typ) rest
+    | Tlink ty | Tsubst ty -> occur_reaches_budget ty0 budget ty
+    | Tpoly (ty, tyl) ->
+      occur_reaches_list ty0 (occur_reaches_budget ty0 budget ty) tyl)
+
+and occur_reaches_list ty0 budget = function
+  | [] -> budget
+  | ty :: l -> occur_reaches_list ty0 (occur_reaches_budget ty0 budget ty) l
+
+and occur_reaches_params ty0 budget = function
+  | [] -> budget
+  | {typ} :: l ->
+    occur_reaches_params ty0 (occur_reaches_budget ty0 budget typ) l
+
+let occur_reaches ty0 ty = ignore (occur_reaches_budget ty0 walk_budget ty)
+
+let occur_cannot_fail ty0 ty =
+  match occur_reaches ty0 ty with
+  | () -> true
+  | exception (Occur | Give_up) -> false
+
+let occur_full env ty0 ty =
   let allow_recursive = !(umode ()) = Pattern in
   let old = !(type_changed ()) in
   try
@@ -1431,6 +1482,12 @@ let occur env ty0 ty =
       (match exn with
       | Occur -> Unify []
       | _ -> exn)
+
+(* In pattern mode [occur_rec] looks types up ([is_contractive]), which can
+   load interfaces, so only expression mode takes the shortcut. *)
+let occur env ty0 ty =
+  if !(umode ()) = Expression && occur_cannot_fail ty0 ty then ()
+  else occur_full env ty0 ty
 
 let occur_in env ty0 t =
   try
@@ -1657,8 +1714,48 @@ let mkvariant fields closed =
 
 (**** Unification ****)
 
-(* Return whether [t0] occurs in [ty]. Objects are also traversed. *)
-let deep_occur t0 ty =
+(* Must follow the same edges as [deep_occur_marked]. Answers only "absent":
+   it gives up on meeting [t0] (where the marked walk stops early) and on a
+   node an enclosing walk marked (which the marked walk skips but then
+   unmarks in [unmark_type]), so it never leaves marks that differ. Like
+   [occur_reaches_budget], it spells out the edges of [iter_type_expr] so
+   that it allocates nothing, except at a [Tvariant]. *)
+let rec deep_occur_budget t0 budget ty =
+  let ty = repr ty in
+  if ty.level < lowest_level then raise Give_up;
+  if ty == t0 then raise Occur;
+  let budget = budget - 1 in
+  if budget < 0 then raise Give_up;
+  match ty.desc with
+  | Tvar _ | Tnil | Tunivar _ -> budget
+  | Tarrow (params, ret) ->
+    deep_occur_budget t0 (deep_occur_params t0 budget params) ret
+  | Ttuple l | Tconstr (_, l, _) | Tpackage (_, _, l) ->
+    deep_occur_list t0 budget l
+  | Tobject ty | Tlink ty | Tsubst ty -> deep_occur_budget t0 budget ty
+  | Tfield {typ; rest} ->
+    deep_occur_budget t0 (deep_occur_budget t0 budget typ) rest
+  | Tpoly (ty, tyl) -> deep_occur_list t0 (deep_occur_budget t0 budget ty) tyl
+  | Tvariant _ ->
+    let budget = ref budget in
+    iter_type_expr (fun ty -> budget := deep_occur_budget t0 !budget ty) ty;
+    !budget
+
+and deep_occur_list t0 budget = function
+  | [] -> budget
+  | ty :: l -> deep_occur_list t0 (deep_occur_budget t0 budget ty) l
+
+and deep_occur_params t0 budget = function
+  | [] -> budget
+  | {typ} :: l -> deep_occur_params t0 (deep_occur_budget t0 budget typ) l
+
+let deep_occur_fast_absent t0 ty =
+  match deep_occur_budget t0 walk_budget ty with
+  | _ -> true
+  | exception (Occur | Give_up) -> false
+
+(* [deep_occur_fast_absent] must follow the same edges. *)
+let deep_occur_marked t0 ty =
   let rec occur_rec ty =
     let ty = repr ty in
     if ty.level >= lowest_level then (
@@ -1673,6 +1770,10 @@ let deep_occur t0 ty =
   with Occur ->
     unmark_type ty;
     true
+
+(* Return whether [t0] occurs in [ty]. Objects are also traversed. *)
+let deep_occur t0 ty =
+  (not (deep_occur_fast_absent t0 ty)) && deep_occur_marked t0 ty
 
 (*
    1. When unifying two non-abbreviated types, one type is made a link
