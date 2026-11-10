@@ -28,9 +28,6 @@ env:
 
 jobs:
   build-compiler:
-    permissions:
-      contents: read
-      actions: write # Master pushes delete superseded caches.
     strategy:
       fail-fast: false
       matrix:
@@ -128,13 +125,17 @@ jobs:
       - name: Build compiler
         run: opam exec -- dune build --display quiet
 
-      # A cache can't be overwritten, so the state is deleted and saved again,
-      # together with the states of earlier dependencies.
       - name: Delete stable compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: ./.github/actions/delete-caches
-        with:
-          prefix: ${{ steps.compiler-build-state-key.outputs.prefix }}
+        shell: bash
+        run: |
+          gh extension install actions/gh-actions-cache
+          gh actions-cache delete ${{ steps.compiler-build-state-key.outputs.value }} \
+            -R ${{ github.repository }} \
+            -B "$GITHUB_REF" \
+            --confirm || echo "not exist"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Save compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'

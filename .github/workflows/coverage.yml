@@ -51,8 +51,9 @@ jobs:
       # The bisect_ppx-instrumented dune build is a separate artifact from
       # the main CI build, so it gets its own key. Only save on master
       # pushes — PRs share the master cache to stay fast but won't poison
-      # it. The key changes only with the dependencies: a key that changed
-      # with the compiler's sources would never match a pull request's.
+      # it. The key changes only with the dependencies, so master keeps one
+      # state per set of dependencies, deleting it and saving it again,
+      # rather than adding a new one with every change of the compiler.
       - name: Coverage build state key
         id: coverage-build-state-key
         run: |
@@ -74,13 +75,16 @@ jobs:
       - name: Run coverage
         run: opam exec -- make coverage
 
-      # A cache can't be overwritten, so the state is deleted and saved again,
-      # together with the states of earlier dependencies.
       - name: Delete stale coverage build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: ./.github/actions/delete-caches
-        with:
-          prefix: ${{ steps.coverage-build-state-key.outputs.prefix }}
+        run: |
+          gh extension install actions/gh-actions-cache
+          gh actions-cache delete ${{ steps.coverage-build-state-key.outputs.value }} \
+            -R ${{ github.repository }} \
+            -B "$GITHUB_REF" \
+            --confirm || echo "not exist"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Save coverage build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'

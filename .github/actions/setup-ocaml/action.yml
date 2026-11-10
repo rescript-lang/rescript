@@ -86,8 +86,11 @@ runs:
         echo "value=${prefix//,/-}$dependency_hash" >> "$GITHUB_OUTPUT"
         echo "setup-version=3.9.0" >> "$GITHUB_OUTPUT"
 
-    # When the dependencies changed, the environment of the previous ones is
-    # restored and updated, which takes minutes less than building it anew.
+    # When a pull request changes the dependencies, the environment of the
+    # previous ones is restored and updated, which takes minutes less than
+    # building it anew. Pushes always build a missing environment anew: what
+    # they save is resolved from scratch, so packages dropped from the opam
+    # files, pins and earlier upgrades don't accumulate in it.
     - name: Restore OPAM environment
       id: cache
       uses: actions/cache/restore@v6
@@ -100,7 +103,7 @@ runs:
           C:\cygwin
           C:\.opam
         key: ${{ steps.cache-key.outputs.value }}
-        restore-keys: ${{ steps.cache-key.outputs.prefix }}
+        restore-keys: ${{ github.event_name == 'pull_request' && steps.cache-key.outputs.prefix || '' }}
 
     - name: Use OCaml ${{ inputs.compiler }}
       if: steps.cache.outputs.cache-matched-key == ''
@@ -163,24 +166,25 @@ runs:
           echo "BASH_ENV=C:\\cygwin\\bash_env" >> "$GITHUB_ENV"
         fi
 
-    # A restored environment of earlier dependencies may predate the
-    # packages they now need.
-    - name: Update OPAM repository
-      if: steps.cache.outputs.cache-matched-key != '' && steps.cache.outputs.cache-hit != 'true'
-      shell: bash
-      run: opam update --repositories
-
     - name: Install OPAM dependencies
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       env:
         DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
-        # In a restored environment, opam takes the system packages that
-        # setup-linux-dependencies unpacks without dpkg, and Binaryen, for
-        # removed, and would rebuild the whole switch.
-        OPAMNODEPEXTS: ${{ steps.cache.outputs.cache-matched-key != '' && '1' || '0' }}
+        RESTORED: ${{ steps.cache.outputs.cache-matched-key != '' }}
       run: |
         read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
+        if [[ "$RESTORED" == "true" ]]; then
+          # The restored environment may predate packages the dependencies
+          # now need. The update leaves the installed packages as they are,
+          # as on an exact cache hit.
+          opam update --repositories
+          opam reinstall --forget-pending
+          # setup-linux-dependencies unpacks musl-tools without dpkg, and
+          # Binaryen is installed by hand, so opam takes both for removed and
+          # would rebuild the whole switch.
+          opam option --global 'depext-bypass=["binaryen" "musl-tools"]'
+        fi
         if [[ "$RUNNER_OS" == "Windows" ]]; then
           export AR=x86_64-w64-mingw32-ar
           export RANLIB=x86_64-w64-mingw32-ranlib
@@ -205,10 +209,3 @@ runs:
           C:\cygwin
           C:\.opam
         key: ${{ steps.cache-key.outputs.value }}
-
-    - name: Delete superseded OPAM environments
-      if: steps.cache.outputs.cache-hit != 'true' && github.event_name == 'push'
-      uses: ./.github/actions/delete-caches
-      with:
-        prefix: ${{ steps.cache-key.outputs.prefix }}
-        keep: ${{ steps.cache-key.outputs.value }}
