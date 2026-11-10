@@ -28,4 +28,3 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-# Temporary: exercise the CI cache fallback
