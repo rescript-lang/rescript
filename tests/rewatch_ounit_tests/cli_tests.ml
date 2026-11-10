@@ -39,40 +39,34 @@ let tests =
     | Cli.Build _ -> true
     | _ -> false)
     "no subcommand defaults to build";
+  check (rejects ["someFolder"]) "a bare folder is an unknown command";
   check
-    ((build_options ["someFolder"]).folder = "someFolder")
-    "a bare folder uses the implicit build command";
+    ((build_options ["--prod"; "someFolder"]).folder = "someFolder")
+    "a folder after an option uses the default build command";
   check
-    ((build_options ["my-project"; "-v"]).folder = "my-project")
-    "a trailing global verbosity flag keeps the implicit folder";
-  check
-    ((build_options ["--"; "-v"]).folder = "-v")
+    ((build_options ["build"; "--"; "-v"]).folder = "-v")
     "double dash preserves an option-looking folder";
   check
-    (shows_help ["some-folder"; "--help"])
-    "implicit command folder help uses global help";
+    (rejects ["some-folder"; "--help"])
+    "help does not hide an unknown command";
   check
-    (shows_help ["some-folder"; "-h"])
-    "short implicit command help uses global help";
+    (rejects ["some-folder"; "-h"])
+    "short help does not hide an unknown command";
+  check
+    (rejects ["some-folder"; "-V"])
+    "version does not hide an unknown command";
+  check (shows_help ["-h"]) "-h is short for --help";
+  check (shows_version ["-V"]) "-V is short for --version";
   check (shows_help ["build"; "--help"]) "explicit build displays command help";
   check (shows_help ["build"; "-h"]) "explicit build accepts short command help";
+  check (rejects ["-v"; "watch"]) "options before a command name are rejected";
+  check (rejects ["--prod"; "build"]) "options before build are rejected";
   check
-    (match parse ["-vvvv"; "watch"] with
-    | Cli.Watch _ -> true
-    | _ -> false)
-    "leading verbosity before watch";
+    ((build_options ["-v"; "./watch"]).folder = "./watch")
+    "a folder named like a command can be built by its path";
   check
-    ((build_options ["-vvvvv"; "build"]).verbosity = 5)
-    "arbitrarily long clustered verbosity remains global";
-  check
-    (shows_help ["-Vh"; "build"])
-    "help takes precedence over version in a leading cluster";
-  check
-    (shows_help ["--version"; "build"; "--help"])
-    "subcommand help takes precedence over a leading version option";
-  check
-    (shows_help ["--version"; "build"; "--help=plain"])
-    "formatted subcommand help takes precedence over a leading version option";
+    ((build_options ["build"; "-vvvvv"]).verbosity = 5)
+    "clustered verbosity after the command is counted";
   check
     (shows_help ["--help=plain"])
     "formatted root help remains a root display option";
@@ -84,12 +78,6 @@ let tests =
     | Cli.Build _ -> true
     | _ -> false)
     "build accepts a trailing verbosity flag";
-  check
-    (shows_version ["-V"; "build"])
-    "a leading short version flag has global precedence";
-  check
-    (shows_version ["some-folder"; "-V"])
-    "implicit build extracts a trailing global version flag";
   check (shows_version ["--version"]) "the long global version flag is accepted";
   check
     (shows_version ["build"; "-V"])
@@ -123,12 +111,12 @@ let tests =
     | _ -> false)
     "clean parses --prod";
   check
-    (match parse ["-q"; "clean"] with
+    (match parse ["clean"; "-q"] with
     | Cli.Clean {verbosity = -1; prod = false; folder = "."} -> true
     | _ -> false)
-    "clean retains the global quiet level";
+    "clean parses the quiet level";
   check (build_options ["--prod"]).prod
-    "--prod selects the implicit build command";
+    "--prod selects the default build command";
   check
     ((build_options ["build"; "--features"; " native , web "]).features
     = Some ["native"; "web"])

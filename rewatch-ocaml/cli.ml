@@ -287,8 +287,25 @@ let root =
       ~version:("rescript " ^ Rewatch_version.version)
       ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
   in
-  Cmd.group info ~default:(build_term ~watch:false)
-    [build; watch; clean; format; compiler_args; help]
+  let commands = [build; watch; clean; format; compiler_args; help] in
+  (* Options before a command name make Cmdliner read the name as the folder of
+     the default build, so [rescript -v watch] would build a folder named
+     watch. *)
+  let default =
+    Term.term_result ~usage:true
+      (let+ command = build_term ~watch:false in
+       match command with
+       | Build {folder}
+         when List.exists (fun cmd -> Cmd.name cmd = folder) commands ->
+         Error
+           (`Msg
+              (Printf.sprintf
+                 "options go after the command: rescript %s [OPTION]… (write \
+                  ./%s for a folder named %s)"
+                 folder folder folder))
+       | command -> Ok command)
+  in
+  Cmd.group info ~default commands
 
 type evaluation = Run of command | Exit of int
 
@@ -296,95 +313,20 @@ exception Parse_error of string
 exception Help
 exception Version
 
-(* Bare project folders must select the default build command, even though
-   Cmdliner otherwise treats them as unknown commands. Move global options
-   behind the selected command and expand short help/version clusters because
-   Cmdliner's standard display options only provide long names. A root display
-   request takes precedence over otherwise invalid implicit-build arguments. *)
+(* Cmdliner's standard display options only have long names. Accept -h and -V
+   as aliases, and print help as plain text instead of through a pager, up to a
+   "--" that ends the options. *)
 let normalize_argv argv =
-  let is_short_global_cluster argument =
-    let length = String.length argument in
-    length > 1
-    && argument.[0] = '-'
-    && argument.[1] <> '-'
-    && String.for_all
-         (function
-           | 'v' | 'q' | 'h' | 'V' -> true
-           | _ -> false)
-         (String.sub argument 1 (length - 1))
-  in
-  let short_cluster_contains character argument =
-    is_short_global_cluster argument
-    && String.contains_from argument 1 character
-  in
-  let is_global = function
-    | "--verbose" | "--quiet" | "--help" | "--version" -> true
-    | argument ->
-      is_short_global_cluster argument
-      || String.starts_with ~prefix:"--help=" argument
-  in
-  let requests_help argument =
-    argument = "--help"
-    || String.starts_with ~prefix:"--help=" argument
-    || short_cluster_contains 'h' argument
-  in
-  let requests_version argument =
-    argument = "--version" || short_cluster_contains 'V' argument
-  in
-  let is_command = function
-    | "build" | "watch" | "clean" | "format" | "compiler-args" | "help" -> true
-    | _ -> false
-  in
-  let rec normalize_display_options = function
+  let rec normalize = function
     | [] -> []
     | "--" :: rest -> "--" :: rest
-    | argument :: rest when String.starts_with ~prefix:"--help=" argument ->
-      argument :: normalize_display_options rest
-    | argument :: rest when requests_help argument ->
-      "--help=plain" :: normalize_display_options rest
-    | argument :: rest when requests_version argument ->
-      "--version" :: normalize_display_options rest
-    | argument :: rest -> argument :: normalize_display_options rest
-  in
-  let explicit_command arguments =
-    let rec loop globals = function
-      | [] | "--" :: _ -> None
-      | argument :: rest when is_global argument ->
-        loop (argument :: globals) rest
-      | command :: rest when is_command command ->
-        Some (List.rev globals, command, rest)
-      | _ -> None
-    in
-    loop [] arguments
-  in
-  let partition_implicit arguments =
-    let rec loop globals others = function
-      | [] -> (List.rev globals, List.rev others)
-      | "--" :: rest -> (List.rev globals, List.rev_append others ("--" :: rest))
-      | argument :: rest when is_global argument ->
-        loop (argument :: globals) others rest
-      | argument :: rest -> loop globals (argument :: others) rest
-    in
-    loop [] [] arguments
+    | ("-h" | "--help") :: rest -> "--help=plain" :: normalize rest
+    | "-V" :: rest -> "--version" :: normalize rest
+    | argument :: rest -> argument :: normalize rest
   in
   match Array.to_list argv with
   | [] -> argv
-  | executable :: arguments ->
-    let routed =
-      match explicit_command arguments with
-      | Some (globals, command, rest) ->
-        executable :: command :: (globals @ rest)
-      | None ->
-        let globals, others = partition_implicit arguments in
-        if
-          List.exists
-            (fun argument ->
-              requests_help argument || requests_version argument)
-            globals
-        then executable :: globals
-        else executable :: "build" :: (globals @ others)
-    in
-    Array.of_list (normalize_display_options routed)
+  | executable :: arguments -> Array.of_list (executable :: normalize arguments)
 
 (* Evaluates the command line and returns Cmdliner's result with the
    diagnostics it wrote, or [Error] for arguments that are not UTF-8. Help is

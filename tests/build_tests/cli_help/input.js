@@ -369,12 +369,11 @@ await test(["-h"], { stdout: cliHelp, stderr: "", status: 0 });
 // Shows cli help with -h arg
 await test(["help"], { stdout: cliHelp, stderr: "", status: 0 });
 
-// Exits with cli help with unknown command
-// Exits with build usage on unknown args
+// Exits with cli usage on unknown args
 await test(["--foo"], {
   stdout: "",
   stderr:
-    "Usage: rescript build [--help] [OPTION]… [FOLDER]\n" +
+    "Usage: rescript [--help] [COMMAND] …\n" +
     "rescript: unknown option --foo. Did you mean -f?\n",
   status: 2,
 });

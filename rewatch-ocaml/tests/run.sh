@@ -1077,7 +1077,7 @@ test ! -f "$watch_basic/src/New.js"
 # A shallow watch on the nearest existing ancestor must advance one directory
 # at a time until a configured nested source root exists. The slash in the JSON
 # path also exercises native separator normalization on Windows.
-"$port" -v watch "$missing_nested_source" \
+"$port" watch -v "$missing_nested_source" \
   >"$missing_nested_source/watch.log" 2>&1 &
 missing_nested_source_pid=$!
 background_pids="$background_pids $missing_nested_source_pid"
@@ -1725,7 +1725,7 @@ awk 'BEGIN { for (i = 1; i <= 200000; i++) printf "let v%d = (%d, \"%d\")\n", i,
   >"$second_interrupt/src/Slow.res"
 
 # A second build waits for the first one's build lock and then runs.
-"$port" -vv build "$second_interrupt" >"$second_interrupt/first.log" 2>&1 &
+"$port" build -vv "$second_interrupt" >"$second_interrupt/first.log" 2>&1 &
 lock_first_pid=$!
 background_pids="$background_pids $lock_first_pid"
 # Logged when the parsed module is handed to the compiler.
@@ -1759,7 +1759,7 @@ if ! $windows_posix_shell; then
   rm "$second_interrupt/src/Slow.js"
   mkdir -p "$second_interrupt/tmp"
   TMPDIR="$second_interrupt/tmp" \
-    "$port" -vv build "$second_interrupt" >"$second_interrupt/build.log" 2>&1 &
+    "$port" build -vv "$second_interrupt" >"$second_interrupt/build.log" 2>&1 &
   second_interrupt_pid=$!
   background_pids="$background_pids $second_interrupt_pid"
   # Logged when the parsed module is handed to the compiler.
@@ -1860,7 +1860,7 @@ if ! $windows_posix_shell; then
     expected_status=${interrupt_signal#*:}
     interrupt_build="$work/interrupt-build-$signal_name"
     slow_project "$interrupt_build"
-    "$port" -vv build "$interrupt_build" >"$interrupt_build/build.log" 2>&1 &
+    "$port" build -vv "$interrupt_build" >"$interrupt_build/build.log" 2>&1 &
     interrupt_build_pid=$!
     background_pids="$background_pids $interrupt_build_pid"
     if ! wait_for_text "$interrupt_build/build.log" 'compile dirty: Slow'; then
@@ -1886,7 +1886,7 @@ fi
 # watcher's compiler work like a signal, before the queued dependent.
 lock_interrupt="$work/lock-interrupt"
 slow_project "$lock_interrupt"
-"$port" -vv watch "$lock_interrupt" >"$lock_interrupt/watch.log" 2>&1 &
+"$port" watch -vv "$lock_interrupt" >"$lock_interrupt/watch.log" 2>&1 &
 lock_interrupt_pid=$!
 background_pids="$background_pids $lock_interrupt_pid"
 if ! wait_for_text "$lock_interrupt/watch.log" 'compile dirty: Slow'; then
@@ -1909,7 +1909,7 @@ fi
 # becoming the baseline of the next one.
 atomic_save="$work/atomic-save-rebuild"
 slow_project "$atomic_save"
-"$port" -vv watch "$atomic_save" >"$atomic_save/watch.log" 2>&1 &
+"$port" watch -vv "$atomic_save" >"$atomic_save/watch.log" 2>&1 &
 atomic_save_pid=$!
 background_pids="$background_pids $atomic_save_pid"
 if ! wait_for_text "$atomic_save/watch.log" 'Finished initial compilation' 1 1200; then
