@@ -754,8 +754,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
     if need_paren then P.paren f action else action ();
     cxt
   | Is_null_or_undefined e ->
-    P.cond_paren_group f (level > 0) (fun _ ->
-        let cxt = expression ~level:1 cxt f e in
+    (* Printed as [e == null], which binds like [===] *)
+    let out, lft, _ = Js_op_util.op_prec EqEqEq in
+    P.cond_paren_group f (level > out) (fun _ ->
+        let cxt = expression ~level:lft cxt f e in
         P.space f;
         P.string f "==";
         P.space f;

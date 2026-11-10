@@ -202,7 +202,7 @@ console.log(regex.test(string));
 
 let result = regex.exec(string);
 
-let result$1 = (result == null) ? undefined : Primitive_option.some(result);
+let result$1 = result == null ? undefined : Primitive_option.some(result);
 
 console.log(Stdlib_Option.map(result$1, prim => prim.input));
 

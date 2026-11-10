@@ -1,0 +1,1 @@
+- Fix `Nullable.isNullable` of a conditional, `||` or bitwise expression testing only part of it, as in `Nullable.isNullable(c ? a : b)`.
