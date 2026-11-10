@@ -88,15 +88,14 @@ type app_pattern = {
   args: Parsetree.expression list;
 }
 
-(* match fn as *)
-let view_as_app (fn : exp) (s : string list) : app_pattern option =
+(* An application of the pipe operator [->]. Matching the constant compiles
+   to a direct string comparison, run for every application. *)
+let view_as_pipe (fn : exp) : app_pattern option =
   match fn.pexp_desc with
-  | Pexp_apply {funct = {pexp_desc = Pexp_ident {txt = Lident op; _}}; args}
-    when List.mem op s ->
+  | Pexp_apply
+      {funct = {pexp_desc = Pexp_ident {txt = Lident ("->" as op)}}; args} ->
     Some {op; loc = fn.pexp_loc; args = check_and_discard args}
   | _ -> None
-
-let infix_ops = ["->"]
 
 let rec rewrite_pipe_rhs ~loc ~attrs a (f : exp) =
   match f.pexp_desc with
@@ -183,7 +182,7 @@ let rec rewrite_pipe_rhs ~loc ~attrs a (f : exp) =
   | _ -> Exp.apply ~loc ~attrs f [(Nolabel, a)]
 
 let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
-  match view_as_app e infix_ops with
+  match view_as_pipe e with
   | Some {op = "->"; args = [a_; f_]; loc} -> (
     (* A braced pipeline RHS may contain local bindings or opens before its
        final call. Bind the left-hand expression before entering that context. *)
