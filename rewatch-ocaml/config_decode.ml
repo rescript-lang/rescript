@@ -133,21 +133,6 @@ let strings path field = function
   | `List values -> List.map (string path field) values
   | _ -> fail path (Printf.sprintf "field %S must be an array of strings" field)
 
-let namespace_from_package_name name =
-  let buffer = Buffer.create (String.length name) in
-  let capitalize = ref true in
-  String.iter
-    (fun character ->
-      match character with
-      | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' ->
-        Buffer.add_char buffer
-          (if !capitalize then Char.uppercase_ascii character else character);
-        capitalize := false
-      | '/' | '-' -> capitalize := true
-      | _ -> ())
-    name;
-  Buffer.contents buffer
-
 (* A string namespace combined with a namespace-entry is converted with the
    Pascal case of the convert_case Rust crate (0.6) that the original build
    system used, which rescript.json files already depend on: "my_lib" names

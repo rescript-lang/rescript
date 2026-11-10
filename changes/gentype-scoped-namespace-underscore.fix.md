@@ -1,0 +1,1 @@
+- genType now recognizes the namespace module of a scoped dependency whose name contains `_` (such as `@my_org/lib`), which it derived differently from the build system.

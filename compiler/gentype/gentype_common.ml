@@ -115,33 +115,11 @@ type dep =
   | Internal of Resolved_name.t
   | Dot of dep * string
 
-module Scoped_package =
-(* Taken from ext_namespace.ml in bukclescript *)
-struct
-  let namespace_of_package_name (s : string) : string =
-    let len = String.length s in
-    let buf = Buffer.create len in
-    let add capital ch =
-      Buffer.add_char buf (if capital then Char.uppercase_ascii ch else ch)
-    in
-    let rec aux capital off len =
-      if off >= len then ()
-      else
-        let ch = String.unsafe_get s off in
-        match ch with
-        | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' ->
-          add capital ch;
-          aux false (off + 1) len
-        | '/' | '-' -> aux true (off + 1) len
-        | _ -> aux capital (off + 1) len
-    in
-    aux true 0 len;
-    Buffer.contents buf
-
+module Scoped_package = struct
   (** @demo/some-library -> DemoSomelibrary *)
   let package_name_to_generated_module_name package_name =
     if String.contains package_name '/' then
-      Some (package_name |> namespace_of_package_name)
+      Some (Ext_namespace.namespace_of_package_name package_name)
     else None
 
   let is_generated_module id ~(config : Config.t) =
