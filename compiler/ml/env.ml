@@ -298,15 +298,16 @@ module Id_tbl = struct
           (Opened {using; root; components; force; overrides = Tbl.empty; next});
     }
 
-  (* The binding named [name] in an open, with its position. *)
-  let find_opened (type a) name (Opened o : a opened) : a * int =
+  (* The path and binding named [name] in an open. The result is built here,
+     so that a lookup allocates no other pair on the way. *)
+  let find_opened (type a) name (Opened o : a opened) : Path.t * a =
     match Tbl.find_str name o.overrides with
-    | found -> found
+    | desc, pos -> (Pdot (o.root, name, pos), desc)
     | exception Not_found ->
       let desc, pos = Tbl.find_str name o.components in
-      (o.force desc, pos)
+      (Pdot (o.root, name, pos), o.force desc)
 
-  (* Every binding of an open, as [find_opened] gives it. *)
+  (* Every binding of an open, as [find_opened] gives it, with its position. *)
   let fold_opened (type a) f (Opened o : a opened) acc =
     Tbl.fold
       (fun name (desc, pos) acc ->
@@ -328,10 +329,9 @@ module Id_tbl = struct
       (Pident id, desc)
     with Not_found as exn -> (
       match tbl.opened with
-      | Some (Opened {using; root; next} as opened) -> (
+      | Some (Opened {using; next} as opened) -> (
         try
-          let descr, pos = find_opened name opened in
-          let res = (Pdot (root, name, pos), descr) in
+          let res = find_opened name opened in
           (if mark then
              match using with
              | None -> ()
@@ -351,8 +351,14 @@ module Id_tbl = struct
       {tbl with current = Ident.add id new_desc tbl.current}
     with Not_found -> (
       match tbl.opened with
-      | Some (Opened o as opened) -> (
-        match find_opened name opened with
+      | Some (Opened o) -> (
+        match
+          match Tbl.find_str name o.overrides with
+          | found -> found
+          | exception Not_found ->
+            let desc, pos = Tbl.find_str name o.components in
+            (o.force desc, pos)
+        with
         | desc, pos ->
           let overrides = Tbl.add name (f desc, pos) o.overrides in
           {tbl with opened = Some (Opened {o with overrides})}
@@ -368,9 +374,9 @@ module Id_tbl = struct
     @
     match tbl.opened with
     | None -> []
-    | Some (Opened {root; next} as opened) -> (
+    | Some (Opened {next} as opened) -> (
       match find_opened name opened with
-      | desc, pos -> (Pdot (root, name, pos), desc) :: find_all name next
+      | found -> found :: find_all name next
       | exception Not_found -> find_all name next)
 
   let rec fold_name f tbl acc =
