@@ -70,8 +70,9 @@ val rev_toplevel_flatten : J.block -> J.block
 
 (* val is_constant : J.expression -> bool *)
 
-(** Simple expression, 
-    no computation involved so that  it is okay to be duplicated
-*)
-
-val is_okay_to_duplicate : J.expression -> bool
+val is_okay_to_duplicate : ?property_reads:bool -> J.expression -> bool
+(** Simple expression, no computation involved so that it is okay to be
+    duplicated. With [~property_reads:false], reading it twice also gives the
+    same value twice: it reads no JS property, which may run a getter each
+    time, as one from a [@get] external or a [@val] name with a dot does.
+    Fields of records count. *)

@@ -365,8 +365,13 @@ let rev_toplevel_flatten block =
     is_constant a && is_constant b
    | _ -> false *)
 
-let rec is_okay_to_duplicate (e : J.expression) =
+let rec is_okay_to_duplicate ?(property_reads = true) (e : J.expression) =
   match e.expression_desc with
+  | Var (Id id)
+    when (not property_reads) && Ext_ident.is_js id
+         && String.contains id.name '.' ->
+    false
   | Var _ | Bool _ | Str _ | Template_literal _ | Number _ -> true
-  | Static_index (e, _s, _off) -> is_okay_to_duplicate e
+  | Static_index (e, _s, off) ->
+    (property_reads || off <> None) && is_okay_to_duplicate ~property_reads e
   | _ -> false
