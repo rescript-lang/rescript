@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/external_reserved_inline_primitive.res[0m:[2m2:1-41[0m
+
+  1 [2m│[0m // This primitive name is only for @inline constants.
+  [1;31m2[0m [2m│[0m [1;31mexternal answer: int = "#rescript-inline"[0m
+  3 [2m│[0m 
+
+  "#rescript-inline" is reserved for @inline constants

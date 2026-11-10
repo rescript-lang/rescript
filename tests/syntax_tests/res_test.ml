@@ -658,6 +658,9 @@ let () =
 module Outcome_printer_tests = struct
   let signature_to_outcome structure =
     Lazy.force Res_outcome_printer.setup;
+    (* The type checker resolves externals through this hook, which the
+       compiler's drivers register in [Ppx_entry]. This test doesn't link it. *)
+    Primitive.resolve_external := Ast_external.resolve;
 
     Res_compmisc.init_path ();
     (Clflags.current ()).nopervasives := true;

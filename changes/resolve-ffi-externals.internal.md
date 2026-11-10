@@ -1,0 +1,1 @@
+- Keep resolved FFI specifications out of the parsetree, which now holds an external's primitive string as written. The type checker resolves each external once.

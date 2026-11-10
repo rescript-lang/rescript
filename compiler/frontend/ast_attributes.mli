@@ -50,7 +50,9 @@ val process_derive_type : t -> derive_attr * t
 
 val internal_expansive : attr
 
-val rs_externals : t -> Parsetree.primitive_repr option -> bool
+val is_ffi_external : t -> string -> bool
+(** Whether an [external] with these attributes and primitive name is an FFI
+    external, as opposed to a compiler intrinsic. *)
 
 val is_gentype : attr -> bool
 

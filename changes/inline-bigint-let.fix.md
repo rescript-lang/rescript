@@ -1,0 +1,1 @@
+- Inline `@inline let` bigint constants like other literals, instead of warning that `@inline` cannot appear there.

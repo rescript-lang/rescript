@@ -22,77 +22,42 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let handle_external_in_sig (self : Ast_mapper.mapper)
-    (prim : Parsetree.value_description) (sigi : Parsetree.signature_item) :
-    Parsetree.signature_item =
-  let loc = prim.pval_loc in
-  let pval_type = self.typ self prim.pval_type in
-  let pval_attributes = self.attributes self prim.pval_attributes in
-  match prim.pval_prim with
-  | None -> Location.raise_errorf ~loc "empty primitive string"
-  | Some (Prim_ffi _ | Prim_inline_const _) ->
-    Location.raise_errorf ~loc "external declaration already processed"
-  | Some (Prim_name v) -> (
-    match
-      Ast_external_process.handle_attributes_as_prim loc pval_type
-        pval_attributes v
-    with
-    | {pval_type; pval_prim; pval_attributes; no_inline_cross_module} ->
+(* The resolver behind [Primitive.resolve_external], which the type checker
+   calls once per declaration: an [@inline] constant, an FFI external with its
+   specification, or an intrinsic. An FFI external's errors and warnings are
+   reported here, including unused attributes on its resolved form. *)
+let resolve (value_desc : Parsetree.value_description) (prim_name : string) :
+    Primitive.resolved_external =
+  if prim_name = Ast_external_mk.inline_const_prim then
+    match Ast_external_mk.inline_const_of_declaration value_desc with
+    | Some c ->
       {
-        sigi with
-        psig_desc =
-          Psig_value
-            {
-              prim with
-              pval_type;
-              pval_prim =
-                (if no_inline_cross_module then None else Some pval_prim);
-              pval_attributes;
-            };
-      })
-
-let handle_external_in_stru (self : Ast_mapper.mapper)
-    (prim : Parsetree.value_description) (str : Parsetree.structure_item) :
-    Parsetree.structure_item =
-  let loc = prim.pval_loc in
-  let pval_type = self.typ self prim.pval_type in
-  let pval_attributes = self.attributes self prim.pval_attributes in
-  match prim.pval_prim with
-  | None -> Location.raise_errorf ~loc "empty primitive string"
-  | Some (Prim_ffi _ | Prim_inline_const _) ->
-    Location.raise_errorf ~loc "external declaration already processed"
-  | Some (Prim_name v) -> (
-    match
-      Ast_external_process.handle_attributes_as_prim loc pval_type
-        pval_attributes v
-    with
-    | {pval_type; pval_prim; pval_attributes; no_inline_cross_module} ->
-      let external_result =
-        {
-          str with
-          pstr_desc =
-            Pstr_primitive
-              {prim with pval_type; pval_prim = Some pval_prim; pval_attributes};
-        }
-      in
-      if not no_inline_cross_module then external_result
-      else
-        let open Ast_helper in
-        Str.include_ ~loc
-          (Incl.mk ~loc
-             (Mod.constraint_ ~loc
-                (Mod.structure ~loc [external_result])
-                (Mty.signature ~loc
-                   [
-                     {
-                       psig_desc =
-                         Psig_value
-                           {
-                             prim with
-                             pval_type;
-                             pval_prim = None;
-                             pval_attributes;
-                           };
-                       psig_loc = loc;
-                     };
-                   ]))))
+        resolved_type = value_desc.pval_type;
+        resolved_attributes = [];
+        resolved_name = "";
+        resolved_kind = Kind_inline_const c;
+      }
+    | None ->
+      Location.raise_errorf ~loc:value_desc.pval_loc
+        "\"%s\" is reserved for %@inline constants" prim_name
+  else if Ast_attributes.is_ffi_external value_desc.pval_attributes prim_name
+  then (
+    let {Ast_external_process.pval_type; spec; pval_attributes} =
+      Ast_external_process.resolve value_desc.pval_loc value_desc.pval_type
+        value_desc.pval_attributes prim_name
+    in
+    Bs_ast_invariant.emit_external_warnings_on_resolved_external value_desc
+      ~pval_type ~pval_attributes;
+    {
+      resolved_type = pval_type;
+      resolved_attributes = pval_attributes;
+      resolved_name = prim_name;
+      resolved_kind = Kind_external spec;
+    })
+  else
+    {
+      resolved_type = value_desc.pval_type;
+      resolved_attributes = value_desc.pval_attributes;
+      resolved_name = prim_name;
+      resolved_kind = Kind_intrinsic;
+    }

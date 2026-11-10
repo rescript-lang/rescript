@@ -40,7 +40,7 @@ type arg_type = External_arg_spec.attr
 type arg_label = External_arg_spec.label
 
 (* The declaration, as the attribute language states it. The backend
-   compiles it directly; digestion validates it with [check_decl]. *)
+   compiles it directly; resolution validates it with [check_decl]. *)
 type module_source =
   | Module_named of external_module_name (* @module("...") payload forms *)
   | Module_itself
@@ -145,17 +145,12 @@ let check_external_module_name ?loc x =
     Location.raise_errorf ?loc "empty name encountered"
   | _ -> ()
 
-(* Validation of a declaration; returns whether the binding refers to a
-   package-relative path (which disables cross-module inlining). The checks
-   mirror the historical per-runtime-shape checks exactly, including their
-   asymmetries (a zero-arity value also checks its own name for
-   relativeness; an applied one checks the module name for emptiness). *)
-let check_decl ?loc (decl : external_decl) ~prim_name : bool =
-  let xrelative = ref false in
-  let upgrade bool = if not !xrelative then xrelative := bool in
-  (match decl.module_ with
+(* Validation of a declaration. The checks mirror the historical
+   per-runtime-shape checks exactly, including their asymmetry: an applied
+   value checks its module name for emptiness, a zero-arity one doesn't. *)
+let check_decl ?loc (decl : external_decl) ~prim_name =
+  match decl.module_ with
   | Some Module_itself ->
-    upgrade (is_package_relative_path prim_name);
     if prim_name = "" then Location.raise_errorf ?loc "empty name encountered"
   | (None | Some (Module_named _)) as module_ -> (
     let emn =
@@ -165,27 +160,34 @@ let check_decl ?loc (decl : external_decl) ~prim_name : bool =
     in
     match decl.kind with
     | Decl_val {name} ->
-      if decl.effective_arity = 0 then (
-        upgrade (is_package_relative_path name);
-        emn
-        |> Option.iter (fun emn ->
-            upgrade (is_package_relative_path emn.bundle));
-        valid_global_name ?loc name)
-      else (
-        emn
-        |> Option.iter (fun emn ->
-            upgrade (is_package_relative_path emn.bundle));
+      if decl.effective_arity <> 0 then
         Option.iter (fun emn -> check_external_module_name ?loc emn) emn;
-        valid_global_name ?loc name)
+      valid_global_name ?loc name
     | Decl_new {name} ->
-      emn
-      |> Option.iter (fun emn -> upgrade (is_package_relative_path emn.bundle));
       Option.iter (fun emn -> check_external_module_name ?loc emn) emn;
       valid_global_name ?loc name
     | Decl_send {name} | Decl_set {name} | Decl_get {name} ->
       valid_method_name ?loc name
-    | Decl_get_index | Decl_set_index -> ()));
-  !xrelative
+    | Decl_get_index | Decl_set_index -> ())
+
+(* Does the declaration name a package-relative path? A zero-arity value also
+   counts its own name. *)
+let is_relative (decl : external_decl) ~prim_name =
+  match decl.module_ with
+  | Some Module_itself -> is_package_relative_path prim_name
+  | (None | Some (Module_named _)) as module_ -> (
+    let bundle_relative =
+      match module_ with
+      | Some (Module_named emn) -> is_package_relative_path emn.bundle
+      | _ -> false
+    in
+    match decl.kind with
+    | Decl_val {name} ->
+      bundle_relative
+      || (decl.effective_arity = 0 && is_package_relative_path name)
+    | Decl_new _ -> bundle_relative
+    | Decl_send _ | Decl_set _ | Decl_get _ | Decl_get_index | Decl_set_index ->
+      false)
 
 (* Can an implementation's spec satisfy an interface's spec during signature
    inclusion? Equal specs always can. Object-creation specs compare their

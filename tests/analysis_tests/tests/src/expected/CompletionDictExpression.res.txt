@@ -169,6 +169,16 @@ Path color
   },
   {
     "data": {
+      "modulePath": "RelativeExternal",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RelativeExternal",
+    "kind": 9,
+    "label": "RelativeExternal",
+    "tags": []
+  },
+  {
+    "data": {
       "modulePath": "Rename",
       "filePath": "src/CompletionDictExpression.res"
     },
@@ -881,6 +891,16 @@ Path color
     "detail": "module ReferencesWithInterface",
     "kind": 9,
     "label": "ReferencesWithInterface",
+    "tags": []
+  },
+  {
+    "data": {
+      "modulePath": "RelativeExternal",
+      "filePath": "src/CompletionDictExpression.res"
+    },
+    "detail": "module RelativeExternal",
+    "kind": 9,
+    "label": "RelativeExternal",
     "tags": []
   },
   {

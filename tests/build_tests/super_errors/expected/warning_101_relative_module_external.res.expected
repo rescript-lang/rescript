@@ -1,0 +1,14 @@
+
+  [1;31mWarning number 101[0m (configured as error) 
+  [36m/.../fixtures/warning_101_relative_module_external.res[0m:[2m4:39-41[0m
+
+  2 [2m│[0m // don't inline it. Its unused attribute is reported once, and a @warnin
+    [2m│[0m g on
+  3 [2m│[0m // the external applies to it.
+  [1;31m4[0m [2m│[0m @module("./local") external relative: [1;31m@as[0m("v") int => unit = "relative"
+  5 [2m│[0m 
+  6 [2m│[0m @warning("-101") @module("./local")
+
+  Unused attribute: @as
+This attribute has no effect here.
+For example, some attributes are only meaningful in externals.

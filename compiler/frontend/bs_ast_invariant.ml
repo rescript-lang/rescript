@@ -134,26 +134,20 @@ let emit_external_warnings : iterator =
     value_description =
       (fun self v ->
         match v with
-        | ({pval_loc; pval_prim = Some (Prim_name byte_name); pval_type} :
-            Parsetree.value_description) -> (
-          match byte_name with
-          | ("%identity" | "%component_identity")
-            when not (Ast_core_type.is_arity_one pval_type) ->
-            Location.raise_errorf ~loc:pval_loc
-              "%s expects a function type of the form 'a => 'b (arity 1)"
-              byte_name
-          | _ ->
-            if byte_name <> "" then
-              let c = String.unsafe_get byte_name 0 in
-              if not (c = '%' || c = '#' || c = '?') then
-                Location.prerr_warning pval_loc
-                  (Warnings.Bs_ffi_warning
-                     (byte_name ^ " such externals are unsafe"))
-              else super.value_description self v
-            else
-              Location.prerr_warning pval_loc
-                (Warnings.Bs_ffi_warning
-                   (byte_name ^ " such externals are unsafe")))
+        | {pval_prim = Some prim_name}
+          when Ast_attributes.is_ffi_external v.pval_attributes prim_name ->
+          (* The type checker checks it in its resolved form, through
+             [Ast_external.resolve]. *)
+          ()
+        | {
+         pval_loc;
+         pval_prim = Some (("%identity" | "%component_identity") as byte_name);
+         pval_type;
+        }
+          when not (Ast_core_type.is_arity_one pval_type) ->
+          Location.raise_errorf ~loc:pval_loc
+            "%s expects a function type of the form 'a => 'b (arity 1)"
+            byte_name
         | _ -> super.value_description self v);
     pat =
       (fun self (pat : Parsetree.pattern) ->
@@ -189,6 +183,41 @@ let emit_external_warnings_on_structure (stru : Parsetree.structure) =
 
 let emit_external_warnings_on_signature (sigi : Parsetree.signature) =
   emit_external_warnings.signature emit_external_warnings sigi
+
+(* Can the walk report something for this part of a resolved external? Its
+   [attribute] case doesn't look into payloads, so an attribute can only if
+   the walk checks its name; a type can through its attributes and the forms
+   this doesn't look into. Most resolved externals hold nothing to report, and
+   skipping the walk saves its allocations. *)
+let attribute_may_report (({txt}, _) : Parsetree.attribute) =
+  is_checked_attribute txt || removed_ocaml_attribute txt <> None
+
+let rec type_may_report (ty : Parsetree.core_type) =
+  List.exists attribute_may_report ty.ptyp_attributes
+  ||
+  match ty.ptyp_desc with
+  | Ptyp_any | Ptyp_var _ -> false
+  | Ptyp_arrow {params; ret} ->
+    List.exists
+      (function
+        | Parsetree.Parg_type {attrs; typ} ->
+          List.exists attribute_may_report attrs || type_may_report typ
+        | Parg_fixed _ -> true)
+      params
+    || type_may_report ret
+  | Ptyp_tuple args | Ptyp_constr (_, args) -> List.exists type_may_report args
+  | Ptyp_object _ | Ptyp_alias _ | Ptyp_variant _ | Ptyp_poly _ | Ptyp_package _
+  | Ptyp_extension _ ->
+    true
+
+let emit_external_warnings_on_resolved_external
+    (value_desc : Parsetree.value_description) ~pval_type ~pval_attributes =
+  if
+    List.exists attribute_may_report pval_attributes
+    || type_may_report pval_type
+  then
+    super.value_description emit_external_warnings
+      {value_desc with pval_type; pval_prim = None; pval_attributes}
 
 (* The PPX bridge renames the [ocaml.]-prefixed builtins a PPX emits to their
    bare names, so source written with them is checked before it reaches the
