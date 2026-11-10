@@ -26,6 +26,8 @@
 //   node scripts/compilerBenchmarks.js prepare <checkout>
 //   node scripts/compilerBenchmarks.js measure <checkout> <out.json> [--instructions]
 //     [--project <checkout>] [--playground]
+//   node scripts/compilerBenchmarks.js time <base checkout> <head checkout>
+//     <out.json> [--rounds <n>]
 //   node scripts/compilerBenchmarks.js compare <base.json> <head.json>
 //     [--threshold <percent>] [--summary <file.md>]
 //
@@ -41,8 +43,17 @@
 // of this script, so both measurements use the same ones. With `--project`,
 // it also builds tests/tests of the given checkout with the build system,
 // clean, with nothing to do and after two edits (see measureProjectBuild),
-// counting allocated words only.
+// and a few generated projects, clean and after an edit, for costs that grow
+// with the number of modules of a build (see generatedProjects), counting
+// allocated words only.
 // With `--playground`, it measures the size of the playground's compiler.
+//
+// `time` builds a generated project with the build systems of two prepared
+// checkouts in turn, writes the wall-clock times to <out.json> and prints
+// their medians and the median ratio of the head's time to the base's with
+// a 95% confidence interval (see timeBuilds). It is the one benchmark that
+// measures time, run by hand to indicate the effect of a change that does
+// the same work sooner; CI doesn't run it.
 //
 // `compare` reports the changes between two measurements as Markdown,
 // improvements and regressions alike, one section per count, and exits with
@@ -330,6 +341,138 @@ export const stressInputs = {
 };
 
 /**
+ * A generated project: its files by path relative to its root, rescript.json
+ * among them, and the source file that its edit changes.
+ *
+ * @typedef {{ files: Record<string, string>, edit: string }} GeneratedProject
+ */
+
+/**
+ * The rescript.json of a generated project, with JavaScript written to lib/
+ * so that removing lib/ makes the next build a clean one.
+ *
+ * @param {string} name
+ * @param {Record<string, unknown>} [extra] more settings
+ */
+function projectConfig(name, extra = {}) {
+  const config = {
+    name,
+    sources: [{ dir: "src" }],
+    "package-specs": { module: "esmodule", "in-source": false },
+    suffix: ".mjs",
+    ...extra,
+  };
+  return `${JSON.stringify(config, null, 2)}\n`;
+}
+
+/**
+ * Generated projects for the build benchmarks, one for each cost of a build
+ * that grows with the number of modules rather than with their size, which
+ * compiling one file at a time doesn't show. Their modules are small, so
+ * each builds in a few seconds at most.
+ *
+ * @type {Record<string, () => GeneratedProject>}
+ */
+export const generatedProjects = {
+  // Many modules that each use one or two values of a few large
+  // dependencies: the cost of loading a dependency's interface, which the
+  // type checker copies when it reads it, against the little of it that is
+  // used.
+  WideDeps: () => {
+    const dependencies = 4;
+    const values = 600;
+    const users = 240;
+    /** @type {Record<string, string>} */
+    const files = { "rescript.json": projectConfig("bench-wide-deps") };
+    for (let d = 0; d < dependencies; d++) {
+      const lines = [];
+      for (let v = 0; v < values; v++) {
+        lines.push(`type t${v} = {a${v}: int, b${v}: string}`);
+        lines.push(
+          `let make${v} = (x: int): t${v} => {a${v}: x, b${v}: "${v}"}`,
+        );
+        lines.push(`let get${v} = (r: t${v}) => r.a${v} + ${v}`);
+      }
+      files[`src/Big${d}.res`] = `${lines.join("\n")}\n`;
+    }
+    for (let u = 0; u < users; u++) {
+      const first = u % dependencies;
+      const second = (u * 7 + 1) % dependencies;
+      const v = (u * 37) % values;
+      files[`src/User${u}.res`] = [
+        `let a = Big${first}.get${v}(Big${first}.make${v}(${u}))`,
+        `let b = Big${second}.make${(v + 1) % values}(a).b${(v + 1) % values}`,
+        "",
+      ].join("\n");
+    }
+    // A new value in a dependency changes its interface, so every module
+    // that uses it is compiled again.
+    return { files, edit: "src/Big0.res" };
+  },
+  // A namespaced package of trivial modules. Each module opens the
+  // namespace's map of module aliases, one for every module of the package,
+  // so a cost per alias of opening it is quadratic in the package's size.
+  Namespace: () => {
+    const modules = 1000;
+    /** @type {Record<string, string>} */
+    const files = {
+      "rescript.json": projectConfig("bench-namespace", { namespace: true }),
+    };
+    for (let i = 0; i < modules; i++) {
+      // Each module but the first uses another one, through the map.
+      const use = i === 0 ? "0" : `Mod${Math.floor((i - 1) / 2)}.value`;
+      files[`src/Mod${i}.res`] = `let value = ${use} + ${i}\n`;
+    }
+    // The last module, which nothing uses.
+    return { files, edit: `src/Mod${modules - 1}.res` };
+  },
+};
+
+/**
+ * The project the wall-time benchmark builds: a long chain of modules, each
+ * using the one before it, and a module beside each that uses it. A build
+ * spends most of its time on the chain with most of its worker domains
+ * idle, which is what a change to the build's scheduling would improve.
+ *
+ * @returns {GeneratedProject}
+ */
+export function chainProject() {
+  const length = 150;
+  /** @type {Record<string, string>} */
+  const files = { "rescript.json": projectConfig("bench-chain") };
+  for (let i = 0; i < length; i++) {
+    const lines =
+      i === 0
+        ? [
+            "type t = {depth: int, items: array<int>}",
+            "let base = {depth: 0, items: []}",
+          ]
+        : [
+            `type t = {depth: int, items: array<int>, prev: Chain${i - 1}.t}`,
+            `let base = {depth: ${i}, items: [${i}], prev: Chain${i - 1}.base}`,
+          ];
+    // Bodies with some work for the type checker and code generation.
+    for (let f = 0; f < 20; f++) {
+      lines.push(
+        `let f${f} = (r: t, x: int) =>`,
+        "  switch mod(x, 4) {",
+        `  | 0 => r.items->Array.map(y => y + x + ${f})->Array.length`,
+        `  | 1 => r.depth * ${f + 1} + x`,
+        `  | 2 => r.items->Array.reduce(0, (acc, y) => acc + y * ${f})`,
+        "  | _ => -1",
+        "  }",
+      );
+    }
+    files[`src/Chain${i}.res`] = `${lines.join("\n")}\n`;
+    files[`src/Side${i}.res`] = [
+      `let total = Chain${i}.f0(Chain${i}.base, ${i}) + Chain${i}.f1(Chain${i}.base, 1)`,
+      "",
+    ].join("\n");
+  }
+  return { files, edit: `src/Chain${length - 1}.res` };
+}
+
+/**
  * The runtime and Belt sources of a checkout, by package.
  *
  * @param {string} checkout
@@ -519,17 +662,7 @@ function measureProjectBuild(checkout, projectCheckout, results) {
       throw new Error(`The modules to edit are missing from ${projectDir}.`);
     }
 
-    const build = () => ({
-      ...measureRun(rescript, ["build"], workDir, false, {
-        env: {
-          REWATCH_COMPILER_DOMAINS: "1",
-          REWATCH_REPORT_WORKER_ALLOCATIONS: "1",
-        },
-      }),
-      inputs,
-    });
-    /** @param {string} file */
-    const edit = file => fs.appendFileSync(file, "\nlet benchmarkEdit = 1\n");
+    const build = () => countBuild(rescript, workDir, inputs);
 
     results["build/clean"] = build();
     const outputs = outputSizes(workDir);
@@ -537,12 +670,95 @@ function measureProjectBuild(checkout, projectCheckout, results) {
       results[`output/tests/*${ext}`] = { bytes: outputs[ext], inputs };
     }
     results["build/no-op"] = build();
-    edit(leafModule);
+    editModule(leafModule);
     results["build/leaf-edit"] = build();
-    edit(path.join(workDir, sharedModule));
+    editModule(path.join(workDir, sharedModule));
     results["build/shared-edit"] = build();
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Builds a project with a build system on one worker domain, so that the
+ * counts don't depend on how the work is shared, and counts the words it
+ * and its workers allocated.
+ *
+ * @param {string} rescript
+ * @param {string} dir
+ * @param {string} inputs
+ * @returns {Measurement}
+ */
+function countBuild(rescript, dir, inputs) {
+  return {
+    ...measureRun(rescript, ["build"], dir, false, {
+      env: {
+        REWATCH_COMPILER_DOMAINS: "1",
+        REWATCH_REPORT_WORKER_ALLOCATIONS: "1",
+      },
+    }),
+    inputs,
+  };
+}
+
+/**
+ * Adds a value to a module, which changes its interface when it has no
+ * interface file.
+ *
+ * @param {string} file
+ */
+function editModule(file) {
+  fs.appendFileSync(file, "\nlet benchmarkEdit = 1\n");
+}
+
+/**
+ * Writes a generated project to an empty directory, with the runtime of
+ * `checkout` as its only dependency. Returns a hash of its files.
+ *
+ * @param {GeneratedProject} project
+ * @param {string} dir
+ * @param {string} checkout
+ */
+function writeProject(project, dir, checkout) {
+  const hash = createHash("sha256");
+  for (const [file, contents] of Object.entries(project.files)) {
+    fs.mkdirSync(path.join(dir, path.dirname(file)), { recursive: true });
+    fs.writeFileSync(path.join(dir, file), contents);
+    hash.update(file).update("\0").update(contents).update("\0");
+  }
+  const scope = path.join(dir, "node_modules", "@rescript");
+  fs.mkdirSync(scope, { recursive: true });
+  fs.symlinkSync(
+    path.join(checkout, "packages", "@rescript", "runtime"),
+    path.join(scope, "runtime"),
+    "junction",
+  );
+  return hash.digest("hex").slice(0, 16);
+}
+
+/**
+ * Builds each generated project with the build system of `checkout`, clean
+ * and after its edit, counting allocated words like measureProjectBuild.
+ * The projects come from the checkout of this script, and are built in a
+ * directory with the same name in every measurement.
+ *
+ * @param {string} checkout
+ * @param {Results} results
+ */
+function measureGeneratedProjects(checkout, results) {
+  const rescript = path.join(checkout, relativeBinDir, "rescript.exe");
+  const workDir = path.join(os.tmpdir(), "compiler-bench-generated");
+  for (const [name, generate] of Object.entries(generatedProjects)) {
+    fs.rmSync(workDir, { recursive: true, force: true });
+    try {
+      const project = generate();
+      const inputs = writeProject(project, workDir, checkout);
+      results[`build/${name}/clean`] = countBuild(rescript, workDir, inputs);
+      editModule(path.join(workDir, project.edit));
+      results[`build/${name}/edit`] = countBuild(rescript, workDir, inputs);
+    } finally {
+      fs.rmSync(workDir, { recursive: true, force: true });
+    }
   }
 }
 
@@ -666,9 +882,179 @@ export function measure(checkout, { instructions, project, playground }) {
 
   if (project) {
     measureProjectBuild(checkout, project, results);
+    measureGeneratedProjects(checkout, results);
   }
 
   return results;
+}
+
+/**
+ * How many times the wall-time benchmark builds its project with each
+ * compiler, after one build with each that isn't counted.
+ */
+const timingRounds = 10;
+
+/**
+ * How long one of the wall-time benchmark's builds may take, in
+ * milliseconds, many times as long as a build takes, so that a build that
+ * hangs, as it could with a deadlock in the scheduling, ends the benchmark.
+ */
+const timingBuildTimeout = 2 * 60 * 1000;
+
+/**
+ * The wall-clock times of the wall-time benchmark's builds, in
+ * milliseconds, by benchmark: round i built with the base's compiler and
+ * the head's, one right after the other.
+ *
+ * @typedef {Record<string, { base: number[], head: number[] }>} Timings
+ */
+
+/**
+ * Builds the wall-time benchmark's project clean with the build systems of
+ * two checkouts in turn, on as many worker domains as the build system
+ * chooses, and returns how long each build took. The two compilers take
+ * turns going first, so that a machine that gets slower or faster during
+ * the run changes both alike.
+ *
+ * Wall-clock time on a loaded machine varies by several percent from one
+ * build to the next, and more over minutes, so this only indicates the
+ * effect of a change that counting doesn't show, such as starting a module
+ * earlier: building the same modules with idle domains doing less is
+ * faster, but allocates and executes as much or more.
+ *
+ * Each checkout builds a copy of the project of its own, with its own
+ * runtime, both under paths of the same length.
+ *
+ * @param {string} baseCheckout
+ * @param {string} headCheckout
+ * @param {number} rounds
+ * @returns {Timings}
+ */
+export function timeBuilds(baseCheckout, headCheckout, rounds) {
+  const workDir = path.join(os.tmpdir(), "compiler-bench-time");
+  fs.rmSync(workDir, { recursive: true, force: true });
+  try {
+    const project = chainProject();
+    const sides = [
+      { name: "base", checkout: baseCheckout },
+      { name: "head", checkout: headCheckout },
+    ].map(side => {
+      const dir = path.join(workDir, side.name);
+      writeProject(project, dir, side.checkout);
+      return {
+        ...side,
+        dir,
+        rescript: path.join(side.checkout, relativeBinDir, "rescript.exe"),
+        /** @type {number[]} */
+        times: [],
+      };
+    });
+    /** @param {(typeof sides)[number]} side */
+    const build = side => {
+      fs.rmSync(path.join(side.dir, "lib"), { recursive: true, force: true });
+      const start = process.hrtime.bigint();
+      execFileSync(side.rescript, ["build"], {
+        cwd: side.dir,
+        stdio: "pipe",
+        timeout: timingBuildTimeout,
+        killSignal: "SIGKILL",
+      });
+      return Number(process.hrtime.bigint() - start) / 1e6;
+    };
+    for (const side of sides) build(side);
+    for (let round = 0; round < rounds; round++) {
+      const order = round % 2 === 0 ? sides : [...sides].reverse();
+      for (const side of order) side.times.push(build(side));
+    }
+    return {
+      "time/Chain/clean": { base: sides[0].times, head: sides[1].times },
+    };
+  } finally {
+    fs.rmSync(workDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The median of numbers.
+ *
+ * @param {number[]} values
+ */
+export function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+/**
+ * A pseudo-random number generator (mulberry32), so that the confidence
+ * interval of the same times is the same in every run.
+ *
+ * @param {number} seed
+ * @returns {() => number} numbers in [0, 1)
+ */
+function randomNumbers(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * The median of the head's time divided by the base's time in the same
+ * round, with a 95% confidence interval from a percentile bootstrap: the
+ * medians of `resamples` samples of the rounds drawn with replacement, of
+ * which 2.5% are below `low` and 2.5% above `high`. Pairing the rounds
+ * leaves out a drift that slows both builds of a round alike.
+ *
+ * @param {number[]} base
+ * @param {number[]} head
+ * @param {number} [resamples]
+ * @returns {{ ratio: number, low: number, high: number, rounds: number }}
+ */
+export function timeRatio(base, head, resamples = 2000) {
+  if (base.length !== head.length || base.length === 0) {
+    throw new Error("The base and the head need the same rounds.");
+  }
+  const ratios = base.map((time, i) => head[i] / time);
+  const random = randomNumbers(1);
+  const medians = Array.from({ length: resamples }, () =>
+    median(ratios.map(() => ratios[Math.floor(random() * ratios.length)])),
+  ).sort((a, b) => a - b);
+  /** @param {number} q */
+  const quantile = q =>
+    medians[Math.min(resamples - 1, Math.floor(q * resamples))];
+  return {
+    ratio: median(ratios),
+    low: quantile(0.025),
+    high: quantile(0.975),
+    rounds: ratios.length,
+  };
+}
+
+/**
+ * Summarizes the wall-time benchmarks as lines of text: for each, the
+ * base's and the head's median times, and the median of each round's head
+ * time over its base time, which isn't the ratio of the two medians, with
+ * its 95% confidence interval.
+ *
+ * @param {Timings} timings
+ * @returns {string[]}
+ */
+export function renderTimings(timings) {
+  return Object.entries(timings).map(([name, { base, head }]) => {
+    const { ratio, low, high, rounds } = timeRatio(base, head);
+    return [
+      `${name} (${rounds} ${rounds === 1 ? "round" : "rounds"}):`,
+      `base ${median(base).toFixed(0)} ms, head ${median(head).toFixed(0)} ms (medians),`,
+      `head / base ${ratio.toFixed(3)} (95% CI ${low.toFixed(3)} to ${high.toFixed(3)})`,
+    ].join(" ");
+  });
 }
 
 /**
@@ -682,9 +1068,22 @@ export function measure(checkout, { instructions, project, playground }) {
  */
 
 /**
+ * Whether a benchmark builds one of the generated projects. Their counts
+ * are larger than all the others together, so they are added up apart.
+ *
+ * @param {string} name
+ */
+const isGeneratedProject = name =>
+  Object.keys(generatedProjects).some(project =>
+    name.startsWith(`build/${project}/`),
+  );
+
+/**
  * Lists the counts of one metric that differ between two measurements,
  * largest relative change first, and the benchmarks that only one of them
- * has. Benchmarks without the metric on either side are left out.
+ * has. Benchmarks without the metric on either side are left out. The
+ * total leaves out the generated projects, which have a subtotal of their
+ * own, `generated`, when there are any.
  *
  * @param {Results} base
  * @param {Results} head
@@ -715,9 +1114,14 @@ export function compareResults(base, head, threshold, metric = "allocated") {
   }
   changes.sort((x, y) => Math.abs(y.percent) - Math.abs(x.percent));
 
-  /** @param {Results} results */
-  const total = results =>
-    common.reduce((sum, name) => sum + (results[name][metric] ?? 0), 0);
+  /**
+   * @param {Results} results
+   * @param {string[]} names
+   */
+  const total = (results, names) =>
+    names.reduce((sum, name) => sum + (results[name][metric] ?? 0), 0);
+  const counted = common.filter(name => !isGeneratedProject(name));
+  const generated = common.filter(isGeneratedProject);
 
   return {
     metric,
@@ -729,7 +1133,11 @@ export function compareResults(base, head, threshold, metric = "allocated") {
     added: [...headNames].filter(name => !baseNames.has(name)),
     removed: [...baseNames].filter(name => !headNames.has(name)),
     compared: common.length,
-    total: { base: total(base), head: total(head) },
+    total: { base: total(base, counted), head: total(head, counted) },
+    generated:
+      generated.length > 0
+        ? { base: total(base, generated), head: total(head, generated) }
+        : undefined,
   };
 }
 
@@ -810,19 +1218,27 @@ function renderSection(comparison, threshold, visibleRows) {
     removed,
     compared,
     total,
+    generated,
   } = comparison;
   const words = metricWords[metric];
-  const totalPercent =
-    total.base === 0 ? 0 : ((total.head - total.base) / total.base) * 100;
-  // A total that rounds to 0.00% would read as "+0.00%" or "-0.00%".
-  const totalChange =
-    Math.abs(totalPercent) < 0.005 ? "±0.00%" : formatPercent(totalPercent);
+  /** @param {{ base: number, head: number }} sum */
+  const sumChange = sum => {
+    const percent =
+      sum.base === 0 ? 0 : ((sum.head - sum.base) / sum.base) * 100;
+    // A total that rounds to 0.00% would read as "+0.00%" or "-0.00%".
+    const change =
+      Math.abs(percent) < 0.005 ? "±0.00%" : formatPercent(percent);
+    return `${formatCount(sum.base)} → ${formatCount(sum.head)} (${change})`;
+  };
   const lines = [
     `### ${words.title}`,
     "",
-    `In total: ${formatCount(total.base)} → ${formatCount(total.head)} (${totalChange}).`,
+    `In total: ${sumChange(total)}.`,
     "",
   ];
+  if (generated) {
+    lines.push(`Generated projects: ${sumChange(generated)}.`, "");
+  }
   if (regressions.length > 0) {
     lines.push(
       `**⚠️ Regression: ${words.more(regressions.length, threshold)}.**`,
@@ -911,7 +1327,11 @@ export function compareAll(base, head, threshold) {
   );
 }
 
-/** @param {string[]} args */
+/**
+ * Runs a command and returns its exit status.
+ *
+ * @param {string[]} args
+ */
 function main(args) {
   const [command, ...rest] = args;
   if (command === "prepare" && rest.length === 1) {
@@ -939,6 +1359,25 @@ function main(args) {
     console.log(`Measured ${Object.keys(results).length} benchmarks.`);
     return 0;
   }
+  if (command === "time" && rest.length >= 3) {
+    const [baseCheckout, headCheckout, out, ...options] = rest;
+    let rounds = timingRounds;
+    for (let i = 0; i < options.length; i += 2) {
+      if (options[i] === "--rounds") rounds = Number(options[i + 1]);
+      else throw new Error(`Unknown option ${options[i]}`);
+    }
+    if (!Number.isInteger(rounds) || rounds < 1) {
+      throw new Error("--rounds takes a positive integer.");
+    }
+    const timings = timeBuilds(
+      path.resolve(baseCheckout),
+      path.resolve(headCheckout),
+      rounds,
+    );
+    fs.writeFileSync(out, `${JSON.stringify(timings, null, 2)}\n`);
+    for (const line of renderTimings(timings)) console.log(line);
+    return 0;
+  }
   if (command === "compare" && rest.length >= 2) {
     const [basePath, headPath, ...options] = rest;
     let threshold = 1;
@@ -960,6 +1399,8 @@ function main(args) {
     "Usage: compilerBenchmarks.js prepare <checkout>\n" +
       "       compilerBenchmarks.js measure <checkout> <out.json> [--instructions]\n" +
       "         [--project <checkout>] [--playground]\n" +
+      "       compilerBenchmarks.js time <base checkout> <head checkout> <out.json>\n" +
+      "         [--rounds <n>]\n" +
       "       compilerBenchmarks.js compare <base.json> <head.json> [--threshold <percent>]\n" +
       "         [--summary <file.md>]",
   );
