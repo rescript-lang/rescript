@@ -1451,84 +1451,8 @@ and print_type_declarations ~state ~rec_flag type_declarations cmt_tbl =
  *        (* Invariant: non-empty list *)
  *  | Ptype_open
  *)
-and print_type_declaration ~state ~name ~equal_sign ~rec_flag i
-    (td : Parsetree.type_declaration) cmt_tbl =
-  let attrs =
-    print_attributes ~state ~loc:td.ptype_loc td.ptype_attributes cmt_tbl
-  in
-  let prefix =
-    if i > 0 then Doc.text "and " else Doc.concat [Doc.text "type "; rec_flag]
-  in
-  let type_name = name in
-  let type_params = print_type_params ~state td.ptype_params cmt_tbl in
-  let manifest_and_kind =
-    match td.ptype_kind with
-    | Ptype_abstract -> (
-      match td.ptype_manifest with
-      | None -> Doc.nil
-      | Some typ ->
-        Doc.concat
-          [
-            Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
-            print_private_flag td.ptype_private;
-            print_typ_expr ~state typ cmt_tbl;
-          ])
-    | Ptype_open ->
-      Doc.concat
-        [
-          Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
-          print_private_flag td.ptype_private;
-          Doc.text "..";
-        ]
-    | Ptype_record lds ->
-      let manifest =
-        match td.ptype_manifest with
-        | None -> Doc.nil
-        | Some typ ->
-          Doc.concat
-            [
-              Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
-              print_typ_expr ~state typ cmt_tbl;
-            ]
-      in
-      Doc.concat
-        [
-          manifest;
-          Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
-          print_private_flag td.ptype_private;
-          print_record_declaration ~record_loc:td.ptype_loc ~state lds cmt_tbl;
-        ]
-    | Ptype_variant cds ->
-      let manifest =
-        match td.ptype_manifest with
-        | None -> Doc.nil
-        | Some typ ->
-          Doc.concat
-            [
-              Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
-              print_typ_expr ~state typ cmt_tbl;
-            ]
-      in
-      Doc.concat
-        [
-          manifest;
-          Doc.concat [Doc.space; Doc.text equal_sign];
-          print_constructor_declarations ~state ~private_flag:td.ptype_private
-            cds cmt_tbl;
-        ]
-  in
-  let constraints = print_type_definition_constraints ~state td.ptype_cstrs in
-  Doc.group
-    (Doc.concat
-       [attrs; prefix; type_name; type_params; manifest_and_kind; constraints])
-
-and print_type_declaration2 ?inline_record_definitions ~state ~rec_flag
-    (td : Parsetree.type_declaration) cmt_tbl i =
-  let name =
-    let doc = print_ident_like td.Parsetree.ptype_name.txt in
-    print_comments doc cmt_tbl td.ptype_name.loc
-  in
-  let equal_sign = "=" in
+and print_type_declaration ?inline_record_definitions ~state ~name ~equal_sign
+    ~rec_flag i (td : Parsetree.type_declaration) cmt_tbl =
   let attrs =
     print_attributes ~state ~loc:td.ptype_loc td.ptype_attributes cmt_tbl
   in
@@ -1610,6 +1534,15 @@ and print_type_declaration2 ?inline_record_definitions ~state ~rec_flag
   Doc.group
     (Doc.concat
        [attrs; prefix; type_name; type_params; manifest_and_kind; constraints])
+
+and print_type_declaration2 ?inline_record_definitions ~state ~rec_flag
+    (td : Parsetree.type_declaration) cmt_tbl i =
+  let name =
+    let doc = print_ident_like td.Parsetree.ptype_name.txt in
+    print_comments doc cmt_tbl td.ptype_name.loc
+  in
+  print_type_declaration ?inline_record_definitions ~state ~name ~equal_sign:"="
+    ~rec_flag i td cmt_tbl
 
 and print_type_definition_constraints ~state cstrs =
   match cstrs with
