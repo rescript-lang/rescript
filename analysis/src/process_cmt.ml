@@ -617,7 +617,7 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
         incl_type []
     in
     top_level
-  | Tstr_primitive vd when Jsx_hacks.primitive_is_fragment vd = false ->
+  | Tstr_primitive vd ->
     let declared =
       add_declared ~extent:vd.val_loc ~item:vd.val_val.val_type
         ~name:vd.val_name
