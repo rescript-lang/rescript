@@ -124,6 +124,6 @@ let iter_includes f x =
 
 let get_raw_opens x =
   x
-  |> Utils.filter_map (function
+  |> List.filter_map (function
     | Open path -> Some path
     | _ -> None)

@@ -441,7 +441,7 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
         let unpack_loc_opt =
           match
             pat.pat_extra
-            |> Utils.filter_map (function
+            |> List.filter_map (function
               | Typedtree.Tpat_unpack, loc, _ -> Some loc
               | _ -> None)
           with
@@ -729,7 +729,7 @@ let file_for_cmt_infos ~module_name ~uri
   | Partial_implementation parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filter_map (fun p ->
+      |> List.filter_map (fun p ->
           match (p : Cmt_format.binary_part) with
           | Partial_structure str -> Some str.str_items
           | Partial_structure_item str -> Some [str]
@@ -741,7 +741,7 @@ let file_for_cmt_infos ~module_name ~uri
   | Partial_interface parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
+      |> List.filter_map (fun (p : Cmt_format.binary_part) ->
           match p with
           | Partial_signature str -> Some str.sig_items
           | Partial_signature_item str -> Some [str]

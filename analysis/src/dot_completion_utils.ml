@@ -1,6 +1,6 @@
 let filter_record_fields ~env ~record_as_string ~prefix ~exact fields =
   fields
-  |> Utils.filter_map (fun (field : Shared_types.field) ->
+  |> List.filter_map (fun (field : Shared_types.field) ->
       if Utils.check_name field.fname.txt ~prefix ~exact then
         Some
           (Shared_types.Completion.create field.fname.txt ~env
@@ -17,7 +17,7 @@ let field_completions_for_dot_completion ?pos_of_dot typ ~env ~state ~package
     if Debug.verbose () then
       Printf.printf "[dot_completion]--> Obj type found:\n";
     obj |> Type_utils.get_obj_fields
-    |> Utils.filter_map (fun (field, _typ) ->
+    |> List.filter_map (fun (field, _typ) ->
         if Utils.check_name field ~prefix ~exact then
           let full_obj_field_name = Printf.sprintf "[\"%s\"]" field in
           Some
