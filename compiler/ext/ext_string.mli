@@ -33,8 +33,6 @@ val split_by : ?keep_empty:bool -> (char -> bool) -> string -> string list
 val split : ?keep_empty:bool -> string -> char -> string list
 (** default is false *)
 
-val starts_with : string -> string -> bool
-
 (**
    [ends_with_then_chop name ext]
    @example:
@@ -51,12 +49,6 @@ val for_all_from : string -> int -> (char -> bool) -> bool
    if [start] is negative, it raises,
    if [start] is too large, it returns true
 *)
-
-val for_all : string -> (char -> bool) -> bool
-
-val is_empty : string -> bool
-
-val equal : string -> string -> bool
 
 (* val index_next :
    string -> 
@@ -85,10 +77,6 @@ val replace_backward_slash : string -> string
 (** if no conversion happens, reference equality holds *)
 
 val compare : string -> string -> int
-
-val single_colon : string
-
-val uncapitalize_ascii : string -> string
 
 val is_valid_hash_number : string -> bool
 

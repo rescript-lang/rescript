@@ -92,7 +92,7 @@ type app_pattern = {
 let view_as_app (fn : exp) (s : string list) : app_pattern option =
   match fn.pexp_desc with
   | Pexp_apply {funct = {pexp_desc = Pexp_ident {txt = Lident op; _}}; args}
-    when Ext_list.has_string s op ->
+    when List.mem op s ->
     Some {op; loc = fn.pexp_loc; args = check_and_discard args}
   | _ -> None
 

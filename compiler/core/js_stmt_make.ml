@@ -82,7 +82,8 @@ let int_switch ?(declaration : (J.property * Ident.t) option)
   | Number (Int {i; _}) -> (
     let continuation =
       match
-        Ext_list.find_opt clauses (fun (switch_case, x) ->
+        clauses
+        |> List.find_map (fun (switch_case, (x : J.case_clause)) ->
             if switch_case = Int32.to_int i then Some x.switch_body else None)
       with
       | Some case -> case
@@ -135,10 +136,15 @@ let string_switch ?(declaration : (J.property * Ident.t) option)
   | Str txt -> (
     let continuation =
       match
-        Ext_list.find_opt clauses (fun (switch_case, x) ->
-            match switch_case with
-            | Literal (String s) -> if s = txt then Some x.switch_body else None
-            | Literal _ | Payload_shape _ -> None)
+        clauses
+        |> List.find_map
+             (fun
+               ((switch_case : Variant_runtime.tag_type), (x : J.case_clause))
+             ->
+               match switch_case with
+               | Literal (String s) ->
+                 if s = txt then Some x.switch_body else None
+               | Literal _ | Payload_shape _ -> None)
       with
       | Some case -> case
       | None -> (

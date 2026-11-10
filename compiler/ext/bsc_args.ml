@@ -54,7 +54,7 @@ let usage_b (buf : Ext_buffer.t) ~usage (speclist : t) =
       if String.length key > !max_col then max_col := String.length key);
   speclist
   |> Array.iter (fun (key, _, doc) ->
-      if not (Ext_string.starts_with doc "*internal*") then (
+      if not (String.starts_with ~prefix:"*internal*" doc) then (
         buf +> "  ";
         buf +> key;
         buf +> String.make (!max_col - String.length key + 2) ' ';

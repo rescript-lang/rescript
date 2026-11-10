@@ -3,7 +3,7 @@ let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 module String_hash = Hashtbl.Make (struct
   type t = string
 
-  let equal = Ext_string.equal
+  let equal = String.equal
   let hash = Ext_platform_primitives.hash_string
 end)
 

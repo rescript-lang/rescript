@@ -197,10 +197,12 @@ let rec is_printable_jsx (e : J.expression) =
   | _ -> false
 
 let raw_snippet_exp_simple_enough (s : string) =
-  Ext_string.for_all s (fun c ->
+  String.for_all
+    (fun c ->
       match c with
       | 'a' .. 'z' | 'A' .. 'Z' | '_' | '.' -> true
       | _ -> false)
+    s
 (* Parentheses are required when the expression
    starts syntactically with "{" or "function"
    TODO:  be more conservative, since Google Closure will handle

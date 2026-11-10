@@ -2309,7 +2309,8 @@ let make_constructor_matching_plan ~cstr ~(layout : Variant_runtime.layout)
     | 2, 0, _, [] when cstr.cstr_name = "true" || cstr.cstr_name = "false" ->
       let find_action name =
         match
-          Ext_list.find_opt consts (fun (cstr, action) ->
+          consts
+          |> List.find_map (fun (cstr, action) ->
               if cstr.cstr_name = name then Some action else None)
         with
         | Some action -> action

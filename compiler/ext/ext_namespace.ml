@@ -37,7 +37,7 @@ let change_ext_ns_suffix name ext =
 let js_name_of_modulename s (case : Ext_js_file_kind.case) suffix : string =
   let s =
     match case with
-    | Little -> Ext_string.uncapitalize_ascii s
+    | Little -> String.uncapitalize_ascii s
     | Upper -> s
   in
   change_ext_ns_suffix s suffix
