@@ -25,7 +25,6 @@ type printing_context = {inlined_types: type_inlined_type list}
 val print_res_poly_identifier : (string -> string) ref
 val longident : formatter -> Longident.t -> unit
 val ident : formatter -> Ident.t -> unit
-val tree_of_path : Path.t -> out_ident
 val path : formatter -> Path.t -> unit
 val string_of_path : Path.t -> string
 val string_of_out_ident : Outcometree.out_ident -> string
