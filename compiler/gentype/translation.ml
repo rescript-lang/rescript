@@ -120,8 +120,8 @@ let translate_value ~attributes ~config ~doc_string ~output_file_relative
   }
 
 (**
- [@genType]
- [@module] external myBanner : ReasonReact.reactClass = "./MyBanner";
+ @genType @module("./MyBanner")
+ external make: React.component<props> = "default"
 *)
 let translate_primitive ~config ~output_file_relative ~resolver ~type_env
     (value_description : Typedtree.value_description) : t =

@@ -426,8 +426,7 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
 let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
     (expression : Typedtree.expression) =
   (match expression.exp_desc with
-  | Texp_ident (path, {txt; loc}, _) when not (Jsx_hacks.path_is_fragment path)
-    ->
+  | Texp_ident (path, {txt; loc}, _) ->
     add_for_longident ~env ~extra
       (Some (expression.exp_type, Value))
       path txt loc
