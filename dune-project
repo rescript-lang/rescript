@@ -52,6 +52,10 @@
   (odoc :with-doc)
   (ocaml-lsp-server
    (and :with-dev-setup (>= 1.23.0)))
+  ; lsp is held at 1.27.0 (analysis.opam), and so is ocaml-lsp-server, which
+  ; doesn't build against stdune 3.25.
+  (stdune
+   (and :with-dev-setup (< 3.25)))
   (js_of_ocaml
    (and
     (<> :os "win32")
