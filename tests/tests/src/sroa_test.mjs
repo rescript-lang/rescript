@@ -116,21 +116,43 @@ function writeOnlyFieldStillRaises() {
   return cell_live;
 }
 
+function storedInWriteOnly() {
+  let cell = 1;
+  return cell;
+}
+
+function readByWriteOnly() {
+  let value = 1;
+  return value;
+}
+
+function manyInLoop(n) {
+  let a = 0;
+  let b = 1;
+  let c = 2;
+  for (let i = 0; i <= n; ++i) {
+    a = a + i | 0;
+    b = b + a | 0;
+    c = c + b | 0;
+  }
+  return (a + b | 0) + c | 0;
+}
+
 Mocha.describe("Sroa_test", () => {
-  Mocha.test("scalarizes a local mutable record", () => Test_utils.eq("File \"sroa_test.res\", line 123, characters 53-60", 42, localPair()));
-  Mocha.test("shares scalar fields with closures", () => Test_utils.eq("File \"sroa_test.res\", line 124, characters 54-61", 32, capturedPair()));
-  Mocha.test("preserves initializer order", () => Test_utils.eq("File \"sroa_test.res\", line 125, characters 47-54", [
+  Mocha.test("scalarizes a local mutable record", () => Test_utils.eq("File \"sroa_test.res\", line 156, characters 53-60", 42, localPair()));
+  Mocha.test("shares scalar fields with closures", () => Test_utils.eq("File \"sroa_test.res\", line 157, characters 54-61", 32, capturedPair()));
+  Mocha.test("preserves initializer order", () => Test_utils.eq("File \"sroa_test.res\", line 158, characters 47-54", [
     4,
     [
       1,
       2
     ]
   ], initializationOrder()));
-  Mocha.test("retains an escaping record", () => Test_utils.eq("File \"sroa_test.res\", line 126, characters 46-53", 30, consumePair({
+  Mocha.test("retains an escaping record", () => Test_utils.eq("File \"sroa_test.res\", line 159, characters 46-53", 30, consumePair({
     left: 10,
     right: 20
   })));
-  Mocha.test("cleans up fields according to their uses", () => Test_utils.eq("File \"sroa_test.res\", line 128, characters 7-14", [
+  Mocha.test("cleans up fields according to their uses", () => Test_utils.eq("File \"sroa_test.res\", line 161, characters 7-14", [
     5,
     [
       2,
@@ -140,20 +162,23 @@ Mocha.describe("Sroa_test", () => {
       6
     ]
   ], fieldUseCleanup()));
-  Mocha.test("preserves overwritten initializer effects", () => Test_utils.eq("File \"sroa_test.res\", line 131, characters 7-14", [
+  Mocha.test("preserves overwritten initializer effects", () => Test_utils.eq("File \"sroa_test.res\", line 164, characters 7-14", [
     2,
     [
       1,
       2
     ]
   ], overwrittenBeforeRead()));
-  Mocha.test("removes write-only fields captured by closures", () => Test_utils.eq("File \"sroa_test.res\", line 134, characters 7-14", [
+  Mocha.test("removes write-only fields captured by closures", () => Test_utils.eq("File \"sroa_test.res\", line 167, characters 7-14", [
     1,
     2
   ], capturedWriteOnly()));
-  Mocha.test("does not evaluate writes in uncalled closures", () => Test_utils.eq("File \"sroa_test.res\", line 137, characters 7-14", [1], uncalledWriteOnlyClosure()));
-  Mocha.test("read-only fields snapshot their initializer", () => Test_utils.eq("File \"sroa_test.res\", line 140, characters 7-14", 1, readOnlyFieldSnapshotsInitializer()));
-  Mocha.test("preserves exceptions from write-only field values", () => Test_utils.throws("File \"sroa_test.res\", line 143, characters 11-18", writeOnlyFieldStillRaises));
+  Mocha.test("does not evaluate writes in uncalled closures", () => Test_utils.eq("File \"sroa_test.res\", line 170, characters 7-14", [1], uncalledWriteOnlyClosure()));
+  Mocha.test("read-only fields snapshot their initializer", () => Test_utils.eq("File \"sroa_test.res\", line 173, characters 7-14", 1, readOnlyFieldSnapshotsInitializer()));
+  Mocha.test("preserves exceptions from write-only field values", () => Test_utils.throws("File \"sroa_test.res\", line 176, characters 11-18", writeOnlyFieldStillRaises));
+  Mocha.test("scalarizes a block stored in a write-only field", () => Test_utils.eq("File \"sroa_test.res\", line 178, characters 67-74", 1, storedInWriteOnly()));
+  Mocha.test("drops reads that only feed write-only fields", () => Test_utils.eq("File \"sroa_test.res\", line 179, characters 64-71", 1, readByWriteOnly()));
+  Mocha.test("scalarizes several blocks updated together", () => Test_utils.eq("File \"sroa_test.res\", line 180, characters 62-69", 38, manyInLoop(3)));
 });
 
 export {
@@ -168,5 +193,8 @@ export {
   uncalledWriteOnlyClosure,
   readOnlyFieldSnapshotsInitializer,
   writeOnlyFieldStillRaises,
+  storedInWriteOnly,
+  readByWriteOnly,
+  manyInLoop,
 }
 /*  Not a pure module */
