@@ -96,7 +96,7 @@ let esmodule_export cxt f (idents : Ident.t list) =
           (fun (s, export) ->
             P.group f 0 (fun _ ->
                 P.string f export;
-                if not @@ Ext_string.equal export s then (
+                if not @@ String.equal export s then (
                   P.space f;
                   P.string f L.as_;
                   P.space f;

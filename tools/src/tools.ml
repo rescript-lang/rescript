@@ -341,12 +341,6 @@ let type_detail typ ~env ~full ~state =
          })
   | _ -> None
 
-let rec string_of_out_ident = function
-  | Outcometree.Oide_ident name -> name
-  | Oide_dot (path, name) -> string_of_out_ident path ^ "." ^ name
-  | Oide_apply (functor_, argument) ->
-    string_of_out_ident functor_ ^ "(" ^ string_of_out_ident argument ^ ")"
-
 let render_out_type typ =
   Res_doc.to_string ~width:80 (Res_outcome_printer.print_out_type_doc typ)
 
@@ -355,7 +349,7 @@ let rec type_doc_of_out_type (typ : Outcometree.out_type) =
   | Otyp_constr (path, generic_parameters) ->
     Constructor
       {
-        path = string_of_out_ident path;
+        path = Printtyp.string_of_out_ident path;
         generic_parameters = List.map type_doc_of_out_type generic_parameters;
       }
   | Otyp_var (weak, name) -> Variable {name; weak}

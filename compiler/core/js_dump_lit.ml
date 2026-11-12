@@ -60,7 +60,7 @@ let dot = "."
 
 let comma = ","
 
-let colon = Ext_string.single_colon
+let colon = ":"
 
 let colon_space = ": "
 

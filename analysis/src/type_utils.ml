@@ -130,124 +130,83 @@ let get_extracted_type maybe_res =
   | None -> None
   | Some (extracted_type, _) -> Some extracted_type
 
+(* Rebuild [t] with each type variable [v] replaced by [sub v]. *)
+let map_type_vars ~sub (t : Types.type_expr) =
+  let rec loop (t : Types.type_expr) =
+    match t.desc with
+    | Tlink t -> loop t
+    | Tvar _ -> sub t
+    | Tunivar _ -> t
+    | Tconstr (path, args, memo) ->
+      {t with desc = Tconstr (path, args |> List.map loop, memo)}
+    | Tsubst t -> loop t
+    | Tvariant rd -> {t with desc = Tvariant (row_desc rd)}
+    | Tnil -> t
+    | Tarrow (params, ret) ->
+      {
+        t with
+        desc =
+          Tarrow
+            ( List.map
+                (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
+                params,
+              loop ret );
+      }
+    | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
+    | Tobject t -> {t with desc = Tobject (loop t)}
+    | Tfield f ->
+      {t with desc = Tfield {f with typ = loop f.typ; rest = loop f.rest}}
+    | Tpoly (t, []) -> loop t
+    | Tpoly (t, tl) -> {t with desc = Tpoly (loop t, tl |> List.map loop)}
+    | Tpackage (p, l, tl) ->
+      {t with desc = Tpackage (p, l, tl |> List.map loop)}
+  and row_desc (rd : Types.row_desc) =
+    let row_fields =
+      rd.row_fields |> List.map (fun (l, rf) -> (l, row_field rf))
+    in
+    let row_more = loop rd.row_more in
+    let row_name =
+      match rd.row_name with
+      | None -> None
+      | Some (p, tl) -> Some (p, tl |> List.map loop)
+    in
+    {rd with row_fields; row_more; row_name}
+  and row_field (rf : Types.row_field) =
+    match rf with
+    | Rpresent None -> rf
+    | Rpresent (Some t) -> Rpresent (Some (loop t))
+    | Reither (b1, tl, b2, r) -> Reither (b1, tl |> List.map loop, b2, r)
+    | Rabsent -> Rabsent
+  in
+  loop t
+
 let instantiate_type ~type_params ~type_args (t : Types.type_expr) =
   if type_params = [] || type_args = [] then t
   else
-    let rec apply_sub tp ta t =
+    let rec apply_sub tp ta v =
       match (tp, ta) with
       | t1 :: t_rest1, t2 :: t_rest2 ->
-        if t1 = t then t2 else apply_sub t_rest1 t_rest2 t
-      | [], _ | _, [] -> t
+        if t1 = v then t2 else apply_sub t_rest1 t_rest2 v
+      | [], _ | _, [] -> v
     in
-    let rec loop (t : Types.type_expr) =
-      match t.desc with
-      | Tlink t -> loop t
-      | Tvar _ -> apply_sub type_params type_args t
-      | Tunivar _ -> t
-      | Tconstr (path, args, memo) ->
-        {t with desc = Tconstr (path, args |> List.map loop, memo)}
-      | Tsubst t -> loop t
-      | Tvariant rd -> {t with desc = Tvariant (row_desc rd)}
-      | Tnil -> t
-      | Tarrow (params, ret) ->
-        {
-          t with
-          desc =
-            Tarrow
-              ( List.map
-                  (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
-                  params,
-                loop ret );
-        }
-      | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
-      | Tobject t -> {t with desc = Tobject (loop t)}
-      | Tfield f ->
-        {t with desc = Tfield {f with typ = loop f.typ; rest = loop f.rest}}
-      | Tpoly (t, []) -> loop t
-      | Tpoly (t, tl) -> {t with desc = Tpoly (loop t, tl |> List.map loop)}
-      | Tpackage (p, l, tl) ->
-        {t with desc = Tpackage (p, l, tl |> List.map loop)}
-    and row_desc (rd : Types.row_desc) =
-      let row_fields =
-        rd.row_fields |> List.map (fun (l, rf) -> (l, row_field rf))
-      in
-      let row_more = loop rd.row_more in
-      let row_name =
-        match rd.row_name with
-        | None -> None
-        | Some (p, tl) -> Some (p, tl |> List.map loop)
-      in
-      {rd with row_fields; row_more; row_name}
-    and row_field (rf : Types.row_field) =
-      match rf with
-      | Rpresent None -> rf
-      | Rpresent (Some t) -> Rpresent (Some (loop t))
-      | Reither (b1, tl, b2, r) -> Reither (b1, tl |> List.map loop, b2, r)
-      | Rabsent -> Rabsent
-    in
-    loop t
+    map_type_vars ~sub:(apply_sub type_params type_args) t
 
+(* Like [instantiate_type], but matches type variables by name. *)
 let instantiate_type2 ?(type_arg_context : type_arg_context option)
     (t : Types.type_expr) =
   match type_arg_context with
   | None | Some {type_args = []} | Some {type_params = []} -> t
   | Some {type_args; type_params} ->
-    let rec apply_sub tp ta name =
-      match (tp, ta) with
-      | {Types.desc = Tvar (Some var_name)} :: t_rest1, t2 :: t_rest2 ->
-        if var_name = name then t2 else apply_sub t_rest1 t_rest2 name
-      | _ :: t_rest1, _ :: t_rest2 -> apply_sub t_rest1 t_rest2 name
-      | [], _ | _, [] -> t
+    let rec apply_sub tp ta (v : Types.type_expr) =
+      match (v.desc, tp, ta) with
+      | ( Tvar (Some name),
+          {Types.desc = Tvar (Some param)} :: t_rest1,
+          t2 :: t_rest2 ) ->
+        if param = name then t2 else apply_sub t_rest1 t_rest2 v
+      | Tvar (Some _), _ :: t_rest1, _ :: t_rest2 -> apply_sub t_rest1 t_rest2 v
+      | _ -> v
     in
-
-    let rec loop (t : Types.type_expr) =
-      match t.desc with
-      | Tlink t -> loop t
-      | Tvar (Some name) -> apply_sub type_params type_args name
-      | Tvar _ -> t
-      | Tunivar _ -> t
-      | Tconstr (path, args, memo) ->
-        {t with desc = Tconstr (path, args |> List.map loop, memo)}
-      | Tsubst t -> loop t
-      | Tvariant rd -> {t with desc = Tvariant (row_desc rd)}
-      | Tnil -> t
-      | Tarrow (params, ret) ->
-        {
-          t with
-          desc =
-            Tarrow
-              ( List.map
-                  (fun (arg : Types.arg) -> {arg with typ = loop arg.typ})
-                  params,
-                loop ret );
-        }
-      | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
-      | Tobject t -> {t with desc = Tobject (loop t)}
-      | Tfield f ->
-        {t with desc = Tfield {f with typ = loop f.typ; rest = loop f.rest}}
-      | Tpoly (t, []) -> loop t
-      | Tpoly (t, tl) -> {t with desc = Tpoly (loop t, tl |> List.map loop)}
-      | Tpackage (p, l, tl) ->
-        {t with desc = Tpackage (p, l, tl |> List.map loop)}
-    and row_desc (rd : Types.row_desc) =
-      let row_fields =
-        rd.row_fields |> List.map (fun (l, rf) -> (l, row_field rf))
-      in
-      let row_more = loop rd.row_more in
-      let row_name =
-        match rd.row_name with
-        | None -> None
-        | Some (p, tl) -> Some (p, tl |> List.map loop)
-      in
-      {rd with row_fields; row_more; row_name}
-    and row_field (rf : Types.row_field) =
-      match rf with
-      | Rpresent None -> rf
-      | Rpresent (Some t) -> Rpresent (Some (loop t))
-      | Reither (b1, tl, b2, r) -> Reither (b1, tl |> List.map loop, b2, r)
-      | Rabsent -> Rabsent
-    in
-    loop t
+    map_type_vars ~sub:(apply_sub type_params type_args) t
 
 let rec extract_record_type ~state ~env ~package (t : Types.type_expr) =
   match t.desc with

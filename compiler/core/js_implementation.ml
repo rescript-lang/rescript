@@ -188,8 +188,7 @@ let implementation_map ppf sourcefile =
   let ns = Ext_filename.module_name (Filename.remove_extension sourcefile) in
   let ml_ast =
     Ext_list.fold_left list_of_modules [] (fun acc line ->
-        if Ext_string.is_empty line then acc
-        else make_structure_item ~ns line :: acc)
+        if line = "" then acc else make_structure_item ~ns line :: acc)
   in
   Res_compmisc.init_path ();
   ml_ast

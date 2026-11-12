@@ -930,7 +930,8 @@ let switch lam (lam_switch : lambda_switch) : t =
   | Lconst (Const_constructor constant), _ ->
     (* By runtime value: a coercion accepts [@as(1.)] for [@as(1.0)] *)
     let action =
-      Ext_list.find_opt lam_switch.sw_consts (fun (key, action) ->
+      lam_switch.sw_consts
+      |> List.find_map (fun (key, action) ->
           match key with
           | Switch_constructor (Constant tag)
             when literal_denotes_same constant.literal tag.literal ->
@@ -943,7 +944,8 @@ let switch lam (lam_switch : lambda_switch) : t =
        e.g. an integer, so the const case might not be found *)
     let i = Int32.to_int i in
     let action =
-      Ext_list.find_opt lam_switch.sw_consts (fun (key, action) ->
+      lam_switch.sw_consts
+      |> List.find_map (fun (key, action) ->
           match key with
           | Switch_int ordinal when ordinal = i -> Some action
           | Switch_constructor (Constant {literal})
@@ -971,7 +973,8 @@ let switch lam (lam_switch : lambda_switch) : t =
       | _ -> block = case
     in
     let action =
-      Ext_list.find_opt lam_switch.sw_blocks (fun (key, action) ->
+      lam_switch.sw_blocks
+      |> List.find_map (fun (key, action) ->
           match (key, runtime) with
           | Switch_constructor (Block case_runtime), Some runtime
             when same_runtime runtime case_runtime ->

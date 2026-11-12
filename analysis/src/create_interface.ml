@@ -427,14 +427,7 @@ let print_signature ~path ~source ~extractor ~signature =
       Buffer.add_string buf (") =>\n" ^ indent);
       process_module_type ~scope ~indent ret_mt
     | Mty_ident path | Mty_alias (_, path) ->
-      let rec out_ident_to_string (ident : Outcometree.out_ident) =
-        match ident with
-        | Oide_ident s -> s
-        | Oide_dot (ident, s) -> out_ident_to_string ident ^ "." ^ s
-        | Oide_apply (call, arg) ->
-          out_ident_to_string call ^ "(" ^ out_ident_to_string arg ^ ")"
-      in
-      Buffer.add_string buf (out_ident_to_string (Printtyp.tree_of_path path))
+      Buffer.add_string buf (Printtyp.string_of_path path)
   in
 
   process_signature ~scope:None ~indent:"" signature;

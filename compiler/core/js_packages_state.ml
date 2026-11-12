@@ -47,8 +47,6 @@ let make_runtime () : unit =
   state.packages_info <- Js_packages_info.runtime_package_specs
 
 let set_package_map module_name =
-  (* set_package_name name ;
-     let module_name = Ext_namespace.namespace_of_package_name name  in *)
   (Clflags.current ()).dont_record_crc_unit := Some module_name;
   (Clflags.current ()).open_modules :=
     module_name :: !((Clflags.current ()).open_modules)

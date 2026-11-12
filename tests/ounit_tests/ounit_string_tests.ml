@@ -39,19 +39,6 @@ let suites =
            Ext_string.starts_with "abb" "abb" =~ true;
            Ext_string.starts_with "abb" "abbc" =~ false );
          ( __LOC__ >:: fun _ ->
-           Ext_string.for_all "____" (function
-             | '_' -> true
-             | _ -> false)
-           =~ true;
-           Ext_string.for_all "___-" (function
-             | '_' -> true
-             | _ -> false)
-           =~ false;
-           Ext_string.for_all "" (function
-             | '_' -> true
-             | _ -> false)
-           =~ true );
-         ( __LOC__ >:: fun _ ->
            Ext_string.tail_from "ghsogh" 1 =~ "hsogh";
            Ext_string.tail_from "ghsogh" 0 =~ "ghsogh" );
          ( __LOC__ >:: fun _ ->

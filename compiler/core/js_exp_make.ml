@@ -1510,7 +1510,7 @@ let to_int32 (e : J.expression) : J.expression = int32_bor e zero_int_literal
 let string_comp (cmp : Lambda.comparison) (e0 : t) (e1 : t) =
   match (string_literal_semantic e0, string_literal_semantic e1) with
   | Some a0, Some a1 -> (
-    let equal = Ext_string.equal a0 a1 in
+    let equal = String.equal a0 a1 in
     match cmp with
     | Ceq -> bool equal
     | Cneq -> bool (Stdlib.not equal)

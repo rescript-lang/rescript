@@ -83,7 +83,8 @@ let declare_undeclared_exports (exports : Ident.t list) (block : J.block) :
 
 (** Also need analyze its depenency is pure or not *)
 let no_side_effects (rest : Lam_group.t list) : string option =
-  Ext_list.find_opt rest (fun x ->
+  rest
+  |> List.find_map (fun (x : Lam_group.t) ->
       match x with
       | Single (kind, id, body) -> (
         match kind with
@@ -93,7 +94,8 @@ let no_side_effects (rest : Lam_group.t list) : string option =
           else None
         | _ -> None)
       | Recursive bindings ->
-        Ext_list.find_opt bindings (fun (id, lam) ->
+        bindings
+        |> List.find_map (fun (id, lam) ->
             if not @@ Lam_analysis.no_side_effects lam then
               Some (Printf.sprintf "%s" id.Ident.name)
             else None)

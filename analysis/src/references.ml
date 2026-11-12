@@ -25,7 +25,8 @@ let line_col_to_cmt_loc ~pos:(line, col) = (line + 1, col)
   *)
 let normalize_external_reference_key ~namespace ~module_name ~path =
   match namespace with
-  | Some namespace when Utils.ends_with module_name ("-" ^ namespace) ->
+  | Some namespace when String.ends_with ~suffix:("-" ^ namespace) module_name
+    ->
     let suffix_len = String.length namespace + 1 in
     let source_module_len = String.length module_name - suffix_len in
     let source_module = String.sub module_name 0 source_module_len in
@@ -484,7 +485,7 @@ let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
                       | Some refs ->
                         let locs =
                           refs
-                          |> Utils.filter_map (fun (p, t, locs) ->
+                          |> List.filter_map (fun (p, t, locs) ->
                               if p = normalized_path && t = tip then Some locs
                               else None)
                         in
@@ -508,7 +509,7 @@ let all_references_for_loc_item ~state ~full:({file; package} as full) loc_item
   | TopLevelModule module_name ->
     let other_modules_references =
       package.project_files |> File_set.elements
-      |> Utils.filter_map (fun module_name ->
+      |> List.filter_map (fun module_name ->
           Cmt.full_from_module ~package ~module_name)
       |> List.map (fun full ->
           match Hashtbl.find_opt full.extra.file_references module_name with

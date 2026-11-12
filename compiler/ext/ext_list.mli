@@ -32,8 +32,6 @@ val map_combine : 'a list -> 'b list -> ('a -> 'c) -> ('c * 'b) list
 
 val combine_array : 'a array -> 'b list -> ('a -> 'c) -> ('c * 'b) list
 
-val has_string : string list -> string -> bool
-
 val mapi : 'a list -> (int -> 'a -> 'b) -> 'b list
 
 val mapi_append : 'a list -> (int -> 'a -> 'b) -> 'b list -> 'b list
@@ -90,8 +88,6 @@ val filter_map : 'a list -> ('a -> 'b option) -> 'b list
 
 val same_length : 'a list -> 'b list -> bool
 
-val init : int -> (int -> 'a) -> 'a list
-
 val split_at : 'a list -> int -> 'a list * 'a list
 (** [split_at n l]
     will split [l] into two lists [a,b], [a] will be of length [n], 
@@ -146,12 +142,6 @@ val find_first_not : 'a list -> ('a -> bool) -> 'a option
     otherwise return the first element [e] as [Some e] which
     fails the predicate
 *)
-
-(** [find_opt f l] returns [None] if all return [None],  
-    otherwise returns the first one. 
-*)
-
-val find_opt : 'a list -> ('a -> 'b option) -> 'b option
 
 val rev_iter : 'a list -> ('a -> unit) -> unit
 

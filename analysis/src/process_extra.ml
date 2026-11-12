@@ -110,7 +110,7 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
   | Partial_implementation parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
+      |> List.filter_map (fun (p : Cmt_format.binary_part) ->
           match p with
           | Partial_structure str -> Some str.str_items
           | Partial_structure_item str -> Some [str]
@@ -125,7 +125,7 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
   | Partial_interface parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
+      |> List.filter_map (fun (p : Cmt_format.binary_part) ->
           match p with
           | Partial_signature s -> Some s.sig_items
           | Partial_signature_item str -> Some [str]

@@ -120,7 +120,7 @@ let decode_namespace path ~name fields =
            namespace source fix)
   in
   let from_package_name () =
-    namespace_from_package_name name
+    Ext_namespace.namespace_of_package_name name
     |> module_name
          ~source:(Printf.sprintf "package name \"%s\"" name)
          ~fix:" or rename the package"
@@ -140,7 +140,7 @@ let decode_namespace path ~name fields =
     | Some (`String value) when Option.is_some namespace_entry ->
       Some (from_value value (pascal_case value))
     | Some (`String value) ->
-      Some (from_value value (namespace_from_package_name value))
+      Some (from_value value (Ext_namespace.namespace_of_package_name value))
     | Some _ -> fail path "field \"namespace\" must be a boolean or string"
   in
   match (namespace_entry, namespace_name) with

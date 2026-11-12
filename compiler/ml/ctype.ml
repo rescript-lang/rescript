@@ -2280,7 +2280,7 @@ and unify2 env t1 t2 =
   ignore (expand_head_unif !env t2);
   let t1' = expand_head_unif !env t1 in
   let t2' = expand_head_unif !env t2 in
-  let lv = Ext_pervasives.min_int t1'.level t2'.level in
+  let lv = Int.min t1'.level t2'.level in
   update_level !env lv t2;
   update_level !env lv t1;
   if unify_eq t1' t2' then ()
@@ -2474,11 +2474,7 @@ and unify_fields env (ty1 : Types.type_expr) (ty2 : Types.type_expr) =
      requires this pre-unification state because tail unification can close an
      open row before the matching fields are processed. *)
   let open1 = is_Tvar (repr rest1) and open2 = is_Tvar (repr rest2) in
-  let va =
-    make_rowvar
-      (Ext_pervasives.min_int l1 l2)
-      (miss2 = []) rest1 (miss1 = []) rest2
-  in
+  let va = make_rowvar (Int.min l1 l2) (miss2 = []) rest1 (miss1 = []) rest2 in
   let d1 = rest1.desc and d2 = rest2.desc in
   try
     unify env (build_fields l1 miss1 va) rest2;
@@ -2548,7 +2544,7 @@ and unify_row env row1 row2 =
     let more =
       if fixed1 then rm1
       else if fixed2 then rm2
-      else newty2 (Ext_pervasives.min_int rm1.level rm2.level) (Tvar None)
+      else newty2 (Int.min rm1.level rm2.level) (Tvar None)
     in
     let fixed = fixed1 || fixed2
     and closed = row1.row_closed || row2.row_closed in
@@ -3402,7 +3398,7 @@ let pred_enlarge n = if n mod 2 = 1 then pred n else n
 type change = Unchanged | Equiv | Changed [@@immediate]
 
 let[@inline] max (c1 : change) (c2 : change) : change =
-  Obj.magic (Ext_pervasives.max_int (Obj.magic c1 : int) (Obj.magic c2 : int))
+  Obj.magic (Int.max (Obj.magic c1 : int) (Obj.magic c2 : int))
 let collect l = List.fold_left (fun c1 (_, c2) -> max c1 c2) Unchanged l
 
 let rec filter_visited = function

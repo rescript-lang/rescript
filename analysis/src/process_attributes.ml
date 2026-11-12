@@ -10,31 +10,11 @@ let rec find_doc_attribute attributes =
     | None -> find_doc_attribute rest)
   | _ :: rest -> find_doc_attribute rest
 
-let rec find_deprecated_attribute attributes =
-  let open Parsetree in
-  match attributes with
-  | [] -> None
-  | ({Asttypes.txt = "deprecated"}, PStr [{pstr_desc = Pstr_eval (expr, _)}])
-    :: _ -> (
-    match Ast_payload.semantic_string_of_expression expr with
-    | Some msg -> Some msg
-    | None -> (
-      match (Ast_payload.unwrap_braces expr).pexp_desc with
-      (* deprecated attr with record *)
-      | Pexp_record (fields, _) ->
-        let reason = ref "" in
-        fields
-        |> List.iter (fun {lid = {txt}; x} ->
-            match txt with
-            | Lident "reason" -> (
-              match Ast_payload.semantic_string_of_expression x with
-              | Some msg -> reason := msg
-              | None -> ())
-            | _ -> ());
-        Some !reason
-      | _ -> None))
-  | ({Asttypes.txt = "deprecated"}, _) :: _ -> Some ""
-  | _ :: rest -> find_deprecated_attribute rest
+(* The message of a [@deprecated] attribute, read as the compiler reads it
+   for its warning *)
+let find_deprecated_attribute attributes =
+  Builtin_attributes.deprecated_of_attrs_with_migrate attributes
+  |> Option.map (fun (reason, _, _) -> reason)
 
 let new_declared ~item ~extent ~name ~stamp ~module_path is_exported attributes
     =

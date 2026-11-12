@@ -116,7 +116,7 @@ let completions_for_exported_constructors ~(env : Query_env.t) ~prefix ~exact
           (constructors
           |> List.filter (fun c ->
               Utils.check_name c.Constructor.cname.txt ~prefix ~exact)
-          |> Utils.filter_map (fun c ->
+          |> List.filter_map (fun c ->
               let name = c.Constructor.cname.txt in
               if not (Hashtbl.mem names_used name) then
                 let () = Hashtbl.add names_used name () in
@@ -140,7 +140,7 @@ let completion_for_exported_fields ~(env : Query_env.t) ~prefix ~exact
         res :=
           (fields
           |> List.filter (fun f -> Utils.check_name f.fname.txt ~prefix ~exact)
-          |> Utils.filter_map (fun f ->
+          |> List.filter_map (fun f ->
               let name = f.fname.txt in
               if not (Hashtbl.mem names_used name) then
                 let () = Hashtbl.add names_used name () in
@@ -324,7 +324,7 @@ let kind_to_documentation ~state ~env ~full ~current_docstring name
       docstring
       @ [
           Markdown.code_block
-            (if optional && Utils.starts_with name "?" = false then
+            (if optional && String.starts_with ~prefix:"?" name = false then
                name ^ "?: "
                ^ (typ |> Utils.unwrap_if_option |> Shared.type_to_string)
              else name ^ ": " ^ (typ |> Shared.type_to_string));
@@ -366,7 +366,7 @@ let kind_to_detail name (kind : Completion.kind) =
     (* Handle optional fields. Checking for "?" is because sometimes optional
        fields are prefixed with "?" when completing, and at that point we don't
        need to _also_ add a "?" after the field name, as that looks weird. *)
-    if optional && Utils.starts_with name "?" = false then
+    if optional && String.starts_with ~prefix:"?" name = false then
       typ |> Utils.unwrap_if_option |> Shared.type_to_string
     else typ |> Shared.type_to_string
   | Constructor (c, _) -> show_constructor c
@@ -547,19 +547,21 @@ let get_items_from_opens ~opens ~local_tables ~prefix ~exact ~completion_context
          completions_from_this_open @ results)
        []
 
-let find_local_completions_for_values_and_constructors
+(* Local values and modules, and constructors when [constructors] is set *)
+let find_local_completions_for_values ~constructors
     ~(local_tables : Local_tables.t) ~env ~prefix ~exact ~opens ~scope =
   local_tables |> Local_tables.populate_values ~env;
   local_tables |> Local_tables.populate_included_values ~env;
-  local_tables |> Local_tables.populate_constructors ~env;
+  if constructors then local_tables |> Local_tables.populate_constructors ~env;
   local_tables |> Local_tables.populate_modules ~env;
 
   scope
   |> Scope.iter_values_before_first_open
        (process_local_value ~prefix ~exact ~env ~local_tables);
-  scope
-  |> Scope.iter_constructors_before_first_open
-       (process_local_constructor ~prefix ~exact ~env ~local_tables);
+  if constructors then
+    scope
+    |> Scope.iter_constructors_before_first_open
+         (process_local_constructor ~prefix ~exact ~env ~local_tables);
   scope
   |> Scope.iter_modules_before_first_open
        (process_local_module ~prefix ~exact ~env ~local_tables);
@@ -572,39 +574,10 @@ let find_local_completions_for_values_and_constructors
   scope
   |> Scope.iter_values_after_first_open
        (process_local_value ~prefix ~exact ~env ~local_tables);
-  scope
-  |> Scope.iter_constructors_after_first_open
-       (process_local_constructor ~prefix ~exact ~env ~local_tables);
-  scope
-  |> Scope.iter_modules_after_first_open
-       (process_local_module ~prefix ~exact ~env ~local_tables);
-
-  scope
-  |> Scope.iter_includes
-       (process_local_include ~prefix ~exact ~env ~local_tables);
-
-  List.rev_append local_tables.result_rev values_from_opens
-
-let find_local_completions_for_values ~(local_tables : Local_tables.t) ~env
-    ~prefix ~exact ~opens ~scope =
-  local_tables |> Local_tables.populate_values ~env;
-  local_tables |> Local_tables.populate_included_values ~env;
-  local_tables |> Local_tables.populate_modules ~env;
-  scope
-  |> Scope.iter_values_before_first_open
-       (process_local_value ~prefix ~exact ~env ~local_tables);
-  scope
-  |> Scope.iter_modules_before_first_open
-       (process_local_module ~prefix ~exact ~env ~local_tables);
-
-  let values_from_opens =
-    get_items_from_opens ~opens ~local_tables ~prefix ~exact
-      ~completion_context:Value
-  in
-
-  scope
-  |> Scope.iter_values_after_first_open
-       (process_local_value ~prefix ~exact ~env ~local_tables);
+  if constructors then
+    scope
+    |> Scope.iter_constructors_after_first_open
+         (process_local_constructor ~prefix ~exact ~env ~local_tables);
   scope
   |> Scope.iter_modules_after_first_open
        (process_local_module ~prefix ~exact ~env ~local_tables);
@@ -665,7 +638,7 @@ let find_local_completions_with_opens ~pos ~(env : Query_env.t) ~prefix ~exact
   let local_tables = Local_tables.create () in
   match completion_context with
   | Value | ValueOrField ->
-    find_local_completions_for_values_and_constructors ~local_tables ~env
+    find_local_completions_for_values ~constructors:true ~local_tables ~env
       ~prefix ~exact ~opens ~scope
   | Type ->
     find_local_completions_for_types ~local_tables ~env ~prefix ~exact ~opens
@@ -682,12 +655,12 @@ let get_complementary_completions_for_typed_value ~opens ~all_files ~scope ~env
   let exact = false in
   let local_completions_with_opens =
     let local_tables = Local_tables.create () in
-    find_local_completions_for_values ~local_tables ~env ~prefix ~exact ~opens
-      ~scope
+    find_local_completions_for_values ~constructors:false ~local_tables ~env
+      ~prefix ~exact ~opens ~scope
   in
   let file_modules =
     all_files |> File_set.elements
-    |> Utils.filter_map (fun name ->
+    |> List.filter_map (fun name ->
         if
           Utils.check_name name ~prefix ~exact
           && not
@@ -714,7 +687,7 @@ let get_completions_for_path ~state ~debug ~opens ~full ~pos ~exact ~scope
     in
     let file_modules =
       all_files |> File_set.elements
-      |> Utils.filter_map (fun name ->
+      |> List.filter_map (fun name ->
           if
             Utils.check_name name ~prefix ~exact
             && not
@@ -1251,7 +1224,7 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
       match typ |> Type_utils.extract_object_type ~state ~env ~package with
       | Some (env, t_obj) ->
         t_obj |> Type_utils.get_obj_fields
-        |> Utils.filter_map (fun (field, typ) ->
+        |> List.filter_map (fun (field, typ) ->
             if Utils.check_name field ~prefix:label ~exact then
               Some
                 (Completion.create field ~env ~kind:(Completion.ObjLabel typ))
@@ -1599,7 +1572,7 @@ let filter_items items ~prefix =
   else
     items
     |> List.filter (fun (item : Completion.t) ->
-        Utils.starts_with item.name prefix)
+        String.starts_with ~prefix item.name)
 
 type completion_mode = Pattern of Completable.pattern_mode | Expression
 
@@ -1812,7 +1785,7 @@ let rec complete_typed_value ~raw_opens ~full ~state ~prefix ~completion_context
               ~as_snippet:false)
           ~includes_snippets:true
           ~insert_text:
-            ((if Utils.starts_with prefix "#" then "" else "#")
+            ((if String.starts_with ~prefix:"#" prefix then "" else "#")
             ^ constructor.display_name
             ^ print_constructor_args
                 (List.length constructor.args)
@@ -1822,7 +1795,9 @@ let rec complete_typed_value ~raw_opens ~full ~state ~prefix ~completion_context
                (constructor, type_expr |> Shared.type_to_string))
           ~env)
     |> filter_items
-         ~prefix:(if Utils.starts_with prefix "#" then prefix else "#" ^ prefix)
+         ~prefix:
+           (if String.starts_with ~prefix:"#" prefix then prefix
+            else "#" ^ prefix)
   | Toption (env, t) ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Toption";
     let inner_type =
@@ -2116,7 +2091,7 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
       Completion.create name ~kind:(Label typ_string) ~env
     in
     let key_labels =
-      if Utils.starts_with "key" prefix then [mk_label ("key", "string")]
+      if String.starts_with ~prefix "key" then [mk_label ("key", "string")]
       else []
     in
     let path_to_element_props = Type_utils.path_to_element_props package in
@@ -2136,7 +2111,7 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
           (fields
           |> List.filter_map (fun (f : field) ->
               if
-                Utils.starts_with f.fname.txt prefix
+                String.starts_with ~prefix f.fname.txt
                 && (for_hover || not (List.mem f.fname.txt idents_seen))
               then
                 Some
@@ -2165,13 +2140,13 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
       mkLabel_ name (typ |> Shared.type_to_string)
     in
     let key_labels =
-      if Utils.starts_with "key" prefix then [mkLabel_ "key" "string"] else []
+      if String.starts_with ~prefix "key" then [mkLabel_ "key" "string"] else []
     in
     if labels = [] then []
     else
       (labels
       |> List.filter (fun (name, _t, _env) ->
-          Utils.starts_with name prefix
+          String.starts_with ~prefix name
           && name <> "key"
           && (for_hover || not (List.mem name idents_seen)))
       |> List.map mk_label)
@@ -2326,9 +2301,9 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     in
     let items = items_from_package_json @ local_items in
     items
-    |> List.filter (fun name -> Utils.starts_with name prefix)
+    |> List.filter (fun name -> String.starts_with ~prefix name)
     |> List.map (fun name ->
-        let is_local = Utils.starts_with name "./" in
+        let is_local = String.starts_with ~prefix:"./" name in
         Completion.create name
           ~kind:(Label (if is_local then "Local file" else "Package"))
           ~env)
@@ -2351,7 +2326,8 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
       else Completion_decorators.local
     in
     decorators
-    |> List.filter (fun (decorator, _, _) -> Utils.starts_with decorator prefix)
+    |> List.filter (fun (decorator, _, _) ->
+        String.starts_with ~prefix decorator)
     |> List.map (fun (decorator, maybe_insert_text, doc) ->
         let parts = String.split_on_char '.' prefix in
         let len = String.length prefix in
@@ -2389,7 +2365,7 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
     in
     labels
     |> List.filter (fun (name, _t) ->
-        Utils.starts_with name prefix
+        String.starts_with ~prefix name
         && (for_hover || not (List.mem name idents_seen)))
     |> List.map mk_label
   | Cpattern {context_path; prefix; nested; fallback; pattern_mode} -> (
@@ -2597,7 +2573,7 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
   | ChtmlElement {prefix} ->
     Completion_jsx.html_elements
     |> List.filter_map (fun (element_name, description, deprecated) ->
-        if Utils.starts_with element_name prefix then
+        if String.starts_with ~prefix element_name then
           let name = "<" ^ element_name ^ ">" in
           Some
             (Completion.create name ~synthetic:true ~kind:(Label name)
@@ -2609,7 +2585,7 @@ let rec process_completable ~state ~debug ~full ~scope ~env ~pos ~for_hover
                  | false -> None))
         else None)
   | CextensionNode prefix ->
-    if Utils.starts_with "todo" prefix then
+    if String.starts_with ~prefix "todo" then
       let detail =
         "`%todo` is used to tell the compiler that some code still needs to be \
          implemented."

@@ -430,7 +430,7 @@ let get_cmt_path ~uri p =
   | Impl {cmt} -> cmt
   | Namespace {cmt} -> cmt
   | IntfAndImpl {cmti; cmt} ->
-    let interface = Utils.ends_with (Uri.to_path uri) "i" in
+    let interface = String.ends_with ~suffix:"i" (Uri.to_path uri) in
     if interface then cmti else cmt
 
 module Tip = struct

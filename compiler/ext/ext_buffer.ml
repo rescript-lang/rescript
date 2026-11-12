@@ -70,7 +70,7 @@ let[@inline] add_char b c =
    then invalid_arg "Ext_buffer.add_substring/add_subbytes";
    let new_position = b.position + len in
    if new_position > b.length then resize b len;
-   Ext_bytes.unsafe_blit_string s offset b.buffer b.position len;
+   Bytes.unsafe_blit_string s offset b.buffer b.position len;
    b.position <- new_position *)
 
 (* let add_subbytes b s offset len =
@@ -80,7 +80,7 @@ let add_string b s =
   let len = String.length s in
   let new_position = b.position + len in
   if new_position > b.length then resize b len;
-  Ext_bytes.unsafe_blit_string s 0 b.buffer b.position len;
+  Bytes.unsafe_blit_string s 0 b.buffer b.position len;
   b.position <- new_position
 
 (* TODO: micro-optimzie *)
@@ -90,7 +90,7 @@ let add_string_char b s c =
   let new_position = b.position + len in
   if new_position > b.length then resize b len;
   let b_buffer = b.buffer in
-  Ext_bytes.unsafe_blit_string s 0 b_buffer b.position s_len;
+  Bytes.unsafe_blit_string s 0 b_buffer b.position s_len;
   Bytes.unsafe_set b_buffer (new_position - 1) c;
   b.position <- new_position
 

@@ -101,14 +101,6 @@ let rec map l f =
     let y5 = f x5 in
     y1 :: y2 :: y3 :: y4 :: y5 :: map tail f
 
-let rec has_string l f =
-  match l with
-  | [] -> false
-  | [x1] -> x1 = f
-  | [x1; x2] -> x1 = f || x2 = f
-  | [x1; x2; x3] -> x1 = f || x2 = f || x3 = f
-  | x1 :: x2 :: x3 :: x4 -> x1 = f || x2 = f || x3 = f || has_string x4 f
-
 let rec map_combine l1 l2 f =
   match (l1, l2) with
   | [], [] -> []
@@ -384,36 +376,6 @@ let rec same_length xs ys =
   | _ :: xs, _ :: ys -> same_length xs ys
   | _, _ -> false
 
-let init n f =
-  match n with
-  | 0 -> []
-  | 1 ->
-    let a0 = f 0 in
-    [a0]
-  | 2 ->
-    let a0 = f 0 in
-    let a1 = f 1 in
-    [a0; a1]
-  | 3 ->
-    let a0 = f 0 in
-    let a1 = f 1 in
-    let a2 = f 2 in
-    [a0; a1; a2]
-  | 4 ->
-    let a0 = f 0 in
-    let a1 = f 1 in
-    let a2 = f 2 in
-    let a3 = f 3 in
-    [a0; a1; a2; a3]
-  | 5 ->
-    let a0 = f 0 in
-    let a1 = f 1 in
-    let a2 = f 2 in
-    let a3 = f 3 in
-    let a4 = f 4 in
-    [a0; a1; a2; a3; a4]
-  | _ -> Array.to_list (Array.init n f)
-
 let rec rev_append l1 l2 =
   match l1 with
   | [] -> l2
@@ -576,14 +538,6 @@ let rec for_all2_no_exn l1 l2 p =
   | [], [] -> true
   | a1 :: l1, a2 :: l2 -> p a1 a2 && for_all2_no_exn l1 l2 p
   | _, _ -> false
-
-let rec find_opt xs p =
-  match xs with
-  | [] -> None
-  | x :: l -> (
-    match p x with
-    | Some _ as v -> v
-    | None -> find_opt l p)
 
 let rec split_map l f =
   match l with
