@@ -2566,6 +2566,65 @@ let object_valid_fields env ty =
     Some (List.fold_left collect_fields [] fields)
   | _ -> None
 
+(* Whether [ty] is generic and has no variables, so that an instance of it
+   would be an identical copy. Generic types don't change, so the answer
+   for the last type asked about is kept: field reads of one object usually
+   come one after another, and each check traverses the whole type. *)
+let last_closed_scheme_key = Request_local.new_key (fun () -> ref None)
+
+let is_closed_scheme ty =
+  let ty = repr ty in
+  let last = Domain.DLS.get last_closed_scheme_key in
+  match !last with
+  | Some (ty', closed) when ty' == ty -> closed
+  | _ ->
+    let closed = ty.level = generic_level && Ctype.free_variables ty = [] in
+    last := Some (ty, closed);
+    closed
+
+(* The identifier [lid] of [sexp], before it is unified with the expected
+   type. [share]: when the identifier's type is generic and has no variables,
+   the expression gets that type itself rather than an identical copy, for a
+   caller that won't unify it. *)
+let type_ident ~context ~deprecated_context ~recarg ~share env sexp lid =
+  let path, desc =
+    try
+      Typetexp.find_value
+        ?deprecated_context:
+          (match deprecated_context with
+          | None -> Some Reference
+          | v -> v)
+        env lid.loc lid.txt
+    with
+    | Typetexp.Error (_, _, Unbound_value (Ldot (module_lid, "make")))
+    when context = Some JsxComponent
+    ->
+      (* [<Button />] refers to [Button.make]. The module exists (otherwise
+         the lookup reports it as unbound), but it defines no component. *)
+      raise (Error (lid.loc, env, Jsx_component_without_make module_lid))
+  in
+  let is_recarg =
+    match (repr desc.val_type).desc with
+    | Tconstr (p, _, _) -> Path.is_constructor_typath p
+    | _ -> false
+  in
+
+  (match (is_recarg, recarg, (repr desc.val_type).desc) with
+  | _, Allowed, _ | true, Required, _ | false, Rejected, _ -> ()
+  | true, Rejected, _ | false, Required, (Tvar _ | Tconstr _) ->
+    raise (Error (sexp.pexp_loc, env, Inlined_record_escape))
+  | false, Required, _ -> () (* will fail later *));
+  {
+    exp_desc = Texp_ident (path, lid, desc);
+    exp_loc = sexp.pexp_loc;
+    exp_extra = [];
+    exp_type =
+      (if share && is_closed_scheme desc.val_type then desc.val_type
+       else instance env desc.val_type);
+    exp_attributes = sexp.pexp_attributes;
+    exp_env = env;
+  }
+
 let rec type_exp ?deprecated_context ~context ?recarg env sexp =
   (* We now delegate everything to type_expect *)
   type_expect ?deprecated_context ~context ?recarg env sexp (newvar ())
@@ -2625,42 +2684,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     in
     {exp with exp_attributes = sexp.pexp_attributes @ exp.exp_attributes}
   | Pexp_ident lid ->
-    let path, desc =
-      try
-        Typetexp.find_value
-          ?deprecated_context:
-            (match deprecated_context with
-            | None -> Some Reference
-            | v -> v)
-          env lid.loc lid.txt
-      with
-      | Typetexp.Error (_, _, Unbound_value (Ldot (module_lid, "make")))
-      when context = Some JsxComponent
-      ->
-        (* [<Button />] refers to [Button.make]. The module exists (otherwise
-           the lookup reports it as unbound), but it defines no component. *)
-        raise (Error (lid.loc, env, Jsx_component_without_make module_lid))
-    in
-    let is_recarg =
-      match (repr desc.val_type).desc with
-      | Tconstr (p, _, _) -> Path.is_constructor_typath p
-      | _ -> false
-    in
-
-    (match (is_recarg, recarg, (repr desc.val_type).desc) with
-    | _, Allowed, _ | true, Required, _ | false, Rejected, _ -> ()
-    | true, Rejected, _ | false, Required, (Tvar _ | Tconstr _) ->
-      raise (Error (loc, env, Inlined_record_escape))
-    | false, Required, _ -> () (* will fail later *));
     rue
-      {
-        exp_desc = Texp_ident (path, lid, desc);
-        exp_loc = loc;
-        exp_extra = [];
-        exp_type = instance env desc.val_type;
-        exp_attributes = sexp.pexp_attributes;
-        exp_env = env;
-      }
+      (type_ident ~context ~deprecated_context ~recarg ~share:false env sexp lid)
   | Pexp_constant cst ->
     let cst = constant_or_raise env loc cst in
     rue
@@ -3674,7 +3699,25 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
         exp_env = env;
       }
   | Pexp_object_get (e, ({txt = met} as met_loc)) -> (
-    let obj = type_exp ~context:None env e in
+    (* A copy of the object's type would be made and stored in the .cmt
+       file for each field read, which is quadratic for many reads of a
+       large object. Looking up a field that the type has doesn't change
+       the type, and the field's type is instantiated below. *)
+    let obj =
+      match e with
+      | {pexp_desc = Pexp_ident lid; pexp_attributes = []} -> (
+        let obj =
+          type_ident ~context:None ~deprecated_context:None ~recarg:Rejected
+            ~share:true env e lid
+        in
+        match obj.exp_desc with
+        | Texp_ident (_, _, desc) when obj.exp_type == desc.val_type -> re obj
+        | _ ->
+          (* As [type_exp] does *)
+          unify_exp ~context:None env (re obj) (newvar ());
+          obj)
+      | _ -> type_exp ~context:None env e
+    in
     try
       (* Lookup constrains an open object row to contain the field, without
          requiring or adding write capability. *)
