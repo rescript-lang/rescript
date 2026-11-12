@@ -10,8 +10,8 @@ depends: [
   "dune" {>= "3.17"}
   "ocaml" {>= "5.0.0"}
   "odoc" {with-doc}
-  "lsp" {= "1.27.0"}
-  "jsonrpc" {= "1.27.0"}
+  "lsp" {= "1.28.1"}
+  "jsonrpc" {= "1.28.1"}
   "uutf" {= "1.0.4"}
   "ppx_yojson_conv_lib" {>= "v0.16.0" & <= "v0.17.0"}
   "yojson" {= "3.0.0"}

@@ -52,10 +52,6 @@
   (odoc :with-doc)
   (ocaml-lsp-server
    (and :with-dev-setup (>= 1.23.0)))
-  ; lsp is held at 1.27.0 (analysis.opam), and so is ocaml-lsp-server, which
-  ; doesn't build against stdune 3.25.
-  (stdune
-   (and :with-dev-setup (< 3.25)))
   (js_of_ocaml
    (and
     (<> :os "win32")
@@ -81,10 +77,10 @@
    (>= 5.0.0))
   (odoc :with-doc)
   (lsp
-   (= 1.27.0))
+   (= 1.28.1))
   ; Linked into the binaries through lsp.
   (jsonrpc
-   (= 1.27.0))
+   (= 1.28.1))
   (uutf
    (= 1.0.4))
   ; v0.17.0 needs OCaml 5.1; the OCaml 5.0 CI job gets v0.16.0.

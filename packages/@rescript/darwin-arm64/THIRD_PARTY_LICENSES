@@ -961,7 +961,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 LSP
 ===
-Version: 1.27.0
+Version: 1.28.1
 Source: https://github.com/ocaml/ocaml-lsp
 License: ISC
 Included in: rescript-editor-analysis and rescript-tools
@@ -987,7 +987,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 JSONRPC
 =======
-Version: 1.27.0
+Version: 1.28.1
 Source: https://github.com/ocaml/ocaml-lsp
 License: ISC
 Included in: runtime dependency of LSP

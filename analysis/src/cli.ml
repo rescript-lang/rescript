@@ -389,6 +389,8 @@ let test ~state ~path =
                                   (edit :
                                     [ `AnnotatedTextEdit of
                                       Lsp.Types.AnnotatedTextEdit.t
+                                    | `SnippetTextEdit of
+                                      Lsp.Types.SnippetTextEdit.t
                                     | `TextEdit of Lsp.Types.TextEdit.t ])
                                 ->
                                   let start_char, new_text, range =
@@ -400,6 +402,10 @@ let test ~state ~path =
                                     | `AnnotatedTextEdit te ->
                                       ( te.range.start.character,
                                         te.newText,
+                                        te.range )
+                                    | `SnippetTextEdit te ->
+                                      ( te.range.start.character,
+                                        te.snippet.value,
                                         te.range )
                                   in
                                   let indent = String.make start_char ' ' in
