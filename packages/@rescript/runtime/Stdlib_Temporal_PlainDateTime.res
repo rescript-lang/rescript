@@ -62,7 +62,7 @@ See [`Temporal.PlainDateTime.from`](https://developer.mozilla.org/en-US/docs/Web
 Temporal.PlainDateTime.fromStringOrThrow("2024-02-29T09:30")->Temporal.PlainDateTime.hour == 9
 ```
 */
-@val
+@val @throws(JsExn)
 external fromStringOrThrow: string => t = "Temporal.PlainDateTime.from"
 
 /**

@@ -55,7 +55,7 @@ switch BigInt.fromStringOrThrow("a") {
 }
 ```
 */
-@val
+@val @throws(JsExn)
 external fromStringOrThrow: string => bigint = "BigInt"
 
 /**
@@ -113,7 +113,7 @@ switch BigInt.fromFloatOrThrow(123.5) {
 }
 ```
 */
-@val
+@val @throws(JsExn)
 external fromFloatOrThrow: float => bigint = "BigInt"
 
 /**

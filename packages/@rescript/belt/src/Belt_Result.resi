@@ -30,6 +30,7 @@ switch Belt.Result.getExn(Belt.Result.Error("Invalid data")) {
 }
 ```
 */
+@throws(Not_found)
 let getExn: t<'a, 'b> => 'a
 
 /**
@@ -47,6 +48,7 @@ switch Belt.Result.getOrThrow(Belt.Result.Error("Invalid data")) {
 }
 ```
 */
+@throws(Not_found)
 let getOrThrow: t<'a, 'b> => 'a
 
 @deprecated("Use `mapWithDefault` instead")

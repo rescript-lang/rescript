@@ -51,7 +51,7 @@ See [`Temporal.PlainDate.from`](https://developer.mozilla.org/en-US/docs/Web/Jav
 Temporal.PlainDate.fromStringOrThrow("2024-02-29")->Temporal.PlainDate.day == 29
 ```
 */
-@val
+@val @throws(JsExn)
 external fromStringOrThrow: string => t = "Temporal.PlainDate.from"
 
 /**

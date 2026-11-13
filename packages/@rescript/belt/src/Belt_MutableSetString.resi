@@ -103,7 +103,11 @@ let minimum: t => option<value>
 let maximum: t => option<value>
 
 let get: (t, value) => option<value>
+
+@throws(Not_found)
 let getExn: (t, value) => value
+
+@throws(Not_found)
 let getOrThrow: (t, value) => value
 
 /**

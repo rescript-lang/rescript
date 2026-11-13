@@ -103,7 +103,11 @@ let minimum: t<'k, 'a, _> => option<('k, 'a)>
 let maximum: t<'k, 'a, _> => option<('k, 'a)>
 let get: (t<'k, 'a, 'id>, 'k) => option<'a>
 let getWithDefault: (t<'k, 'a, 'id>, 'k, 'a) => 'a
+
+@throws(Not_found)
 let getExn: (t<'k, 'a, 'id>, 'k) => 'a
+
+@throws(Not_found)
 let getOrThrow: (t<'k, 'a, 'id>, 'k) => 'a
 
 /** Throw when invariant is not held. */
