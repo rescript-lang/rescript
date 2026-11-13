@@ -1,0 +1,1 @@
+- Keep `@directive` on `@this` functions.

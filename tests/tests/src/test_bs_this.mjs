@@ -2,18 +2,18 @@
 
 
 function uux_this(x, y) {
-  let o = this ;
+  let o = this;
   return (o.length + x | 0) + y | 0;
 }
 
 function even(x) {
-  let o = this ;
+  let o = this;
   return x + o | 0;
 }
 
 function bark() {
   return function (x, y) {
-    let o = this ;
+    let o = this;
     console.log([
       o.length,
       o.x,
@@ -27,7 +27,7 @@ function bark() {
 
 let js_obj = {
   bark: function (x, y) {
-    let o = this ;
+    let o = this;
     console.log(o);
     return x + y | 0;
   }
@@ -35,11 +35,11 @@ let js_obj = {
 
 function f(x) {
   x.onload = function () {
-    let o = this ;
+    let o = this;
     console.log(o);
   };
   return x.addEventListener("onload", function () {
-    let o = this ;
+    let o = this;
     console.log(o.response);
   });
 }

@@ -255,7 +255,6 @@ let pp_var_assign cxt f id =
 let pp_var_assign_this cxt f id =
   let cxt = pp_var_assign cxt f id in
   P.string f L.this;
-  P.space f;
   semi f;
   P.newline f;
   cxt
@@ -447,11 +446,14 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
           in
           P.space f;
           P.brace_vgroup f 1 (fun _ ->
+              (* A directive must be the first statement of the body, so it
+                 comes before [let self = this] *)
+              print_directive f directive;
               let cxt =
                 if Js_fun_env.get_unused env 0 then cxt
                 else pp_var_assign_this cxt f this
               in
-              function_body ?directive ~return_unit cxt f b))
+              function_body ~return_unit cxt f b))
       else
         let cxt =
           match l with
@@ -1572,14 +1574,17 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
           P.space f;
           brace_block cxt f b)
 
-and function_body ?directive (cxt : cxt) f ~return_unit (b : J.block) : unit =
-  (match directive with
+and print_directive f directive =
+  match directive with
   | None -> ()
   | Some directive ->
     P.newline f;
     P.string f directive;
     P.string f ";";
-    P.newline f);
+    P.newline f
+
+and function_body ?directive (cxt : cxt) f ~return_unit (b : J.block) : unit =
+  print_directive f directive;
   match b with
   | [] -> ()
   | [s] -> (
