@@ -27,12 +27,14 @@ const platforms = [
   { packageName: "win32-x64", family: "win32" },
 ];
 
-// The dune executables in the platform packages, by source directory.
+// The dune executables in the platform packages, by source directory, with
+// the names `dune describe workspace` may give them: the private name, or
+// from dune 3.25 on, the public name when there is one.
 const shippedExecutables = new Map([
-  ["compiler/bsc", "rescript_compiler_main"],
-  ["rewatch-ocaml", "rescript_ocaml"],
-  ["analysis/bin", "main"],
-  ["tools/bin", "main"],
+  ["compiler/bsc", ["rescript_compiler_main", "bsc"]],
+  ["rewatch-ocaml", ["rescript_ocaml"]],
+  ["analysis/bin", ["main", "rescript-editor-analysis"]],
+  ["tools/bin", ["main", "rescript-tools"]],
 ]);
 
 /**
@@ -146,8 +148,8 @@ function linkedOpamPackages() {
       const sourceDir = path.posix.dirname(
         path.posix.relative("_build/default", impl ?? ""),
       );
-      const name = shippedExecutables.get(sourceDir);
-      if (name !== undefined && atoms(field(fields, "names")).includes(name)) {
+      const names = shippedExecutables.get(sourceDir) ?? [];
+      if (atoms(field(fields, "names")).some(name => names.includes(name))) {
         roots.push(fields);
       }
     }

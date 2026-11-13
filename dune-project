@@ -77,10 +77,10 @@
    (>= 5.0.0))
   (odoc :with-doc)
   (lsp
-   (= 1.27.0))
+   (= 1.28.1))
   ; Linked into the binaries through lsp.
   (jsonrpc
-   (= 1.27.0))
+   (= 1.28.1))
   (uutf
    (= 1.0.4))
   ; v0.17.0 needs OCaml 5.1; the OCaml 5.0 CI job gets v0.16.0.
