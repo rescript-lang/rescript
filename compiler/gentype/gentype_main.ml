@@ -108,7 +108,7 @@ let read_input_cmt is_interface cmt_file =
   in
   if is_interface then
     let cmt_file_impl =
-      (cmt_file |> (Filename.chop_extension [@doesNotRaise])) ^ ".cmt"
+      (cmt_file |> (Filename.chop_extension [@doesNotThrow])) ^ ".cmt"
     in
     let input_cmt_impl = read_cmt cmt_file_impl in
     let has_gentype_annotations_impl =

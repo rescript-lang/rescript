@@ -313,13 +313,7 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
   in
   let does_not_throw attributes =
     attributes
-    |> Annotation.get_attribute_payload (function
-      | "doesNotRaise" | "doesnotraise" | "DoesNoRaise" | "doesNotraise"
-      | "doNotRaise" | "donotraise" | "DoNoRaise" | "doNotraise"
-      | "doesNotThrow" | "doesnotthrow" | "DoesNoThrow" | "doesNotthrow"
-      | "doNotThrow" | "donotthrow" | "DoNoThrow" | "doNotthrow" ->
-        true
-      | _ -> false)
+    |> Annotation.get_attribute_payload (fun s -> s = "doesNotThrow")
     <> None
   in
   let expr ~(module_path : Module_path.t) (self : Tast_mapper.mapper)
@@ -425,9 +419,7 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
   in
   let get_exceptions_from_annotations attributes =
     let throws_annotation_payload =
-      attributes
-      |> Annotation.get_attribute_payload (fun s ->
-          s = "throws" || s = "throw" || s = "raises" || s = "raise")
+      attributes |> Annotation.get_attribute_payload (fun s -> s = "throws")
     in
     let rec get_exceptions payload =
       match payload with

@@ -12,7 +12,7 @@ let sanitize_id s =
         | c -> c)
     else s
   in
-  if s <> "" && (s.[0] [@doesNotRaise]) >= 'A' && (s.[0] [@doesNotRaise]) <= 'z'
+  if s <> "" && (s.[0] [@doesNotThrow]) >= 'A' && (s.[0] [@doesNotThrow]) <= 'z'
   then s
   else "_" ^ s
 

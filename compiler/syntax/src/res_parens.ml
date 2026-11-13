@@ -237,7 +237,7 @@ let assert_or_await_expr_rhs ?(in_await = false) expr =
 let is_negative_constant constant =
   let is_neg txt =
     let len = String.length txt in
-    len > 0 && (String.get [@doesNotRaise]) txt 0 = '-'
+    len > 0 && (String.get [@doesNotThrow]) txt 0 = '-'
   in
   match constant with
   | (Parsetree.Pconst_integer (i, _) | Pconst_float (i, _)) when is_neg i ->
@@ -307,7 +307,7 @@ let starts_with_minus txt =
   let len = String.length txt in
   if len == 0 then false
   else
-    let s = (String.get [@doesNotRaise]) txt 0 in
+    let s = (String.get [@doesNotThrow]) txt 0 in
     s = '-'
 
 let jsx_prop_expr expr =
