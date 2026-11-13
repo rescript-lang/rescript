@@ -32,6 +32,22 @@ val delay_safe : assignable:Set_ident.t -> Lambda.t -> bool
     after other code, gives the same value. [assignable] are the variables
     some [Lassign] assigns. *)
 
+val reads_callee : Lambda.primitive -> bool
+(** The call of an external function or class, which reads it from its global
+    or module before the arguments run *)
+
+(** How the evaluation of a term may move with respect to other code *)
+type motion =
+  | Anywhere  (** no side effects, and depends on no state that may change *)
+  | Reads  (** no side effects, but reads state that may change *)
+  | Effects
+
+val motion : assignable:Set_ident.t -> Lambda.t -> motion
+
+val conflict : motion -> motion -> bool
+(** Whether code of the two motions can give other results when it runs in
+    the other order *)
+
 val size_upto : limit:int -> Lambda.t -> int
 (** The size of a lambda for inlining decisions if it is below [limit],
     [limit] otherwise. [limit] must be at most 1000. *)

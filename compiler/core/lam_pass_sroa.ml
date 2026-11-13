@@ -109,6 +109,9 @@ let replace ~block ~info ~initializers body =
     else
       let fields = fields_for_block block info field_count in
       let body = rewrite block fields uses body in
+      (* The fields that are written, of this block and of the ones replaced
+         in [body] *)
+      let assignable = lazy (Lambda_traverse.assigned_variables body) in
       let rec bind_fields index initializers body =
         match initializers with
         | [] -> body
@@ -121,7 +124,8 @@ let replace ~block ~info ~initializers body =
              still needs a mutable scalar binding. *)
           if not use.read then discard_value init body
           else if not use.written then
-            Lam_util.refine_let ~kind:Strict fields.(index) init body
+            Lam_util.refine_let ~assignable:(Lazy.force assignable) ~kind:Strict
+              fields.(index) init body
           else Lambda.let_ Variable fields.(index) init body
       in
       Some (bind_fields 0 initializers body)
