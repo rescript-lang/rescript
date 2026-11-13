@@ -91,9 +91,7 @@ let run ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
       match result with
       | Build_attempt.Parse_failed {stdout; stderr} ->
         Build_session.mark_parse_pending attempt.session pending_path;
-        let output =
-          Printf.sprintf "Error in %s:\n%s%s" config.name stderr stdout
-        in
+        let output = stderr ^ stdout in
         Compiler_log.append root output;
         attempt.parse_messages <-
           Build_attempt.Parse_error output :: attempt.parse_messages

@@ -1,20 +1,3 @@
-(**
- * `starts_with s prefix`
- * true if the string starts with the prefix
- *)
-let starts_with s prefix =
-  if prefix = "" then true
-  else
-    let p = String.length prefix in
-    p <= String.length s && String.sub s 0 p = prefix
-
-let ends_with s suffix =
-  if suffix = "" then true
-  else
-    let p = String.length suffix in
-    let l = String.length s in
-    p <= String.length s && String.sub s (l - p) p = suffix
-
 let is_first_char_uppercase s =
   String.length s > 0 && Char.equal s.[0] (Char.uppercase_ascii s.[0])
 
@@ -39,25 +22,6 @@ let chop_location_end loc length =
     loc with
     loc_end = {loc.loc_end with pos_cnum = loc.loc_end.pos_cnum - length};
   }
-
-(** An optional List.find *)
-let rec find fn items =
-  match items with
-  | [] -> None
-  | one :: rest -> (
-    match fn one with
-    | None -> find fn rest
-    | Some x -> Some x)
-
-let filter_map f =
-  let rec aux accu = function
-    | [] -> List.rev accu
-    | x :: l -> (
-      match f x with
-      | None -> aux accu l
-      | Some v -> aux (v :: accu) l)
-  in
-  aux []
 
 let dump_path path = Str.global_replace (Str.regexp_string "\\") "/" path
 
@@ -168,7 +132,7 @@ let is_jsx_component (vb : Parsetree.value_binding) =
   | Some {pjc_kind = Pjc_with_props} | None -> false
 
 let check_name name ~prefix ~exact =
-  if exact then name = prefix else starts_with name prefix
+  if exact then name = prefix else String.starts_with ~prefix name
 
 let indent n text =
   let spaces = String.make n ' ' in

@@ -878,8 +878,7 @@
     "src/Belt_internalSetString.res"
   ],
   "@rescript/darwin-arm64": [
-    "RE_LICENSE.md",
-    "THIRD_PARTY_NOTICES_REWATCH.md",
+    "THIRD_PARTY_LICENSES",
     "bin.d.ts",
     "bin.js",
     "bin/.gitkeep",
@@ -890,8 +889,7 @@
     "package.json"
   ],
   "@rescript/linux-arm64": [
-    "RE_LICENSE.md",
-    "THIRD_PARTY_NOTICES_REWATCH.md",
+    "THIRD_PARTY_LICENSES",
     "bin.d.ts",
     "bin.js",
     "bin/.gitkeep",
@@ -902,8 +900,7 @@
     "package.json"
   ],
   "@rescript/linux-x64": [
-    "RE_LICENSE.md",
-    "THIRD_PARTY_NOTICES_REWATCH.md",
+    "THIRD_PARTY_LICENSES",
     "bin.d.ts",
     "bin.js",
     "bin/.gitkeep",
@@ -914,8 +911,7 @@
     "package.json"
   ],
   "@rescript/win32-x64": [
-    "RE_LICENSE.md",
-    "THIRD_PARTY_NOTICES_REWATCH.md",
+    "THIRD_PARTY_LICENSES",
     "bin.d.ts",
     "bin.js",
     "bin/.gitkeep",

@@ -172,15 +172,9 @@ module UnicodeProperties = struct
 
 end
 
-
 (* Decision tree for partitions *)
 
 let default_loc = Location.none
-
-let lident_loc ~loc s = {
-  loc;
-  txt= lident s
-}
 
 type decision_tree =
   | Lte of int * decision_tree * decision_tree
@@ -251,7 +245,6 @@ let segments_of_partition p =
 
 let decision_table p =
   simplify (-1) (Cset.max_code) (decision_table (segments_of_partition p))
-
 
 (* Helpers to build AST *)
 
@@ -535,7 +528,6 @@ let regexp_of_pattern env =
   in
   aux
 
-
 let previous = ref []
 let regexps = ref []
 let should_set_cookies = ref false
@@ -581,7 +573,6 @@ let mapper =
         err e.pexp_loc "the %sedlex extension is only recognized on match expressions"
       | _ -> super # expression e
 
-
     val toplevel = true
 
     method structure_with_regexps l =
@@ -624,15 +615,6 @@ let post_handler cookies =
   if !should_set_cookies then
     let loc = default_loc in
     Driver.Cookies.set cookies "sedlex.regexps" (pexp_extension ~loc ( {loc; txt="regexps"}, PStr !regexps))
-
-
-let extensions =
-  [Extension.declare
-    "sedlex"
-    Extension.Context.expression
-    Ast_pattern.(single_expr_payload __)
-    (fun ~loc:_ ~path:_ expr -> mapper # expression expr);
-  ]
 
 let () =
   Driver.Cookies.add_handler pre_handler;

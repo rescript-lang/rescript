@@ -97,6 +97,11 @@ to choose another count: a positive integer, lowered to the machine's limit of
 `max(12, min(32, CPUs))`. The main domain schedules dependencies;
 workers run compiler requests and publish what they produce.
 
+The runtime's allocation report at exit (`OCAMLRUNPARAM=v=0x400`) only counts
+the main domain. With `REWATCH_REPORT_WORKER_ALLOCATIONS` set, the build also
+prints `worker_allocated_words: <n>`, the words its workers allocated, which
+the compiler benchmarks (`scripts/compilerBenchmarks.js`) add to it.
+
 The driver gives each request fresh compiler state (flags, warnings, caches,
 predefined types, identifier counters) and restores it on every exit, so
 requests on different domains don't interfere and repeated requests produce

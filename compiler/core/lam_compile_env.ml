@@ -101,9 +101,8 @@ let cmj_table_of_module_id ~dynamic_import (module_id : Ident.t) =
 let register_ml_module ~dynamic_import (module_id : Ident.t) : unit =
   ignore (cmj_table_of_module_id ~dynamic_import module_id)
 
-let query_external_id_info ?(dynamic_import = false) (module_id : Ident.t)
-    (name : string) : ident_info =
-  let cmj_table = cmj_table_of_module_id ~dynamic_import module_id in
+let query_external_id_info (module_id : Ident.t) (name : string) : ident_info =
+  let cmj_table = cmj_table_of_module_id ~dynamic_import:false module_id in
   Js_cmj_format.query_by_name cmj_table name
 
 let get_package_info_from_cmj (id : Lam_module_ident.t) :

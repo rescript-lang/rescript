@@ -404,44 +404,32 @@ exception Non_closed of type_expr * bool
 
 let free_variables_ref_key = Request_local.new_key (fun () -> ref [])
 let free_variables_ref () = Domain.DLS.get free_variables_ref_key
-let really_closed_key = Request_local.new_key (fun () -> ref None)
-let really_closed () = Domain.DLS.get really_closed_key
 
 let rec free_vars_rec real ty =
   let ty = repr ty in
   if ty.level >= lowest_level then (
     ty.level <- pivot_level - ty.level;
-    match (ty.desc, !(really_closed ())) with
-    | Tvar _, _ ->
-      free_variables_ref () := (ty, real) :: !(free_variables_ref ())
-    | Tconstr (path, tl, _), Some env ->
-      (try
-         let _, body, _ = Env.find_type_expansion path env in
-         if (repr body).level <> generic_level then
-           free_variables_ref () := (ty, real) :: !(free_variables_ref ())
-       with Not_found -> ());
-      List.iter (free_vars_rec true) tl
-    | Tobject ty, _ -> free_vars_rec false ty
-    | Tfield {typ = ty1; rest = ty2}, _ ->
+    match ty.desc with
+    | Tvar _ -> free_variables_ref () := (ty, real) :: !(free_variables_ref ())
+    | Tobject ty -> free_vars_rec false ty
+    | Tfield {typ = ty1; rest = ty2} ->
       free_vars_rec true ty1;
       free_vars_rec false ty2
-    | Tvariant row, _ ->
+    | Tvariant row ->
       let row = row_repr row in
       iter_row (free_vars_rec true) row;
       if not (static_row row) then free_vars_rec false row.row_more
     | _ -> iter_type_expr (free_vars_rec true) ty)
 
-let free_vars ?env ty =
+let free_vars ty =
   free_variables_ref () := [];
-  really_closed () := env;
   free_vars_rec true ty;
   let res = !(free_variables_ref ()) in
   free_variables_ref () := [];
-  really_closed () := None;
   res
 
-let free_variables ?env ty =
-  let tl = List.map fst (free_vars ?env ty) in
+let free_variables ty =
+  let tl = List.map fst (free_vars ty) in
   unmark_type ty;
   tl
 
@@ -1392,6 +1380,7 @@ let is_contractive env p =
 
 exception Occur
 
+(* [occur_reaches] must follow the same edges in expression mode. *)
 let rec occur_rec env allow_recursive visited ty0 = function
   | {desc = Tlink ty} -> occur_rec env allow_recursive visited ty0 ty
   | ty -> (
@@ -1425,7 +1414,57 @@ let type_changed () = Domain.DLS.get type_changed_key
 
 let merge r b = if b then r := true
 
-let occur env ty0 ty =
+(* Cheap first passes for [occur] and [deep_occur]: walks with no visited
+   set and no marks that give up (raise [Give_up]) after [walk_budget]
+   nodes, which also stops cycles and heavy sharing, or when they cannot
+   decide; the caller then runs the full walk. A pass that finishes has
+   visited every node the full walk would. *)
+exception Give_up
+
+let walk_budget = 256
+
+(* Must follow the same edges as [occur_rec] in expression mode. Finishing
+   proves [occur_rec] would neither meet [ty0] nor find a [Tconstr] cycle,
+   its only ways to raise, and it expands types only after raising. The
+   edges are those of [iter_type_expr], spelled out so that the walk
+   allocates nothing: it returns the budget left instead of keeping it in a
+   ref that a closure captures. *)
+let rec occur_reaches_budget ty0 budget ty =
+  match ty.desc with
+  | Tlink ty -> occur_reaches_budget ty0 budget ty
+  | desc -> (
+    if ty == ty0 then raise Occur;
+    let budget = budget - 1 in
+    if budget < 0 then raise Give_up;
+    match desc with
+    | Tobject _ | Tvariant _ | Tvar _ | Tnil | Tunivar _ -> budget
+    | Tarrow (params, ret) ->
+      occur_reaches_budget ty0 (occur_reaches_params ty0 budget params) ret
+    | Ttuple l | Tconstr (_, l, _) | Tpackage (_, _, l) ->
+      occur_reaches_list ty0 budget l
+    | Tfield {typ; rest} ->
+      occur_reaches_budget ty0 (occur_reaches_budget ty0 budget typ) rest
+    | Tlink ty | Tsubst ty -> occur_reaches_budget ty0 budget ty
+    | Tpoly (ty, tyl) ->
+      occur_reaches_list ty0 (occur_reaches_budget ty0 budget ty) tyl)
+
+and occur_reaches_list ty0 budget = function
+  | [] -> budget
+  | ty :: l -> occur_reaches_list ty0 (occur_reaches_budget ty0 budget ty) l
+
+and occur_reaches_params ty0 budget = function
+  | [] -> budget
+  | {typ} :: l ->
+    occur_reaches_params ty0 (occur_reaches_budget ty0 budget typ) l
+
+let occur_reaches ty0 ty = ignore (occur_reaches_budget ty0 walk_budget ty)
+
+let occur_cannot_fail ty0 ty =
+  match occur_reaches ty0 ty with
+  | () -> true
+  | exception (Occur | Give_up) -> false
+
+let occur_full env ty0 ty =
   let allow_recursive = !(umode ()) = Pattern in
   let old = !(type_changed ()) in
   try
@@ -1443,6 +1482,12 @@ let occur env ty0 ty =
       (match exn with
       | Occur -> Unify []
       | _ -> exn)
+
+(* In pattern mode [occur_rec] looks types up ([is_contractive]), which can
+   load interfaces, so only expression mode takes the shortcut. *)
+let occur env ty0 ty =
+  if !(umode ()) = Expression && occur_cannot_fail ty0 ty then ()
+  else occur_full env ty0 ty
 
 let occur_in env ty0 t =
   try
@@ -1669,8 +1714,48 @@ let mkvariant fields closed =
 
 (**** Unification ****)
 
-(* Return whether [t0] occurs in [ty]. Objects are also traversed. *)
-let deep_occur t0 ty =
+(* Must follow the same edges as [deep_occur_marked]. Answers only "absent":
+   it gives up on meeting [t0] (where the marked walk stops early) and on a
+   node an enclosing walk marked (which the marked walk skips but then
+   unmarks in [unmark_type]), so it never leaves marks that differ. Like
+   [occur_reaches_budget], it spells out the edges of [iter_type_expr] so
+   that it allocates nothing, except at a [Tvariant]. *)
+let rec deep_occur_budget t0 budget ty =
+  let ty = repr ty in
+  if ty.level < lowest_level then raise Give_up;
+  if ty == t0 then raise Occur;
+  let budget = budget - 1 in
+  if budget < 0 then raise Give_up;
+  match ty.desc with
+  | Tvar _ | Tnil | Tunivar _ -> budget
+  | Tarrow (params, ret) ->
+    deep_occur_budget t0 (deep_occur_params t0 budget params) ret
+  | Ttuple l | Tconstr (_, l, _) | Tpackage (_, _, l) ->
+    deep_occur_list t0 budget l
+  | Tobject ty | Tlink ty | Tsubst ty -> deep_occur_budget t0 budget ty
+  | Tfield {typ; rest} ->
+    deep_occur_budget t0 (deep_occur_budget t0 budget typ) rest
+  | Tpoly (ty, tyl) -> deep_occur_list t0 (deep_occur_budget t0 budget ty) tyl
+  | Tvariant _ ->
+    let budget = ref budget in
+    iter_type_expr (fun ty -> budget := deep_occur_budget t0 !budget ty) ty;
+    !budget
+
+and deep_occur_list t0 budget = function
+  | [] -> budget
+  | ty :: l -> deep_occur_list t0 (deep_occur_budget t0 budget ty) l
+
+and deep_occur_params t0 budget = function
+  | [] -> budget
+  | {typ} :: l -> deep_occur_params t0 (deep_occur_budget t0 budget typ) l
+
+let deep_occur_fast_absent t0 ty =
+  match deep_occur_budget t0 walk_budget ty with
+  | _ -> true
+  | exception (Occur | Give_up) -> false
+
+(* [deep_occur_fast_absent] must follow the same edges. *)
+let deep_occur_marked t0 ty =
   let rec occur_rec ty =
     let ty = repr ty in
     if ty.level >= lowest_level then (
@@ -1685,6 +1770,10 @@ let deep_occur t0 ty =
   with Occur ->
     unmark_type ty;
     true
+
+(* Return whether [t0] occurs in [ty]. Objects are also traversed. *)
+let deep_occur t0 ty =
+  (not (deep_occur_fast_absent t0 ty)) && deep_occur_marked t0 ty
 
 (*
    1. When unifying two non-abbreviated types, one type is made a link
@@ -2191,7 +2280,7 @@ and unify2 env t1 t2 =
   ignore (expand_head_unif !env t2);
   let t1' = expand_head_unif !env t1 in
   let t2' = expand_head_unif !env t2 in
-  let lv = Ext_pervasives.min_int t1'.level t2'.level in
+  let lv = Int.min t1'.level t2'.level in
   update_level !env lv t2;
   update_level !env lv t1;
   if unify_eq t1' t2' then ()
@@ -2385,11 +2474,7 @@ and unify_fields env (ty1 : Types.type_expr) (ty2 : Types.type_expr) =
      requires this pre-unification state because tail unification can close an
      open row before the matching fields are processed. *)
   let open1 = is_Tvar (repr rest1) and open2 = is_Tvar (repr rest2) in
-  let va =
-    make_rowvar
-      (Ext_pervasives.min_int l1 l2)
-      (miss2 = []) rest1 (miss1 = []) rest2
-  in
+  let va = make_rowvar (Int.min l1 l2) (miss2 = []) rest1 (miss1 = []) rest2 in
   let d1 = rest1.desc and d2 = rest2.desc in
   try
     unify env (build_fields l1 miss1 va) rest2;
@@ -2459,7 +2544,7 @@ and unify_row env row1 row2 =
     let more =
       if fixed1 then rm1
       else if fixed2 then rm2
-      else newty2 (Ext_pervasives.min_int rm1.level rm2.level) (Tvar None)
+      else newty2 (Int.min rm1.level rm2.level) (Tvar None)
     in
     let fixed = fixed1 || fixed2
     and closed = row1.row_closed || row2.row_closed in
@@ -3313,7 +3398,7 @@ let pred_enlarge n = if n mod 2 = 1 then pred n else n
 type change = Unchanged | Equiv | Changed [@@immediate]
 
 let[@inline] max (c1 : change) (c2 : change) : change =
-  Obj.magic (Ext_pervasives.max_int (Obj.magic c1 : int) (Obj.magic c2 : int))
+  Obj.magic (Int.max (Obj.magic c1 : int) (Obj.magic c2 : int))
 let collect l = List.fold_left (fun c1 (_, c2) -> max c1 c2) Unchanged l
 
 let rec filter_visited = function
@@ -3327,15 +3412,15 @@ let memq_warn t visited =
     true)
   else false
 
-let rec lid_of_path ?(hash = "") = function
-  | Path.Pident id -> Longident.Lident (hash ^ Ident.name id)
-  | Path.Pdot (p1, s, _) -> Longident.Ldot (lid_of_path p1, hash ^ s)
+let rec lid_of_path = function
+  | Path.Pident id -> Longident.Lident (Ident.name id)
+  | Path.Pdot (p1, s, _) -> Longident.Ldot (lid_of_path p1, s)
   (* Applicative-functor application paths (Path.Papply) are produced
      internally (applicative functors are on by default) even though ReScript's
      surface syntax cannot reference such a path directly. Render the
      application by name (e.g. "F(Arg)") rather than aborting, so any diagnostic
      that reaches here degrades gracefully instead of crashing the compiler. *)
-  | Path.Papply _ as p -> Longident.Lident (hash ^ Path.name p)
+  | Path.Papply _ as p -> Longident.Lident (Path.name p)
 
 let has_constr_row' env t = has_constr_row (expand_abbrev env t)
 
@@ -3526,8 +3611,8 @@ let enlarge_type env ty =
 let subtypes_key = Request_local.new_key (fun () -> Type_pairs.create 17)
 let subtypes () = Domain.DLS.get subtypes_key
 
-let subtype_error ?ctx env trace =
-  raise (Subtype (expand_trace env (List.rev trace), [], ctx))
+let subtype_error env trace =
+  raise (Subtype (expand_trace env (List.rev trace), [], None))
 
 let extract_concrete_typedecl_opt env t =
   match extract_concrete_typedecl env t with

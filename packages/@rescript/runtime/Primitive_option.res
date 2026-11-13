@@ -63,7 +63,7 @@ let fromNull = (type t, x: Primitive_js_extern.null<t>): option<t> =>
 /** Preserves `None`/`undefined` and unwraps one outer option layer.
     Nested `Some` values stay encoded one level deeper. */
 let valFromOption = (x: Obj.t): Obj.t =>
-  if x !== Obj.repr(Primitive_js_extern.null) && isNested(x) {
+  if !Primitive_js_extern.testAny(x) && isNested(x) {
     let {depth}: nested = Obj.magic(x)
     if depth == 0 {
       Obj.magic(None)

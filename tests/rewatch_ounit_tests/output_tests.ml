@@ -23,11 +23,21 @@ let tests =
         Platform.clean_symbol)
     "interactive compiler cleanup format";
   check
-    (Output.parsing_message ~color:true ~step:"2/3" ~count:4 ~seconds:1.5
+    (Output.parsing_message ~color:true ~step:"2/3" ~count:4 ~seconds:(Some 1.5)
     = Printf.sprintf
         "\027[2K\r\027[1m\027[2m[2/3]\027[0m %sParsed 4 source files in 1.50s"
         Platform.parse_symbol)
     "interactive parsing phase styles the step when color is enabled";
+  check
+    (Output.count_of 1 "module" = "1 module"
+    && Output.count_of 0 "module" = "0 modules"
+    && Output.stale_modules ~cleaned:1 = "1 stale module")
+    "counts use the singular for one";
+  check
+    (Output.compiler_output ~color:false "\027[1;31mError\027[0m" = "Error"
+    && Output.compiler_output ~color:true "\027[1;31mError\027[0m"
+       = "\027[1;31mError\027[0m")
+    "compiler output is uncolored when colors are off";
   check
     (Output.should_clear_screen ~clear_screen:true ~show_progress:true
        ~interactive:true)

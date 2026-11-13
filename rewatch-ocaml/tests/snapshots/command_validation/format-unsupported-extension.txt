@@ -1,5 +1,4 @@
 status: 1
 --- stdout
 --- stderr
-Error formatting <WORK>/project/src/A.txt: don't know what to do with <WORK>/project/src/A.txt
-
+<WORK>/project/src/A.txt is not a .res or .resi file

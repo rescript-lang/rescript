@@ -55,13 +55,13 @@ let position scanner =
 let _printDebug ~start_pos ~end_pos scanner token =
   let open Lexing in
   print_string scanner.src;
-  print_string ((String.make [@doesNotRaise]) start_pos.pos_cnum ' ');
+  print_string ((String.make [@doesNotThrow]) start_pos.pos_cnum ' ');
   print_char '^';
   (match end_pos.pos_cnum - start_pos.pos_cnum with
   | 0 -> if token = Token.Eof then () else assert false
   | 1 -> ()
   | n ->
-    print_string ((String.make [@doesNotRaise]) (n - 2) '-');
+    print_string ((String.make [@doesNotThrow]) (n - 2) '-');
     print_char '^');
   print_char ' ';
   print_string (Res_token.to_string token);
@@ -204,7 +204,7 @@ let scan_identifier scanner =
   in
   skip_good_chars scanner;
   let str =
-    (String.sub [@doesNotRaise]) scanner.src start_off
+    (String.sub [@doesNotThrow]) scanner.src start_off
       (scanner.offset - start_off)
   in
   match (scanner, str) with
@@ -300,7 +300,7 @@ let scan_number scanner =
     | _ -> is_float
   in
   let literal =
-    (String.sub [@doesNotRaise]) scanner.src start_off
+    (String.sub [@doesNotThrow]) scanner.src start_off
       (scanner.offset - start_off)
   in
 
@@ -341,7 +341,7 @@ let scan_exotic_identifier scanner =
   scan ();
 
   let ident =
-    (String.sub [@doesNotRaise]) scanner.src start_off
+    (String.sub [@doesNotThrow]) scanner.src start_off
       (scanner.offset - start_off)
   in
   let name = Ext_ident.unwrap_uppercase_exotic ident in
@@ -460,7 +460,7 @@ let scan_string scanner =
   let bring_buf_up_to_date ~start_offset =
     let str_up_to_now =
       (String.sub scanner.src !last_offset_in_buf
-         (start_offset - !last_offset_in_buf) [@doesNotRaise])
+         (start_offset - !last_offset_in_buf) [@doesNotThrow])
     in
     Buffer.add_string buf str_up_to_now;
     last_offset_in_buf := start_offset
@@ -468,7 +468,7 @@ let scan_string scanner =
 
   let result ~first_char_offset ~last_char_offset =
     if Buffer.length buf = 0 then
-      (String.sub [@doesNotRaise]) scanner.src first_char_offset
+      (String.sub [@doesNotThrow]) scanner.src first_char_offset
         (last_char_offset - first_char_offset)
     else (
       bring_buf_up_to_date ~start_offset:last_char_offset;
@@ -506,12 +506,12 @@ let scan_string scanner =
     let txt = scanner.src in
     let is_numeric_escape =
       len = 3
-      && (is_digit txt.[start_offset] [@doesNotRaise])
-      && (is_digit txt.[start_offset + 1] [@doesNotRaise])
-      && (is_digit txt.[start_offset + 2] [@doesNotRaise])
+      && (is_digit txt.[start_offset] [@doesNotThrow])
+      && (is_digit txt.[start_offset + 1] [@doesNotThrow])
+      && (is_digit txt.[start_offset + 2] [@doesNotThrow])
     in
     if is_numeric_escape then (
-      let str_decimal = (String.sub txt start_offset 3 [@doesNotRaise]) in
+      let str_decimal = (String.sub txt start_offset 3 [@doesNotThrow]) in
       bring_buf_up_to_date ~start_offset;
       let str_hex = Res_string.convert_decimal_to_hex ~str_decimal in
       last_offset_in_buf := start_offset + 3;
@@ -584,7 +584,7 @@ let scan_escape scanner =
       Char.code ch
   in
   let contents =
-    (String.sub [@doesNotRaise]) scanner.src offset (scanner.offset - offset)
+    (String.sub [@doesNotThrow]) scanner.src offset (scanner.offset - offset)
   in
   next scanner;
   (* Consume \' *)
@@ -605,7 +605,7 @@ let scan_regex ~start_pos:opening_pos ~prefix_length scanner =
   let bring_buf_up_to_date ~start_offset =
     let str_up_to_now =
       (String.sub scanner.src !last_offset_in_buf
-         (start_offset - !last_offset_in_buf) [@doesNotRaise])
+         (start_offset - !last_offset_in_buf) [@doesNotThrow])
     in
     Buffer.add_string buf str_up_to_now;
     last_offset_in_buf := start_offset
@@ -613,7 +613,7 @@ let scan_regex ~start_pos:opening_pos ~prefix_length scanner =
 
   let result ~first_char_offset ~last_char_offset =
     if Buffer.length buf = 0 then
-      (String.sub [@doesNotRaise]) scanner.src first_char_offset
+      (String.sub [@doesNotThrow]) scanner.src first_char_offset
         (last_char_offset - first_char_offset)
     else (
       bring_buf_up_to_date ~start_offset:last_char_offset;
@@ -680,7 +680,7 @@ let scan_single_line_comment scanner =
     (Comment.make_single_line_comment
        ~loc:
          Location.{loc_start = start_pos; loc_end = end_pos; loc_ghost = false}
-       ((String.sub [@doesNotRaise]) scanner.src start_off
+       ((String.sub [@doesNotThrow]) scanner.src start_off
           (scanner.offset - start_off)))
 
 let scan_multi_line_comment scanner =
@@ -725,7 +725,7 @@ let scan_multi_line_comment scanner =
              loc_end = position scanner;
              loc_ghost = false;
            }
-       ((String.sub [@doesNotRaise]) scanner.src content_start_off length))
+       ((String.sub [@doesNotThrow]) scanner.src content_start_off length))
 
 let scan_template_literal_token scanner =
   let start_off = scanner.offset in
@@ -738,7 +738,7 @@ let scan_template_literal_token scanner =
     | '`' ->
       next scanner;
       let contents =
-        (String.sub [@doesNotRaise]) scanner.src start_off
+        (String.sub [@doesNotThrow]) scanner.src start_off
           (scanner.offset - 1 - start_off)
       in
       Token.TemplateTail (contents, last_pos)
@@ -747,7 +747,7 @@ let scan_template_literal_token scanner =
       | '{' ->
         next2 scanner;
         let contents =
-          (String.sub [@doesNotRaise]) scanner.src start_off
+          (String.sub [@doesNotThrow]) scanner.src start_off
             (scanner.offset - 2 - start_off)
         in
         Token.TemplatePart (contents, last_pos)
@@ -767,7 +767,7 @@ let scan_template_literal_token scanner =
       let end_pos = position scanner in
       scanner.err ~start_pos ~end_pos Diagnostics.unclosed_template;
       let contents =
-        (String.sub [@doesNotRaise]) scanner.src start_off
+        (String.sub [@doesNotThrow]) scanner.src start_off
           (max (scanner.offset - 1 - start_off) 0)
       in
       Token.TemplateTail (contents, last_pos)
@@ -1007,7 +1007,7 @@ let rec scan scanner =
         Token.Codepoint
           {
             c = Char.code ch;
-            original = (String.sub [@doesNotRaise]) scanner.src offset 1;
+            original = (String.sub [@doesNotThrow]) scanner.src offset 1;
           }
       | ch, _ ->
         next scanner;
@@ -1022,7 +1022,7 @@ let rec scan scanner =
         done;
         if scanner.ch = '\'' then (
           let contents =
-            (String.sub [@doesNotRaise]) scanner.src offset length
+            (String.sub [@doesNotThrow]) scanner.src offset length
           in
           next scanner;
           Token.Codepoint {c = codepoint; original = contents})

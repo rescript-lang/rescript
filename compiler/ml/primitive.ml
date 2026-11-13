@@ -28,7 +28,6 @@ type description = {
       (* Name of the intrinsic or the external's JS name; "" for inline
          constants and object creation *)
   prim_arity: int; (* Number of arguments *)
-  prim_alloc: bool; (* Does it allocates or raise? *)
   prim_kind: prim_kind;
   prim_from_constructor: bool;
       (* Is it from a type constructor instead of a concrete function type? *)
@@ -62,7 +61,6 @@ let parse_declaration (valdecl : Parsetree.value_description) ~arity
   {
     prim_name = name;
     prim_arity = arity;
-    prim_alloc = true;
     prim_kind = kind;
     prim_from_constructor = from_constructor;
   }

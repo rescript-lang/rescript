@@ -261,19 +261,12 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
             when Peek.ith_is_identifier ~i:1 env ->
             let ts_accessibility =
               (with_loc (fun env ->
-                   let leading = Peek.comments env in
                    Eat.token env;
-                   let kind =
-                     match t with
-                     | T_PUBLIC -> Ast.Class.TSAccessibility.Public
-                     | T_PRIVATE -> Ast.Class.TSAccessibility.Private
-                     | T_PROTECTED -> Ast.Class.TSAccessibility.Protected
-                     | _ -> failwith "Must be one of the above"
-                   in
-                   {
-                     Ast.Class.TSAccessibility.kind;
-                     comments = Flow_ast_utils.mk_comments_opt ~leading ();
-                   }
+                   match t with
+                   | T_PUBLIC -> Ast.Class.TSAccessibility.Public
+                   | T_PRIVATE -> Ast.Class.TSAccessibility.Private
+                   | T_PROTECTED -> Ast.Class.TSAccessibility.Protected
+                   | _ -> failwith "Must be one of the above"
                )
               )
                 env
@@ -495,7 +488,6 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
                   let tparams =
                     type_params_remove_trailing
                       env
-                      ~kind:Flow_ast_mapper.DeclareFunctionTP
                       (Type.type_params env)
                   in
                   let id =
@@ -525,7 +517,6 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
                   let tparams =
                     type_params_remove_trailing
                       env
-                      ~kind:Flow_ast_mapper.DeclareFunctionTP
                       (Type.type_params env)
                   in
                   (tparams, Some id)
@@ -712,9 +703,9 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
     let env = env |> with_no_let true in
     declarations T_LET env
 
-  let enum_declaration ?leading ~const_ =
+  let enum_declaration ~const_ =
     with_loc (fun env ->
-        let enum = Enum.declaration ?leading ~const_ env in
+        let enum = Enum.declaration ~const_ env in
         Statement.EnumDeclaration enum
     )
 
@@ -849,7 +840,6 @@ module Declaration (Parse : Parser_common.PARSER) (Type : Parser_common.TYPE) :
               let tparams =
                 type_params_remove_trailing
                   env
-                  ~kind:Flow_ast_mapper.DeclareComponentTP
                   (Type.type_params env)
               in
               let params =

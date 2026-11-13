@@ -42,7 +42,6 @@ val invalidate_graph_cycle : t -> unit
 val set_graph_cycle : t -> Module_graph.cycle_info option -> unit
 val add_package_plan : t -> Package_plan.t -> unit
 val find_package_plan : t -> string -> Package_plan.t option
-val iter_package_plans : t -> (string -> Package_plan.t -> unit) -> unit
 val package_plan_values : t -> Package_plan.t Seq.t
 val add_source_reference : t -> string -> source_reference -> unit
 val find_source_reference : t -> string -> source_reference option

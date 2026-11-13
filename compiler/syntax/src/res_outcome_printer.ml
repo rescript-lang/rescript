@@ -163,7 +163,7 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
         let i = ref 0 in
         let package =
           Doc.join ~sep:Doc.line
-            ((List.map2 [@doesNotRaise])
+            ((List.map2 [@doesNotThrow])
                (fun lbl typ ->
                  let result =
                    Doc.concat

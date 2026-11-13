@@ -172,8 +172,7 @@ module Error_ret = struct
     let attrs = Array.append loc_attrs warn_attrs in
     Js.Unsafe.obj attrs
 
-  let from_loc_errors ?(warnings : Loc_warn_info.t array option)
-      ~(type_ : string) (errors : loc_err_info array) =
+  let from_loc_errors ~(type_ : string) (errors : loc_err_info array) =
     let js_errors =
       Array.map
         (fun (e : loc_err_info) ->
@@ -190,14 +189,7 @@ module Error_ret = struct
           ("type", inject @@ Js.string type_);
         |]
     in
-    let warning_attr =
-      match warnings with
-      | Some warnings ->
-        Js.Unsafe.
-          [|("warnings", inject @@ Js.array (Array.map make_warning warnings))|]
-      | None -> [||]
-    in
-    let attrs = Array.append loc_err_attrs warning_attr in
+    let attrs = loc_err_attrs in
     Js.Unsafe.(obj attrs)
 
   let from_syntax_errors (errors : loc_err_info array) =
@@ -494,22 +486,14 @@ module Compile = struct
     List.iter Iter.iter_structure_item structure.str_items;
     Js.array (!acc |> Array.of_list)
 
-  let gentype_output ~module_system ~modulename ~sourcefile structure env =
+  let gentype_output ~module_system ~modulename ~sourcefile structure =
     let cmt_annots = Cmt_format.Implementation structure in
     let input_cmt =
       {
         Cmt_format.cmt_modname = modulename;
         cmt_annots;
         cmt_value_dependencies = [];
-        cmt_comments = [];
-        cmt_args = [||];
-        cmt_sourcefile = Some sourcefile;
-        cmt_builddir = Sys.getcwd ();
-        cmt_loadpath = Config.get_load_path ();
         cmt_source_digest = None;
-        cmt_initial_env = env;
-        cmt_imports = [];
-        cmt_use_summaries = false;
         cmt_extra_info = {Cmt_utils.deprecated_used = []};
       }
     in
@@ -533,7 +517,6 @@ module Compile = struct
           Gentype_config.default with
           module_;
           project_root;
-          bsb_project_root = project_root;
           suffix = Literals.suffix_js;
         }
       in
@@ -720,7 +703,7 @@ module Compile = struct
                   inject
                   @@ Js.string
                        (gentype_output ~module_system ~modulename
-                          ~sourcefile:filename structure env) );
+                          ~sourcefile:filename structure) );
               |]
           else [||]
         in

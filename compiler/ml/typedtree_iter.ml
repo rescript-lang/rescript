@@ -22,13 +22,13 @@ TODO:
 open Asttypes
 open Typedtree
 
-module type IteratorArgument = sig
+(* [enter_expression] has no default: every iterator handles expressions. *)
+module type IteratorArgumentDefaults = sig
   val enter_structure : structure -> unit
   val enter_value_description : value_description -> unit
   val enter_type_extension : type_extension -> unit
   val enter_extension_constructor : extension_constructor -> unit
   val enter_pattern : pattern -> unit
-  val enter_expression : expression -> unit
   val enter_package_type : package_type -> unit
   val enter_signature : signature -> unit
   val enter_signature_item : signature_item -> unit
@@ -68,14 +68,20 @@ module type IteratorArgument = sig
   val leave_type_declarations : rec_flag -> unit
 end
 
+module type IteratorArgument = sig
+  include IteratorArgumentDefaults
+  val enter_expression : expression -> unit
+end
+
+(* The iterator's whole interface, also the entry points no pass uses yet. *)
 module Make_iterator (Iter : IteratorArgument) : sig
-  val iter_structure : structure -> unit
-  val iter_signature : signature -> unit
+  val iter_structure : structure -> unit [@@live]
+  val iter_signature : signature -> unit [@@live]
   val iter_structure_item : structure_item -> unit
-  val iter_signature_item : signature_item -> unit
+  val iter_signature_item : signature_item -> unit [@@live]
   val iter_expression : expression -> unit
-  val iter_module_type : module_type -> unit
-  val iter_pattern : pattern -> unit
+  val iter_module_type : module_type -> unit [@@live]
+  val iter_pattern : pattern -> unit [@@live]
 end = struct
   let may_iter f v =
     match v with
@@ -419,7 +425,6 @@ module Default_iterator_argument = struct
   let enter_type_extension _ = ()
   let enter_extension_constructor _ = ()
   let enter_pattern _ = ()
-  let enter_expression _ = ()
   let enter_package_type _ = ()
   let enter_signature _ = ()
   let enter_signature_item _ = ()

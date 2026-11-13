@@ -441,7 +441,7 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
         let unpack_loc_opt =
           match
             pat.pat_extra
-            |> Utils.filter_map (function
+            |> List.filter_map (function
               | Typedtree.Tpat_unpack, loc, _ -> Some loc
               | _ -> None)
           with
@@ -550,7 +550,7 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
       {mb_id; mb_attributes; mb_loc; mb_name = name; mb_expr = {mod_desc}}
     when not
            (String.length name.txt >= 6
-           && (String.sub name.txt 0 6 = "local_") [@doesNotRaise])
+           && (String.sub name.txt 0 6 = "local_") [@doesNotThrow])
          (* %%private generates a dummy module called local_... *) ->
     let item = for_module ~env mod_desc name.txt in
     let declared =
@@ -617,7 +617,7 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
         incl_type []
     in
     top_level
-  | Tstr_primitive vd when Jsx_hacks.primitive_is_fragment vd = false ->
+  | Tstr_primitive vd ->
     let declared =
       add_declared ~extent:vd.val_loc ~item:vd.val_val.val_type
         ~name:vd.val_name
@@ -729,7 +729,7 @@ let file_for_cmt_infos ~module_name ~uri
   | Partial_implementation parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filter_map (fun p ->
+      |> List.filter_map (fun p ->
           match (p : Cmt_format.binary_part) with
           | Partial_structure str -> Some str.str_items
           | Partial_structure_item str -> Some [str]
@@ -741,7 +741,7 @@ let file_for_cmt_infos ~module_name ~uri
   | Partial_interface parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
+      |> List.filter_map (fun (p : Cmt_format.binary_part) ->
           match p with
           | Partial_signature str -> Some str.sig_items
           | Partial_signature_item str -> Some [str]

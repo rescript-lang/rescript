@@ -1,0 +1,1 @@
+- The editor now shows a value as deprecated exactly when the compiler warns about it, also for `@deprecated` payloads it read differently before (such as a record without `reason`).

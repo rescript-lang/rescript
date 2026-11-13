@@ -52,7 +52,6 @@ let count_label =
       lbl_repres = Record_regular;
       lbl_private = Asttypes.Public;
       lbl_loc = loc;
-      lbl_attributes = [];
     }
   in
   label.lbl_all <- [|label|];

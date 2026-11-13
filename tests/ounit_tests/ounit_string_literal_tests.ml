@@ -370,9 +370,6 @@ let assert_js_global ~expected (expression : J.expression) =
     OUnit.assert_equal ~printer:(Printf.sprintf "%S") expected ident.name
   | _ -> OUnit.assert_failure "expected a JavaScript global reference"
 
-let string_payload constant =
-  Parsetree.PStr [Ast_helper.Str.eval (Ast_helper.Exp.constant constant)]
-
 let template_payload source =
   Parsetree.PStr
     [Ast_helper.Str.eval (Ast_helper.Exp.template [located_string source] [])]

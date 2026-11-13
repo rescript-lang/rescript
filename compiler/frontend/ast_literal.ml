@@ -25,10 +25,6 @@
 module Lid = struct
   type t = Longident.t
 
-  let val_unit : t = Lident "()"
-
-  let type_unit : t = Lident "unit"
-
   let type_string : t = Lident "string"
 
   let type_int : t = Lident "int" (* use *predef* *)
@@ -49,12 +45,6 @@ end
 module No_loc = struct
   let loc = Location.none
 
-  let val_unit =
-    Ast_helper.Exp.construct {txt = Lid.val_unit; loc} {txt = []; loc}
-
-  let type_unit =
-    Ast_helper.Typ.mk (Ptyp_constr ({txt = Lid.type_unit; loc}, []))
-
   let type_int = Ast_helper.Typ.mk (Ptyp_constr ({txt = Lid.type_int; loc}, []))
 
   let type_string =
@@ -70,29 +60,13 @@ type expression_lit = Parsetree.expression lit
 
 type core_type_lit = Parsetree.core_type lit
 
-let val_unit ?loc () =
-  match loc with
-  | None -> No_loc.val_unit
-  | Some loc ->
-    Ast_helper.Exp.construct {txt = Lid.val_unit; loc} {txt = []; loc}
-
-let type_unit ?loc () =
-  match loc with
-  | None -> No_loc.type_unit
-  | Some loc ->
-    Ast_helper.Typ.mk ~loc (Ptyp_constr ({txt = Lid.type_unit; loc}, []))
-
 let type_string ?loc () =
   match loc with
   | None -> No_loc.type_string
   | Some loc ->
     Ast_helper.Typ.mk ~loc (Ptyp_constr ({txt = Lid.type_string; loc}, []))
 
-let type_bool ?loc () =
-  match loc with
-  | None -> No_loc.type_bool
-  | Some loc ->
-    Ast_helper.Typ.mk ~loc (Ptyp_constr ({txt = Lid.type_bool; loc}, []))
+let type_bool () = No_loc.type_bool
 
 let type_int ?loc () =
   match loc with

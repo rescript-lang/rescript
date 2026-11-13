@@ -21,7 +21,6 @@ let new_key init =
   key
 
 let get = Domain.DLS.get
-let set = Domain.DLS.set
 
 let with_fresh action =
   (* [entries] lists the newest key first. Initialize in registration order,

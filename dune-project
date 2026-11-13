@@ -23,9 +23,11 @@
   dune
   (ppxlib
    (>= 0.38.0))
-  (ppx_deriving :build)
+  (ppx_deriving
+   (and :build (= 6.2.0)))
   (ppx_gen_rec :build)
-  wtf8
+  (wtf8
+   (= 1.0.2))
   (ocamlformat
    (and :with-test (= 0.29.0)))
   (yojson
@@ -36,6 +38,13 @@
    (= 2.1.1))
   (luv
    (= 0.5.14+rescript.1))
+  ; Linked into the build system through luv.
+  (ctypes
+   (= 0.24.0))
+  (integers
+   (= 0.8.0))
+  (stdlib-shims
+   (= 0.3.0))
   (re
    (= 1.14.0))
   (ounit2
@@ -52,7 +61,13 @@
    (and
     (<> :os "win32")
     :with-test
-    (= 6.5.0)))))
+    (= 6.5.0)))
+  ; make dead-code
+  (reanalyze
+   (and
+    (<> :os "win32")
+    :with-test
+    (= 2.27.0)))))
 
 (package
  (name analysis)
@@ -62,9 +77,17 @@
    (>= 5.0.0))
   (odoc :with-doc)
   (lsp
+   (= 1.28.1))
+  ; Linked into the binaries through lsp.
+  (jsonrpc
+   (= 1.28.1))
+  (uutf
+   (= 1.0.4))
+  ; v0.17.0 needs OCaml 5.1; the OCaml 5.0 CI job gets v0.16.0.
+  (ppx_yojson_conv_lib
    (and
-    (>= 1.23.0)
-    (< 1.28.0)))
+    (>= v0.16.0)
+    (<= v0.17.0)))
   (yojson
     (= 3.0.0))))
 
@@ -75,7 +98,7 @@
   (ocaml
    (>= 5.0.0))
   (cmarkit
-   (>= 0.3.0))
+   (= 0.4.0))
   analysis
   (yojson
     (= 3.0.0))

@@ -28,9 +28,6 @@ env:
 
 jobs:
   build-compiler:
-    outputs:
-      api-docs-artifact-id: ${{ steps.upload-api-docs.outputs.artifact-id }}
-      website-branch: ${{ steps.api-docs-plan.outputs.website-branch }}
     strategy:
       fail-fast: false
       matrix:
@@ -156,22 +153,27 @@ jobs:
         id: compiler-build-state-key
         shell: bash
         run: |
-          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
+          echo "value=compiler-build-state-v2-${{ matrix.os }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
             | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
 
+      # Only _build: dune's shared cache under ~/.cache/dune would grow with
+      # every master push that restores, extends and saves it again.
       - name: Restore compiler build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
         id: compiler-build-state
         uses: actions/cache/restore@v6
         with:
-          path: |
-            C:\.cache\dune
-            ~/.cache/dune
-            _build
+          path: _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Build compiler
         run: opam exec -- dune build --display quiet
+
+      # Reads the linked libraries, versions, and license texts from this
+      # job's opam switch, the one the linux-x64 release binaries come from.
+      - name: Check third-party licenses
+        if: matrix.upload_libs
+        run: opam exec -- node scripts/generateThirdPartyLicenses.js --check
 
       - name: Delete stable compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -189,10 +191,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/cache/save@v6
         with:
-          path: |
-            C:\.cache\dune
-            ~/.cache/dune
-            _build
+          path: _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Verify promoted compiler exes
@@ -232,6 +231,10 @@ jobs:
       - name: Test commit records
         if: matrix.test_commit_records
         run: yarn test-commit-records
+
+      - name: Test the pull request comment action
+        if: matrix.test_commit_records
+        run: yarn test-upsert-comment
 
       - name: Run tests
         run: node scripts/test.js -all
@@ -310,19 +313,51 @@ jobs:
           opam exec -- ./_build/default/tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe -runner sequential
         shell: bash
 
-      - name: Run rewatch focused integration tests
+      # The canonical suite works in rewatch/testrepo and the focused one in
+      # directories of its own, so they run side by side; each takes one to
+      # three and a half minutes. The canonical suite fails when another
+      # process runs its executable as it starts, so it runs a copy. Its
+      # output is shown once both are done.
+      - name: Run rewatch focused integration and canonical tests
         timeout-minutes: 30
         run: |
-          sh rewatch-ocaml/tests/run.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
-        shell: bash
+          bin=packages/@rescript/${{ matrix.node-target }}/bin
+          rm -rf tmp/canonical-bin
+          mkdir -p tmp
+          cp -R "$bin" tmp/canonical-bin
+          canonical_log=tmp/canonical-tests.log
+          ./rewatch/tests/suite.sh tmp/canonical-bin/rescript.exe >"$canonical_log" 2>&1 &
+          canonical=$!
 
-      - name: Run rewatch canonical tests
-        run: ./rewatch/tests/suite.sh packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+          focused_status=0
+          sh rewatch-ocaml/tests/run.sh "$bin/rescript.exe" || focused_status=$?
+          canonical_status=0
+          wait "$canonical" || canonical_status=$?
+
+          if [ "$canonical_status" -eq 0 ]; then
+            echo "::group::Canonical tests"
+            cat "$canonical_log"
+            echo "::endgroup::"
+          else
+            cat "$canonical_log"
+            echo "::error::The canonical tests failed with status $canonical_status"
+          fi
+          if [ "$focused_status" -ne 0 ]; then
+            echo "::error::The focused integration tests failed with status $focused_status"
+          fi
+          [ "$focused_status" -eq 0 ] && [ "$canonical_status" -eq 0 ]
         shell: bash
 
       - name: Build playground compiler
         if: matrix.build_playground
         run: opam exec -- make playground
+
+      # Runs after the playground build, whose browser-profile tree it
+      # analyzes together with the native one. reanalyze is a test
+      # dependency, installed with the switch.
+      - name: Check for dead code
+        if: matrix.build_playground
+        run: opam exec -- make dead-code
 
       - name: Test playground compiler
         if: matrix.build_playground
@@ -395,13 +430,198 @@ jobs:
         if: ${{ matrix.generate_api_docs }}
         run: yarn apidocs:generate
 
+      # Release builds publish this artifact to the website (publish.yml).
       - name: "Upload artifacts: scripts/res/apiDocs"
-        id: upload-api-docs
         if: ${{ matrix.generate_api_docs }}
         uses: actions/upload-artifact@v7
         with:
           name: api
           path: scripts/res/apiDocs/
+
+      # Checks that the website builds with the generated API docs. These
+      # steps stay in this job rather than in one that needs build-compiler,
+      # which would wait for the slowest platform before starting.
+      - name: Checkout rescript-lang.org
+        if: ${{ matrix.generate_api_docs }}
+        uses: actions/checkout@v7
+        with:
+          repository: rescript-lang/rescript-lang.org
+          ref: ${{ steps.api-docs-plan.outputs.website-branch }}
+          path: rescript-lang.org
+
+      - name: Check for API docs changes
+        id: api-docs-diff
+        if: ${{ matrix.generate_api_docs }}
+        run: |
+          cp -R scripts/res/apiDocs/. rescript-lang.org/data/api/
+          git -C rescript-lang.org status
+          if [[ -z "$(git -C rescript-lang.org status --porcelain)" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+      # The website is checked out inside this repository, so its Yarn also
+      # reads this repository's .yarnrc.yml and rejects the settings it does
+      # not know yet. The steps that need this config are done.
+      - name: Hide the compiler's Yarn config from the website
+        if: ${{ matrix.generate_api_docs && steps.api-docs-diff.outputs.changed == 'true' }}
+        run: mv .yarnrc.yml "$RUNNER_TEMP/rescript.yarnrc.yml"
+        shell: bash
+
+      - name: Use Node.js for website
+        if: ${{ matrix.generate_api_docs && steps.api-docs-diff.outputs.changed == 'true' }}
+        uses: actions/setup-node@v7
+        with:
+          cache: yarn
+          cache-dependency-path: rescript-lang.org/yarn.lock
+          node-version-file: rescript-lang.org/.node-version
+
+      - name: Build website with the API docs
+        if: ${{ matrix.generate_api_docs && steps.api-docs-diff.outputs.changed == 'true' }}
+        run: |
+          yarn
+          yarn build
+        working-directory: rescript-lang.org
+
+  # Compares the words the compiler allocates on fixed inputs, and the
+  # instructions it executes on some of them, with the base branch
+  # (scripts/compilerBenchmarks.js). Neither count depends on the runner's
+  # speed, so this can fail on a growth of 1%. It is not needed by ci-ok: a
+  # deliberate growth shouldn't block a merge. The report goes to the job
+  # summary and, for a pull request from a branch of this repository, to a
+  # comment on it; a fork's pull request gets a token that can't comment.
+  benchmarks:
+    if: github.event_name == 'pull_request'
+    # x64, since bsc doesn't run under valgrind on arm64.
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      # The same build as the first linux-x64 build-compiler job, so that the
+      # OPAM environment and the build state are shared.
+      DUNE_PROFILE: static
+      OCAML_COMPILER: ocaml-variants.5.5.2+options,ocaml-option-static
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # The merge commit and its first parent, the base branch.
+          fetch-depth: 2
+
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node
+
+      - name: Test the benchmark script
+        run: yarn test-compiler-benchmarks
+
+      - name: Setup Linux dependencies
+        uses: ./.github/actions/setup-linux-dependencies
+
+      - name: Install valgrind
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends valgrind
+          valgrind --version
+
+      - name: Setup OCaml
+        id: setup_ocaml
+        uses: ./.github/actions/setup-ocaml
+        with:
+          compiler: ${{ env.OCAML_COMPILER }}
+          os: ubuntu-26.04
+          cache-prefix: opam-env-v9
+
+      - name: Compiler build state key
+        id: compiler-build-state-key
+        run: |
+          echo "value=compiler-build-state-v2-ubuntu-26.04-${{ steps.setup_ocaml.outputs.setup_version }}-$OCAML_COMPILER-${{ hashFiles('*.opam') }}" \
+            | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
+
+      - name: Restore compiler build state
+        uses: actions/cache/restore@v6
+        with:
+          # The paths are part of the cache's version, so they must be the
+          # ones build-compiler saves.
+          path: _build
+          key: ${{ steps.compiler-build-state-key.outputs.value }}
+
+      - name: Build the compiler
+        run: opam exec -- dune build --display quiet
+
+      - name: Build the base branch's compiler
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/base" HEAD^1
+          opam exec -- dune build --root "$RUNNER_TEMP/base" --display quiet
+
+      # For the size of the bundle only; the playground is tested elsewhere.
+      - name: Build the playground compilers
+        run: |
+          opam exec -- make playground-compiler
+          opam exec -- make -C "$RUNNER_TEMP/base" playground-compiler
+
+      - name: Measure and compare
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Both checkouts are measured from the same path, one after the
+          # other: the paths in the compiler's arguments change its counts a
+          # little, and the instructions of the runtime and Belt files by up
+          # to 0.2%. The runtime and Belt are built there too, since the
+          # replayed builds would otherwise write interfaces that don't
+          # match those of the files they don't replay yet. Both build the
+          # base's tests/tests, which the base's compiler builds already.
+          measure() {
+            sudo mkdir -p /bench
+            sudo mount --bind "$1" /bench
+            node scripts/compilerBenchmarks.js prepare /bench
+            node scripts/compilerBenchmarks.js measure /bench "$2" --instructions \
+              --project "$RUNNER_TEMP/base" --playground
+            sudo umount /bench
+          }
+          measure "$RUNNER_TEMP/base" "$RUNNER_TEMP/base.json"
+          measure "$GITHUB_WORKSPACE" "$RUNNER_TEMP/head.json"
+          status=0
+          report="$RUNNER_TEMP/benchmarks-report.md"
+          node scripts/compilerBenchmarks.js compare "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json" \
+            --threshold 1 --summary "$report" || status=$?
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nPull request %s compared with base %s in [this run](%s).\n' \
+            "$(git rev-parse --short=9 HEAD^2)" "$(git rev-parse --short=9 HEAD^1)" "$RUN_URL" \
+            >> "$report"
+          exit "$status"
+
+      # When a step failed before the comparison, the comment says so instead
+      # of keeping the report of an earlier commit.
+      - name: Report a failure to run the benchmarks
+        if: ${{ !cancelled() }}
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          report="$RUNNER_TEMP/benchmarks-report.md"
+          if [ ! -f "$report" ]; then
+            {
+              echo "## ⚠️ Compiler benchmarks"
+              echo
+              echo "The benchmarks couldn't run for pull request ${HEAD_SHA:0:9}; [the run]($RUN_URL) shows why."
+            } > "$report"
+            cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # The pull request's one comment, edited in place on each push, also
+      # when nothing changed, so that it shows the comparison ran.
+      - name: Comment on the pull request
+        if: >-
+          !cancelled() &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        uses: ./.github/actions/upsert-comment
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          tag: compiler-benchmarks
+          body-path: ${{ runner.temp }}/benchmarks-report.md
 
   dev-playground:
     needs:
@@ -489,46 +709,6 @@ jobs:
         run: |
           yarn dlx pkg-pr-new publish --yarn "." "./packages/@rescript/*"
 
-  api-docs:
-    needs:
-      - build-compiler
-    runs-on: ubuntu-26.04-arm
-    steps:
-      - name: Checkout rescript-lang.org
-        uses: actions/checkout@v7
-        with:
-          repository: rescript-lang/rescript-lang.org
-          ref: ${{ needs.build-compiler.outputs.website-branch }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v8
-        with:
-          artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
-          path: data/api
-
-      - name: Check if repo is clean
-        id: diffcheck
-        run: |
-          git status
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "clean=true" >> $GITHUB_OUTPUT
-          else
-            echo "clean=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Use Node.js
-        if: steps.diffcheck.outputs.clean == 'false'
-        uses: actions/setup-node@v7
-        with:
-          cache: yarn
-          node-version-file: .node-version
-
-      - name: Build website
-        if: steps.diffcheck.outputs.clean == 'false'
-        run: |
-          yarn
-          yarn build
-
   test-devcontainer:
     runs-on: ubuntu-26.04-arm
     steps:
@@ -540,87 +720,11 @@ jobs:
           push: never
           runCmd: make
 
-  test-installation-npm:
-    needs:
-      - pkg-pr-new
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-26
-          - os: ubuntu-26.04
-          - os: ubuntu-26.04-arm
-          - os: windows-2025
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Use Node.js
-        uses: actions/setup-node@v7
-        with:
-          # Run integration tests with the oldest supported node version.
-          node-version: 22
-
-      - name: Make test directory
-        id: tmp-dir
-        shell: bash
-        run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
-            mkdir -p "$dir"
-          else
-            dir=$(mktemp -d)
-          fi
-          echo "path=$dir" >> "$GITHUB_OUTPUT"
-          cp -r tests/package_tests/installation_test/* "$dir"
-          # The compiled stdlib tests run against the installed runtime. Their
-          # Test.mjs imports @babel/code-frame, which tests/tests depends on.
-          cp -r tests/tests/src/stdlib "$dir/stdlib"
-          echo "code-frame=$(node -p 'require("./tests/tests/package.json").dependencies["@babel/code-frame"]')" >> "$GITHUB_OUTPUT"
-
-      - name: Install ReScript package
-        run: |
-          COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
-          npm i --no-audit \
-            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
-            "https://pkg.pr.new/rescript-lang/rescript/@rescript/runtime@${COMMIT_SHA}" \
-            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}" \
-            "@babel/code-frame@${{ steps.tmp-dir.outputs.code-frame }}"
-        shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
-
-      - name: Test installation
-        run: |
-          npx rescript -h
-          npx rescript build
-          cp src/BeltTest.res.txt src/BeltTest.res
-          if npx rescript build; then
-            echo "Belt unexpectedly compiled without being listed as a dependency" >&2
-            exit 1
-          fi
-          cp rescript-with-belt.json rescript.json
-          npx rescript build
-          node src/BeltTest.mjs
-        shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
-
-      - name: Test packaged CLI subcommands and watch shutdown
-        run: node packaged-cli-smoke.mjs
-        shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
-
-      # build-compiler runs the stdlib tests on the Node.js version in .nvmrc,
-      # this job on the oldest supported one, so tests of APIs missing there
-      # must stay out of Stdlib_TestSuite and Stdlib_TempTests.
-      - name: Run stdlib tests
-        run: |
-          node stdlib/Stdlib_TestSuite.mjs
-          node stdlib/Stdlib_TempTests.mjs
-        shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
-
-  test-installation-pnpm:
+  # Installs the packages published by pkg-pr-new with npm, then with pnpm,
+  # each in a directory of its own. One job per OS rather than one per
+  # package manager halves the jobs that wait for a runner, macOS runners
+  # in particular.
+  test-installation:
     needs:
       - pkg-pr-new
     strategy:
@@ -647,24 +751,71 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Make test directory
+      - name: Make test directories
         id: tmp-dir
         shell: bash
         run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
-            mkdir -p "$dir"
-          else
-            dir=$(mktemp -d)
-          fi
-          echo "path=$dir" >> "$GITHUB_OUTPUT"
-          cp -r tests/package_tests/installation_test/* "$dir"
-          # The compiled stdlib tests run against the installed runtime. Their
-          # Test.mjs imports @babel/code-frame, which tests/tests depends on.
-          cp -r tests/tests/src/stdlib "$dir/stdlib"
+          for manager in npm pnpm; do
+            if [[ "$RUNNER_OS" == "Windows" ]]; then
+              dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
+              mkdir -p "$dir"
+            else
+              dir=$(mktemp -d)
+            fi
+            echo "$manager=$dir" >> "$GITHUB_OUTPUT"
+            cp -r tests/package_tests/installation_test/* "$dir"
+            # The compiled stdlib tests run against the installed runtime. Their
+            # Test.mjs imports @babel/code-frame, which tests/tests depends on.
+            cp -r tests/tests/src/stdlib "$dir/stdlib"
+          done
           echo "code-frame=$(node -p 'require("./tests/tests/package.json").dependencies["@babel/code-frame"]')" >> "$GITHUB_OUTPUT"
 
-      - name: Install ReScript package
+      - name: "npm: Install ReScript package"
+        run: |
+          COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
+          npm i --no-audit \
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/runtime@${COMMIT_SHA}" \
+            "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}" \
+            "@babel/code-frame@${{ steps.tmp-dir.outputs.code-frame }}"
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.npm }}
+
+      - name: "npm: Test installation"
+        run: |
+          npx rescript -h
+          npx rescript build
+          cp src/BeltTest.res.txt src/BeltTest.res
+          if npx rescript build; then
+            echo "Belt unexpectedly compiled without being listed as a dependency" >&2
+            exit 1
+          fi
+          cp rescript-with-belt.json rescript.json
+          npx rescript build
+          node src/BeltTest.mjs
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.npm }}
+
+      - name: "npm: Test packaged CLI subcommands and watch shutdown"
+        run: node packaged-cli-smoke.mjs
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.npm }}
+
+      # build-compiler runs the stdlib tests on the Node.js version in .nvmrc,
+      # this job on the oldest supported one, so tests of APIs missing there
+      # must stay out of Stdlib_TestSuite and Stdlib_TempTests.
+      - name: "npm: Run stdlib tests"
+        run: |
+          node stdlib/Stdlib_TestSuite.mjs
+          node stdlib/Stdlib_TempTests.mjs
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.npm }}
+
+      # The pnpm steps run even when an npm step failed, so that one run
+      # reports both package managers.
+      - name: "pnpm: Install ReScript package"
+        id: pnpm-install
+        if: ${{ !cancelled() && steps.tmp-dir.outcome == 'success' }}
         run: |
           COMMIT_SHA="${{ needs.pkg-pr-new.outputs.commit_sha }}"
           # pnpm 10 blocks pkg.pr.new's URL-based platform subdependencies unless block-exotic-subdeps is disabled.
@@ -674,9 +825,11 @@ jobs:
             "https://pkg.pr.new/rescript-lang/rescript/@rescript/belt@${COMMIT_SHA}" \
             "@babel/code-frame@${{ steps.tmp-dir.outputs.code-frame }}"
         shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
+        working-directory: ${{ steps.tmp-dir.outputs.pnpm }}
 
-      - name: Test installation
+      - name: "pnpm: Test installation"
+        id: pnpm-test
+        if: ${{ !cancelled() && steps.pnpm-install.outcome == 'success' }}
         run: |
           pnpm rescript -h
           pnpm rescript build
@@ -689,17 +842,15 @@ jobs:
           pnpm rescript build
           node src/BeltTest.mjs
         shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
+        working-directory: ${{ steps.tmp-dir.outputs.pnpm }}
 
-      # build-compiler runs the stdlib tests on the Node.js version in .nvmrc,
-      # this job on the oldest supported one, so tests of APIs missing there
-      # must stay out of Stdlib_TestSuite and Stdlib_TempTests.
-      - name: Run stdlib tests
+      - name: "pnpm: Run stdlib tests"
+        if: ${{ !cancelled() && steps.pnpm-test.outcome == 'success' }}
         run: |
           node stdlib/Stdlib_TestSuite.mjs
           node stdlib/Stdlib_TempTests.mjs
         shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
+        working-directory: ${{ steps.tmp-dir.outputs.pnpm }}
 
   # The single CI check that the master ruleset requires. Matrix job names
   # contain runner labels, so requiring this job instead keeps the ruleset
@@ -710,10 +861,8 @@ jobs:
     needs:
       - build-compiler
       - pkg-pr-new
-      - api-docs
       - test-devcontainer
-      - test-installation-npm
-      - test-installation-pnpm
+      - test-installation
     runs-on: ubuntu-26.04
     steps:
       - name: Check that all needed jobs succeeded

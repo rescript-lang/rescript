@@ -11,8 +11,6 @@ type t =
   | AbstractPrivateMember
   | AbstractPropertyInNonAbstractClass
   | AbstractPropertyWithInitializer
-  | AccessorDataProperty
-  | AccessorGetSet
   | AdjacentJSXElements
   | AmbiguousLetBracket
   | AsyncFunctionAsStatement
@@ -83,8 +81,6 @@ type t =
   | InvalidLHSInForIn
   | InvalidLHSInForOf
   | InvalidOptionalIndexedAccess
-  | InvalidRegExp
-  | InvalidRegExpFlags of string
   | InvalidSciBigInt
   | InvalidTupleOptionalSpread
   | InvalidTupleVariance
@@ -131,7 +127,6 @@ type t =
   | StaticAbstractMethod
   | StrictCatchVariable
   | StrictDelete
-  | StrictDuplicateProperty
   | StrictFunctionName
   | StrictLHSAssignment
   | StrictLHSPostfix
@@ -171,7 +166,6 @@ type t =
   | UnexpectedTypeAnnotation
   | UnexpectedTypeDeclaration
   | UnexpectedTypeExport
-  | UnexpectedTypeImport
   | UnexpectedTypeInterface
   | UnexpectedVariance
   | UnexpectedWithExpected of string * string
@@ -185,8 +179,6 @@ type t =
 
 exception Error of (Loc.t * t) * (Loc.t * t) list
 
-let error loc e = raise (Error ((loc, e), []))
-
 module PP = struct
   let error = function
     | AbstractMethodInNonAbstractClass ->
@@ -196,9 +188,6 @@ module PP = struct
     | AbstractPropertyInNonAbstractClass ->
       "Abstract properties can only appear within an abstract class."
     | AbstractPropertyWithInitializer -> "Abstract properties cannot have an initializer."
-    | AccessorDataProperty ->
-      "Object literal may not have data and accessor property with the same name"
-    | AccessorGetSet -> "Object literal may not have multiple get/set accessors with the same name"
     | AdjacentJSXElements ->
       "Unexpected token <. Remember, adjacent JSX elements must be wrapped in an enclosing parent tag"
     | AmbiguousLetBracket ->
@@ -364,9 +353,6 @@ module PP = struct
     | InvalidLHSInForOf -> "Invalid left-hand side in for-of"
     | InvalidOptionalIndexedAccess ->
       "Invalid optional indexed access. Indexed access uses bracket notation. Use the format `T?.[K]`."
-    | InvalidRegExp -> "Invalid regular expression"
-    | InvalidRegExpFlags flags ->
-      Printf.sprintf "Invalid flags supplied to RegExp constructor '%s'" flags
     | InvalidSciBigInt -> "A bigint literal cannot use exponential notation"
     | InvalidTypeof -> "`typeof` can only be used to get the type of variables."
     | InvalidTupleOptionalSpread -> "Tuple spread elements cannot be optional."
@@ -436,8 +422,6 @@ module PP = struct
     | StaticAbstractMethod -> "`static` modifier can't be used with the `abstract` modifier."
     | StrictCatchVariable -> "Catch variable may not be eval or arguments in strict mode"
     | StrictDelete -> "Delete of an unqualified identifier in strict mode."
-    | StrictDuplicateProperty ->
-      "Duplicate data property in object literal not allowed in strict mode"
     | StrictFunctionName -> "Function name may not be eval or arguments in strict mode"
     | StrictLHSAssignment -> "Assignment to eval or arguments is not allowed in strict mode"
     | StrictLHSPostfix ->
@@ -488,7 +472,6 @@ module PP = struct
     | UnexpectedTypeAnnotation -> "Type annotations are not allowed in untyped mode"
     | UnexpectedTypeDeclaration -> "Type declarations are not allowed in untyped mode"
     | UnexpectedTypeExport -> "Type exports are not allowed in untyped mode"
-    | UnexpectedTypeImport -> "Type imports are not allowed in untyped mode"
     | UnexpectedTypeInterface -> "Interfaces are not allowed in untyped mode"
     | UnexpectedVariance -> "Unexpected variance sigil"
     | UnexpectedWithExpected (unexpected, expected) ->

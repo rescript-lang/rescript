@@ -46,7 +46,7 @@ function fromNull(x) {
 }
 
 function valFromOption(x) {
-  if (x === null || x.BS_PRIVATE_NESTED_SOME_NONE === undefined) {
+  if (x == null || x.BS_PRIVATE_NESTED_SOME_NONE === undefined) {
     return x;
   }
   let depth = x.BS_PRIVATE_NESTED_SOME_NONE;

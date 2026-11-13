@@ -26,10 +26,9 @@
 
 type t = J.statement
 
-val throw_stmt : ?comment:string -> J.expression -> t
+val throw_stmt : J.expression -> t
 
 val if_ :
-  ?comment:string ->
   ?declaration:Lambda.let_kind * Ident.t ->
   (* when it's not None, we also need make a variable declaration in the
      begininnig, however, we can optmize such case
@@ -39,14 +38,13 @@ val if_ :
   J.block ->
   t
 
-val block : ?comment:string -> J.block -> t
+val block : J.block -> t
 (**   
    turn a block into  a single statement,
    avoid nested block
 *)
 
 val int_switch :
-  ?comment:string ->
   ?declaration:Lambda.let_kind * Ident.t ->
   ?default:J.block ->
   J.expression ->
@@ -69,7 +67,6 @@ val int_switch :
 *)
 
 val string_switch :
-  ?comment:string ->
   ?declaration:Lambda.let_kind * Ident.t ->
   ?default:J.block ->
   J.expression ->
@@ -79,29 +76,17 @@ val string_switch :
 val block_last_is_return_throw_or_continue : J.block -> bool
 (** Whether control never falls out of the end of the block *)
 
-val declare_variable :
-  ?comment:string ->
-  ?ident_info:J.ident_info ->
-  kind:Lambda.let_kind ->
-  Ident.t ->
-  t
+val declare_variable : kind:Lambda.let_kind -> Ident.t -> t
 (** Just declaration without initialization *)
 
 (*** Declaration with initialization *)
-val define_variable :
-  ?comment:string ->
-  ?ident_info:J.ident_info ->
-  kind:Lambda.let_kind ->
-  Ident.t ->
-  J.expression ->
-  t
+val define_variable : kind:Lambda.let_kind -> Ident.t -> J.expression -> t
 
-val assign : ?comment:string -> J.ident -> J.expression -> t
+val assign : J.ident -> J.expression -> t
 
-val while_ : ?comment:string -> ?label:J.label -> J.expression -> J.block -> t
+val while_ : ?label:J.label -> J.expression -> J.block -> t
 
 val for_ :
-  ?comment:string ->
   ?label:J.label ->
   J.for_ident_expression option ->
   J.finish_ident_expression ->
@@ -110,25 +95,18 @@ val for_ :
   J.block ->
   t
 
-val for_of :
-  ?comment:string -> ?label:J.label -> J.expression -> J.ident -> J.block -> t
+val for_of : ?label:J.label -> J.expression -> J.ident -> J.block -> t
 
-val for_await_of :
-  ?comment:string -> ?label:J.label -> J.expression -> J.ident -> J.block -> t
+val for_await_of : ?label:J.label -> J.expression -> J.ident -> J.block -> t
 
-val try_ :
-  ?comment:string ->
-  ?with_:J.ident * J.block ->
-  ?finally:J.block ->
-  J.block ->
-  t
+val try_ : ?with_:J.ident * J.block -> ?finally:J.block -> J.block -> t
 
 val exp : ?comment:string -> J.expression -> t
 
-val return_stmt : ?comment:string -> J.expression -> t
+val return_stmt : J.expression -> t
 
 val break_ : ?label:J.label -> unit -> t
 
 val continue_ : ?label:J.label -> unit -> t
 
-val debugger_stmt : ?comment:string -> unit -> t
+val debugger_stmt : unit -> t

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Checks the DEBUG and TRACE events of `rescript -v build` and `-vv build`
+# Checks the DEBUG and TRACE events of `rescript build -v` and `build -vv`
 # against snapshots/verbose_output. Only the event lines are compared, sorted,
 # so parallel compilation does not reorder them.
 set -eu
@@ -33,14 +33,7 @@ normalize_events() {
   sed -E \
     's# at "[^"]*rescript\.json"# at "<PROJECT>/rescript.json"#g' \
     "$input" \
-    | awk '
-        /^(DEBUG|TRACE):$/ {
-          label = $0
-          if ((getline message) > 0) print label "\t" message
-          next
-        }
-        /^compile dirty: / { print }
-      ' \
+    | grep -E '^(debug|trace): ' \
     | LC_ALL=C sort >"$output"
 }
 
@@ -52,7 +45,7 @@ capture() {
   project="$work/$level"
   (
     cd "$project"
-    "$rescript" "-$level" build >"$work/$name.stdout" 2>"$work/$name.stderr"
+    "$rescript" build "-$level" >"$work/$name.stdout" 2>"$work/$name.stderr"
   )
   if [ -s "$work/$name.stderr" ]; then
     echo "$name unexpectedly wrote verbose build output to stderr" >&2
@@ -67,7 +60,7 @@ capture() {
 capture v v
 capture vv vv
 
-if grep -E '^(TRACE:|compile dirty:)' "$work/v.events" >/dev/null; then
+if grep -E '^trace:' "$work/v.events" >/dev/null; then
   echo "-v unexpectedly emitted trace-level events" >&2
   cat "$work/v.events" >&2
   exit 1

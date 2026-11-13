@@ -47,6 +47,14 @@ let pair = (a: kind, b: kind) => [a, b]
 // let ys = [...base, Fi]
 //                      ^com
 
-// A list literal gets no typed completion, with or without a spread
+// A list literal completes its elements like an array literal
 // let ys: list<kind> = list{...baseList, Fi, ...baseList}
 //                                          ^com
+
+// A trailing spread is the tail of a [::] chain, so `list{...baseList, }`
+// parses as `baseList`, and no element position is left
+// let ys: list<kind> = list{...baseList, }
+//                                        ^com
+
+// let ys: list<kind> = list{Fi, ...baseList}
+//                             ^com

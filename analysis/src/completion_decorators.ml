@@ -38,18 +38,6 @@ Alternatively, use the `@@deprecated` decorator to add a deprecation warning to 
 
 [Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#expression-deprecated-decorator).|};
       ] );
-    ( "doesNotRaise",
-      None,
-      [
-        {|The `@doesNotRaise` decorator is deprecated. Please use `@doesNotThrow` instead.
-
-`@doesNotRaise` is uses to override the analysis and state that an expression does not throw any exceptions,
-even though the analysis reports otherwise. This can happen for example in the case of array access where
-the analysis does not perform range checks but takes a conservative stance that any access
-could potentially throw.
-[Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
-> Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
-      ] );
     ( "doesNotThrow",
       None,
       [
@@ -150,17 +138,6 @@ The `@new` decorator is used whenever you need to bind to a JavaScript class con
         {|The `@obj` decorator is used to create functions that return JavaScript objects with properties that match the function's parameter labels.
 
 [Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#obj-decorator).|};
-      ] );
-    ( "raises",
-      Some "raises(\"$0\")",
-      [
-        {|The `@raises` decorator is deprecated. Please use `@throws` instead.
-
-`@raises` acknowledges that a function can throw exceptions that are not caught, and suppresses
-a warning in that case. Callers of the functions are then subjected to the same rule.
-Example `@raises(Exn)` or `@raises([E1, E2, E3])` for multiple exceptions.
-[Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
-> Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
       ] );
     ( "throws",
       Some "throws(\"$0\")",

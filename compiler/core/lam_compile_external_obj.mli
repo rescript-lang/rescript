@@ -26,11 +26,16 @@
     object literal. *)
 
 val hold_obj_args :
+  delay_safe:(J.expression -> bool) ->
   External_arg_spec.obj_params ->
   (J.block * J.expression) list ->
   (J.block * J.expression) list
 (** {!Lam_compile_external_call.hold_arg} for the compiled arguments of an
-    object-creating external *)
+    object-creating external. An optional argument whose presence is not
+    known is also bound to a temporary when evaluating it after the object
+    literal, as {!assemble_obj_args} does, could change a value or the order
+    of effects. [delay_safe] tells whether evaluating an argument after other
+    code gives the same value and effects. *)
 
 val assemble_obj_args :
   External_arg_spec.obj_params -> J.expression list -> J.block * J.expression

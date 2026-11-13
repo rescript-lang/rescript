@@ -28,7 +28,7 @@ let of_payload (payload : payload) : fixed_value Location.loc option =
     | _ -> None)
   | _ -> None
 
-let to_expression ?(loc = Location.none) (value : fixed_value) : expression =
+let to_expression ~loc (value : fixed_value) : expression =
   match value with
   | Pfixed_int source ->
     Ast_helper.Exp.constant ~loc:source.loc (Pconst_integer (source.txt, None))

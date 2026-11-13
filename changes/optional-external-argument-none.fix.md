@@ -1,0 +1,1 @@
+- Fix a `TypeError` when an optional external argument such as `~x=?dict->Dict.get(k)`, or an optional JSX key, is `None`.

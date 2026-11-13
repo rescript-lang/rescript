@@ -194,12 +194,12 @@ let rename ~state ~full ~pos ~new_name ~debug =
         in
         let references_to_toplevel_modules =
           all_references
-          |> Utils.filter_map (fun {References.uri = uri2; loc_opt} ->
+          |> List.filter_map (fun {References.uri = uri2; loc_opt} ->
               if loc_opt = None then Some uri2 else None)
         in
         let references_to_items =
           all_references
-          |> Utils.filter_map (function
+          |> List.filter_map (function
             | {References.uri = uri2; loc_opt = Some loc} -> Some (uri2, loc)
             | {loc_opt = None} -> None)
         in

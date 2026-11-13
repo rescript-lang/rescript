@@ -1,0 +1,1 @@
+- Compile packages with a namespace faster: each module no longer walks every entry of the namespace when it opens it, which made a clean build of a large namespaced package quadratic in its number of modules (4.6 times faster on a package of about 4,900 modules).

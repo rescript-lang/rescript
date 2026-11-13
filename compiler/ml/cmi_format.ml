@@ -29,12 +29,6 @@ type cmi_infos = {
   cmi_flags: pers_flags list;
 }
 
-let input_cmi ic =
-  let name, sign = input_value ic in
-  let crcs = input_value ic in
-  let flags = input_value ic in
-  {cmi_name = name; cmi_sign = sign; cmi_crcs = crcs; cmi_flags = flags}
-
 (* Earlier compilers wrote OCaml-style magic numbers *)
 let legacy_magic_prefix = "Caml1999I"
 
@@ -52,14 +46,6 @@ let check_magic_number filename buffer =
       raise (Error (Wrong_version_interface (filename, "an older")))
     else raise (Error (Not_an_interface filename))
 
-let read_cmi_channel filename ic =
-  try
-    check_magic_number filename
-      (really_input_string ic (String.length Config.cmi_magic_number));
-    input_cmi ic
-  with End_of_file | Failure _ -> raise (Error (Corrupted_interface filename))
-
-(* The same as [read_cmi_channel] on a channel holding [contents]. *)
 let read_cmi_contents filename contents =
   let magic_length = String.length Config.cmi_magic_number in
   if String.length contents < magic_length then

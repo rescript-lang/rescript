@@ -10,11 +10,11 @@ function fromOption(option) {
 }
 
 function equal(a, b, eq) {
-  return Stdlib_Option.equal((a == null) ? undefined : Primitive_option.some(a), (b == null) ? undefined : Primitive_option.some(b), eq);
+  return Stdlib_Option.equal(a == null ? undefined : Primitive_option.some(a), b == null ? undefined : Primitive_option.some(b), eq);
 }
 
 function compare(a, b, cmp) {
-  return Stdlib_Option.compare((a == null) ? undefined : Primitive_option.some(a), (b == null) ? undefined : Primitive_option.some(b), cmp);
+  return Stdlib_Option.compare(a == null ? undefined : Primitive_option.some(a), b == null ? undefined : Primitive_option.some(b), cmp);
 }
 
 function getOr(value, $$default) {

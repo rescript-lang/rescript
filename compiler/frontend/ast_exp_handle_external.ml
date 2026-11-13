@@ -54,7 +54,7 @@ let ffi_expression loc ~is_function (exp : Parsetree.expression) =
     let arrow ~arity =
       let effective_arity = if arity = 0 then 1 else arity in
       let args =
-        Ext_list.init effective_arity (fun _ ->
+        List.init effective_arity (fun _ ->
             Parsetree.Parg_type {attrs = []; lbl = Nolabel; typ = any})
       in
       Ast_helper.Typ.arrow ~loc args any

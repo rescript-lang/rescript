@@ -22,12 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type t = int
-
-val compare : t -> t -> int
-
-val equal : t -> t -> bool
-
 val int32_unsigned_to_int : int32 -> int
 (** 
    works on 64 bit platform only

@@ -30,7 +30,7 @@ module Object
         else
           trailing_and_remover_after_last_loc env
       in
-      remove_trailing expression (fun remover expression -> remover#expression expression)
+      remove_trailing expression
     in
     let decorator env =
       let leading = Peek.comments env in
@@ -202,7 +202,6 @@ module Object
               let tparams =
                 type_params_remove_trailing
                   env
-                  ~kind:Flow_ast_mapper.FunctionTP
                   (Type.type_params env)
               in
               let params =
@@ -581,7 +580,7 @@ module Object
             expr
           else
             let { remove_trailing; _ } = trailing_and_remover env in
-            remove_trailing expr (fun remover expr -> remover#expression expr)
+            remove_trailing expr
         in
         let targs = Type.type_args env in
         { Class.Extends.expr; targs; comments = Flow_ast_utils.mk_comments_opt ~leading () }
@@ -595,7 +594,7 @@ module Object
         let (loc, extends) = class_extends ~leading env in
         let { remove_trailing; _ } = trailing_and_remover env in
         Some
-          (loc, remove_trailing extends (fun remover extends -> remover#class_extends loc extends))
+          (loc, remove_trailing extends)
       else
         None
     in
@@ -784,7 +783,6 @@ module Object
               let tparams =
                 type_params_remove_trailing
                   env
-                  ~kind:Flow_ast_mapper.FunctionTP
                   (Type.type_params env)
               in
               let params =
@@ -955,7 +953,7 @@ module Object
           match Peek.token env with
           | T_EOF
           | T_RCURLY ->
-            { trailing = []; remove_trailing = (fun x _ -> x) }
+            { trailing = []; remove_trailing = (fun x -> x) }
           | _ when Peek.is_line_terminator env ->
             Comment_attachment.trailing_and_remover_after_last_line env
           | _ -> Comment_attachment.trailing_and_remover_after_last_loc env
@@ -968,18 +966,18 @@ module Object
             ( key,
               annot,
               Class.Property.Initialized
-                (remover.remove_trailing expr (fun remover expr -> remover#expression expr))
+                (remover.remove_trailing expr)
             )
           (* prop: annot *)
           | (Ast.Type.Available annot, _) ->
             ( key,
               Ast.Type.Available
-                (remover.remove_trailing annot (fun remover annot -> remover#type_annotation annot)),
+                (remover.remove_trailing annot),
               value
             )
           (* prop *)
           | _ ->
-            (remover.remove_trailing key (fun remover key -> remover#object_key key), annot, value)
+            (remover.remove_trailing key, annot, value)
         in
         (key, annot, value, [])
     in
@@ -1158,7 +1156,6 @@ module Object
               let tparams =
                 type_params_remove_trailing
                   env
-                  ~kind:Flow_ast_mapper.FunctionTP
                   (Type.type_params env)
               in
               let params =
@@ -1269,7 +1266,6 @@ module Object
               let tparams =
                 type_params_remove_trailing
                   env
-                  ~kind:Flow_ast_mapper.FunctionTP
                   (Type.type_params env)
               in
               let params =
@@ -1477,9 +1473,8 @@ module Object
           let leading = Peek.comments env in
           let start = Peek.loc env in
           Eat.token env;
-          let trailing = Eat.trailing_comments env in
-          let comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing () in
-          (Some (start, { Ast.Class.TSAccessibility.kind; comments }), leading)
+          ignore (Eat.trailing_comments env);
+          (Some (start, kind), leading)
         | _ -> (None, [])
       in
       let static =
@@ -1676,7 +1671,7 @@ module Object
                Reject modifiers that are not valid on index signatures. *)
             error_unsupported_declare env declare;
             (match ts_accessibility with
-            | Some (loc, { Ast.Class.TSAccessibility.kind; _ }) ->
+            | Some (loc, kind) ->
               let keyword =
                 match kind with
                 | Ast.Class.TSAccessibility.Public -> "public"
@@ -1890,7 +1885,7 @@ module Object
       | _ when Peek.is_identifier env ->
         let id = Parse.identifier tmp_env in
         let { remove_trailing; _ } = trailing_and_remover env in
-        let id = remove_trailing id (fun remover id -> remover#identifier id) in
+        let id = remove_trailing id in
         Some id
       | _ ->
         (* error, but don't consume a token like Parse.identifier does. this helps
@@ -1905,9 +1900,7 @@ module Object
       | Some tparams ->
         let { remove_trailing; _ } = trailing_and_remover env in
         Some
-          (remove_trailing tparams (fun remover tparams ->
-               remover#type_params ~kind:Flow_ast_mapper.ClassTP tparams
-           )
+          (remove_trailing tparams
           )
     in
     let (extends, implements) = class_heritage env in
@@ -2001,45 +1994,14 @@ module Object
               (key_loc, Parse_error.RecordInvalidPropertyName { name = key_name; static; method_ })
           | _ -> ()
         in
-        let empty_invalid_syntax =
-          {
-            InvalidPropertySyntax.invalid_suffix_semicolon = None;
-            invalid_optional = None;
-            invalid_variance = None;
-          }
-        in
-        let invalid_syntax =
-          Option.map
-            (fun variance ->
-              { empty_invalid_syntax with InvalidPropertySyntax.invalid_variance = Some variance })
-            variance
-        in
-        let invalid_syntax =
-          if Peek.token env = T_PLING then (
-            let error_loc = Peek.loc env in
-            Eat.token env;
-            let invalid_syntax = Option.value invalid_syntax ~default:empty_invalid_syntax in
-            Some { invalid_syntax with InvalidPropertySyntax.invalid_optional = Some error_loc }
-          ) else
-            invalid_syntax
-        in
+        if Peek.token env = T_PLING then Eat.token env;
         let end_property () =
           match Peek.token env with
           | T_EOF
           | T_RCURLY ->
-            invalid_syntax
-          | T_SEMICOLON ->
-            let semicolon_loc = Peek.loc env in
-            Eat.token env;
-            let invalid_syntax = Option.value invalid_syntax ~default:empty_invalid_syntax in
-            Some
-              {
-                invalid_syntax with
-                InvalidPropertySyntax.invalid_suffix_semicolon = Some semicolon_loc;
-              }
-          | _ ->
-            Expect.token env T_COMMA;
-            invalid_syntax
+            ()
+          | T_SEMICOLON -> Eat.token env
+          | _ -> Expect.token env T_COMMA
         in
         (match Peek.token env with
         | T_COLON when static ->
@@ -2051,9 +2013,9 @@ module Object
                 let annot = Type.annotation env in
                 Expect.token env T_ASSIGN;
                 let value = Expression.assignment env in
-                let invalid_syntax = end_property () in
+                end_property ();
                 let comments = Flow_ast_utils.mk_comments_opt ~leading () in
-                { StaticProperty.key; annot; value; comments; invalid_syntax })
+                { StaticProperty.key; annot; value; comments })
               env
           in
           elements env (Body.StaticProperty prop :: acc)
@@ -2070,9 +2032,9 @@ module Object
                   else
                     None
                 in
-                let invalid_syntax = end_property () in
+                end_property ();
                 let comments = Flow_ast_utils.mk_comments_opt ~leading () in
-                { Property.key; annot; default_value; comments; invalid_syntax })
+                { Property.key; annot; default_value; comments })
               env
           in
           elements env (Body.Property prop :: acc)
@@ -2140,24 +2102,10 @@ module Object
           | Some tparams ->
             let { remove_trailing; _ } = trailing_and_remover env in
             Some
-              (remove_trailing tparams (fun remover tparams ->
-                   remover#type_params ~kind:Flow_ast_mapper.RecordTP tparams
-               )
+              (remove_trailing tparams
               )
         in
-        let invalid_syntax =
-          if Peek.token env = T_ASSIGN then (
-            let invalid_syntax =
-              {
-                Ast.Statement.RecordDeclaration.InvalidSyntax.invalid_infix_equals =
-                  Some (Peek.loc env);
-              }
-            in
-            Eat.token env;
-            Some invalid_syntax
-          ) else
-            None
-        in
+        if Peek.token env = T_ASSIGN then Eat.token env;
         if Peek.token env = T_EXTENDS then (
           error_at env (Peek.loc env, Parse_error.RecordExtendsUnsupported);
           let leading = Peek.comments env in
@@ -2179,7 +2127,6 @@ module Object
             implements;
             body;
             comments;
-            invalid_syntax;
           }
     )
 end

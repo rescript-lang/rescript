@@ -2,12 +2,12 @@
 
 
 function methodThroughPpxBridge() {
-  let $$this = this ;
+  let $$this = this;
   return 1 + $$this | 0;
 }
 
 function bracedMethodThroughPpxBridge() {
-  let $$this = this ;
+  let $$this = this;
   return 1 + $$this | 0;
 }
 

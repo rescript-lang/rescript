@@ -1,6 +1,13 @@
 name: Setup OCaml
 description: Restore or install the repository OPAM environment.
 
+# An environment is only ever used as it was built: restored on an exact key,
+# or built from scratch, never restored from other dependencies and updated.
+# Pushes save what they build. A pull request that changes the opam files
+# saves its environment too, in its own cache scope, so that only its first
+# push per change builds from scratch. Each save deletes the earlier
+# generations of the same key prefix on the same ref.
+
 inputs:
   compiler:
     description: OCaml compiler switch specification.
@@ -81,8 +88,9 @@ runs:
         dependency_flags_key="${DEPENDENCY_FLAGS//--/}"
         dependency_flags_key="${dependency_flags_key// /_}"
         dependency_hash="${{ hashFiles('*.opam') }}"
-        key="$CACHE_PREFIX-$OS-3.9.0-$COMPILER-$dependency_flags_key-$dependency_hash"
-        echo "value=${key//,/-}" >> "$GITHUB_OUTPUT"
+        prefix="$CACHE_PREFIX-$OS-3.9.0-$COMPILER-$dependency_flags_key-"
+        echo "prefix=${prefix//,/-}" >> "$GITHUB_OUTPUT"
+        echo "value=${prefix//,/-}$dependency_hash" >> "$GITHUB_OUTPUT"
         echo "setup-version=3.9.0" >> "$GITHUB_OUTPUT"
 
     - name: Restore OPAM environment
@@ -140,10 +148,29 @@ runs:
         fi
         opam install . "${dependency_flags[@]}"
 
+    # A pull request that changes the dependencies saves its environment, so
+    # that its next pushes find it. Caches saved by pull_request runs are
+    # scoped to the pull request's merge ref, so no other branch sees them.
+    # Other pull requests don't save: each would store a copy of master's.
+    - name: Check whether the pull request changes the dependencies
+      id: dependencies
+      if: steps.cache.outputs.cache-hit != 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        if git fetch --quiet --depth=1 origin "$BASE_SHA" &&
+          ! git diff --quiet FETCH_HEAD HEAD -- '*.opam'; then
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Cache OPAM environment
-      # Caches created by pull_request runs are scoped to that PR's merge ref
-      # and cannot seed other PRs or branches, so only push runs save them.
-      if: steps.cache.outputs.cache-hit != 'true' && github.event_name == 'push'
+      id: save
+      if: >-
+        steps.cache.outputs.cache-hit != 'true' &&
+        (github.event_name == 'push' || steps.dependencies.outputs.changed == 'true')
       uses: actions/cache/save@v6
       with:
         path: |
@@ -154,6 +181,26 @@ runs:
           C:\cygwin
           C:\.opam
         key: ${{ steps.cache-key.outputs.value }}
+
+    # Keeps one environment per key prefix and ref. Needs actions: write;
+    # without it, the earlier generations stay until GitHub evicts them.
+    - name: Delete earlier OPAM environments
+      if: steps.save.outcome == 'success'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PREFIX: ${{ steps.cache-key.outputs.prefix }}
+        KEEP: ${{ steps.cache-key.outputs.value }}
+      run: |
+        gh api --paginate --method GET "repos/$GITHUB_REPOSITORY/actions/caches" \
+          -f key="$PREFIX" -f ref="$GITHUB_REF" \
+          --jq ".actions_caches[] | select(.key != \"$KEEP\") | .id" |
+          while IFS= read -r id; do
+            echo "Deleting cache $id"
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/actions/caches/$id" ||
+              echo "::warning::Couldn't delete cache $id."
+          done ||
+          echo "::warning::Couldn't list the earlier OPAM environments."
 
     - name: Use cached OPAM environment
       if: steps.cache.outputs.cache-hit == 'true'

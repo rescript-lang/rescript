@@ -1,0 +1,1 @@
+- Remove ReasonReact and JSX v3 leftovers from editor analysis and genType.

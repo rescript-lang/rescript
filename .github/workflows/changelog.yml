@@ -21,9 +21,12 @@ jobs:
   changelog:
     runs-on: ubuntu-26.04
     steps:
+      # The checks need the history and tags, but only a few files of older
+      # commits, which git fetches when it reads them.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          filter: blob:none
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v7
         with:

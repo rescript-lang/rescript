@@ -270,7 +270,6 @@ type primitive =
   | Pnull_undefined_to_opt
   (* Produced by Lam_pass_remove_alias, not by translation *)
   | Pis_null
-  | Pis_undefined
   | Pis_not_none
   | Pval_from_option
   | Pval_from_option_not_nest
@@ -501,10 +500,10 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
   (* etc *)
   | Pval_from_option | Pval_from_option_not_nest | Pnull_to_opt
   | Pnull_undefined_to_opt | Pis_null | Pis_not_none | Psome | Psome_not_nest
-  | Pis_undefined | Pis_null_undefined | Ptypeof | Pis_poly_var_block
-  | Pdebugger | Pinit_mod | Pupdate_mod | Pduprecord | Pmakearray | Parraylength
-  | Parrayrefu | Parraysetu | Parrayrefs | Pjs_fn_method | Phash
-  | Phash_mixstring | Phash_mixint | Phash_finalmix | Precord_rest _ ->
+  | Pis_null_undefined | Ptypeof | Pis_poly_var_block | Pdebugger | Pinit_mod
+  | Pupdate_mod | Pduprecord | Pmakearray | Parraylength | Parrayrefu
+  | Parraysetu | Parrayrefs | Pjs_fn_method | Phash | Phash_mixstring
+  | Phash_mixint | Phash_finalmix | Precord_rest _ ->
     rhs = lhs
   (* Reachable only via the optimizer's term-equality comparison, which the
      test suite doesn't exercise for template primitives. *)
@@ -573,18 +572,6 @@ let eq_primitive_approx (lhs : primitive) (rhs : primitive) =
     | _ -> false)
   | Praw_js_code _ -> false
 (* TOO lazy, here comparison is only approximation*)
-
-(* The source-level name a field access carries, when it has one. *)
-let str_of_field_info (x : field_dbg_info) : string option =
-  match x with
-  | Fld_extension | Fld_variant | Fld_cons | Fld_poly_var_tag
-  | Fld_poly_var_content | Fld_tuple ->
-    None
-  | Fld_record {name}
-  | Fld_module {name}
-  | Fld_record_inline {name}
-  | Fld_record_extension {name} ->
-    Some name
 
 let is_immutable_block (info : tag_info) =
   mutable_flag_of_tag_info info = Immutable
@@ -753,10 +740,9 @@ let may_skip_operands (primitive : primitive) =
   | Pdict_has | Pawait | Pimport _ | Pinit_mod | Pupdate_mod | Phash
   | Phash_mixint | Phash_mixstring | Phash_finalmix | Pis_null_undefined
   | Pcreate_extension _ | Pjscomp _ | Pnull_to_opt | Pnull_undefined_to_opt
-  | Pis_null | Pis_undefined | Pis_not_none | Pval_from_option
-  | Pval_from_option_not_nest | Pis_poly_var_block | Praw_js_code _
-  | Pjs_fn_method | Ptagged_template _ | Ptemplate _ | Pdict_spread
-  | Parray_spread | Plist_spread ->
+  | Pis_null | Pis_not_none | Pval_from_option | Pval_from_option_not_nest
+  | Pis_poly_var_block | Praw_js_code _ | Pjs_fn_method | Ptagged_template _
+  | Ptemplate _ | Pdict_spread | Parray_spread | Plist_spread ->
     false
 
 (* Whether [primitive] on [args], the arguments of a call, evaluates them as
@@ -944,7 +930,8 @@ let switch lam (lam_switch : lambda_switch) : t =
   | Lconst (Const_constructor constant), _ ->
     (* By runtime value: a coercion accepts [@as(1.)] for [@as(1.0)] *)
     let action =
-      Ext_list.find_opt lam_switch.sw_consts (fun (key, action) ->
+      lam_switch.sw_consts
+      |> List.find_map (fun (key, action) ->
           match key with
           | Switch_constructor (Constant tag)
             when literal_denotes_same constant.literal tag.literal ->
@@ -957,7 +944,8 @@ let switch lam (lam_switch : lambda_switch) : t =
        e.g. an integer, so the const case might not be found *)
     let i = Int32.to_int i in
     let action =
-      Ext_list.find_opt lam_switch.sw_consts (fun (key, action) ->
+      lam_switch.sw_consts
+      |> List.find_map (fun (key, action) ->
           match key with
           | Switch_int ordinal when ordinal = i -> Some action
           | Switch_constructor (Constant {literal})
@@ -985,7 +973,8 @@ let switch lam (lam_switch : lambda_switch) : t =
       | _ -> block = case
     in
     let action =
-      Ext_list.find_opt lam_switch.sw_blocks (fun (key, action) ->
+      lam_switch.sw_blocks
+      |> List.find_map (fun (key, action) ->
           match (key, runtime) with
           | Switch_constructor (Block case_runtime), Some runtime
             when same_runtime runtime case_runtime ->

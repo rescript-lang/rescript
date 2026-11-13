@@ -43,7 +43,7 @@ let newty2 level desc =
   state.type_node_id <- state.type_node_id + 1;
   {desc; level; id = state.type_node_id}
 let newgenty desc = newty2 generic_level desc
-let newgenvar ?name () = newgenty (Tvar name)
+let newgenvar () = newgenty (Tvar None)
 
 (**** Check some types ****)
 
@@ -240,11 +240,18 @@ let rec iter_row f row =
     Misc.may (fun (_, l) -> List.iter f l) row.row_name
   | _ -> assert false
 
+(* Not [List.iter] with a closure, which would be allocated at every arrow. *)
+let rec iter_arg_types f = function
+  | [] -> ()
+  | {typ} :: params ->
+    f typ;
+    iter_arg_types f params
+
 let iter_type_expr f ty =
   match ty.desc with
   | Tvar _ -> ()
   | Tarrow (params, ret) ->
-    List.iter (fun {typ} -> f typ) params;
+    iter_arg_types f params;
     f ret
   | Ttuple l -> List.iter f l
   | Tconstr (_, l, _) -> List.iter f l

@@ -27,12 +27,6 @@ type 'a lit = ?loc:Location.t -> unit -> 'a
 module Lid : sig
   type t = Longident.t
 
-  val val_unit : t
-
-  val type_unit : t
-
-  val type_int : t
-
   val js_extern : t
 
   val method_callback : t
@@ -48,13 +42,9 @@ type expression_lit = Parsetree.expression lit
 
 type core_type_lit = Parsetree.core_type lit
 
-val val_unit : expression_lit
-
-val type_unit : core_type_lit
-
 val type_string : core_type_lit
 
-val type_bool : core_type_lit
+val type_bool : unit -> Parsetree.core_type
 
 val type_int : core_type_lit
 

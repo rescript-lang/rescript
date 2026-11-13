@@ -475,7 +475,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
           let leading = Peek.comments env in
           Expect.identifier env "component";
           let tparams =
-            type_params_remove_trailing env ~kind:Flow_ast_mapper.ComponentTypeTP (type_params env)
+            type_params_remove_trailing env (type_params env)
           in
           let params = component_param_list env in
           let (params, renders) =
@@ -634,15 +634,14 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
       match Peek.token env with
       | T_RCURLY ->
         Eat.rescan_as_template_from env prev_lex_env;
-        let (loc, part, is_tail) =
+        let (loc, is_tail) =
           match Peek.token env with
-          | T_TEMPLATE_PART (loc, cooked, raw, _, tail) ->
-            let open Ast.Type.TemplateLiteral in
+          | T_TEMPLATE_PART (loc, _, _, _, tail) ->
             Eat.token env;
-            (loc, { Element.value = { Element.cooked; raw }; tail }, tail)
+            (loc, tail)
           | _ -> assert false
         in
-        let quasis = (loc, part) :: quasis in
+        let quasis = loc :: quasis in
         if is_tail then
           (loc, List.rev quasis, List.rev types)
         else
@@ -650,34 +649,16 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
       | _ ->
         (* Malformed template *)
         error_unexpected ~expected:"a template literal part" env;
-        let imaginary_quasi =
-          ( fst t,
-            {
-              Ast.Type.TemplateLiteral.Element.value =
-                { Ast.Type.TemplateLiteral.Element.raw = ""; cooked = "" };
-              tail = true;
-            }
-          )
-        in
-        (fst t, List.rev (imaginary_quasi :: quasis), List.rev types)
+        (fst t, List.rev (fst t :: quasis), List.rev types)
     in
-    fun env ((start_loc, cooked, raw, _, is_tail) as part) ->
+    fun env ((start_loc, _, _, _, is_tail) as part) ->
       let leading = Peek.comments env in
       Expect.token env (T_TEMPLATE_PART part);
       let (end_loc, quasis, types) =
-        let head =
-          ( start_loc,
-            {
-              Ast.Type.TemplateLiteral.Element.value =
-                { Ast.Type.TemplateLiteral.Element.cooked; raw };
-              tail = is_tail;
-            }
-          )
-        in
         if is_tail then
-          (start_loc, [head], [])
+          (start_loc, [start_loc], [])
         else
-          template_parts env [head] []
+          template_parts env [start_loc] []
       in
       let trailing = Eat.trailing_comments env in
       let loc = Loc.btwn start_loc end_loc in
@@ -1298,7 +1279,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
   and _function env =
     let start_loc = Peek.loc env in
     let tparams =
-      type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTP (type_params env)
+      type_params_remove_trailing env (type_params env)
     in
     let params = function_param_list env in
     function_with_params ~effect_:Function.Arbitrary env start_loc tparams params
@@ -1317,7 +1298,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
     let start_loc = Peek.loc env in
     Eat.token env;
     let tparams =
-      type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTP (type_params env)
+      type_params_remove_trailing env (type_params env)
     in
     let params = function_param_list env in
     function_with_params ~effect_:Function.Hook env start_loc tparams params
@@ -1327,7 +1308,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
     if abstract_ then Eat.token env;
     Eat.token env;
     let tparams =
-      type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTP (type_params env)
+      type_params_remove_trailing env (type_params env)
     in
     let params = function_param_list env in
     (match params with
@@ -1420,7 +1401,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
         env start_loc static ~abstract ~override key ~optional ~ts_accessibility ~leading =
       let key = object_key_remove_trailing env key in
       let tparams =
-        type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTypeTP (type_params env)
+        type_params_remove_trailing env (type_params env)
       in
       let value = methodish env start_loc tparams in
       let value = (fst value, Type.Function (snd value)) in
@@ -1451,7 +1432,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
           (fun env ->
             let start_loc = Peek.loc env in
             let tparams =
-              type_params_remove_trailing env ~kind:Flow_ast_mapper.FunctionTypeTP (type_params env)
+              type_params_remove_trailing env (type_params env)
             in
             let value = methodish env start_loc tparams in
             Type.Object.CallProperty.
@@ -1693,7 +1674,6 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
                 let tparams =
                   type_params_remove_trailing
                     env
-                    ~kind:Flow_ast_mapper.FunctionTypeTP
                     (type_params env)
                 in
                 let value =
@@ -2182,7 +2162,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
         let leading = leading @ Peek.comments env in
         Eat.token env;
         let ts_accessibility =
-          Some (acc_loc, { Ast.Class.TSAccessibility.kind; comments = None })
+          Some (acc_loc, kind)
         in
         property
           env
@@ -2700,7 +2680,7 @@ module Type (Parse : Parser_common.PARSER) : Parser_common.TYPE = struct
         id
       else
         let { remove_trailing; _ } = trailing_and_remover env in
-        remove_trailing id (fun remover id -> remover#generic_identifier_type id)
+        remove_trailing id
     in
     let targs = type_args env in
     { Type.Generic.id; targs; comments = None }

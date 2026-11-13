@@ -1,0 +1,2 @@
+- Evaluate an optional `@obj` argument such as `~x=?f()` in source order.
+- Read an optional external argument that is a JS property, such as a `@get` getter, only once.

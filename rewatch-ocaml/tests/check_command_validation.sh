@@ -38,8 +38,9 @@ terminate_and_wait() {
   wait "$pid"
   local status=$?
   set -e
-  if [ "$status" -ne 0 ] && \
-    { ! $windows_posix_shell || [ "$status" -ne 143 ]; }; then
+  # A watcher stopped by SIGTERM exits with 143, as the help says.
+  if [ "$status" -ne 143 ] && \
+    { ! $windows_posix_shell || [ "$status" -ne 0 ]; }; then
     printf '%s exited with status %s after shutdown\n' "$label" "$status" >&2
     return 1
   fi
@@ -473,7 +474,7 @@ run_build_output_case() {
   build_project="$work/$name-build"
   cp -R "$fixture" "$build_project"
   if [ "$mode" = quiet ]; then
-    run_rescript -q build "$build_project"
+    run_rescript build -q "$build_project"
   elif [ "$mode" = forced-color ]; then
     CLICOLOR_FORCE=1 run_rescript build "$build_project"
   else
@@ -499,7 +500,7 @@ run_multiple_parse_errors_case() {
     exit 1
   fi
   error="$work/rescript.err"
-  if [ "$(grep -cF 'Error in multiple-parse-errors:' "$error")" -ne 2 ] || \
+  if [ "$(grep -cF 'Syntax error!' "$error")" -ne 2 ] || \
     ! grep -E '[/\\]src[/\\]A\.res' "$error" >/dev/null || \
     ! grep -E '[/\\]src[/\\]B\.res' "$error" >/dev/null; then
     echo "rescript did not retain every independent parse error" >&2
@@ -581,12 +582,15 @@ run_build_output_case quiet-warning 0 \
   "$root/rewatch-ocaml/tests/warning-replay" quiet
 
 run_case build-subcommand-version accept build --version
-run_case clustered-global-version accept -vV build
-run_case clustered-global-verbosity accept -vvvvv build "$project"
-run_case clustered-global-version-before-help accept -Vh build
-run_case clustered-global-help-before-version accept -hV build
-run_case clustered-subcommand-help-before-version accept build -hV
-run_case clustered-subcommand-version-before-help accept build -Vh
+run_case short-help accept -h
+run_case short-version accept -V
+run_case clustered-verbosity accept build -vvvvv "$project"
+run_case options-before-command exit2 -v build
+require_error_contains options-before-command \
+  'options go after the command: rescript build'
+run_case folder-named-like-command reject -v ./build
+require_error_contains folder-named-like-command \
+  "Project folder './build' does not exist."
 "$rescript" build --help=groff >"$work/help-groff.out"
 if ! grep -F '.\" Pipe this output to groff' \
   "$work/help-groff.out" >/dev/null; then
@@ -596,7 +600,17 @@ if ! grep -F '.\" Pipe this output to groff' \
 fi
 checked=$((checked + 1))
 run_case implicit-conflicting-verbosity exit2 -v -q
+require_error_contains implicit-conflicting-verbosity \
+  'verbose cannot be used together with --quiet'
 run_case build-conflicting-verbosity exit2 build --verbose --quiet
+# Cmdliner quotes the command name when colors are off and styles it
+# otherwise, so the name is checked apart from the message.
+for display in "" --help -V; do
+  name=unknown-command${display:+-$display}
+  run_case "$name" exit2 bogus-command ${display:+"$display"}
+  require_error_contains "$name" 'unknown command'
+  require_error_contains "$name" 'bogus-command'
+done
 run_case filter-perl-quoting accept build --filter '\QA.res\E' "$project"
 run_case filter-invalid exit2 build --filter '(' "$project"
 require_error_contains filter-invalid 'invalid regular expression'
@@ -604,7 +618,8 @@ run_case filter-backreference exit2 build --filter '(A)\1' "$project"
 require_error_contains filter-backreference 'unsupported regular expression'
 run_case build-no-timing-preserves-folder accept build --no-timing "$project"
 run_case compiler-args-source accept compiler-args "$project/src/A.res"
-run_case compiler-args-extension reject compiler-args "$project/src/A.txt"
+run_case compiler-args-extension exit2 compiler-args "$project/src/A.txt"
+require_error_contains compiler-args-extension 'rescript: PATH argument:'
 run_case compiler-args-missing reject compiler-args "$project/src/Missing.res"
 run_case compiler-args-no-project reject compiler-args "$work/orphan/A.res"
 
@@ -642,6 +657,37 @@ run_case format-directory reject format "$project/src"
 check_output_snapshot format-directory
 run_case format-unsupported-extension reject format "$project/src/A.txt"
 check_output_snapshot format-unsupported-extension
+# A syntax error does not stop the run: every other file is checked and
+# listed in path order, then the run fails.
+format_broken="$work/format-broken"
+mkdir -p "$format_broken/src"
+printf '{"name":"format-broken","sources":["src"]}\n' \
+  >"$format_broken/rescript.json"
+for name in D B C A; do
+  printf 'let   value =    1\n' >"$format_broken/src/$name.res"
+done
+printf 'let value =\n' >"$format_broken/src/Broken.res"
+run_case --cwd "$format_broken" format-continues-after-syntax-error reject \
+  format --check
+printf '%s\n' '[format check] src/A.res' '[format check] src/B.res' \
+  '[format check] src/C.res' '[format check] src/D.res' \
+  >"$work/format-broken.expected"
+# Windows prints the relative paths with backslashes.
+tr '\\' '/' <"$work/rescript.err" >"$work/format-broken.err"
+grep -F '[format check]' "$work/format-broken.err" >"$work/format-broken.listed"
+if ! cmp -s "$work/format-broken.expected" "$work/format-broken.listed" || \
+  ! grep -F 'Error formatting src/Broken.res:' "$work/format-broken.err" \
+    >/dev/null || \
+  ! grep -F 'The 4 files listed above need formatting' \
+    "$work/format-broken.err" >/dev/null; then
+  echo "format-continues-after-syntax-error: not every file was reported in order" >&2
+  dump_output
+  exit 1
+fi
+run_case --cwd "$format_broken" format-duplicate-arguments reject \
+  format --check src/A.res src/A.res
+require_error_contains format-duplicate-arguments \
+  'The file listed above needs formatting'
 run_case --cwd "$work/empty" format-no-config reject format
 require_error_contains format-no-config \
   "Could not read rescript.json at $work/empty:"
@@ -671,7 +717,7 @@ if [ "$rescript_status" -eq 0 ] || [ -s "$work/rescript.out" ]; then
   echo "format-invalid-stdin: expected the formatter to reject" >&2
   exit 1
 fi
-require_error_contains format-invalid-stdin 'Error formatting stdin:'
+require_error_contains format-invalid-stdin 'Error formatting <stdin>:'
 require_error_contains format-invalid-stdin \
   'This let-binding misses an expression'
 checked=$((checked + 1))
@@ -720,9 +766,10 @@ if ! grep -F -- '--after-build command cannot be empty' \
   dump_output
   exit 1
 fi
+# The shell reports the missing program; the build fails with its status.
 run_case after-build-missing-program reject build --after-build \
   rewatch-command-that-does-not-exist "$project"
-if ! grep -F 'Could not run --after-build command' \
+if ! grep -F -- '--after-build command failed' \
     "$work/rescript.err" >/dev/null || \
   ! grep -F 'rewatch-command-that-does-not-exist' \
     "$work/rescript.err" >/dev/null; then
@@ -765,7 +812,7 @@ set +e
 wait "$signal_lock_watch_pid"
 signal_lock_status=$?
 set -e
-if ! $windows_posix_shell && [ "$signal_lock_status" -ne 0 ]; then
+if ! $windows_posix_shell && [ "$signal_lock_status" -ne 143 ]; then
   echo "Signal during build-lock wait exited with $signal_lock_status" >&2
   exit 1
 fi
@@ -821,6 +868,25 @@ if [ "$(classify "$rescript_status")" != reject ] || \
   grep -F 'invalid JSON' "$work/rescript.err" >/dev/null; then
   echo "watch-lock-before-config: lock acquisition did not precede config parsing" >&2
   dump_output
+  exit 1
+fi
+checked=$((checked + 1))
+# Clean refuses while a watcher of the project runs, which would otherwise
+# keep reading the removed artifacts.
+run_rescript clean "$owner_dir"
+if [ "$(classify "$rescript_status")" != reject ] || \
+  ! grep -F 'Could not clean while rescript watch' "$work/rescript.err" \
+    >/dev/null || \
+  [ ! -f "$owner_dir/lib/rescript/A.cmt" ]; then
+  echo "clean-during-watch: clean did not refuse while a watcher runs" >&2
+  dump_output
+  exit 1
+fi
+printf 'let value = 2\n' >"$owner_dir/src/A.res"
+wait_for_text "$owner_dir/watch.out" "Finished incremental compilation"
+if grep -F 'No such file' "$owner_dir/watch.out" "$owner_dir/watch.err" >/dev/null; then
+  echo "clean-during-watch: the watcher lost its artifacts" >&2
+  cat "$owner_dir/watch.out" "$owner_dir/watch.err" >&2
   exit 1
 fi
 kill -TERM "$watch_lock_owner_pid"
@@ -885,7 +951,7 @@ if ! grep -Fx 'root dependencies: a' "$work/rescript.err.plain" >/dev/null || \
   exit 1
 fi
 run_case build-source-path-is-file accept build "$work/source-path-file"
-if ! grep -F 'Could not read folder: "src"' "$work/rescript.err" >/dev/null; then
+if ! grep -F 'warning: source folder "src" of package source-path-file' "$work/rescript.err" >/dev/null; then
   echo "Non-directory source diagnostic is missing" >&2
   dump_output
   exit 1
@@ -906,9 +972,9 @@ run_case --cwd "$work/format-source-selection" \
   format-scans-graph-with-effective-features reject format --check
 normalize_project_path "$work/rescript.err" "$work/rescript.err.norm" \
   "$work/format-source-selection"
-missing_folder='Could not read folder: "missing". Specified in dependency: installed'
-base_file='[format check] <ROOT>/packages/local/base/Base.res'
-native_file='[format check] <ROOT>/packages/local/native/Native.res'
+missing_folder='warning: source folder "missing" of package installed'
+base_file='[format check] packages/local/base/Base.res'
+native_file='[format check] packages/local/native/Native.res'
 other_file='<ROOT>/packages/local/other/Other.res'
 if ! grep -F "$missing_folder" "$work/rescript.err.norm" >/dev/null || \
   ! grep -F "$base_file" "$work/rescript.err.norm" >/dev/null || \
@@ -932,7 +998,7 @@ if [ "$rescript_status" -ne 0 ] || \
 fi
 check_output_snapshot clean-redirected
 checked=$((checked + 1))
-run_rescript -q clean "$project"
+run_rescript clean -q "$project"
 if [ "$rescript_status" -ne 0 ] || \
   [ -s "$work/rescript.out" ] || [ -s "$work/rescript.err" ]; then
   echo "Quiet redirected clean emitted output" >&2
@@ -951,7 +1017,7 @@ run_case build-malformed-package-json reject build \
   "$work/malformed-package-json"
 require_error_contains build-malformed-package-json \
   'Could not initialize build: Could not parse package.json:'
-run_case build-mismatched-dependency-name exit2 build \
+run_case build-mismatched-dependency-name reject build \
   "$work/mismatched-dependency"
 strip_ansi "$work/rescript.err" >"$work/rescript.err.plain"
 if ! grep -F \
@@ -961,17 +1027,17 @@ if ! grep -F \
   dump_output
   exit 1
 fi
-run_case build-missing-dependency exit2 build "$work/missing-dependency"
+run_case build-missing-dependency reject build "$work/missing-dependency"
 require_error_contains build-missing-dependency \
-  "Could not build package tree reading dependency 'absent' at path '$work/missing-dependency'. Error:"
-run_case build-configless-dependency exit2 build "$work/configless-dependency"
+  "Could not resolve dependency absent of the package at '$work/missing-dependency'. Is it installed?"
+run_case build-configless-dependency reject build "$work/configless-dependency"
 require_error_contains build-configless-dependency \
   "Could not build package tree for 'no-config' at path '$work/configless-dependency'. Error:"
-run_case build-malformed-dependency exit2 build "$work/malformed-dependency"
+run_case build-malformed-dependency reject build "$work/malformed-dependency"
 require_error_contains build-malformed-dependency \
   "Could not build package tree for 'bad-config' at path '$work/malformed-dependency'. Error:"
 run_case build-duplicate-dependency accept build "$work/duplicate-dependency"
-duplicate_warning='Duplicated package: shared ./node_modules/shared (chosen) vs ./node_modules/a/node_modules/shared in ./node_modules/a'
+duplicate_warning='warning: duplicated package: shared ./node_modules/shared (chosen) vs ./node_modules/a/node_modules/shared in ./node_modules/a'
 normalize_project_path "$work/rescript.err" "$work/rescript.err.norm" \
   "$work/duplicate-dependency"
 if ! grep -F "$duplicate_warning" "$work/rescript.err.norm" >/dev/null; then
@@ -1065,7 +1131,7 @@ wait_for_file "$work/watch-dependency-recovery/src/A.js"
 terminate_and_wait "$dependency_recovery_pid" "dependency-recovery watcher"
 checked=$((checked + 1))
 
-"$rescript" -v watch "$work/watch-dependency-install" \
+"$rescript" watch -v "$work/watch-dependency-install" \
   >"$work/watch-dependency-install.out" \
   2>"$work/watch-dependency-install.err" &
 dependency_install_pid=$!
@@ -1093,7 +1159,7 @@ checked=$((checked + 1))
 
 directory_link "$work/watch-dependency-fallback/packages/dep" \
   "$work/node_modules/dep"
-"$rescript" -v watch "$work/watch-dependency-fallback" \
+"$rescript" watch -v "$work/watch-dependency-fallback" \
   >"$work/watch-dependency-fallback.out" \
   2>"$work/watch-dependency-fallback.err" &
 dependency_fallback_pid=$!
@@ -1199,7 +1265,7 @@ checked=$((checked + 1))
 quiet_watch_project="$work/quiet-watch"
 quiet_watch_marker="$quiet_watch_project/after-build.log"
 REWATCH_WATCH_FILTER_MARKER="$quiet_watch_marker" \
-  "$rescript" -q watch \
+  "$rescript" watch -q \
     --after-build "node $command_work/watch-filter-marker.js" \
     "$quiet_watch_project" \
     >"$work/quiet-watch.out" 2>"$work/quiet-watch.err" &
@@ -1220,7 +1286,7 @@ rm "$quiet_watch_project/lib/rescript/watch.lock"
 wait_for_exit "$quiet_watch_pid"
 wait "$quiet_watch_pid"
 if [ -s "$work/quiet-watch.out" ] || \
-  grep -F "Incremental build failed" "$work/quiet-watch.err" >/dev/null; then
+  grep -F "Build failed" "$work/quiet-watch.err" >/dev/null; then
   echo "quiet-watch: quiet watch emitted progress or a duplicate failure summary" >&2
   cat "$work/quiet-watch.out" "$work/quiet-watch.err" >&2
   exit 1
@@ -1229,7 +1295,7 @@ fi
 # rebuild reports the parse error again. Compare the distinct reports only.
 node -e '
   const fs = require("fs");
-  const blocks = fs.readFileSync(process.argv[1], "utf8").split(/^(?=Error in )/m);
+  const blocks = fs.readFileSync(process.argv[1], "utf8").split(/^(?=  Syntax error!)/m);
   const distinct = blocks.filter((block, i) => block !== blocks[i - 1]);
   fs.writeFileSync(process.argv[2], distinct.join(""));
 ' "$work/quiet-watch.err" "$work/quiet-watch.err.distinct"
@@ -1239,9 +1305,9 @@ if ! check_snapshot command_validation/quiet-watch.txt \
 fi
 checked=$((checked + 1))
 
-run_case clean-missing-dependency exit2 clean "$work/missing-dependency"
-run_case clean-configless-dependency exit2 clean "$work/configless-dependency"
-run_case clean-malformed-dependency exit2 clean "$work/malformed-dependency"
+run_case clean-missing-dependency accept clean "$work/missing-dependency"
+run_case clean-configless-dependency accept clean "$work/configless-dependency"
+run_case clean-malformed-dependency accept clean "$work/malformed-dependency"
 run_rescript clean "$work/clean-duplicate"
 if [ "$rescript_status" -ne 0 ] || \
   [ -e "$work/clean-duplicate/src/one/A.js" ] || \
@@ -1279,11 +1345,11 @@ printf '{"name":"missing-dependency","sources":["src"],"dependencies":["absent"]
   >"$work/missing-dependency/rescript.json"
 checked=$((checked + 1))
 run_case --cwd "$work/missing-dependency" \
-  format-missing-dependency exit2 format
+  format-missing-dependency reject format
 run_case --cwd "$work/configless-dependency" \
-  format-configless-dependency exit2 format
+  format-configless-dependency reject format
 run_case --cwd "$work/malformed-dependency" \
-  format-malformed-dependency exit2 format
+  format-malformed-dependency reject format
 if [ -e "$work/missing-dependency/lib/rescript/build.lock" ] || \
   [ -e "$work/missing-dependency/lib/rescript/watch.lock" ]; then
   echo "Dependency failures left a build or watch lock behind" >&2

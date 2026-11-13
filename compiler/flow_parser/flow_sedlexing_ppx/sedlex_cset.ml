@@ -9,7 +9,6 @@
 type t = (int * int) list
 
 let max_code = 0x10ffff  (* must be < max_int *)
-let min_code = -1
 
 let empty = []
 let singleton i = [i,i]

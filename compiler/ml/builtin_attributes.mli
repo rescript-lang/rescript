@@ -41,6 +41,11 @@ val check_deprecated_inclusion :
   unit
 val deprecated_of_attrs : Parsetree.attributes -> string option
 
+val deprecated_of_attrs_with_migrate :
+  Parsetree.attributes ->
+  (string * Parsetree.expression option * Parsetree.expression option) option
+(** The message and migration templates of a [@deprecated] attribute *)
+
 val deprecated_attributes : Parsetree.attributes -> Parsetree.attributes
 (** The [deprecated] attributes in a list *)
 

@@ -61,8 +61,6 @@ val create_hashtable : ('a * 'b) array -> ('a, 'b) Hashtbl.t
 (* Create a hashtable of the given size and fills it with the
    given bindings. *)
 
-val output_to_bin_file_directly : string -> (string -> out_channel -> 'a) -> 'a
-
 module Int_literal_converter : sig
   val int : string -> int
 end
@@ -97,7 +95,9 @@ module String_map : Map.S with type key = string
 
 (* Color handling *)
 module Color : sig
+  (* The full ANSI palette, also the colors no message uses yet. *)
   type color = Black | Red | Green | Yellow | Blue | Magenta | Cyan | White
+  [@@live]
 
   type style =
     | FG of color (* foreground *)
@@ -105,13 +105,8 @@ module Color : sig
     | Bold
     | Reset
     | Dim
+  [@@live]
 
-  val ansi_of_style_l : style list -> string
-  (* ANSI escape sequence for the given style *)
-
-  type styles = {error: style list; warning: style list; loc: style list}
-
-  val default_styles : styles
   type setting = Auto | Always | Never
 
   val setup : setting option -> unit

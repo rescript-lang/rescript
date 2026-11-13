@@ -252,19 +252,6 @@ let test ~state ~path =
           | "dv-" -> Debug.debug_level := Off
           | "in+" -> Cfg.in_incremental_typechecking_mode := true
           | "in-" -> Cfg.in_incremental_typechecking_mode := false
-          | "ve+" -> (
-            let version = String.sub rest 3 (String.length rest - 3) in
-            let version = String.trim version in
-            if Debug.verbose () then
-              Printf.printf "Setting version: %s\n" version;
-            match String.split_on_char '.' version with
-            | [major_raw; minor_raw] ->
-              let version =
-                (int_of_string major_raw, int_of_string minor_raw)
-              in
-              Packages.override_rescript_version := Some version
-            | _ -> ())
-          | "ve-" -> Packages.override_rescript_version := None
           | "def" ->
             print_endline
               ("Definition " ^ path ^ " " ^ string_of_int line ^ ":"
@@ -402,6 +389,8 @@ let test ~state ~path =
                                   (edit :
                                     [ `AnnotatedTextEdit of
                                       Lsp.Types.AnnotatedTextEdit.t
+                                    | `SnippetTextEdit of
+                                      Lsp.Types.SnippetTextEdit.t
                                     | `TextEdit of Lsp.Types.TextEdit.t ])
                                 ->
                                   let start_char, new_text, range =
@@ -413,6 +402,10 @@ let test ~state ~path =
                                     | `AnnotatedTextEdit te ->
                                       ( te.range.start.character,
                                         te.newText,
+                                        te.range )
+                                    | `SnippetTextEdit te ->
+                                      ( te.range.start.character,
+                                        te.snippet.value,
                                         te.range )
                                   in
                                   let indent = String.make start_char ' ' in

@@ -60,16 +60,13 @@ let setup_outcome_printer () = Lazy.force Res_outcome_printer.setup
 
 let setup_runtime_path path = Runtime_package.set_path path
 
-let process_file sourcefile ?kind ppf =
+let process_file sourcefile ppf =
   (* The input name must identify the source when writing the binary AST. *)
   setup_outcome_printer ();
   Error_message_utils_support.setup ();
   let kind =
-    match kind with
-    | None ->
-      Ext_file_extensions.classify_input
-        (Ext_filename.get_extension_maybe sourcefile)
-    | Some kind -> kind
+    Ext_file_extensions.classify_input
+      (Ext_filename.get_extension_maybe sourcefile)
   in
   let res =
     match kind with
@@ -595,7 +592,6 @@ let with_fresh_request_states ~cwd action =
 let run_argv ?run_external ~capture ~cwd argv =
   with_fresh_request_states ~cwd (fun () ->
       start_request ();
-      Cmt_format.set_args argv;
       let execute () =
         try
           Bsc_args.parse_exn ~argv (command_line_flags ()) anonymous ~usage;

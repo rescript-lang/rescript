@@ -56,16 +56,11 @@ let after_parsing_sig ppf outputprefix ast =
       ignore
         (Env.save_signature ~deprecated sg modulename (outputprefix ^ ".cmi"));
       Typemod.save_signature modulename tsg outputprefix
-        (Location.get_input_name ())
-        initial_env;
+        (Location.get_input_name ());
       process_with_gentype (outputprefix ^ ".cmti"))
 
-let interface ~parser ppf ?outputprefix fname =
-  let outputprefix =
-    match outputprefix with
-    | None -> Config_util.output_prefix fname
-    | Some x -> x
-  in
+let interface ~parser ppf fname =
+  let outputprefix = Config_util.output_prefix fname in
   Res_compmisc.init_path ();
   parser fname
   |> Cmd_ppx_apply.apply_rewriters ~tool_name:Js_config.tool_name Mli
@@ -155,12 +150,8 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
            Lam_compile_main.lambda_as_module js_program outputprefix);
       process_with_gentype (outputprefix ^ ".cmt"))
 
-let implementation ~parser ppf ?outputprefix fname =
-  let outputprefix =
-    match outputprefix with
-    | None -> Config_util.output_prefix fname
-    | Some x -> x
-  in
+let implementation ~parser ppf fname =
+  let outputprefix = Config_util.output_prefix fname in
   Res_compmisc.init_path ();
   parser fname
   |> Cmd_ppx_apply.apply_rewriters ~tool_name:Js_config.tool_name Ml
@@ -197,8 +188,7 @@ let implementation_map ppf sourcefile =
   let ns = Ext_filename.module_name (Filename.remove_extension sourcefile) in
   let ml_ast =
     Ext_list.fold_left list_of_modules [] (fun acc line ->
-        if Ext_string.is_empty line then acc
-        else make_structure_item ~ns line :: acc)
+        if line = "" then acc else make_structure_item ~ns line :: acc)
   in
   Res_compmisc.init_path ();
   ml_ast

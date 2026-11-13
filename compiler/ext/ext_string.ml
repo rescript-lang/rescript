@@ -44,6 +44,8 @@ let split_by ?(keep_empty = false) is_delim str =
 let split ?keep_empty str on =
   if str = "" then [] else split_by ?keep_empty (fun x -> (x : char) = on) str
 
+(* Unlike String.starts_with, this allocates no closure for its loop, which
+   matters on paths that run for every external or identifier. *)
 let starts_with s beg =
   let beg_len = String.length beg in
   let s_len = String.length s in
@@ -55,23 +57,6 @@ let starts_with s beg =
   done;
   !i = beg_len
 
-(* let check_suffix_case = ends_with  *)
-(* let check_suffix_case_then_chop = ends_with_then_chop *)
-
-(* let check_any_suffix_case_then_chop s suffixes =
-   let rec aux suffixes =
-    match suffixes with
-    | [] -> None
-    | x::xs ->
-      let id = ends_with_index s x in
-      if id >= 0 then Some (String.sub s 0 id)
-      else aux xs in
-   aux suffixes     *)
-
-(* it is unsafe to expose such API as unsafe since
-   user can provide bad input range
-
-*)
 let rec unsafe_for_all_range s ~start ~finish p =
   start > finish
   || p (String.unsafe_get s start)
@@ -82,18 +67,11 @@ let for_all_from s start p =
   if start < 0 then invalid_arg "Ext_string.for_all_from"
   else unsafe_for_all_range s ~start ~finish:(len - 1) p
 
-let for_all s (p : char -> bool) =
-  unsafe_for_all_range s ~start:0 ~finish:(String.length s - 1) p
-
-let is_empty s = String.length s = 0
-
 let tail_from s x =
   let len = String.length s in
   if x > len then
     invalid_arg ("Ext_string.tail_from " ^ s ^ " : " ^ string_of_int x)
   else String.sub s x (len - x)
-
-let equal (x : string) y = x = y
 
 (* let rec index_rec s lim i c =
    if i >= lim then -1 else
@@ -126,10 +104,6 @@ let replace_backward_slash (x : string) =
       x
 
 let compare = Ext_platform_primitives.string_length_based_compare
-let single_colon = ":"
-
-let uncapitalize_ascii = String.uncapitalize_ascii
-
 external ( .![] ) : string -> int -> int = "%string_unsafe_get"
 
 let is_valid_hash_number (x : string) =

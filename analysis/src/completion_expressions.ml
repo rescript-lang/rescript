@@ -20,6 +20,23 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
     traverse_expr expr ~expr_path ~pos ~first_char_before_cursor_no_white
   | Pexp_ident {txt = Lident txt} -> some_if_has_cursor (txt, expr_path)
   | Pexp_construct ({txt = Lident "()"}, _) -> some_if_has_cursor ("", expr_path)
+  | Pexp_construct ({txt = Lident "::"}, {txt = [head; tail]})
+    when loc_has_cursor exp.pexp_loc -> (
+    (* A list literal is a chain of [::]: complete its head as an element,
+       and its tail as the rest of the list. *)
+    match
+      head
+      |> traverse_expr
+           ~expr_path:([Completable.NList] @ expr_path)
+           ~first_char_before_cursor_no_white ~pos
+    with
+    | Some _ as item_with_cursor -> item_with_cursor
+    | None ->
+      tail |> traverse_expr ~expr_path ~first_char_before_cursor_no_white ~pos)
+  | Pexp_construct ({txt = Lident "[]"}, {txt = []}) ->
+    (* The end of a list literal, which holds the cursor at a new element:
+       `list{<com>}` or `list{a, <com>}` *)
+    some_if_has_cursor ("", [Completable.NList] @ expr_path)
   | Pexp_construct ({txt = Lident txt}, {txt = []}) ->
     some_if_has_cursor (txt, expr_path)
   | Pexp_variant (label, {txt = []}) ->
@@ -47,10 +64,15 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
            `[None, <com>, None]`) *)
         Some ("", next_expr_path)
       | _ -> None)
-  | Pexp_spread (Spread_array, elements) -> (
-    (* Complete an item like an element of an array literal, and a spread
-       operand like the whole literal, whose type it has. *)
-    let next_expr_path = [Completable.NArray] @ expr_path in
+  | Pexp_spread (kind, elements) -> (
+    (* Complete an item like an element of the literal, and a spread operand
+       like the whole literal, whose type it has. *)
+    let item_path, opening =
+      match kind with
+      | Spread_array -> (Completable.NArray, '[')
+      | Spread_list -> (NList, '{')
+    in
+    let next_expr_path = [item_path] @ expr_path in
     let item_with_cursor =
       elements
       |> List.find_map (function
@@ -66,7 +88,7 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
     | None
       when loc_has_cursor exp.pexp_loc
            && (first_char_before_cursor_no_white = Some ','
-              || first_char_before_cursor_no_white = Some '[')
+              || first_char_before_cursor_no_white = Some opening)
            && not
                 (elements
                 |> List.exists (function
@@ -75,10 +97,6 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
       (* A new item at the start or after a comma, e.g. `[...xs, <com>]` *)
       Some ("", next_expr_path)
     | None -> None)
-  | Pexp_spread (Spread_list, _) ->
-    (* Like a list literal without a spread, a chain of [::], which gets no
-       typed completion either: the element type of a list is not extracted. *)
-    None
   | Pexp_dict entries -> (
     (* Complete inside the value of the entry with the cursor, or for the type
        of the values at an expression hole, e.g. `dict{"a": <com>}` *)

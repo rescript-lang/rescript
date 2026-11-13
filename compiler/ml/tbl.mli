@@ -19,6 +19,14 @@
 type ('k, 'v) t
 
 val empty : ('k, 'v) t
+
+val of_source : keys:'k array -> find:('k -> 'v) -> ('k, 'v) t
+(** [of_source ~keys ~find] maps each of [keys] to [find key], computed when
+    the key is looked up or visited, so [find] should memoize. [keys] must be
+    sorted by [compare] without duplicates, so that [iter] and [fold] visit
+    them in the same order as for a table built with [add], and [find] must
+    raise [Not_found] for any other key. [add] builds the whole table. *)
+
 val add : 'k -> 'v -> ('k, 'v) t -> ('k, 'v) t
 val find : 'k -> ('k, 'v) t -> 'v
 val find_str : string -> (string, 'v) t -> 'v

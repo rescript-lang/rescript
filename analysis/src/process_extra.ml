@@ -110,7 +110,7 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
   | Partial_implementation parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
+      |> List.filter_map (fun (p : Cmt_format.binary_part) ->
           match p with
           | Partial_structure str -> Some str.str_items
           | Partial_structure_item str -> Some [str]
@@ -125,7 +125,7 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
   | Partial_interface parts ->
     let items =
       parts |> Array.to_list
-      |> Utils.filter_map (fun (p : Cmt_format.binary_part) ->
+      |> List.filter_map (fun (p : Cmt_format.binary_part) ->
           match p with
           | Partial_signature s -> Some s.sig_items
           | Partial_signature_item str -> Some [str]
@@ -426,8 +426,7 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
 let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
     (expression : Typedtree.expression) =
   (match expression.exp_desc with
-  | Texp_ident (path, {txt; loc}, _) when not (Jsx_hacks.path_is_fragment path)
-    ->
+  | Texp_ident (path, {txt; loc}, _) ->
     add_for_longident ~env ~extra
       (Some (expression.exp_type, Value))
       path txt loc

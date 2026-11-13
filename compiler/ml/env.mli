@@ -20,18 +20,6 @@ open Types
 module Path_map :
   Map.S with type key = Path.t and type 'a t = 'a Map.Make(Path).t
 
-type summary =
-  | Env_empty
-  | Env_value of summary * Ident.t * value_description
-  | Env_type of summary * Ident.t * type_declaration
-  | Env_extension of summary * Ident.t * extension_constructor
-  | Env_module of summary * Ident.t * module_declaration
-  | Env_modtype of summary * Ident.t * modtype_declaration
-  | Env_open of summary * Path.t
-  | Env_functor_arg of summary * Ident.t
-  | Env_constraints of summary * type_declaration Path_map.t
-  | Env_copy_types of summary * string list
-
 type t
 
 val empty : t
@@ -201,13 +189,11 @@ val imports : unit -> (string * Digest.t option) list
 val crc_units : unit -> Consistbl.t
 val add_import : string -> unit
 
-(* Summaries -- compact representation of an environment, to be
-   exported in debugging information. *)
+val keep_only_local_constraints : t -> t
+(** The environment stored in .cmt files: empty except for its GADT local
+    constraints and flags. Tools only look things up in it, and the lookups
+    find nothing in an empty table. *)
 
-(* Return an equivalent environment where all fields have been reset,
-   except the summary. *)
-
-val keep_only_summary : t -> t
 type error =
   | Illegal_renaming of string * string * string
   | Inconsistent_import of string * string * string

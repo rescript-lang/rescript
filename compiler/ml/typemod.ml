@@ -86,7 +86,9 @@ let extract_sig_open env loc mty =
 
 (* Compute the environment after opening a module *)
 
-let type_open_ ?used_slot ovf env loc lid =
+(* Live: called through a forward reference ({!Typecore.type_open}) with optional
+   arguments that reanalyze cannot trace. *)
+let[@live] type_open_ ?used_slot ovf env loc lid =
   let path = Typetexp.lookup_module ~load:true env lid.loc lid.txt in
   match Env.open_signature ~loc ?used_slot ovf path env with
   | Some env -> (path, env)
@@ -1801,7 +1803,7 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
          so that value declarations which are not used internally but exported
          are not reported as being unused. *)
       Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
-        (Cmt_format.Implementation str) (Some sourcefile) initial_env;
+        (Cmt_format.Implementation str) (Some sourcefile);
       (str, coercion, finalenv, dclsig)
       (* identifier is useless might read from serialized cmi files*))
     else (
@@ -1823,18 +1825,18 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
           (Env.save_signature ?check_exists ~deprecated simple_sg modulename
              (outputprefix ^ ".cmi"));
         Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
-          (Cmt_format.Implementation str) (Some sourcefile) initial_env);
+          (Cmt_format.Implementation str) (Some sourcefile));
       (str, coercion, finalenv, simple_sg))
   with e ->
     Cmt_format.save_cmt (outputprefix ^ ".cmt") modulename
       (Cmt_format.Partial_implementation
          (Array.of_list (Cmt_format.get_saved_types ())))
-      (Some sourcefile) initial_env;
+      (Some sourcefile);
     raise e
 
-let save_signature modname tsg outputprefix source_file initial_env =
+let save_signature modname tsg outputprefix source_file =
   Cmt_format.save_cmt (outputprefix ^ ".cmti") modname
-    (Cmt_format.Interface tsg) (Some source_file) initial_env
+    (Cmt_format.Interface tsg) (Some source_file)
 
 (* "Packaging" of several compilation units into one unit
    having them as sub-modules. *)

@@ -1,0 +1,1 @@
+- Build: skip unneeded work in the type checker's occur checks and when specializing primitives.

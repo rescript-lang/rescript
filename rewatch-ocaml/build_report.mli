@@ -23,7 +23,8 @@ val create :
 
 val parse_step : t -> string
 val compile_step : t -> string
-val report_failure : t -> compile_seconds:float -> unit
-val print_success_details : t -> compile_seconds:float -> string list
+val report_failure : t -> compile_seconds:float option -> unit
+
+val print_success_details : t -> compile_seconds:float option -> string list
 val report_completion : t -> string list -> unit
 val report_parse_failure : t -> output:string -> unit

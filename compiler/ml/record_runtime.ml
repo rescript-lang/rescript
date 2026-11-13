@@ -55,8 +55,8 @@ let rec check_duplicated_labels_aux (lbls : Parsetree.label_declaration list)
 (* A field has one runtime name, so only the first [@as] naming it is taken
    out; a second one is left behind and reported here. *)
 let extra_as_attribute (lbl : Parsetree.label_declaration) =
-  Ext_list.find_opt lbl.pld_attributes
-    (fun (({txt; loc}, payload) : Parsetree.attribute) ->
+  lbl.pld_attributes
+  |> List.find_map (fun (({txt; loc}, payload) : Parsetree.attribute) ->
       if txt = "as" && Ast_payload.string_literal_of_payload payload <> None
       then Some loc
       else None)

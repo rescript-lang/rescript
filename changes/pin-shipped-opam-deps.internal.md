@@ -1,0 +1,1 @@
+- Pin the exact versions of all OCaml libraries linked into the release binaries, so every platform builds with the same versions whenever its opam cache is rebuilt.

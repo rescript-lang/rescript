@@ -22,4 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val named_expression : J.expression -> (J.statement * Ident.t) option
+val named_expression :
+  ?property_reads:bool -> J.expression -> (J.statement * Ident.t) option
+(** A temporary bound to the expression, unless
+    {!Js_analyzer.is_okay_to_duplicate} holds for it *)

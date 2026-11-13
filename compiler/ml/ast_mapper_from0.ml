@@ -383,7 +383,7 @@ module T = struct
         when lid.txt = Lident "function$" -> (
         let decode_arity_string arity_s =
           int_of_string
-            ((String.sub [@doesNotRaise]) arity_s 9 (String.length arity_s - 9))
+            ((String.sub [@doesNotThrow]) arity_s 9 (String.length arity_s - 9))
         in
         let arity_from_type (typ : Parsetree.core_type) =
           match typ.ptyp_desc with

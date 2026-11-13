@@ -36,24 +36,72 @@ module S = Js_stmt_make
    But the default to be undefined  seems reasonable
 *)
 
-(* [Lam_compile_external_call.hold_arg] for the compiled arguments of an
-   object-creating external, which pair with the labels as in
-   [assemble_obj_args] *)
-let rec hold_obj_args (labels : External_arg_spec.obj_params)
+(* Whether [assemble_obj_args] assigns the optional argument [arg] after the
+   object literal, since its presence is not known *)
+let presence_unknown (arg : J.expression) =
+  Js_of_lam_option.destruct_optional arg ~for_sure_none:false
+    ~for_sure_some:(fun _ -> false)
+    ~not_sure:(fun () -> true)
+
+(* The arguments that [assemble_obj_args] evaluates in the object literal or
+   before it, which are all but the optional ones whose presence is not
+   known *)
+let rec literal_args (labels : External_arg_spec.obj_params)
     (args : (J.block * J.expression) list) =
   match (labels, args) with
   | {obj_arg_label = Obj_label _; obj_arg_type = Arg_cst _} :: labels, args ->
-    hold_obj_args labels args
+    literal_args labels args
+  | {obj_arg_label = Obj_optional _} :: labels, (_, arg) :: args
+    when presence_unknown arg ->
+    literal_args labels args
+  | ( {obj_arg_label = Obj_empty | Obj_label _ | Obj_optional _} :: labels,
+      (_, arg) :: args ) ->
+    arg :: literal_args labels args
+  | [], [] -> []
+  | [], _ :: _ | _ :: _, [] -> assert false
+
+(* [Lam_compile_external_call.hold_arg] for the compiled arguments of an
+   object-creating external, which pair with the labels as in
+   [assemble_obj_args]. That function assigns an optional argument whose
+   presence is not known after the object literal, so it evaluates the
+   argument after the arguments that follow it. Unless that gives the same
+   values and effects, the argument is bound to a temporary after its
+   statements, which keeps it in its place. It does when the argument is
+   [delay_safe], and when each argument that the literal evaluates after it
+   is [delay_safe] or neither of the two has side effects. *)
+let rec hold_obj_args ~(delay_safe : J.expression -> bool)
+    (labels : External_arg_spec.obj_params)
+    (args : (J.block * J.expression) list) =
+  match (labels, args) with
+  | {obj_arg_label = Obj_label _; obj_arg_type = Arg_cst _} :: labels, args ->
+    hold_obj_args ~delay_safe labels args
   | {obj_arg_label = Obj_empty} :: labels, arg :: args ->
-    arg :: hold_obj_args labels args
+    arg :: hold_obj_args ~delay_safe labels args
   | {obj_arg_label = Obj_label _; obj_arg_type} :: labels, arg :: args ->
     Lam_compile_external_call.hold_arg ~arg_label:Arg_label
       ~arg_type:obj_arg_type arg
-    :: hold_obj_args labels args
+    :: hold_obj_args ~delay_safe labels args
   | {obj_arg_label = Obj_optional _; obj_arg_type} :: labels, arg :: args ->
-    Lam_compile_external_call.hold_arg ~arg_label:Arg_optional
-      ~arg_type:obj_arg_type arg
-    :: hold_obj_args labels args
+    let ((block, value) as held) =
+      Lam_compile_external_call.hold_arg ~arg_label:Arg_optional
+        ~arg_type:obj_arg_type arg
+    in
+    let order_matters (later : J.expression) =
+      not
+        (delay_safe later
+        || Js_analyzer.no_side_effect_expression value
+           && Js_analyzer.no_side_effect_expression later)
+    in
+    (if
+       presence_unknown value
+       && (not (delay_safe value))
+       && List.exists order_matters (literal_args labels args)
+     then
+       let tmp = Ext_ident.create_tmp () in
+       ( Ext_list.append_one block (S.define_variable ~kind:Strict tmp value),
+         E.var tmp )
+     else held)
+    :: hold_obj_args ~delay_safe labels args
   | [], [] -> []
   | [], _ :: _ | _ :: _, [] -> assert false
 
@@ -130,10 +178,10 @@ let assemble_obj_args (labels : External_arg_spec.obj_params)
               obj_arg_label =
                 Obj_optional {name = label; for_sure_no_nested_option};
              } -> (
-               (* Need make sure whether assignment is effectful or not
-                  to avoid code duplication
-               *)
-               match Js_ast_util.named_expression arg with
+               (* [arg] is read for its presence and for its value, so it is
+                  bound to a temporary unless reading it twice gives the
+                  same value twice *)
+               match Js_ast_util.named_expression ~property_reads:false arg with
                | None -> (
                  let acc, new_eff =
                    Lam_compile_external_call.ocaml_to_js_eff

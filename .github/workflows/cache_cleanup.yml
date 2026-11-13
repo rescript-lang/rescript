@@ -1,0 +1,36 @@
+name: Cache Cleanup
+
+# Deletes the caches of a closed pull request: they are scoped to its merge
+# ref, so nothing can use them any more, but they count towards the
+# repository's cache storage until GitHub evicts them. The job runs no code
+# of the pull request.
+
+on:
+  pull_request_target:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: The pull request whose caches to delete.
+        required: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-26.04
+    permissions:
+      actions: write
+    steps:
+      - name: Delete the pull request's caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr-number }}
+        run: |
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || { echo "Not a pull request number: $PR_NUMBER" >&2; exit 1; }
+          gh api --paginate --method GET "repos/$GITHUB_REPOSITORY/actions/caches" \
+            -f ref="refs/pull/$PR_NUMBER/merge" \
+            --jq '.actions_caches[] | "\(.id) \(.key)"' |
+            while read -r id key; do
+              echo "Deleting $key"
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/actions/caches/$id" ||
+                echo "::warning::Couldn't delete cache $id."
+            done

@@ -299,7 +299,7 @@ let to_string ?(newline = "\n") ~width doc =
             else (
               Mini_buffer.flush_newline buffer ~newline;
               Mini_buffer.add_string buffer
-                (String.make ind ' ' [@doesNotRaise]);
+                (String.make ind ' ' [@doesNotThrow]);
               process ~pos:ind [] rest)
           | _docs ->
             process ~pos:ind []

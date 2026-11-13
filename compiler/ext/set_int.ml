@@ -25,5 +25,5 @@
 include Set.Make (struct
   type t = int
 
-  let compare = Ext_int.compare
+  let compare = Int.compare
 end)

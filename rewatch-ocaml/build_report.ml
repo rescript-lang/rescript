@@ -47,11 +47,14 @@ let prepare report ~success ~compile_seconds =
     else (
       (match report.kind with
       | One_shot | Initial_watch | Full_watch ->
-        Printf.printf "Cleaned %d/%d\n%!" attempt.cleaned attempt.previous_asts
+        Printf.printf "Cleaned %s\n%!"
+          (Output.stale_modules ~cleaned:attempt.cleaned)
       | Incremental_watch -> ());
-      Printf.printf "Parsed %d source files\n%!" attempt.parsed;
-      if success then Printf.printf "Compiled %d modules\n%!" attempt.compiled
-      else Printf.eprintf "Compiled %d modules\n%!" attempt.compiled);
+      Printf.printf "Parsed %s\n%!"
+        (Output.count_of attempt.parsed "source file");
+      let compiled = Output.count_of attempt.compiled "module" in
+      if success then Printf.printf "Compiled %s\n%!" compiled
+      else Printf.eprintf "Compiled %s\n%!" compiled);
   let diagnostics =
     match report.kind with
     | Incremental_watch | Full_watch -> []
@@ -62,13 +65,16 @@ let prepare report ~success ~compile_seconds =
     Warning_state.entries (Build_session.warning_state attempt.session)
   in
   List.iter
-    (fun entry -> prerr_string entry.Warning_state.output)
+    (fun entry ->
+      prerr_string
+        (Output.compiler_output ~color:report.colors entry.Warning_state.output))
     warning_entries;
   if warning_entries <> [] then prerr_newline ();
   flush stderr;
   if diagnostics <> [] then
     diagnostics
     |> List.map (fun diagnostic ->
+        let diagnostic = String.trim diagnostic in
         if report.colors then Output.yellow diagnostic else diagnostic)
     |> String.concat "\n\n" |> prerr_endline;
   diagnostics
@@ -76,7 +82,8 @@ let prepare report ~success ~compile_seconds =
 let report_completion report diagnostics =
   if report.interactive && report.show_progress then
     let seconds =
-      if report.no_timing then 0. else Unix.gettimeofday () -. report.started_at
+      if report.no_timing then None
+      else Some (Unix.gettimeofday () -. report.started_at)
     in
     Printf.printf "\n%s\n%!"
       (Output.finished_compilation_message ~label:(output_kind report)
@@ -86,7 +93,7 @@ let report_completion report diagnostics =
                 (Build_session.warning_state report.attempt.session)
               <> [])
          ~seconds)
-  else if report.kind <> One_shot && report.show_progress then
+  else if report.show_progress then
     Printf.printf "Finished %scompilation\n%!"
       (match report.kind with
       | Initial_watch -> "initial "
@@ -105,11 +112,12 @@ let report_parse_failure report ~output =
        (Output.parsing_failed_message ~color:report.colors
           ~step:(parse_step report)
           ~seconds:
-            (if report.no_timing then 0. else report.attempt.parse_seconds))
+            (if report.no_timing then None
+             else Some report.attempt.parse_seconds))
    else if report.show_progress then
      match report.kind with
      | One_shot | Initial_watch | Full_watch ->
-       Printf.printf "Cleaned %d/%d\n%!" report.attempt.cleaned
-         report.attempt.previous_asts
+       Printf.printf "Cleaned %s\n%!"
+         (Output.stale_modules ~cleaned:report.attempt.cleaned)
      | Incremental_watch -> ());
-  prerr_endline output
+  prerr_endline (Output.compiler_output ~color:report.colors output)

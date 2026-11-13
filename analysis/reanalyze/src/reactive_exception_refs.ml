@@ -26,9 +26,6 @@
 (** {1 Types} *)
 
 type t = {
-  exception_decls: (Dce_path.t, Location.t) Reactive.t;
-  resolved_refs: (Lexing.position, Pos_set.t) Reactive.t;
-      (** refs_to direction: target -> sources *)
   resolved_refs_from: (Lexing.position, Pos_set.t) Reactive.t;
       (** refs_from direction: source -> targets (for forward solver) *)
 }
@@ -85,4 +82,4 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~merge:Pos_set.union ()
   in
 
-  {exception_decls; resolved_refs; resolved_refs_from}
+  {resolved_refs_from}

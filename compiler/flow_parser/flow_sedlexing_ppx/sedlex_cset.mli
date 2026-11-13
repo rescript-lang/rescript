@@ -6,7 +6,6 @@
 
 type t = (int * int) list
 
-val min_code: int
 val max_code: int
 
 val empty: t

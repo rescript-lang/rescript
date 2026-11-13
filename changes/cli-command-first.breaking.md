@@ -1,0 +1,1 @@
+- `rescript` needs the command before its options and folder, as in `rescript build -v ./pkg`, and reports an unknown command even when `--help` or `--version` follows it.

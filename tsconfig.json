@@ -19,6 +19,8 @@
     "packages/**/*",
     "tests/**/input.js",
     ".github/workflows/*.js",
+    ".github/actions/**/*.js",
+    ".github/actions/**/*.cjs",
     "yarn.config.cjs",
     "package.json"
   ],

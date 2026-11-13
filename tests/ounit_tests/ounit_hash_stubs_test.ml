@@ -2,7 +2,7 @@ let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
 let ( =~ ) = OUnit.assert_equal
 
-type id = {stamp: int; name: string; mutable flags: int} (* = Ident.t *)
+type id = {stamp: int; name: string}
 let hash id = Ext_platform_primitives.hash_stamp_and_name id.stamp id.name
 let suites =
   __FILE__
@@ -23,9 +23,9 @@ let suites =
                Ext_platform_primitives.hash_string x =~ Hashtbl.hash x) );
          ( __LOC__ >:: fun _ ->
            (* only string matters here *)
-           hash {stamp = 0; name = "Pervasives"; flags = 0}
+           hash {stamp = 0; name = "Pervasives"}
            =~ Ext_platform_primitives.hash_string "Pervasives";
-           hash {stamp = 0; name = "UU"; flags = 0}
+           hash {stamp = 0; name = "UU"}
            =~ Ext_platform_primitives.hash_string "UU" );
          ( __LOC__ >:: fun _ ->
            let v = Array.init 20 (fun i -> i) in

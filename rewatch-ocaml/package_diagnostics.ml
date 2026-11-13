@@ -85,17 +85,16 @@ let report_missing_source_folder (config : Config.t) path =
     else path
   in
   Printf.eprintf
-    "ERROR:\n\
-     Could not read folder: %S. Specified in dependency: %s, located %S...\n\
+    "warning: source folder %S of package %s (%s) does not exist or is not a \
+     folder\n\
      %!"
     relative config.name config.root
 
 let report_missing_sources ~is_root (config : Config.t) =
   if (not is_root) && not config.sources_defined then
     Printf.eprintf
-      "WARN:\n\
-       Package '%s' has not defined any sources, but is not the root package. \
-       This is likely a mistake. It is located: %s\n\
+      "warning: package '%s' has not defined any sources, but is not the root \
+       package. This is likely a mistake. It is located: %s\n\
        %!"
       config.name config.root
 

@@ -147,18 +147,6 @@ end
 
 module Path_map = Map.Make (Path)
 
-type summary =
-  | Env_empty
-  | Env_value of summary * Ident.t * value_description
-  | Env_type of summary * Ident.t * type_declaration
-  | Env_extension of summary * Ident.t * extension_constructor
-  | Env_module of summary * Ident.t * module_declaration
-  | Env_modtype of summary * Ident.t * modtype_declaration
-  | Env_open of summary * Path.t
-  | Env_functor_arg of summary * Ident.t
-  | Env_constraints of summary * type_declaration Path_map.t
-  | Env_copy_types of summary * string list
-
 module Tycomp_tbl = struct
   (** This module is used to store components of types (i.e. labels
         and constructors).  We keep a representation of each nested
@@ -376,7 +364,6 @@ type t = {
   modtypes: modtype_declaration Id_tbl.t;
   components: module_components Id_tbl.t;
   functor_args: unit Ident.tbl;
-  summary: summary;
   local_constraints: type_declaration Path_map.t;
   gadt_instances: (int * Type_set.t ref) list;
   flags: int;
@@ -456,7 +443,6 @@ let empty =
     modules = Id_tbl.empty;
     modtypes = Id_tbl.empty;
     components = Id_tbl.empty;
-    summary = Env_empty;
     local_constraints = Path_map.empty;
     gadt_instances = [];
     flags = 0;
@@ -1089,7 +1075,7 @@ let copy_types l env =
   let values =
     List.fold_left (fun env s -> Id_tbl.update s f env) env.values l
   in
-  {env with values; summary = Env_copy_types (env.summary, l)}
+  {env with values}
 
 let mark_value_used env name vd =
   if not (is_implicit_coercion env) then
@@ -1433,6 +1419,80 @@ let prefix_idents root sub sg =
 
 (* Compute structure descriptions *)
 
+(* The module of a package with a namespace maps each module of the package to
+   its compiled name, [module X = X-Ns], and every module of the package opens
+   it. Building the components of a signature walks all of its items, which
+   for this one costs O(package size) per compiled module, so the components of
+   a signature made only of aliases to persistent modules are looked up per
+   name instead, through an index of its items. They are the same components:
+   such an alias refers to no other item of the signature, so neither the
+   substitution from [prefix_idents] nor the environment extended item by item
+   in [components_of_module_maker] can change what it resolves to. *)
+let rec is_alias_map = function
+  | [] -> true
+  | Sig_module (_, {md_type = Mty_alias (_, Pident id)}, _) :: rest ->
+    Ident.persistent id && is_alias_map rest
+  | _ -> false
+
+type alias_map_index = {
+  names: string array;
+      (** Sorted by [String.compare], the order of [compare] on strings, which
+          [Tbl] uses. *)
+  items: (string, Ident.t * module_declaration * int) Hashtbl.t;
+      (** The item and position of each name. *)
+}
+
+let index_alias_map sg =
+  let items = Hashtbl.create (List.length sg) in
+  List.iteri
+    (fun pos item ->
+      match item with
+      | Sig_module (id, md, _) ->
+        Hashtbl.replace items (Ident.name id) (id, md, pos)
+      | _ -> assert false)
+    sg;
+  let names = Array.of_seq (Hashtbl.to_seq_keys items) in
+  Array.sort String.compare names;
+  {names; items}
+
+(* While a build system keeps interfaces decoded across the requests of a
+   build ([Bs_cmi_load]), each request on a domain gets the same signature for
+   an unchanged interface. The indexes of the last few interfaces that are
+   alias maps are therefore kept per domain, by physical signature, and
+   dropped when the build's files change, as the decoded interfaces are. *)
+type alias_map_indexes = {
+  mutable generation: int;
+  mutable indexes: (signature * alias_map_index) list;
+}
+
+let alias_map_indexes_key =
+  Domain.DLS.new_key (fun () -> {generation = -1; indexes = []})
+
+let max_alias_map_indexes = 16
+
+let interface_alias_map_index sg =
+  let cache = Domain.DLS.get alias_map_indexes_key in
+  let generation = Build_file_store.generation () in
+  if cache.generation <> generation then (
+    cache.generation <- generation;
+    cache.indexes <- []);
+  match List.assq_opt sg cache.indexes with
+  | Some index ->
+    (* Most recently used first, so that the namespace every compile opens
+       stays cached while other alias-only interfaces come and go. *)
+    (match cache.indexes with
+    | (first, _) :: _ when first == sg -> ()
+    | indexes ->
+      cache.indexes <-
+        (sg, index) :: List.filter (fun (s, _) -> s != sg) indexes);
+    index
+  | None ->
+    let index = index_alias_map sg in
+    cache.indexes <-
+      (sg, index)
+      :: List.filteri (fun i _ -> i < max_alias_map_indexes - 1) cache.indexes;
+    index
+
 let add_to_tbl id decl tbl =
   let decls = try Tbl.find_str id tbl with Not_found -> [] in
   Tbl.add id (decl :: decls) tbl
@@ -1442,6 +1502,8 @@ let rec components_of_module ~deprecated ~loc env sub path mty =
 
 and components_of_module_maker (env, sub, path, mty) =
   match scrape_alias env mty with
+  | Mty_signature (_ :: _ as sg) when is_alias_map sg ->
+    Some (alias_map_components env sub path sg)
   | Mty_signature sg ->
     let c =
       {
@@ -1525,6 +1587,51 @@ and components_of_module_maker (env, sub, path, mty) =
          })
   | Mty_ident _ | Mty_alias _ -> None
 
+and alias_map_components env sub path sg =
+  let index =
+    match path with
+    | Pident id when Ident.persistent id && Build_file_store.enabled () ->
+      interface_alias_map_index sg
+    | _ -> index_alias_map sg
+  in
+  (* As in the eager loop, an item's path is the one [prefix_idents] gives it,
+     made with the item's own name, and its substitution maps the item to that
+     path. The entries for the other items map identifiers that an alias to a
+     persistent module never mentions, so they are left out, but the
+     substitution must not be the identity: [subst_modtype_maker] and
+     [prefix_idents] would then share what they return instead of copying it,
+     and .cmt files show what is shared. *)
+  let memoize make =
+    let values = Hashtbl.create 16 in
+    fun name ->
+      match Hashtbl.find_opt values name with
+      | Some value -> value
+      | None ->
+        let id, md, pos = Hashtbl.find index.items name in
+        let p = Pdot (path, Ident.name id, pos) in
+        let value = (make (Subst.add_module id p sub) p md, pos) in
+        Hashtbl.add values name value;
+        value
+  in
+  let modules = memoize (fun sub _ md -> Env_lazy.create (sub, md)) in
+  let components =
+    memoize (fun sub p md ->
+        let deprecated =
+          Builtin_attributes.deprecated_of_attrs md.md_attributes
+        in
+        components_of_module ~deprecated ~loc:md.md_loc env sub p md.md_type)
+  in
+  Structure_comps
+    {
+      comp_values = Tbl.empty;
+      comp_constrs = Tbl.empty;
+      comp_labels = Tbl.empty;
+      comp_types = Tbl.empty;
+      comp_modules = Tbl.of_source ~keys:index.names ~find:modules;
+      comp_modtypes = Tbl.empty;
+      comp_components = Tbl.of_source ~keys:index.names ~find:components;
+    }
+
 (* Insertion of bindings by identifier + path *)
 
 and check_usage loc id warn tbl =
@@ -1552,11 +1659,7 @@ and check_value_name name loc =
 and store_value ?check id decl env =
   check_value_name (Ident.name id) decl.val_loc;
   may (fun f -> check_usage decl.val_loc id f (value_declarations ())) check;
-  {
-    env with
-    values = Id_tbl.add id decl env.values;
-    summary = Env_value (env.summary, id, decl);
-  }
+  {env with values = Id_tbl.add id decl env.values}
 
 and store_type ~check id info env =
   let loc = info.type_loc in
@@ -1599,7 +1702,6 @@ and store_type ~check id info env =
         (fun (id, descr) labels -> Tycomp_tbl.add id descr labels)
         labels env.labels;
     types = Id_tbl.add id (info, descrs) env.types;
-    summary = Env_type (env.summary, id, info);
   }
 
 and store_type_infos id info env =
@@ -1608,11 +1710,7 @@ and store_type_infos id info env =
      manifest-ness of the type.  Used in components_of_module to
      keep track of type abbreviations (e.g. type t = float) in the
      computation of label representations. *)
-  {
-    env with
-    types = Id_tbl.add id (info, ([], [])) env.types;
-    summary = Env_type (env.summary, id, info);
-  }
+  {env with types = Id_tbl.add id (info, ([], [])) env.types}
 
 and store_extension ~check id ext env =
   let loc = ext.ext_loc in
@@ -1636,7 +1734,6 @@ and store_extension ~check id ext env =
     env with
     constrs =
       Tycomp_tbl.add id (Datarepr.extension_descr (Pident id) ext) env.constrs;
-    summary = Env_extension (env.summary, id, ext);
   }
 
 and store_module ~check id md env =
@@ -1655,15 +1752,10 @@ and store_module ~check id md env =
         (components_of_module ~deprecated ~loc:md.md_loc env Subst.identity
            (Pident id) md.md_type)
         env.components;
-    summary = Env_module (env.summary, id, md);
   }
 
 and store_modtype id info env =
-  {
-    env with
-    modtypes = Id_tbl.add id info env.modtypes;
-    summary = Env_modtype (env.summary, id, info);
-  }
+  {env with modtypes = Id_tbl.add id info env.modtypes}
 
 (* Compute the components of a functor application in a path. *)
 
@@ -1690,11 +1782,7 @@ let _ =
 (* Insertion of bindings by identifier *)
 
 let add_functor_arg id env =
-  {
-    env with
-    functor_args = Ident.add id () env.functor_args;
-    summary = Env_functor_arg (env.summary, id);
-  }
+  {env with functor_args = Ident.add id () env.functor_args}
 
 let add_value ?check id desc env = store_value ?check id desc env
 
@@ -1781,17 +1869,7 @@ let add_components slot root env0 comps =
 
   let modules = add (fun x -> `Module x) comps.comp_modules env0.modules in
 
-  {
-    env0 with
-    summary = Env_open (env0.summary, root);
-    constrs;
-    labels;
-    values;
-    types;
-    modtypes;
-    components;
-    modules;
-  }
+  {env0 with constrs; labels; values; types; modtypes; components; modules}
 
 let open_signature slot root env0 =
   match get_components (find_module_descr root env0) with
@@ -2003,16 +2081,11 @@ let last_env () = Domain.DLS.get last_env_key
 let last_reduced_env_key = Request_local.new_key (fun () -> ref empty)
 let last_reduced_env () = Domain.DLS.get last_reduced_env_key
 
-let keep_only_summary env =
+let keep_only_local_constraints env =
   if !(last_env ()) == env then !(last_reduced_env ())
   else
     let new_env =
-      {
-        empty with
-        summary = env.summary;
-        local_constraints = env.local_constraints;
-        flags = env.flags;
-      }
+      {empty with local_constraints = env.local_constraints; flags = env.flags}
     in
     last_env () := env;
     last_reduced_env () := new_env;

@@ -112,7 +112,7 @@ let check_deprecated ?deprecated_context loc attrs s =
   | Some (txt, migration_template, migration_in_pipe_chain_template) ->
     !Cmt_utils.record_deprecated_used
       ?deprecated_context ?migration_template ?migration_in_pipe_chain_template
-      loc txt;
+      loc;
     Location.deprecated
       ~can_be_automigrated:
         (Option.is_some migration_template

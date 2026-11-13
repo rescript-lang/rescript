@@ -3,6 +3,14 @@ open OUnit
 let suites =
   "gentype"
   >::: [
+         ( "name a scoped package's module as the build system does" >:: fun _ ->
+           let name =
+             Gentype_common.Scoped_package.package_name_to_generated_module_name
+           in
+           assert_equal (Some "DemoSomeLibrary") (name "@demo/some-library");
+           (* the build system keeps underscores in namespace names *)
+           assert_equal (Some "My_orgLib") (name "@my_org/lib");
+           assert_equal None (name "unscoped") );
          ( "split relative module paths" >:: fun _ ->
            assert_equal ["."] (Module_resolver.path_to_list ".");
            assert_equal ["src"] (Module_resolver.path_to_list "src");

@@ -1,6 +1,4 @@
 exception Error = Project_context.Error
-exception Package_error = Project_context.Package_error
-exception Build_failure = Compiler_scheduler.Build_failure
 exception Parse_failure of string
 exception Reported_failure of string
 exception Full_rebuild_required
@@ -284,7 +282,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
   (* Each build reaches this at most once: the failure reports end by raising
      Reported_failure, and a parse failure is raised before any other outcome
      writes the marker. *)
-  let phase_seconds seconds = if no_timing then 0. else seconds in
+  let phase_seconds seconds = if no_timing then None else Some seconds in
   let parse_step = Build_report.parse_step report in
   let compile_step = Build_report.compile_step report in
   let report_failure ~compile_seconds output =
@@ -292,22 +290,17 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     if attempt.freshness_mode = Build_attempt.Initialize_freshness then
       Source_dirs.write_build ~root_config attempt.session;
     Build_report.report_failure report ~compile_seconds;
-    prerr_string output;
+    prerr_string (Output.compiler_output ~color:colors output);
     prerr_newline ();
     Build_attempt.cleanup_artifacts attempt;
-    raise
-      (Reported_failure
-         ("Incremental build failed. Error: \027[2K\r  Failed to Compile. "
-        ^ "See Errors Above"))
+    raise (Reported_failure "Build failed: see the errors above.")
   in
   let report_parse_failure output =
     Build_attempt.finalize_logs attempt;
     Build_report.report_parse_failure report ~output;
     Build_attempt.cleanup_artifacts attempt;
     raise
-      (Reported_failure
-         "Incremental build failed. Error: \027[2K\r  Could not parse Source \
-          Files")
+      (Reported_failure "Build failed: could not parse the source files above.")
   in
   let format_cycle cycle (by_key : (string, Module_graph.cycle_node) Hashtbl.t)
       =
@@ -352,8 +345,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
                     (Output.compiler_cleanup_message ~color:colors ~step:"1/3");
                 print_endline
                   (Output.cleanup_message ~color:colors ~step:"1/3"
-                     ~cleaned:attempt.cleaned ~total:attempt.previous_asts
-                     ~seconds:(phase_seconds seconds))))
+                     ~cleaned:attempt.cleaned ~seconds:(phase_seconds seconds))))
         in
         (preparation.prepared, preparation.cycle)
     in
@@ -388,7 +380,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     poll ();
     let namespace_count =
       try run_namespace_jobs attempt
-      with Build_failure output ->
+      with Compiler_scheduler.Build_failure output ->
         raise (Parse_failure (parse_output ^ output))
     in
     Output.Progress.finish progress;
@@ -405,7 +397,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
       try
         run_scheduled_modules attempt prepared ~compile_step ~namespace_count;
         None
-      with Build_failure output -> Some output
+      with Compiler_scheduler.Build_failure output -> Some output
     in
     Output.Progress.finish progress;
     let compile_seconds =
@@ -518,7 +510,7 @@ let watch ~verbosity ~folder ~prod ~features ~warn_error ~after_build ~filter
       Watcher.Succeeded
     with
     | Reported_failure _ -> Watcher.Failed
-    | Package_error message
+    | Project_context.Package_error message
     | Error message
     | Config.Error message
     | Source.Error message

@@ -1,0 +1,1 @@
+- Walk the parameters of a function type without allocating a closure, so the compiler allocates about 0.2% less.

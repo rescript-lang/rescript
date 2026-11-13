@@ -39,7 +39,7 @@ then
   error "Second watcher should have been blocked by watch.lock"
   cat second-watch.log
   exit 1
-elif grep 'Could not start Rescript build:' second-watch.log > /dev/null;
+elif grep 'Could not start ReScript build:' second-watch.log > /dev/null;
 then
   success "Second watcher is blocked by watch.lock"
 else

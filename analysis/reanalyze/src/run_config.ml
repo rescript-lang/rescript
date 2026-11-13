@@ -40,6 +40,8 @@ let termination () = run_config.termination <- true
 
 let transitive b = run_config.transitive <- b
 
+(* The fields are read by [equal_snapshot]'s structural equality, which
+   reanalyze does not count as reading a field. *)
 type snapshot = {
   dce: bool;
   exception_: bool;
@@ -48,6 +50,7 @@ type snapshot = {
   transitive: bool;
   unsuppress: string list;
 }
+[@@live]
 
 let snapshot () =
   {

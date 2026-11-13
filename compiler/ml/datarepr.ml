@@ -255,7 +255,6 @@ let dummy_label =
     lbl_repres = Record_regular;
     lbl_private = Public;
     lbl_loc = Location.none;
-    lbl_attributes = [];
   }
 
 let label_descrs ty_res lbls repres priv =
@@ -276,7 +275,6 @@ let label_descrs ty_res lbls repres priv =
           lbl_repres = repres;
           lbl_private = priv;
           lbl_loc = l.ld_loc;
-          lbl_attributes = l.ld_attributes;
         }
       in
       all_labels.(num) <- lbl;

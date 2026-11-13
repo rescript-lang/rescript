@@ -29,7 +29,6 @@ type dead_warning =
   | IncorrectDeadAnnotation
 
 type description =
-  | Circular of {message: string}
   | ExceptionAnalysis of {message: string}
   | ExceptionAnalysisMissing of missing_throw_info
   | DeadModule of {message: string}

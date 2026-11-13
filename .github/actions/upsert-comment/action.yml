@@ -1,0 +1,67 @@
+name: Upsert pull request comment
+description: >-
+  Keep one comment of the workflow's on a pull request, found by its tag:
+  edit it in place, or create it.
+
+inputs:
+  pr-number:
+    description: The pull request to comment on.
+    required: true
+  tag:
+    description: >-
+      Names the comment, so that each run edits the same one. Letters, digits,
+      `_`, `.` and `-`.
+    required: true
+  body:
+    description: The comment's Markdown. Give either this or `body-path`.
+    required: false
+  body-path:
+    description: A file with the comment's Markdown.
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Upsert the comment
+      uses: actions/github-script@v9
+      # The inputs reach the script as environment variables, never as part
+      # of its source: a fork's pull request may have written the body.
+      env:
+        UPSERT_ACTION_PATH: ${{ github.action_path }}
+        UPSERT_PR_NUMBER: ${{ inputs.pr-number }}
+        UPSERT_TAG: ${{ inputs.tag }}
+        UPSERT_BODY: ${{ inputs.body }}
+        UPSERT_BODY_PATH: ${{ inputs.body-path }}
+      with:
+        script: |
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const { upsertComment } = require(
+            path.join(process.env.UPSERT_ACTION_PATH, "upsertComment.cjs"),
+          );
+          const { UPSERT_BODY: body, UPSERT_BODY_PATH: bodyPath } = process.env;
+          if (Boolean(body) === Boolean(bodyPath)) {
+            throw new Error("Give either body or body-path.");
+          }
+          const text = bodyPath ? fs.readFileSync(bodyPath, "utf8") : body;
+          const result = await upsertComment(
+            {
+              listComments: params =>
+                github.paginate(github.rest.issues.listComments, {
+                  ...params,
+                  per_page: 100,
+                }),
+              createComment: params => github.rest.issues.createComment(params),
+              updateComment: params => github.rest.issues.updateComment(params),
+            },
+            {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issueNumber: Number(process.env.UPSERT_PR_NUMBER),
+              tag: process.env.UPSERT_TAG,
+              text,
+              // The GITHUB_TOKEN comments as this user.
+              author: "github-actions[bot]",
+            },
+          );
+          core.info(`Comment ${process.env.UPSERT_TAG}: ${result}.`);

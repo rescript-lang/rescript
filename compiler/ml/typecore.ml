@@ -1357,7 +1357,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
   let sp = maybe_expand_variant_spread_in_pattern sp env expected_ty in
   let mode' = if mode = Splitting_or then Normal else mode in
   let type_pat ?(constrs = constrs) ?(labels = labels) ?(mode = mode')
-      ?(explode = explode) ?(env = env) =
+      ?(explode = explode) =
     type_pat ~constrs ~labels ~no_existentials ~mode ~explode ~env
   in
   let loc = sp.ppat_loc in
@@ -1922,14 +1922,14 @@ let type_pat ?(allow_existentials = false) ?constrs ?labels ?(mode = Normal)
 
 (* this function is passed to Parmatch.check_partial_gadt and
    Parmatch.check_unused to type check gadt nonexhaustiveness *)
-let partial_pred ~lev ?mode ?explode env expected_ty constrs labels p =
+let partial_pred ~lev ?mode ~explode env expected_ty constrs labels p =
   let env = ref env in
   let state = save_state env in
   try
     reset_pattern true;
     let typed_p =
       Ctype.with_passive_variants
-        (type_pat ~allow_existentials:true ~lev ~constrs ~labels ?mode ?explode
+        (type_pat ~allow_existentials:true ~lev ~constrs ~labels ?mode ~explode
            env p)
         expected_ty
     in
@@ -1951,7 +1951,7 @@ let check_partial ?(lev = get_current_level ()) ?partial_match_warning_hint env
     (partial_pred ~lev ~explode env expected_ty)
     loc cases
 
-let check_unused ?(lev = get_current_level ()) env expected_ty cases =
+let check_unused ~lev env expected_ty cases =
   Parmatch.check_unused
     (fun constrs labels spat ->
       partial_pred ~lev ~mode:Split_or ~explode:5 env expected_ty constrs labels

@@ -8,7 +8,6 @@
   Expression_parser
   File_key
   Flow_ast
-  Flow_ast_mapper
   Flow_ast_utils
   Flow_lexer
   Js_id

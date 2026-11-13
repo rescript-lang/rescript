@@ -1,0 +1,1 @@
+- Count the instructions the compiler executes on some of the CI benchmarks with cachegrind, next to the words it allocates.

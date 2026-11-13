@@ -172,27 +172,27 @@ let print_engine ~newline =
 
 exception Already_reported
 
-let parse_implementation ?(ignore_parse_errors = false) sourcefile =
+let parse_implementation ~ignore_parse_errors sourcefile =
   Location.set_input_name sourcefile;
   let parse_result = parsing_engine.parse_implementation ~filename:sourcefile in
   if parse_result.invalid then (
     Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
     if not ignore_parse_errors then raise_notrace Already_reported);
   parse_result.parsetree
-[@@raises Already_reported]
+[@@throws Already_reported]
 
-let parse_interface ?(ignore_parse_errors = false) sourcefile =
+let parse_interface ~ignore_parse_errors sourcefile =
   Location.set_input_name sourcefile;
   let parse_result = parsing_engine.parse_interface ~filename:sourcefile in
   if parse_result.invalid then (
     Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
     if not ignore_parse_errors then raise_notrace Already_reported);
   parse_result.parsetree
-[@@raises Already_reported]
+[@@throws Already_reported]
 
 (* suppress unused optional arg *)
 let _ =
  fun s ->
   ( parse_implementation ~ignore_parse_errors:false s,
     parse_interface ~ignore_parse_errors:false s )
-[@@raises Already_reported]
+[@@throws Already_reported]

@@ -35,9 +35,9 @@ let id_is_for_sure_true_in_boolean (tbl : Lam_stats.ident_tbl) id =
   | Some (Constant (Const_js_false | Const_js_null | Const_js_undefined _)) ->
     Eval_false
   | Some
-      ( Normal_optional _ | ImmutableBlock _ | MutableBlock _ | Constant _
-      | Module _ | FunctionId _ | Exception | Parameter | NA
-      | OptionalBlock (_, (Undefined | Null | Null_undefined)) )
+      ( Normal_optional _ | ImmutableBlock _ | Constant _ | Module _
+      | FunctionId _ | Parameter | NA
+      | OptionalBlock (_, (Null | Null_undefined)) )
   | None ->
     Eval_unknown
 
@@ -103,16 +103,11 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
       -> (
       match Hash_ident.find_opt meta.ident_tbl id with
       | Some (Constant c) when is_const_some c -> simpl l2
-      | Some (ImmutableBlock _ | MutableBlock _ | Normal_optional _) -> simpl l2
+      | Some (ImmutableBlock _ | Normal_optional _) -> simpl l2
       | Some (OptionalBlock (l, Null)) ->
         Lambda.if_
           (Lambda.not_ Location.none
              (Lambda.prim ~primitive:Pis_null ~args:[l] Location.none))
-          (simpl l2) (simpl l3)
-      | Some (OptionalBlock (l, Undefined)) ->
-        Lambda.if_
-          (Lambda.not_ Location.none
-             (Lambda.prim ~primitive:Pis_undefined ~args:[l] Location.none))
           (simpl l2) (simpl l3)
       | Some (OptionalBlock (l, Null_undefined)) ->
         Lambda.if_

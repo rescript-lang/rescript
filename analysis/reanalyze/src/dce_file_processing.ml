@@ -42,7 +42,6 @@ type file_data = {
   decls: Declarations.builder;
   refs: References.builder;
   cross_file: Cross_file_items.builder;
-  file_deps: File_deps.builder;
 }
 
 let process_cmt_file ~config ~(file : file_context) ~cmt_file_path
@@ -60,9 +59,6 @@ let process_cmt_file ~config ~(file : file_context) ~cmt_file_path
   let decls = Declarations.create_builder () in
   let refs = References.create_builder () in
   let cross_file = Cross_file_items.create_builder () in
-  let file_deps = File_deps.create_builder () in
-  (* Register this file *)
-  File_deps.add_file file_deps file.source_path;
   (match cmt_infos.cmt_annots with
   | Interface signature ->
     Collect_annotations.signature ~state:annotations ~config signature;
@@ -77,9 +73,9 @@ let process_cmt_file ~config ~(file : file_context) ~cmt_file_path
     process_signature ~config ~decls ~file ~do_values:true ~do_types:false
       structure.str_type;
     let do_externals = false in
-    Dead_value.process_structure ~config ~decls ~refs ~file_deps ~cross_file
+    Dead_value.process_structure ~config ~decls ~refs ~cross_file
       ~file:dead_common_file ~do_types:true ~do_externals
       ~cmt_value_dependencies:cmt_infos.cmt_value_dependencies structure
   | _ -> ());
   (* Return builders - the caller feeds them to the reactive collections *)
-  {annotations; decls; refs; cross_file; file_deps}
+  {annotations; decls; refs; cross_file}

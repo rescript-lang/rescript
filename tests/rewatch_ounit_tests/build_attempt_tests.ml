@@ -29,11 +29,7 @@ let output_inventory_survives_without_cleanup_work _context =
   Hashtbl.add outputs "src/A.js" ();
   Build_attempt.set_cleanup_result first "root"
     Build_artifacts.
-      {
-        removed_modules = ["Old"];
-        previous_ast_count = 2;
-        present_public_outputs = outputs;
-      };
+      {removed_modules = ["Old"]; present_public_outputs = outputs};
   let second =
     Build_attempt.create_retained ~session:first.session ~process_poll:None
       ~progress:(Output.Progress.create ~enabled:false ~color:false)

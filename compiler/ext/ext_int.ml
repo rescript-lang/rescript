@@ -22,12 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type t = int
-
-let compare (x : t) (y : t) = Stdlib.compare x y
-
-let equal (x : t) (y : t) = x = y
-
 let move = 0x1_0000_0000
 
 (* works only on 64 bit platform *)

@@ -1,6 +1,5 @@
 type cleanup_result = {
   removed_modules: string list;
-  previous_ast_count: int;
   present_public_outputs: (string, unit) Hashtbl.t;
 }
 (** Artifact cleanup first classifies ownership and builds a deletion plan.

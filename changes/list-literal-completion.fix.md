@@ -1,0 +1,1 @@
+- Editor: complete the elements of a list literal from the list's element type, like those of an array literal.

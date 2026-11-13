@@ -39,10 +39,6 @@ let finally v ~clean:action f =
 let with_file_as_chan filename f =
   finally (open_out_bin filename) ~clean:close_out f
 
-let max_int (x : int) y = if x >= y then x else y
-
-let min_int (x : int) y = if x < y then x else y
-
 let max_int_option (x : int option) y =
   match (x, y) with
   | None, _ -> y

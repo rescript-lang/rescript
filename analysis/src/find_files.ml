@@ -144,11 +144,11 @@ let collect_files ~compiled_directory ~source_directory =
     |> List.filter is_source_file |> filter_duplicates
   in
   compileds
-  |> Utils.filter_map (fun path ->
+  |> List.filter_map (fun path ->
       let mod_name = get_name path in
       let cmt = compiled_directory /+ path in
       let res_opt =
-        Utils.find
+        List.find_map
           (fun name ->
             if get_name name = mod_name then Some (source_directory /+ name)
             else None)
@@ -213,7 +213,7 @@ let find_project_files ~public ~namespace ~path ~source_directories
 
   let normals =
     files |> String_set.elements
-    |> Utils.filter_map (fun file ->
+    |> List.filter_map (fun file ->
         if is_implementation file then (
           let module_name = get_name file in
           let resi = Hashtbl.find_opt interfaces module_name in

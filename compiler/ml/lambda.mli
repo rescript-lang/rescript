@@ -271,7 +271,6 @@ type primitive =
   | Pnull_undefined_to_opt
   (* Produced by Lam_pass_remove_alias, not by translation *)
   | Pis_null
-  | Pis_undefined
   | Pis_not_none
   | Pval_from_option
   | Pval_from_option_not_nest
@@ -440,8 +439,6 @@ val const_polyvar_name : string -> structured_constant
 val const_module_alias : structured_constant
 val lambda_assert_false : t
 val lambda_unit : t
-
-val str_of_field_info : field_dbg_info -> string option
 
 val is_immutable_block : tag_info -> bool
 

@@ -71,11 +71,6 @@ let try_request_default () : response option =
   try_request ~socket_dir:(Some socket_dir) ~socket_path
 
 module Server = struct
-  let ( let* ) x f =
-    match x with
-    | Ok v -> f v
-    | Error _ as e -> e
-
   let errorf fmt = Printf.ksprintf (fun s -> Error s) fmt
 
   type server_config = {socket_path: string; cwd: string option}
@@ -99,7 +94,6 @@ module Server = struct
   type reactive_pipeline = {dce_config: Dce_config.t; pipeline: Dce_pipeline.t}
 
   type server_state = {
-    parse_argv: string array -> string option;
     run_analysis:
       dce_config:Dce_config.t ->
       cmt_root:string option ->
@@ -289,7 +283,6 @@ Examples:
           let pipeline = create_reactive_pipeline () in
           Ok
             {
-              parse_argv;
               run_analysis;
               config;
               cmt_root;

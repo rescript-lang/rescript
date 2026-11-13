@@ -33,7 +33,7 @@ type rec_flag =
 
 type element = NA | SimpleForm of Lambda.t
 
-type boxed_nullable = Undefined | Null | Null_undefined
+type boxed_nullable = Null | Null_undefined
 
 (** 
    {[ let v/2 =  Pnull_to_opt u]} 
@@ -51,14 +51,12 @@ type t =
   | Normal_optional of Lambda.t
   | OptionalBlock of Lambda.t * boxed_nullable
   | ImmutableBlock of element array
-  | MutableBlock of element array
   | Constant of Lambda.structured_constant
   | Module of Ident.t  (** TODO: static module vs first class module *)
   | FunctionId of {
       mutable arity: Lam_arity.t;
       lambda: (Lambda.t * rec_flag) option;
     }
-  | Exception
   | Parameter
       (** For this case, it can help us determine whether it should be inlined or not *)
   | NA

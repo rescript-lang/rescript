@@ -5,14 +5,14 @@
  (enabled_if
   (= %{profile} browser))
  (action
-  (copy platform/playground/js_name_of_module_id.ml js_name_of_module_id.ml)))
+  (copy# platform/playground/js_name_of_module_id.ml js_name_of_module_id.ml)))
 
 (rule
  (target js_name_of_module_id.ml)
  (enabled_if
   (<> %{profile} browser))
  (action
-  (copy platform/native/js_name_of_module_id.ml js_name_of_module_id.ml)))
+  (copy# platform/native/js_name_of_module_id.ml js_name_of_module_id.ml)))
 
 (library
  (name core)

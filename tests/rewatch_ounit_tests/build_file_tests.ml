@@ -109,7 +109,6 @@ let parsed_dependencies_tests _context =
               };
             ];
           source_mtimes = Hashtbl.create 1;
-          source_files = [source];
           present_source_files = [source];
         }
       in

@@ -19,12 +19,12 @@ let with_temp_dir = Test_support.with_temp_dir "rewatch-ocaml-format-"
 let tests =
   "format_tests" >:: fun _context ->
   check
-    (Format.formatting_error "stdin" "invalid source"
-    = "Error formatting stdin: invalid source")
+    (Format.formatting_error "<stdin>" "\ninvalid source\n"
+    = "Error formatting <stdin>:\ninvalid source")
     "stdin formatting failures do not expose a temporary filename";
   check
     (Format.formatting_error "src/A.res" "invalid source"
-    = "Error formatting src/A.res: invalid source")
+    = "Error formatting src/A.res:\ninvalid source")
     "file formatting failures retain the source path";
   check
     (Format.format_check_summary 1 = "The file listed above needs formatting")
@@ -95,11 +95,13 @@ let tests =
       check
         (try
            write_file unformatted "let =\n";
-           Format.format_files ~check:false [unformatted];
+           write_file formatted "let second=2\n";
+           Format.format_files ~check:false [unformatted; formatted];
            false
          with Format.Error message ->
-           contains message ("Error formatting " ^ unformatted))
-        "syntax errors are reported with the source path");
+           message = "Formatting failed"
+           && File_util.read_file formatted = "let second = 2\n")
+        "a syntax error fails the run after the other files are formatted");
   with_temp_dir (fun root ->
       let root_source = Test_support.path root "src/App.res" in
       let orphan_interface = Test_support.path root "src/Orphan.resi" in

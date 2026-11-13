@@ -435,9 +435,6 @@ module Scheduler = struct
          Printf.eprintf "Wave %d: processed_nodes=%d wall=%.2fms\n%!" wave_id
            !processed_nodes wave_elapsed_ms);
       propagating := false)
-
-  let wave_count () = !wave_counter
-  let reset_wave_count () = wave_counter := 0
 end
 
 (** {1 Collection Interface} *)

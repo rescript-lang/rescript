@@ -1,5 +1,4 @@
 status: 1
 --- stdout
 --- stderr
-Error formatting <WORK>/project/src: don't know what to do with <WORK>/project/src
-
+<WORK>/project/src is a directory; give .res or .resi files, or no arguments to format the project

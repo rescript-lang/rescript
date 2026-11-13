@@ -827,7 +827,7 @@ let to_value_binding0 vb =
 let attr_names attrs =
   List.map (fun (({txt} : string Asttypes.loc), _) -> txt) attrs
 
-let make_binding ?(attrs = []) () =
+let make_binding ~attrs () =
   Ast_helper.Vb.mk ~loc ~attrs
     (Ast_helper.Pat.var ~loc (Location.mknoloc "make"))
     (Ast_helper.Exp.ident ~loc (Location.mknoloc (Longident.Lident "x")))

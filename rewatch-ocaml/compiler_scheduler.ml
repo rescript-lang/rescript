@@ -114,7 +114,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
     |> List.filter candidate_requires_compile
     |> List.sort (fun first second -> String.compare first.key second.key)
     |> List.iter (fun candidate ->
-        Printf.printf "compile dirty: %s\n%!" candidate.key);
+        Output.trace ~verbosity ("compile dirty: " ^ candidate.key));
   (* The scheduler only needs dirty modules and their transitive dependents.
      Dependencies outside that universe already have usable artifacts, while
      keeping every module in the subprocess graph makes small edits scale with
@@ -401,7 +401,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
   in
   Output.Progress.finish progress;
   Output.trace ~verbosity
-    (Printf.sprintf "Compiled %d out of %d in the universe" !completed_modules
+    (Printf.sprintf "compiled %d of the %d modules to check" !completed_modules
        (List.length scheduled_modules));
   let failures =
     scheduled_modules

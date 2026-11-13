@@ -117,7 +117,7 @@ echo "Checking interactive build output..."
 run_in_terminal "$work/build.tty" build "$(command_path "$work/project")" --no-timing
 tr '\r' '\n' <"$work/build.tty" \
   | normalize_output \
-  | grep -E '^\[[123]/3\] .* (Cleaned|Parsed|Compiled) |^✅ Finished compilation in ' \
+  | grep -E '^\[[123]/3\] .* (Cleaned|Parsed|Compiled) |^✅ Finished compilation' \
   >"$work/build.phases"
 
 if ! grep -F $'\033[1m\033[2m[2/3]\033[0m' "$work/build.tty" >/dev/null; then
@@ -136,10 +136,10 @@ if ! grep -E '^\[2/3\] 🧱 Parsing\.\.\. .+ [0-9]+/1' \
 fi
 
 cat >"$work/expected" <<'EOF'
-[1/3] 🧹 Cleaned 0/0 in 0.00s
-[2/3] 🧱 Parsed 1 source files in 0.00s
-[3/3] 🤺 Compiled 1 modules in 0.00s
-✅ Finished compilation in 0.00s
+[1/3] 🧹 Cleaned 0 stale modules
+[2/3] 🧱 Parsed 1 source file
+[3/3] 🤺 Compiled 1 module
+✅ Finished compilation
 EOF
 
 if ! cmp -s "$work/expected" "$work/build.phases"; then
@@ -154,12 +154,11 @@ run_in_terminal "$work/after-build.tty" \
   "$(command_path "$work/after-build")" --no-timing
 tr '\r' '\n' <"$work/after-build.tty" \
   | normalize_output \
-  | grep -E '^(✅ Finished compilation in |AFTER_BUILD_MARKER$)' \
-  | sed -E 's/in [0-9]+\.[0-9]+s$/in 0.00s/' \
+  | grep -E '^(✅ Finished compilation|AFTER_BUILD_MARKER)$' \
   >"$work/after-build.order"
 
 cat >"$work/expected-after-build-order" <<'EOF'
-✅ Finished compilation in 0.00s
+✅ Finished compilation
 AFTER_BUILD_MARKER
 EOF
 
@@ -184,7 +183,7 @@ if $windows_posix_shell; then
 fi
 
 echo "Checking quiet interactive builds..."
-run_in_terminal "$work/quiet.tty" -q build "$(command_path "$work/project")"
+run_in_terminal "$work/quiet.tty" build -q "$(command_path "$work/project")"
 if tr '\r' '\n' <"$work/quiet.tty" \
   | grep -E '(Cleaned|Parsed|Parsing\.\.\.|Compiled|Compiling\.\.\.|Finished .*compilation)' >/dev/null; then
   echo "A quiet interactive build emitted progress" >&2
@@ -217,7 +216,7 @@ if ! cmp -s "$work/expected-clean" "$work/clean.phases"; then
 fi
 
 echo "Checking quiet interactive cleans..."
-run_in_terminal "$work/clean-quiet.tty" -q clean "$(command_path "$work/project")"
+run_in_terminal "$work/clean-quiet.tty" clean -q "$(command_path "$work/project")"
 if tr '\r' '\n' <"$work/clean-quiet.tty" | grep -E '(Cleaning|Cleaned)' >/dev/null; then
   echo "A quiet interactive clean emitted progress" >&2
   cat "$work/clean-quiet.tty" >&2
@@ -337,9 +336,9 @@ echo "Checking interactive watch rebuilds..."
 capture_watch_rebuild
 
 cat >"$work/expected-watch-initial" <<'EOF'
-[1/3] 🧹 Cleaned 0/0 in <TIME>
-[2/3] 🧱 Parsed 1 source files in <TIME>
-[3/3] 🤺 Compiled 1 modules in <TIME>
+[1/3] 🧹 Cleaned 0 stale modules in <TIME>
+[2/3] 🧱 Parsed 1 source file in <TIME>
+[3/3] 🤺 Compiled 1 module in <TIME>
 ✅ Finished initial compilation in <TIME>
 EOF
 
@@ -350,8 +349,8 @@ if ! cmp -s "$work/expected-watch-initial" "$work/watch-initial.phases"; then
 fi
 
 cat >"$work/expected-watch" <<'EOF'
-[1/2] 🧱 Parsed 1 source files in <TIME>
-[2/2] 🤺 Compiled 1 modules in <TIME>
+[1/2] 🧱 Parsed 1 source file in <TIME>
+[2/2] 🤺 Compiled 1 module in <TIME>
 ✅ Finished incremental compilation in <TIME>
 EOF
 
@@ -387,8 +386,8 @@ capture_initial_failure_recovery
 
 cat >"$work/expected-initial-failure-recovery" <<'EOF'
 Change detected. Rebuilding...
-[1/2] 🧱 Parsed 1 source files in <TIME>
-[2/2] 🤺 Compiled 1 modules in <TIME>
+[1/2] 🧱 Parsed 1 source file in <TIME>
+[2/2] 🤺 Compiled 1 module in <TIME>
 ✅ Finished incremental compilation in <TIME>
 EOF
 

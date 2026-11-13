@@ -5,7 +5,7 @@
  (enabled_if
   (= %{profile} browser))
  (action
-  (copy
+  (copy#
    platform/playground/cmt_format_persistence.ml
    cmt_format_persistence.ml)))
 
@@ -14,7 +14,7 @@
  (enabled_if
   (<> %{profile} browser))
  (action
-  (copy platform/native/cmt_format_persistence.ml cmt_format_persistence.ml)))
+  (copy# platform/native/cmt_format_persistence.ml cmt_format_persistence.ml)))
 
 (library
  (name ml)

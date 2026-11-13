@@ -412,7 +412,7 @@ let specialize_comparison
 (* Specialize a primitive from available type information,
    raise Not_found if primitive is unknown *)
 
-let specialize_primitive p env ty (* ~has_constant_constructor *) =
+let specialize_typed_primitive p env ty (* ~has_constant_constructor *) =
   let fn_expr = is_function_type env ty in
   let unified =
     match fn_expr with
@@ -428,6 +428,20 @@ let specialize_primitive p env ty (* ~has_constant_constructor *) =
       | Some (lhs, _rhs) -> Primitive (specialize_comparison table env lhs)
       | None -> Primitive table.objcomp
     with Not_found -> find_builtin p.prim_name)
+
+(* Only unified operators and comparisons read the primitive's type, so the
+   others skip scraping it (a copy of the whole function type) when it is a
+   function type: scraping one then looks nothing up (only a [Tconstr] head
+   is expanded, and only a [Tconstr] result is looked up), so the copy is
+   all the skipped work. *)
+let specialize_primitive p env ty =
+  match (Btype.repr ty).desc with
+  | Tarrow _
+    when not
+           (Hashtbl.mem Unified_ops.index_by_name p.prim_name
+           || Hashtbl.mem comparisons_table p.prim_name) ->
+    find_builtin p.prim_name
+  | _ -> specialize_typed_primitive p env ty
 
 (* [is_unit] excluded: unit shares the undefined constant but is not a
    [%null] / [%undefined] literal, and comparing it never suppressed the

@@ -2,7 +2,6 @@ type deprecated_used_context = FunctionCall | Reference
 
 type deprecated_used = {
   source_loc: Location.t;
-  deprecated_text: string;
   migration_template: Parsetree.expression option;
   migration_in_pipe_chain_template: Parsetree.expression option;
   context: deprecated_used_context option;
@@ -15,7 +14,6 @@ let record_deprecated_used :
     ?migration_template:Parsetree.expression ->
     ?migration_in_pipe_chain_template:Parsetree.expression ->
     Location.t ->
-    string ->
     unit)
     ref =
   ref
@@ -23,6 +21,5 @@ let record_deprecated_used :
       ?deprecated_context:_
       ?migration_template:_
       ?migration_in_pipe_chain_template:_
-      _
       _
     -> ())

@@ -12,7 +12,6 @@ val new_key : (unit -> 'a) -> 'a key
     starts. *)
 
 val get : 'a key -> 'a
-val set : 'a key -> 'a -> unit
 
 val with_fresh : (unit -> 'a) -> 'a
 (** Run with a fresh value for every key and restore the previous values

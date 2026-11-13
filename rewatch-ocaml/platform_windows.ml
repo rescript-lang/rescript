@@ -58,7 +58,10 @@ let resolve_program =
   Platform_common.resolve_program ~path_separator ~executable_extensions
     ~normalize_directory:normalize_path_directory ~executable_is_usable
 
+(* Read through [Platform.command] on Windows. Other platforms type-check
+   this file only in the tests, where nothing reads the fields. *)
 type command = {env: Spawn.Env.t option; program: string; args: string list}
+[@@live]
 
 let post_build_command ~command ~output =
   let variable = "REWATCH_JS_POST_BUILD_FILE" in

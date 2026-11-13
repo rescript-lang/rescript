@@ -1,16 +1,15 @@
 status: 1
 --- stdout
-Cleaned 0/0
+Cleaned 0 stale modules
 --- stderr
-Error in parse-output:
 
-  [1;31mSyntax error![0m
-  [36m<ROOT>/src/A.res[0m:[2m1:12-2:0[0m
+  Syntax error!
+  <ROOT>/src/A.res:1:12-2:0
 
-  [1;31m1[0m [2m│[0m let value =
-  [1;31m2[0m [2m│[0m 
+  1 │ let value =
+  2 │ 
 
   This let-binding misses an expression
 
 
-Incremental build failed. Error: [2K  Could not parse Source Files
+Build failed: could not parse the source files above.

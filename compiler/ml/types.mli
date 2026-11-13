@@ -414,7 +414,6 @@ type label_description = {
   lbl_repres: record_representation; (* Representation for this record *)
   lbl_private: private_flag; (* Read-only field? *)
   lbl_loc: Location.t;
-  lbl_attributes: Parsetree.attributes;
 }
 
 val same_record_representation :

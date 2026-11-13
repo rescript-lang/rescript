@@ -1,0 +1,1 @@
+- Look up the files a build reads without normalizing paths that are already normal, so a clean build allocates about 2.5% less.

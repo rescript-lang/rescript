@@ -16,5 +16,5 @@ assert.ok(
     "@notUndefined on a type abbreviation must describe an abstract type",
   ),
 );
-assert.ok(stderr.includes("Failed to Compile"));
+assert.ok(stderr.includes("Build failed"));
 await execClean();

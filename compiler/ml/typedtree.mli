@@ -570,7 +570,6 @@ and type_extension = {
 
 and extension_constructor = {
   ext_id: Ident.t;
-  ext_name: string loc;
   ext_type: Types.extension_constructor;
   ext_kind: extension_constructor_kind;
   ext_loc: Location.t;

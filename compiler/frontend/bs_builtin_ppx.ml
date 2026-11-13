@@ -190,12 +190,19 @@ let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
     | Meth_callback _, pexp_attributes ->
       (* FIXME: does it make sense to have a label for [this] ? *)
       async_context := false;
+      (* [@directive] belongs to the JS function, which is the inner function
+         passed to [unsafe_to_method], where translcore reads it *)
+      let fun_attrs, pexp_attributes =
+        List.partition
+          (fun ({Location.txt}, _) -> txt = "directive")
+          pexp_attributes
+      in
       let callback =
         {
           e with
           pexp_desc =
-            Ast_uncurry_gen.to_method_callback ~async ~newtypes e.pexp_loc self
-              params body;
+            Ast_uncurry_gen.to_method_callback ~async ~newtypes ~fun_attrs
+              e.pexp_loc self params body;
           pexp_attributes;
         }
       in

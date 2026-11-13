@@ -45,8 +45,9 @@ The Dune `browser` profile builds the playground compiler. Platform-dependent
 modules are stored below `platform/native/` and `platform/playground/` in their
 owning compiler directory. Rules in that directory's `dune` file copy the
 selected implementation into the build directory as an ordinary `.ml` module;
-all other profiles select the native source. Generated module paths in errors
-or stack traces therefore map back to one of those two source directories.
+all other profiles select the native source. The rules use `copy#`, whose line
+directive makes locations (in errors, stack traces and `.cmt` files) name the
+platform source itself, so the two variants never share source positions.
 
 ## Working on the Compiler
 

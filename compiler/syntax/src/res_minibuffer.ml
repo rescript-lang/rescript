@@ -2,10 +2,10 @@ type t = {mutable buffer: bytes; mutable position: int; mutable length: int}
 
 let create n =
   let n = if n < 1 then 1 else n in
-  let s = (Bytes.create [@doesNotRaise]) n in
+  let s = (Bytes.create [@doesNotThrow]) n in
   {buffer = s; position = 0; length = n}
 
-let contents b = (Bytes.sub_string [@doesNotRaise]) b.buffer 0 b.position
+let contents b = (Bytes.sub_string [@doesNotThrow]) b.buffer 0 b.position
 
 (* Can't be called directly, don't add to the interface *)
 let resize_internal b more =
@@ -17,10 +17,10 @@ let resize_internal b more =
   if !new_len > Sys.max_string_length then
     if b.position + more <= Sys.max_string_length then
       new_len := Sys.max_string_length;
-  let new_buffer = (Bytes.create [@doesNotRaise]) !new_len in
+  let new_buffer = (Bytes.create [@doesNotThrow]) !new_len in
   (* PR#6148: let's keep using [blit] rather than [unsafe_blit] in
      this tricky function that is slow anyway. *)
-  Bytes.blit b.buffer 0 new_buffer 0 b.position [@doesNotRaise];
+  Bytes.blit b.buffer 0 new_buffer 0 b.position [@doesNotThrow];
   b.buffer <- new_buffer;
   b.length <- !new_len
 
@@ -34,7 +34,7 @@ let add_string b s =
   let len = String.length s in
   let new_position = b.position + len in
   if new_position > b.length then resize_internal b len;
-  Bytes.blit_string s 0 b.buffer b.position len [@doesNotRaise];
+  Bytes.blit_string s 0 b.buffer b.position len [@doesNotThrow];
   b.position <- new_position
 
 (* adds newline and trims all preceding whitespace *)

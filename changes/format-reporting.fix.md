@@ -1,0 +1,1 @@
+- `rescript format` formats or checks every file even when one has a syntax error, then fails; it reports files once each, sorted and relative to the current directory, rejects missing files, directories and non-ReScript files with a short message, and reports `--stdin` errors at `<stdin>`.

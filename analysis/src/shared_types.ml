@@ -25,17 +25,6 @@ module Module_path = struct
       | NotVisible -> current
     in
     loop module_path [tip_name]
-
-  let to_path_with_prefix module_path prefix : path =
-    let rec loop module_path current =
-      match module_path with
-      | File _ -> current
-      | IncludedModule (_, inner) -> loop inner current
-      | ExportedModule {name; module_path = inner} ->
-        loop inner (name :: current)
-      | NotVisible -> current
-    in
-    prefix :: loop module_path []
 end
 
 type field = {
@@ -275,21 +264,6 @@ module File = struct
     module_name: string;
     structure: Module.structure;
   }
-
-  let create module_name uri =
-    {
-      uri;
-      stamps = Stamps.init ();
-      module_name;
-      structure =
-        {
-          name = module_name;
-          docstring = [];
-          exported = Exported.init ();
-          items = [];
-          deprecated = None;
-        };
-    }
 end
 
 module Query_env : sig
@@ -307,8 +281,6 @@ module Query_env : sig
      The result is A.B.C.D if D is inside C.
      Or A.B.D or A.D or D if it's in one of its parents. *)
   val path_from_env : t -> path -> bool * path
-
-  val to_string : t -> string
 end = struct
   type t = {
     file: File.t;
@@ -316,9 +288,6 @@ end = struct
     path_rev: path;
     parent: t option;
   }
-
-  let to_string {file; path_rev} =
-    file.module_name :: List.rev path_rev |> String.concat "."
 
   let from_file (file : File.t) =
     {file; exported = file.structure.exported; path_rev = []; parent = None}
@@ -372,6 +341,7 @@ and completion_type =
     }
   | Tbool of Query_env.t
   | Tarray of Query_env.t * inner_type
+  | Tlist of Query_env.t * inner_type
   | Tdict of Query_env.t * inner_type
   | Tstring of Query_env.t
   | TtypeT of {env: Query_env.t; path: Path.t}
@@ -461,7 +431,7 @@ let get_cmt_path ~uri p =
   | Impl {cmt} -> cmt
   | Namespace {cmt} -> cmt
   | IntfAndImpl {cmti; cmt} ->
-    let interface = Utils.ends_with (Uri.to_path uri) "i" in
+    let interface = String.ends_with ~suffix:"i" (Uri.to_path uri) in
     if interface then cmti else cmt
 
 module Tip = struct
@@ -529,12 +499,10 @@ and package = {
   suffix: string;
   root_path: file_path;
   project_files: File_set.t;
-  dependencies: string list;
   dependencies_files: File_set.t;
   paths_for_module: (file, paths) Hashtbl.t;
   namespace: string option;
   opens: path list;
-  rescript_version: int * int;
   autocomplete: file list Misc.String_map.t;
 }
 
@@ -615,6 +583,7 @@ module Completable = struct
         source_arity: int;
       }
     | NArray
+    | NList  (** An element of a list literal *)
     | NDictValue of {optional: bool}
         (** The pattern or expression of a dict entry, [?P] if [optional] *)
 
@@ -630,11 +599,13 @@ module Completable = struct
       "polyvariantPayload::" ^ constructor_name ^ "($" ^ string_of_int item_num
       ^ ")"
     | NArray -> "array"
+    | NList -> "list"
     | NDictValue {optional} -> if optional then "dictValue(?)" else "dictValue"
 
   type context_path =
     | CPString
     | CPArray of context_path option
+    | CPList of context_path option
     | CPDict of context_path option
     | CPInt
     | CPFloat
@@ -737,6 +708,8 @@ module Completable = struct
     | CPArray (Some ctx_path) ->
       "array<" ^ context_path_to_string ctx_path ^ ">"
     | CPArray None -> "array"
+    | CPList (Some ctx_path) -> "list<" ^ context_path_to_string ctx_path ^ ">"
+    | CPList None -> "list"
     | CPDict (Some ctx_path) -> "dict<" ^ context_path_to_string ctx_path ^ ">"
     | CPDict None -> "dict"
     | CPId {path; completion_context} ->
@@ -866,16 +839,14 @@ module Completion = struct
     docstring: string list;
     kind: kind;
     detail: string option;
-    type_arg_context: type_arg_context option;
-    data: (string * string) list option;
     additional_text_edits: Lsp.Types.TextEdit.t list option;
     synthetic: bool;
         (** Whether this item is an made up, synthetic item or not. *)
   }
 
-  let create ?(synthetic = false) ?additional_text_edits ?data ?type_arg_context
+  let create ?(synthetic = false) ?additional_text_edits
       ?(includes_snippets = false) ?insert_text ~kind ~env ?sort_text
-      ?deprecated ?filter_text ?detail ?(docstring = []) name =
+      ?deprecated ?detail ?(docstring = []) name =
     {
       name;
       env;
@@ -887,10 +858,8 @@ module Completion = struct
       insert_text_format =
         (if includes_snippets then Some Lsp.Types.InsertTextFormat.Snippet
          else None);
-      filter_text;
+      filter_text = None;
       detail;
-      type_arg_context;
-      data;
       additional_text_edits;
       synthetic;
     }

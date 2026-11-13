@@ -54,7 +54,7 @@ let structure_gen (tdcls : tdcls) _explict_nonrec =
             | Pcstr_tuple pcd_args -> pcd_args
             | Pcstr_record _ -> raise_unsupported_vaiant_record_arg pcd_loc
           in
-          let little_con_name = Ext_string.uncapitalize_ascii con_name in
+          let little_con_name = String.uncapitalize_ascii con_name in
           let arity = List.length pcd_args in
           let annotate_type =
             match pcd_res with
@@ -72,7 +72,7 @@ let structure_gen (tdcls : tdcls) _explict_nonrec =
                  annotate_type
              else
                let vars =
-                 Ext_list.init arity (fun x -> "param_" ^ string_of_int x)
+                 List.init arity (fun x -> "param_" ^ string_of_int x)
                in
                let exp =
                  Exp.constraint_
@@ -130,7 +130,7 @@ let signature_gen (tdcls : Parsetree.type_declaration list) _explict_nonrec =
             | None -> core_type
           in
           Ast_comb.single_non_rec_val ?attrs:gentype_attrs
-            {loc; txt = Ext_string.uncapitalize_ascii con_name}
+            {loc; txt = String.uncapitalize_ascii con_name}
             (match
                Ext_list.map pcd_args (fun x ->
                    Parsetree.Parg_type {attrs = []; lbl = Nolabel; typ = x})

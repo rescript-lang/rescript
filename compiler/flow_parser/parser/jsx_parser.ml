@@ -366,9 +366,9 @@ module JSX (Parse : Parser_common.PARSER) (Expression : Parser_common.EXPRESSION
   let rec child ~parent_opening_name env =
     match Peek.token env with
     | T_LCURLY -> expression_container_or_spread_child env
-    | T_JSX_CHILD_TEXT (loc, value, raw) as token ->
+    | T_JSX_CHILD_TEXT (loc, _, _) as token ->
       Expect.token env token;
-      (loc, JSX.Text { JSX.Text.value; raw })
+      (loc, JSX.Text)
     | _ ->
       (match element_or_fragment ~parent_opening_name env with
       | (loc, `Element element) -> (loc, JSX.Element element)
@@ -538,18 +538,11 @@ module JSX (Parse : Parser_common.PARSER) (Expression : Parser_common.EXPRESSION
                 children;
                 comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing ();
               }
-        | (start_loc, Ok `Fragment)
-        | (start_loc, Error `Fragment) ->
+        | (_, Ok `Fragment)
+        | (_, Error `Fragment) ->
           `Fragment
             {
-              JSX.frag_opening_element = start_loc;
-              frag_closing_element =
-                (match closing_element with
-                | `Fragment loc -> loc
-                (* the following are parse erros *)
-                | `Element (loc, _) -> loc
-                | _ -> end_loc);
-              frag_children = children;
+              JSX.frag_children = children;
               frag_comments = Flow_ast_utils.mk_comments_opt ~leading ~trailing ();
             }
       in

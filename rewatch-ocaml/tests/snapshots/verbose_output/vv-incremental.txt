@@ -1,7 +1,7 @@
-DEBUG:	Building source file-tree for package: verbose-output
-DEBUG:	Compiling file: A
-DEBUG:	Created project context for "verbose-output" at "<PROJECT>/rescript.json"
-DEBUG:	Generating AST for module: A
-DEBUG:	Parsing package: verbose-output
-TRACE:	Compiled 2 out of 2 in the universe
-compile dirty: A
+debug: Building source file-tree for package: verbose-output
+debug: Compiling file: A
+debug: Created project context for "verbose-output" at "<PROJECT>/rescript.json"
+debug: Generating AST for module: A
+debug: Parsing package: verbose-output
+trace: compile dirty: A
+trace: compiled 2 of the 2 modules to check

@@ -1,0 +1,2 @@
+- Compare the words the compiler allocates with the base branch in CI, and fail on a growth of more than 1%.
+- Remove the syntax benchmarks (`make bench`); the CI comparison parses and formats their files with `bsc` instead.

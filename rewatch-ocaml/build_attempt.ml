@@ -36,7 +36,6 @@ type t = {
   freshness_mode: freshness_mode;
   session: Build_session.t;
   mutable cleaned: int;
-  mutable previous_asts: int;
   mutable parsed: int;
   mutable compiled: int;
   mutable parse_seconds: float;
@@ -64,7 +63,6 @@ let create ~freshness_mode ~session ~process_poll ~progress ~verbosity =
     freshness_mode;
     session;
     cleaned = 0;
-    previous_asts = 0;
     parsed = 0;
     compiled = 0;
     parse_seconds = 0.;

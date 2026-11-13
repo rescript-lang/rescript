@@ -1,0 +1,13 @@
+{
+  "name": "namespace_components",
+  "sources": ["src"],
+  "namespace": "Shop",
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".res.mjs",
+  "warnings": {
+    "error": true
+  }
+}

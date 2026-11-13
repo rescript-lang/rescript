@@ -37,7 +37,5 @@ let vvv = Some(x->getV)
 // vvv
 //  ^xfm
 
-// ^ve+ 11.1
 // switch withSomeVarian
 //                      ^com
-// ^ve-

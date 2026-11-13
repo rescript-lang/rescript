@@ -29,8 +29,8 @@ type attrs = attribute list
 
 module Const : sig
   val string : string -> constant
-  val integer : ?suffix:char -> string -> constant
-  val int : ?suffix:char -> int -> constant
+  val integer : string -> constant
+  val int : int -> constant
 end
 
 (** {1 Core language} *)
@@ -56,7 +56,7 @@ module Typ : sig
     closed_flag ->
     label list option ->
     core_type
-  val poly : ?loc:loc -> ?attrs:attrs -> str list -> core_type -> core_type
+  val poly : loc:loc -> ?attrs:attrs -> str list -> core_type -> core_type
   val package :
     ?loc:loc -> ?attrs:attrs -> lid -> (lid * core_type) list -> core_type
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> core_type
@@ -131,8 +131,7 @@ module Exp : sig
     expression ->
     expression
 
-  val fun_param :
-    ?attrs:attrs -> ?default:expression -> arg_label -> pattern -> fun_param
+  val fun_param : ?attrs:attrs -> arg_label -> pattern -> fun_param
   val apply :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -298,8 +297,6 @@ module Jsx_component : sig
   val of_attribute : attribute -> jsx_component option
   (** The component an attribute such as [@react.component] denotes, if its
       payload is one the JSX transform understands. *)
-
-  val to_attribute : jsx_component -> attribute
 end
 
 (** Value declarations *)
@@ -341,11 +338,9 @@ module Type : sig
     ?attrs:attrs ->
     ?args:constructor_arguments ->
     ?res:core_type ->
-    ?runtime_tag:constructor_tag ->
     str ->
     constructor_declaration
-  (** A valid first [@as] in [attrs] is taken out and becomes the runtime tag,
-      unless one is given explicitly. *)
+  (** A valid first [@as] in [attrs] is taken out and becomes the runtime tag. *)
 
   val constructor_attributes : constructor_declaration -> attrs
   (** The attributes as written, with the constructor [@as] put back. *)
@@ -355,12 +350,10 @@ module Type : sig
     ?attrs:attrs ->
     ?mut:mutable_flag ->
     ?optional:bool ->
-    ?runtime_name:string ->
     str ->
     core_type ->
     label_declaration
-  (** [@as("x")] in [attrs] is taken out and becomes the runtime name, unless
-      one is given explicitly. *)
+  (** [@as("x")] in [attrs] is taken out and becomes the runtime name. *)
 
   val field_attributes : label_declaration -> attrs
   (** The attributes as written, with the [@as] taken out by [field] put back.
@@ -419,6 +412,8 @@ end
 (** Module expressions *)
 module Mod : sig
   val mk : ?loc:loc -> ?attrs:attrs -> module_expr_desc -> module_expr
+  [@@live]
+  (** The builder the others specialize, as in every module of this file. *)
 
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> module_expr
   val structure : ?loc:loc -> ?attrs:attrs -> structure -> module_expr

@@ -101,14 +101,13 @@ jobs:
         run: rclone copyto --s3-no-check-bucket semantic-diff/index.html "rescript:cdn-assets/semantic-diff/pr-${PR_NUMBER}/index.html"
 
       - name: Comment semantic diff
-        uses: thollander/actions-comment-pull-request@v3
+        uses: ./.github/actions/upsert-comment
         with:
           pr-number: ${{ github.event.pull_request.number }}
           # The pull request's one comment, edited in place on each push;
           # edits notify no one.
-          comment-tag: semantic-diff
-          mode: upsert
-          file-path: semantic-diff/comment.md
+          tag: semantic-diff
+          body-path: semantic-diff/comment.md
 
       # Last, so that the page and the comment show the records either way.
       - name: Check commit descriptions

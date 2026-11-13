@@ -197,10 +197,12 @@ let rec is_printable_jsx (e : J.expression) =
   | _ -> false
 
 let raw_snippet_exp_simple_enough (s : string) =
-  Ext_string.for_all s (fun c ->
+  String.for_all
+    (fun c ->
       match c with
       | 'a' .. 'z' | 'A' .. 'Z' | '_' | '.' -> true
       | _ -> false)
+    s
 (* Parentheses are required when the expression
    starts syntactically with "{" or "function"
    TODO:  be more conservative, since Google Closure will handle
@@ -253,7 +255,6 @@ let pp_var_assign cxt f id =
 let pp_var_assign_this cxt f id =
   let cxt = pp_var_assign cxt f id in
   P.string f L.this;
-  P.space f;
   semi f;
   P.newline f;
   cxt
@@ -445,11 +446,14 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
           in
           P.space f;
           P.brace_vgroup f 1 (fun _ ->
+              (* A directive must be the first statement of the body, so it
+                 comes before [let self = this] *)
+              print_directive f directive;
               let cxt =
                 if Js_fun_env.get_unused env 0 then cxt
                 else pp_var_assign_this cxt f this
               in
-              function_body ?directive ~return_unit cxt f b))
+              function_body ~return_unit cxt f b))
       else
         let cxt =
           match l with
@@ -754,8 +758,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
     if need_paren then P.paren f action else action ();
     cxt
   | Is_null_or_undefined e ->
-    P.cond_paren_group f (level > 0) (fun _ ->
-        let cxt = expression ~level:1 cxt f e in
+    (* Printed as [e == null], which binds like [===] *)
+    let out, lft, _ = Js_op_util.op_prec EqEqEq in
+    P.cond_paren_group f (level > out) (fun _ ->
+        let cxt = expression ~level:lft cxt f e in
         P.space f;
         P.string f "==";
         P.space f;
@@ -1568,14 +1574,17 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
           P.space f;
           brace_block cxt f b)
 
-and function_body ?directive (cxt : cxt) f ~return_unit (b : J.block) : unit =
-  (match directive with
+and print_directive f directive =
+  match directive with
   | None -> ()
   | Some directive ->
     P.newline f;
     P.string f directive;
     P.string f ";";
-    P.newline f);
+    P.newline f
+
+and function_body ?directive (cxt : cxt) f ~return_unit (b : J.block) : unit =
+  print_directive f directive;
   match b with
   | [] -> ()
   | [s] -> (

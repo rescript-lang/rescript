@@ -140,9 +140,7 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         | None -> cleanup_stale package
       in
       Build_attempt.set_cleanup_result attempt package.root cleanup;
-      attempt.cleaned <- attempt.cleaned + List.length cleanup.removed_modules;
-      attempt.previous_asts <-
-        attempt.previous_asts + cleanup.previous_ast_count)
+      attempt.cleaned <- attempt.cleaned + List.length cleanup.removed_modules)
     cleanups_before_clean;
   let compile_assets =
     if attempt.compiler_cleaned || Hashtbl.length attempt.removed_modules > 0

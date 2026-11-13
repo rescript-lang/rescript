@@ -102,7 +102,6 @@ let generated_output_details_for_suffixes suffixes path =
 
 type cleanup_result = {
   removed_modules: string list;
-  previous_ast_count: int;
   present_public_outputs: (string, unit) Hashtbl.t;
 }
 
@@ -209,7 +208,6 @@ let cleanup_stale ~artifact_files ~ast_sources ~present_source_files
   Config.namespace_compiler_name config.namespace
   |> Option.iter (fun namespace ->
       add_expected namespace [".cmi"; ".cmj"; ".cmt"; ".mlmap"]);
-  let previous_ast_count = ref 0 in
   let removed_modules = ref [] in
   artifact_files
   |> List.iter (fun path ->
@@ -218,7 +216,6 @@ let cleanup_stale ~artifact_files ~ast_sources ~present_source_files
         Filename.check_suffix basename ".ast"
         || Filename.check_suffix basename ".iast"
       in
-      if is_ast then incr previous_ast_count;
       if
         Compile_assets.is_managed_basename basename
         && ((not (Hashtbl.mem expected_artifacts basename))
@@ -239,8 +236,4 @@ let cleanup_stale ~artifact_files ~ast_sources ~present_source_files
       Hashtbl.remove present_public_outputs (path ^ ".map");
       File_util.remove_file path;
       File_util.remove_file (path ^ ".map"));
-  {
-    removed_modules = !removed_modules;
-    previous_ast_count = !previous_ast_count;
-    present_public_outputs;
-  }
+  {removed_modules = !removed_modules; present_public_outputs}

@@ -91,5 +91,5 @@ let trim_spaces s =
     while !j >= !i && String.unsafe_get s !j = ' ' do
       decr j
     done;
-    if !j >= !i then (String.sub [@doesNotRaise]) s !i (!j - !i + 1) else "")
+    if !j >= !i then (String.sub [@doesNotThrow]) s !i (!j - !i + 1) else "")
   else s

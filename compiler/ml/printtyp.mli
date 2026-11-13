@@ -25,9 +25,9 @@ type printing_context = {inlined_types: type_inlined_type list}
 val print_res_poly_identifier : (string -> string) ref
 val longident : formatter -> Longident.t -> unit
 val ident : formatter -> Ident.t -> unit
-val tree_of_path : Path.t -> out_ident
 val path : formatter -> Path.t -> unit
 val string_of_path : Path.t -> string
+val string_of_out_ident : Outcometree.out_ident -> string
 val raw_type_expr : formatter -> type_expr -> unit
 val string_of_label : Asttypes.arg_label -> string
 
@@ -62,7 +62,6 @@ val modtype_declaration : Ident.t -> formatter -> modtype_declaration -> unit
 val report_unification_error :
   formatter ->
   Env.t ->
-  ?unif:bool ->
   (type_expr * type_expr) list ->
   (formatter -> unit) ->
   (formatter -> unit) ->
@@ -72,7 +71,6 @@ val super_report_unification_error :
   ?print_extra_info:(formatter -> type_expr -> type_expr -> unit) ->
   formatter ->
   Env.t ->
-  ?unif:bool ->
   (type_expr * type_expr) list ->
   (formatter -> unit) ->
   (formatter -> unit) ->

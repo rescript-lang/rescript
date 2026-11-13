@@ -103,9 +103,9 @@ let publication_releases_files_tests _context =
       in
       File_util.ensure_dir artifact_dir;
       File_util.ensure_dir (Filename.concat root "src");
-      let publish ?(has_interface = false) path =
+      let publish path =
         Compiler_process.publish ~artifact_dir ~is_local:true ~config
-          ~has_interface ~source_kind:Source.Implementation path succeeded
+          ~has_interface:false ~source_kind:Source.Implementation path succeeded
       in
       Test_support.write_file (artifact "Same.cmi") "same interface";
       Unix.utimes (artifact "Same.cmi") 1_000_000_000. 1_000_000_000.;

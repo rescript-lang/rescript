@@ -389,14 +389,9 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     {dependencies = []; type_ = Emit_type.type_react_dom_re_dom_ref}
   | ["ReactDOM"; "Ref"; "currentDomRef"], [] ->
     {dependencies = []; type_ = Emit_type.type_any}
-  | ["ReactDOMRe"; "domRef"], [] ->
-    {dependencies = []; type_ = Emit_type.type_react_dom_re_dom_ref}
-  | ["ReactDOMRe"; "Ref"; "currentDomRef"], [] ->
-    {dependencies = []; type_ = Emit_type.type_any}
   | ["ReactEvent"; "Mouse"; "t"], [] ->
     {dependencies = []; type_ = Emit_type.type_react_event_mouse_t}
   | ( ( ["React"; "element"]
-      | ["ReasonReact"; "reactElement"]
       | ["Pervasives"; "Jsx"; "element"]
       | ["Jsx"; "element"] ),
       [] ) ->
@@ -614,7 +609,7 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
     match type_env |> Type_env.lookup_module_type_signature ~path with
     | Some (signature, type_env) ->
       let type_equations_translation =
-        (List.combine ids types [@doesNotRaise])
+        (List.combine ids types [@doesNotThrow])
         |> List.map (fun (x, t) ->
             ( x,
               t |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env

@@ -63,7 +63,6 @@ let labels_of_keys keys =
              lbl_repres = Record_regular;
              lbl_private = Asttypes.Public;
              lbl_loc = Location.none;
-             lbl_attributes = [];
            })
          keys)
   in

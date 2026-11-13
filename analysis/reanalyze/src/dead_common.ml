@@ -16,17 +16,7 @@ module Config = struct
   let analyze_externals = ref false
   let report_underscore = false
   let report_types_dead_only_in_interface = false
-  let warn_on_circular_dependencies = false
 end
-
-let rec check_sub s1 s2 n =
-  n <= 0
-  || (try s1.[n] = s2.[n] with Invalid_argument _ -> false)
-     && check_sub s1 s2 (n - 1)
-
-let file_is_implementation_of s1 s2 =
-  let n1 = String.length s1 and n2 = String.length s2 in
-  n2 = n1 + 1 && check_sub s1 s2 (n1 - 1)
 
 let live_annotation = "live"
 
@@ -58,8 +48,8 @@ let decl_get_loc decl =
   in
   {Location.loc_start; loc_end = decl.pos_end; loc_ghost = false}
 
-let add_value_reference ~config ~refs ~file_deps ~(binding : Location.t)
-    ~add_file_reference ~(loc_from : Location.t) ~(loc_to : Location.t) : unit =
+let add_value_reference ~config ~refs ~(binding : Location.t)
+    ~(loc_from : Location.t) ~(loc_to : Location.t) : unit =
   let effective_from = if binding = Location.none then loc_from else binding in
   if not effective_from.loc_ghost then (
     if config.Dce_config.cli.debug then
@@ -67,14 +57,7 @@ let add_value_reference ~config ~refs ~file_deps ~(binding : Location.t)
         (effective_from.loc_start |> Pos.to_string)
         (loc_to.loc_start |> Pos.to_string);
     References.add_value_ref refs ~pos_to:loc_to.loc_start
-      ~pos_from:effective_from.loc_start;
-    if
-      add_file_reference && (not loc_to.loc_ghost)
-      && (not effective_from.loc_ghost)
-      && effective_from.loc_start.pos_fname <> loc_to.loc_start.pos_fname
-    then
-      File_deps.add_dep file_deps ~from_file:effective_from.loc_start.pos_fname
-        ~to_file:loc_to.loc_start.pos_fname)
+      ~pos_from:effective_from.loc_start)
 
 let addDeclaration_ ~config ~decls ~(file : File_context.t) ?pos_end ?pos_start
     ~decl_kind ~path ~(loc : Location.t) ?(pos_adjustment = Decl.Nothing)

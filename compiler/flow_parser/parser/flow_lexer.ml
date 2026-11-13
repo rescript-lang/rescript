@@ -240,10 +240,6 @@ let loc_of_token env lex_token =
   | T_REGEXP (loc, _, _) -> loc
   | _ -> loc_of_lexbuf env env.lex_lb
 
-let advance_loc_by_char loc =
-  let open Loc in
-  { loc with start = loc._end; _end = { loc._end with column = loc._end.column + 1 } }
-
 let lex_error (env : Lex_env.t) loc err : Lex_env.t =
   let lex_errors_acc = (loc, err) :: env.lex_state.lex_errors_acc in
   { env with lex_state = { lex_errors_acc } }
@@ -287,8 +283,7 @@ let mk_comment
     else
       Line
   in
-  let on_newline = Loc.(env.lex_last_loc._end.Loc.line < loc.start.Loc.line) in
-  let c = { kind; text; on_newline } in
+  let c = { kind; text } in
   (loc, c)
 
 let mk_num_singleton number_type (lexeme : int array) =
@@ -1693,35 +1688,6 @@ let jsx_child env start buf raw lexbuf =
     (env, T_JSX_CHILD_TEXT (loc, value, raw))
   | _ -> failwith "unreachable jsx_child"
 
-let template_tail env lexbuf =
-  match%sedlex lexbuf with
-  | line_terminator_sequence ->
-    let env = new_line env lexbuf in
-    Continue env
-  | Plus whitespace -> Continue env
-  | "//" ->
-    let start_pos = start_pos_of_lexbuf env lexbuf in
-    let buf = Buffer.create 127 in
-    let (env, end_pos) = line_comment env buf lexbuf in
-    Comment (env, mk_comment env start_pos end_pos buf false)
-  | "/*" ->
-    let start_pos = start_pos_of_lexbuf env lexbuf in
-    let buf = Buffer.create 127 in
-    let (env, end_pos) = comment env buf lexbuf in
-    Comment (env, mk_comment env start_pos end_pos buf true)
-  | '}' ->
-    let start = start_pos_of_lexbuf env lexbuf in
-    let value = Buffer.create 127 in
-    let raw = Buffer.create 127 in
-    let (env, is_tail) = template_part env value raw lexbuf in
-    let _end = end_pos_of_lexbuf env lexbuf in
-    let loc = { Loc.source = Lex_env.source env; start; _end } in
-    Token (env, T_TEMPLATE_PART (loc, Buffer.contents value, Buffer.contents raw, false, is_tail))
-  | any ->
-    let env = illegal env (loc_of_lexbuf env lexbuf) in
-    Token (env, T_TEMPLATE_PART (loc_of_lexbuf env lexbuf, "", "", false, true))
-  | _ -> failwith "unreachable template_tail"
-
 let template_tail_start env =
   let lexbuf = env.lex_lb in
   let start_pos = Sedlexing.lexeme_start lexbuf in
@@ -1812,15 +1778,7 @@ let regexp = wrap regexp
 
 let jsx_tag = wrap jsx_tag
 
-let template_tail = wrap template_tail
-
 let type_token = wrap (token_base ~for_type_token:true)
 
 let token = wrap (token_base ~for_type_token:false)
 
-let is_valid_identifier_name lexbuf =
-  match%sedlex lexbuf with
-  | js_id_start ->
-    (* we need handle cases like \u1fa38 so that single code is not enough*)
-    loop_id_continues lexbuf
-  | _ -> false

@@ -18,14 +18,7 @@ module Lex_mode : sig
     | JSX_CHILD
     | REGEXP
 
-  val debug_string_of_lex_mode : t -> string
 end
-
-type token_sink_result = {
-  token_loc: Loc.t;
-  token: Token.t;
-  token_context: Lex_mode.t;
-}
 
 type parse_options = {
   components: bool; (* enable parsing of Flow component syntax *)
@@ -42,10 +35,6 @@ type parse_options = {
           statements; matches hermes-parser [allowReturnOutsideFunction] *)
 }
 
-val default_parse_options : parse_options
-
-val permissive_parse_options : parse_options
-
 type env
 
 type allowed_super =
@@ -55,8 +44,6 @@ type allowed_super =
 
 (* constructor: *)
 val init_env :
-  ?token_sink:(token_sink_result -> unit) option ->
-  ?parse_options:parse_options option ->
   File_key.t option ->
   string ->
   env
@@ -67,8 +54,6 @@ val in_strict_mode : env -> bool
 val last_loc : env -> Loc.t option
 
 val last_token : env -> Token.t option
-
-val in_export : env -> bool
 
 val in_export_default : env -> bool
 
@@ -207,8 +192,6 @@ val is_contextually_reserved : string -> bool
 
 val is_reserved : string -> bool
 
-val token_is_reserved : Token.t -> bool
-
 val token_is_reserved_type : Token.t -> bool
 
 val token_is_type_identifier : env -> Token.t -> bool
@@ -216,8 +199,6 @@ val token_is_type_identifier : env -> Token.t -> bool
 val token_is_variance : Token.t -> bool
 
 val is_strict_reserved : string -> bool
-
-val token_is_strict_reserved : Token.t -> bool
 
 val is_restricted : string -> bool
 
@@ -258,10 +239,6 @@ module Peek : sig
 
   val ith_loc : i:int -> env -> Loc.t
 
-  val ith_errors : i:int -> env -> (Loc.t * Parse_error.t) list
-
-  val ith_comments : i:int -> env -> Loc.t Flow_ast.Comment.t list
-
   val ith_is_line_terminator : i:int -> env -> bool
 
   val ith_is_implicit_semicolon : i:int -> env -> bool
@@ -287,8 +264,6 @@ module Eat : sig
   val pop_lex_mode : env -> unit
 
   val double_pop_lex_mode : env -> unit
-
-  val rescan_as_template : env -> unit
 
   val rescan_as_template_from : env -> Lex_env.t -> unit
 

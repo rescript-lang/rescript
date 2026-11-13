@@ -25,7 +25,6 @@ type t = {
   freshness_mode: freshness_mode;
   session: Build_session.t;
   mutable cleaned: int;
-  mutable previous_asts: int;
   mutable parsed: int;
   mutable compiled: int;
   mutable parse_seconds: float;

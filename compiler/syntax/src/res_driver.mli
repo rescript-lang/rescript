@@ -60,9 +60,9 @@ exception Already_reported
 
 (* ReScript implementation parsing compatible with ocaml pparse driver. Used by the compiler. *)
 val parse_implementation :
-  ?ignore_parse_errors:bool -> string -> Parsetree.structure
-[@@live] [@@raises Location.Error Already_reported]
+  ignore_parse_errors:bool -> string -> Parsetree.structure
+[@@live] [@@throws Location.Error Already_reported]
 
 (* ReScript interface parsing compatible with ocaml pparse driver. Used by the compiler *)
-val parse_interface : ?ignore_parse_errors:bool -> string -> Parsetree.signature
-[@@live] [@@raises Location.Error Already_reported]
+val parse_interface : ignore_parse_errors:bool -> string -> Parsetree.signature
+[@@live] [@@throws Location.Error Already_reported]
