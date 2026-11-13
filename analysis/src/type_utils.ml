@@ -103,6 +103,10 @@ let rec extracted_type_to_string ?(name_only = false) ?(inner = false) =
     "array<" ^ Shared.type_to_string inner_typ ^ ">"
   | Tarray (_, ExtractedType inner_typ) ->
     "array<" ^ extracted_type_to_string ~inner:true inner_typ ^ ">"
+  | Tlist (_, TypeExpr inner_typ) ->
+    "list<" ^ Shared.type_to_string inner_typ ^ ">"
+  | Tlist (_, ExtractedType inner_typ) ->
+    "list<" ^ extracted_type_to_string ~inner:true inner_typ ^ ">"
   | Tdict (_, TypeExpr inner_typ) ->
     "dict<" ^ Shared.type_to_string inner_typ ^ ">"
   | Tdict (_, ExtractedType inner_typ) ->
@@ -351,6 +355,8 @@ let rec extract_type ?(print_opening_debug = true)
     Some (Tpromise (env, payload_type_expr), type_arg_context)
   | Tconstr (Path.Pident {name = "array"}, [payload_type_expr], _) ->
     Some (Tarray (env, TypeExpr payload_type_expr), type_arg_context)
+  | Tconstr (Path.Pident {name = "list"}, [payload_type_expr], _) ->
+    Some (Tlist (env, TypeExpr payload_type_expr), type_arg_context)
   | Tconstr (Path.Pident {name = "dict"}, [payload_type_expr], _) ->
     Some (Tdict (env, TypeExpr payload_type_expr), type_arg_context)
   | Tconstr (Path.Pident {name = "result"}, [ok_type; error_type], _) ->
@@ -786,9 +792,10 @@ let rec resolve_nested ?type_arg_context ~env ~full ~state ~nested ?ctx
           |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
               typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested)
         ))
-    | NArray, Tarray (env, ExtractedType typ) ->
+    | NArray, Tarray (env, ExtractedType typ)
+    | NList, Tlist (env, ExtractedType typ) ->
       typ |> resolve_nested ?type_arg_context ~env ~state ~full ~nested
-    | NArray, Tarray (env, TypeExpr typ) ->
+    | NArray, Tarray (env, TypeExpr typ) | NList, Tlist (env, TypeExpr typ) ->
       typ
       |> extract_type ~env ~state ~package:full.package
       |> Utils.Option.flat_map (fun (typ, type_arg_context) ->
@@ -981,6 +988,8 @@ let rec context_path_from_core_type (core_type : Parsetree.core_type) =
     |> Option.map (fun inner_typ -> Completable.CPOption inner_typ)
   | Ptyp_constr ({txt = Lident "array"}, [inner_typ]) ->
     Some (Completable.CPArray (inner_typ |> context_path_from_core_type))
+  | Ptyp_constr ({txt = Lident "list"}, [inner_typ]) ->
+    Some (Completable.CPList (inner_typ |> context_path_from_core_type))
   | Ptyp_constr ({txt = Lident "dict"}, [inner_typ]) ->
     Some (Completable.CPDict (inner_typ |> context_path_from_core_type))
   | Ptyp_constr (lid, _) ->
