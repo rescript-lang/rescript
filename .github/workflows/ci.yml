@@ -104,18 +104,17 @@ jobs:
         id: compiler-build-state-key
         shell: bash
         run: |
-          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
+          echo "value=compiler-build-state-v2-${{ matrix.os }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
             | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
 
+      # Only _build: dune's shared cache under ~/.cache/dune would grow with
+      # every master push that restores, extends and saves it again.
       - name: Restore compiler build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
         id: compiler-build-state
         uses: actions/cache/restore@v6
         with:
-          path: |
-            C:\.cache\dune
-            ~/.cache/dune
-            _build
+          path: _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Build compiler
@@ -143,10 +142,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/cache/save@v6
         with:
-          path: |
-            C:\.cache\dune
-            ~/.cache/dune
-            _build
+          path: _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Verify promoted compiler exes
@@ -456,7 +452,7 @@ jobs:
       pull-requests: write
     env:
       # The same build as the first linux-x64 build-compiler job, so that the
-      # OPAM environment and the dune cache are shared.
+      # OPAM environment and the build state are shared.
       DUNE_PROFILE: static
       OCAML_COMPILER: ocaml-variants.5.5.2+options,ocaml-option-static
     steps:
@@ -492,7 +488,7 @@ jobs:
       - name: Compiler build state key
         id: compiler-build-state-key
         run: |
-          echo "value=compiler-build-state-v1-ubuntu-26.04-${{ steps.setup_ocaml.outputs.setup_version }}-$OCAML_COMPILER-${{ hashFiles('*.opam') }}" \
+          echo "value=compiler-build-state-v2-ubuntu-26.04-${{ steps.setup_ocaml.outputs.setup_version }}-$OCAML_COMPILER-${{ hashFiles('*.opam') }}" \
             | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
 
       - name: Restore compiler build state
@@ -500,10 +496,7 @@ jobs:
         with:
           # The paths are part of the cache's version, so they must be the
           # ones build-compiler saves.
-          path: |
-            C:\.cache\dune
-            ~/.cache/dune
-            _build
+          path: _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Build the compiler

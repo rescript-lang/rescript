@@ -17,7 +17,8 @@ jobs:
   coverage:
     runs-on: ubuntu-26.04-arm
     permissions:
-      actions: write # For build cache overwriting
+      contents: read
+      actions: write # For deleting earlier OPAM environments
       id-token: write # For CodeCov OIDC
     env:
       OS: ubuntu-26.04-arm
@@ -47,47 +48,10 @@ jobs:
           git+https://github.com/patricoferris/bisect_ppx.git#7061d643ff492b0045796357ee6917ded21fb1f0
           --yes
 
-      # --- Coverage build cache --------------------------------------------
-      # The bisect_ppx-instrumented dune build is a separate artifact from
-      # the main CI build, so it gets its own key. Only restore/save on
-      # master pushes — PRs share the master cache to stay fast but won't
-      # poison it.
-      - name: Coverage build state key
-        id: coverage-build-state-key
-        run: echo "value=coverage-build-state-v1-${{ env.OS }}-${{ steps.setup_ocaml.outputs.setup_version }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'compiler/**', 'dune-project') }}" >> $GITHUB_OUTPUT
-
-      - name: Restore coverage build state
-        if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
-        id: coverage-build-state
-        uses: actions/cache/restore@v6
-        with:
-          path: |
-            ~/.cache/dune
-            _build
-          key: ${{ steps.coverage-build-state-key.outputs.value }}
-
+      # No build state is cached: every compiler change misses it, and the
+      # instrumented build takes about 30 s.
       - name: Run coverage
         run: opam exec -- make coverage
-
-      - name: Delete stale coverage build state
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        run: |
-          gh extension install actions/gh-actions-cache
-          gh actions-cache delete ${{ steps.coverage-build-state-key.outputs.value }} \
-            -R ${{ github.repository }} \
-            -B "$GITHUB_REF" \
-            --confirm || echo "not exist"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Save coverage build state
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v6
-        with:
-          path: |
-            ~/.cache/dune
-            _build
-          key: ${{ steps.coverage-build-state-key.outputs.value }}
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
