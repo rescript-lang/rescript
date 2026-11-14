@@ -62,14 +62,14 @@ Mocha.describe("Optional_external_arg_once_test", () => {
     ]);
     let s$1 = makeSource();
     let t = makeTarget();
-    t.setLevel((() => {
-      switch (Primitive_option.valFromOption(s$1.level)) {
+    t.setLevel((x => {
+      switch (x) {
         case "low" :
           return 0;
         case "high" :
           return 10;
       }
-    })());
+    })(Primitive_option.valFromOption(s$1.level)));
     Test_utils.eq("File \"optional_external_arg_once_test.res\", line 155, characters 7-14", [
       ["10"],
       1
@@ -197,7 +197,8 @@ Mocha.describe("Optional_external_arg_once_test", () => {
       return v;
     };
     let tmp = mark("size", 2);
-    let tmp$1 = (mark("unit", undefined), {});
+    mark("unit", undefined);
+    let tmp$1 = {};
     if (tmp !== undefined) {
       tmp$1.size = tmp;
     }
@@ -374,14 +375,14 @@ Mocha.describe("Optional_external_arg_once_test", () => {
       })
     };
     if (tmp !== undefined) {
-      tmp$1.level = (() => {
-        switch (tmp) {
+      tmp$1.level = (x => {
+        switch (x) {
           case "low" :
             return 0;
           case "high" :
             return 10;
         }
-      })();
+      })(tmp);
     }
     let o = tmp$1;
     Test_utils.eq("File \"optional_external_arg_once_test.res\", line 341, characters 7-14", [
@@ -393,31 +394,30 @@ Mocha.describe("Optional_external_arg_once_test", () => {
     ]);
     let mode = "light";
     let tmp$2 = mode;
-    let tmp$3 = call(() => {
-      mode = "dark";
-      return "high";
-    });
-    let tmp$4 = {
-      level: (() => {
-        switch (tmp$3) {
+    let tmp$3 = {
+      level: (x => {
+        switch (x) {
           case "low" :
             return 0;
           case "high" :
             return 10;
         }
-      })()
+      })(call(() => {
+        mode = "dark";
+        return "high";
+      }))
     };
     if (tmp$2 !== undefined) {
-      tmp$4.mode = (() => {
-        switch (tmp$2) {
+      tmp$3.mode = (x => {
+        switch (x) {
           case "light" :
             return "light-mode";
           case "dark" :
             return "dark-mode";
         }
-      })();
+      })(tmp$2);
     }
-    let o$1 = tmp$4;
+    let o$1 = tmp$3;
     Test_utils.eq("File \"optional_external_arg_once_test.res\", line 354, characters 7-14", [
       "light-mode",
       10
