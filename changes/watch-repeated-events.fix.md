@@ -1,0 +1,1 @@
+- Watch mode no longer rebuilds, and prints the same errors again, when one file change is reported twice.

@@ -47,8 +47,14 @@ val create_with_symlink_paths : digest_cache -> Watch_scope.t -> registration
 
 val changes_between : entry list -> entry list -> change list
 
-val update_entries :
-  digest_cache -> entry list -> change list -> entry list option
+(* The result of re-reading the files a native watcher reported. A platform
+   can report one write more than once (macOS FSEvents may repeat it after
+   the drain window), so [Unchanged] means every file still matches its
+   entry and no build is needed. [Not_in_snapshot] means a reported path has
+   no entry and the snapshot must be reconciled. *)
+type entries_update = Unchanged | Updated of entry list | Not_in_snapshot
+
+val update_entries : digest_cache -> entry list -> change list -> entries_update
 
 val changes_are_incremental : change list -> bool
 
