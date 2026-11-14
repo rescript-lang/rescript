@@ -82,13 +82,23 @@ let gentype_dependency_args_from_paths (config : Config.t) dependencies =
         | None -> []
         | Some path -> ["-bs-gentype-dep-path"; dependency.name ^ "=" ^ path])
 
-let namespace_args (config : Config.t) module_name =
-  match config.namespace with
-  | Config.No_namespace -> []
-  | Config.Namespace namespace -> ["-bs-ns"; namespace]
-  | Config.Namespace_with_entry {name; entry} ->
-    if entry = module_name then ["-open"; "@" ^ name]
-    else ["-bs-ns"; "@" ^ name]
+(* Dev modules also open the dev map, which aliases the package's dev modules
+   (Source.namespace_members). *)
+let namespace_args (config : Config.t) ~is_dev module_name =
+  let namespace =
+    match config.namespace with
+    | Config.No_namespace -> []
+    | Config.Namespace namespace -> ["-bs-ns"; namespace]
+    | Config.Namespace_with_entry {name; entry} ->
+      if entry = module_name then ["-open"; "@" ^ name]
+      else ["-bs-ns"; "@" ^ name]
+  in
+  let dev_namespace =
+    match Config.dev_namespace_compiler_name config.namespace with
+    | Some dev_namespace when is_dev -> ["-bs-open-alias-map"; dev_namespace]
+    | Some _ | None -> []
+  in
+  namespace @ dev_namespace
 
 let parser_arguments ~(config : Config.t) ~contents ~path =
   parser_flags ~ppx_flags:(filter_ppx_flags config.ppx_flags contents) config
@@ -112,7 +122,7 @@ let compiler_common_arguments ~project_root ~(config : Config.t) ~runtime
   @ ["-bs-package-name"; config.name; "-bs-project-root"; project_root]
 
 let compiler_arguments_with_common ~(config : Config.t) ~common_args
-    ~module_name ~source_kind ~has_interface ~path =
+    ~module_name ~is_dev ~source_kind ~has_interface ~path =
   let interface_args =
     match source_kind with
     | Source.Implementation when has_interface -> ["-bs-read-cmi"]
@@ -126,15 +136,15 @@ let compiler_arguments_with_common ~(config : Config.t) ~common_args
         (fun spec -> ["-bs-package-output"; package_output config path spec])
         config.package_specs
   in
-  namespace_args config module_name
+  namespace_args config ~is_dev module_name
   @ interface_args @ common_args @ output_args
   @ [Source.ast_path path]
 
 let compiler_arguments ~project_root ~(config : Config.t) ~runtime
-    ~dependency_dirs ~module_name ~source_kind ~has_interface ~watch
+    ~dependency_dirs ~module_name ~is_dev ~source_kind ~has_interface ~watch
     ~gentype_dependency_args ~path =
   compiler_arguments_with_common ~config
     ~common_args:
       (compiler_common_arguments ~project_root ~config ~runtime ~dependency_dirs
          ~watch ~gentype_dependency_args)
-    ~module_name ~source_kind ~has_interface ~path
+    ~module_name ~is_dev ~source_kind ~has_interface ~path

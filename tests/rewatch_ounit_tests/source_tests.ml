@@ -49,12 +49,35 @@ let tests =
           interface = None;
           is_dev = false;
         };
+      Source.
+        {
+          name = "Fixture";
+          implementation = "test/Fixture.res";
+          interface = None;
+          is_dev = true;
+        };
+      Source.
+        {
+          name = "Fixture-with-dash";
+          implementation = "test/Fixture-with-dash.res";
+          interface = None;
+          is_dev = true;
+        };
     ]
   in
   check
-    (names (Source.namespace_members ~entry:(Some "Entry") namespace_modules)
+    (names
+       (Source.namespace_members ~entry:(Some "Entry") ~dev:false
+          namespace_modules)
     = ["Member"])
-    "namespace membership excludes the entry and exotic module names";
+    "namespace membership excludes the entry, dev modules and exotic module \
+     names";
+  check
+    (names
+       (Source.namespace_members ~entry:(Some "Entry") ~dev:true
+          namespace_modules)
+    = ["Fixture"])
+    "dev map membership holds only dev modules with plain names";
   let root = Filename.temp_file "rewatch-ocaml-sources-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;

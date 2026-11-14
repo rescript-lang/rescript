@@ -178,7 +178,10 @@ let make_structure_item ~ns cunit : Parsetree.structure_item =
 
 (** decoding [.mlmap]
     keep in sync with [namespace_task] in rewatch-ocaml/compiler_process.ml
-*)
+
+    The file name gives the namespace of the alias targets, and [-o] can give
+    the compiled unit another name: rewatch compiles a package's dev modules
+    from [dev/Ns.mlmap] with [-o Ns-dev]. *)
 let implementation_map ppf sourcefile =
   let () = (Js_config.current ()).cmj_only := true in
   let ichan = open_in_bin (Compiler_request_state.resolve_path sourcefile) in

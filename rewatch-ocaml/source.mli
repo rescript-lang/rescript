@@ -27,7 +27,12 @@ val module_name : string -> string
 val without_current_dir_segments : string -> string
 (** [path] without its "." segments: "./src/./A.res" is "src/A.res". *)
 
-val namespace_members : entry:string option -> module_ list -> module_ list
+val namespace_members :
+  entry:string option -> dev:bool -> module_ list -> module_ list
+(** The modules of the namespace map, or with [~dev:true] of the dev map. *)
+
+val dev_namespace_compiler_name : Config.t -> module_ list -> string option
+(** The dev map of a namespaced package with dev modules. *)
 
 val duplicate_error :
   display_root:string -> string -> string -> string -> string -> exn
