@@ -97,6 +97,25 @@ let tests =
         |> adjacent_positions "-I" |> position development |> Option.is_none)
         "source directory matching respects path-component boundaries";
       let config = Config.load_root root in
+      let namespace_args namespace =
+        Compiler_args.namespace_args {config with namespace}
+      in
+      assert_equal ["-bs-ns"; "Ns"]
+        (namespace_args (Config.Namespace "Ns") ~is_dev:false "A")
+        ~msg:"non-dev modules do not open the dev map";
+      assert_equal
+        ["-bs-ns"; "Ns"; "-bs-open-alias-map"; "Ns-dev"]
+        (namespace_args (Config.Namespace "Ns") ~is_dev:true "A")
+        ~msg:"dev modules open the dev map after the namespace";
+      assert_equal
+        ["-open"; "@Ns"; "-bs-open-alias-map"; "@Ns-dev"]
+        (namespace_args
+           (Config.Namespace_with_entry {name = "Ns"; entry = "Entry"})
+           ~is_dev:true "Entry")
+        ~msg:"a dev namespace entry opens the dev map after the namespace";
+      assert_equal []
+        (namespace_args Config.No_namespace ~is_dev:true "A")
+        ~msg:"packages without a namespace have no dev map";
       let gentype_config = {config with gentype_args = ["-bs-gentype"]} in
       let selected_regular = Filename.concat root "selected/regular" in
       check

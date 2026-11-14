@@ -35,6 +35,7 @@ val namespace_task :
   entry:string option ->
   package_dirty:bool ->
   force:bool ->
+  dev_namespace:string option ->
   string ->
   Source.module_ list ->
   Compiler_scheduler.namespace_task option
