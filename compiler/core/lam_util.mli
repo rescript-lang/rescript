@@ -54,12 +54,14 @@ val alias_ident_or_global :
 
 val refine_let :
   ?original:Lambda.t ->
+  assignable:Set_ident.t ->
   kind:Lambda.let_kind ->
   Ident.t ->
   Lambda.t ->
   Lambda.t ->
   Lambda.t
 (** [original] is the binding being rebuilt, when there is one. It is returned
-    unchanged if no refinement applies. *)
+    unchanged if no refinement applies. [assignable] are the variables some
+    [Lassign] assigns. *)
 
 val not_function : Lambda.t -> bool

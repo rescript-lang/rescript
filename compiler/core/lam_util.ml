@@ -41,6 +41,7 @@
    - (Return)      [let[k] x = e in x]               ⟶ e
    - (Prim)        [let[k] x = e in prim p x]        ⟶ prim p e   (p ≠ makeblock)
    - (Call)        [let[k] x = e in f x]             ⟶ f e        (x not captured in f)
+                     both when e may run after what the call evaluates first
    - (Alias)       [let[k] x = e in body]            ⟶ let[Alias] x = e in body
                      when k ∈ {Strict, StrictOpt} and SafeAlias(e)
    - (Strict λ)    [let[Strict] x = fn in body]      ⟶ let[StrictOpt] x = fn in body
@@ -50,14 +51,20 @@
    evaluation strategy downstream, so we keep its predicate intentionally
    syntactic and narrow. *)
 (* [original] is the binding this one was taken apart from, if any. When
-   nothing is refined it is handed back untouched rather than rebuilt. *)
-let refine_let ?original ~kind param (arg : Lambda.t) (l : Lambda.t) : Lambda.t
-    =
+   nothing is refined it is handed back untouched rather than rebuilt.
+   [assignable] are the variables some [Lassign] assigns. *)
+let refine_let ?original ~assignable ~kind param (arg : Lambda.t) (l : Lambda.t)
+    : Lambda.t =
   (* A JSX element whose only argument is its tag keeps the tag bound: a
      function bound by [let] gets the binding's name, which React shows *)
   let keeps_binding = function
     | Lambda.Pmakeblock _ | Pjsx _ -> true
     | _ -> false
+  in
+  (* JavaScript evaluates the callee of a call before the arguments, so
+     [f(e)] runs [e] after [f], while the binding ran it before *)
+  let may_follow (callee : Lam_analysis.motion) =
+    not (Lam_analysis.conflict callee (Lam_analysis.motion ~assignable arg))
   in
   (* SafeAlias is the predicate that justifies the (Alias) rewrite
        let[k] x = e in body  -->  let[Alias] x = e in body
@@ -101,17 +108,23 @@ let refine_let ?original ~kind param (arg : Lambda.t) (l : Lambda.t) : Lambda.t
          cannot refer back to `x`, and we avoid generating a redundant local. *)
     arg
   | _, _, Lprim {primitive; args = [Lvar w]; loc; _}
-    when Ident.same w param && not (keeps_binding primitive) ->
+    when Ident.same w param
+         && (not (keeps_binding primitive))
+         && ((not (Lam_analysis.reads_callee primitive)) || may_follow Reads) ->
     (* When we immediately feed the binding into a primitive, like
          `{ let x = value; Array.length(x) }`, we inline the primitive call
-         with `value`. This only happens for primitives that are pure and do not
-         allocate new blocks, so evaluation order and side effects stay the same. *)
+         with `value`. Only the call of an external function does something
+         before its argument, which is to read the function, so evaluation
+         order and side effects stay the same. *)
     Lambda.prim ~primitive ~args:[arg] loc
   | _, _, Lapply {ap_func = fn; ap_args = [Lvar w]; ap_loc}
-    when Ident.same w param && not (Lam_hit.hit_variable param fn) ->
+    when Ident.same w param
+         && (not (Lam_hit.hit_variable param fn))
+         && may_follow (Lam_analysis.motion ~assignable fn) ->
     (* For a function call such as `{ let x = value; someFn(x) }`, we can
-         rewrite to `someFn(value)` as long as the callee does not capture `x`.
-         This removes the temporary binding while preserving the call semantics. *)
+         rewrite to `someFn(value)` as long as the callee does not capture `x`
+         and `value` may run after it: not `{ let x = c.n; next()(x) }`, where
+         `next()` may assign `c.n`. *)
     Lambda.apply fn [arg] ap_loc
   | (Strict | StrictOpt), arg, _ when is_safe_to_alias arg ->
     (* `Strict` and `StrictOpt` bindings both evaluate the RHS immediately

@@ -192,6 +192,23 @@ let rec delay_safe ~assignable (lam : Lambda.t) : bool =
   | Lfor _ | Lfor_of _ | Lfor_await_of _ | Lassign _ | Lbreak | Lcontinue ->
     false
 
+let reads_callee (primitive : Lambda.primitive) =
+  match primitive with
+  | Pjs_call {ffi = {kind = Decl_val _ | Decl_new _}} -> true
+  | _ -> false
+
+type motion = Anywhere | Reads | Effects
+
+let motion ~assignable lam : motion =
+  if delay_safe ~assignable lam then Anywhere
+  else if no_side_effects lam then Reads
+  else Effects
+
+let conflict (a : motion) (b : motion) =
+  match (a, b) with
+  | Anywhere, _ | _, Anywhere | Reads, Reads -> false
+  | Effects, (Reads | Effects) | Reads, Effects -> true
+
 (* Size of a lambda that is too big to inline, e.g. one containing a loop *)
 let too_big = 1000
 
