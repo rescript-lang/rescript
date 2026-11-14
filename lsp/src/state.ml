@@ -83,7 +83,7 @@ let workspace_root t =
   match t.status with
   | Uninitialized -> assert false
   | Initialized init ->
-    Helpers.workspace_root_uri_of_initialize_params init.params
+    Helpers.root_uri_of_initialize_params init.params
 
 let to_yojson (t : t) : Yojson.Safe.t =
   let document_store_to_yojson (store : Document_store.t) =

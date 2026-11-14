@@ -1,10 +1,10 @@
 open Lsp
 open Lsp.Types
 
-let workspace_root_uri_of_initialize_params (params : InitializeParams.t) =
+let root_uri_of_initialize_params (params : InitializeParams.t) =
   match (params.workspaceFolders, params.rootUri, params.rootPath) with
-  | Some (Some (workspace_folder :: _)), _, _ -> workspace_folder.uri
   | _, Some root_uri, _ -> root_uri
+  | Some (Some (workspace_folder :: _)), _, _ -> workspace_folder.uri
   | _, _, Some (Some root_path) -> root_path |> Uri.of_path
   | _ -> Sys.getcwd () |> Uri.of_path
 

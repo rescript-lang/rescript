@@ -259,7 +259,7 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
           (Server_notification.PublishDiagnostics publish_diagnostics_params)
           server)
   in
-  let workspace_root = Helpers.workspace_root_uri_of_initialize_params params in
+  let workspace_root = Helpers.root_uri_of_initialize_params params in
   let analysis_state, compiler_config =
     discover_project_context ~notify_errors:true ~workspace_root server
   in
