@@ -75,18 +75,15 @@ let initialization (client_capabilities : ClientCapabilities.t) =
          ~identifier:"rescript" ~interFileDependencies:false ())
   in
   let positionEncoding =
-    let options =
-      Option.bind client_capabilities.general (fun g -> g.positionEncodings)
-    in
-    match options with
+    match Capabilities.position_encodings client_capabilities with
     | None -> None
-    | Some xs ->
+    | Some options ->
       List.find_map
         (fun encondig ->
-          match encondig with
-          | (PositionEncodingKind.UTF16 | UTF8) as kind -> Some kind
-          | _ -> None)
-        xs
+          if Capabilities.supported options ~tag:encondig ~equal:Stdlib.( = )
+          then Some encondig
+          else None)
+        [PositionEncodingKind.UTF16; UTF8]
   in
   let capabilities =
     ServerCapabilities.create ~textDocumentSync ~completionProvider

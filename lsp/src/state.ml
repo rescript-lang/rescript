@@ -126,8 +126,8 @@ let to_yojson (t : t) : Yojson.Safe.t =
           ("compiler_config", compiler_config_to_yojson compiler_config);
           ( "position_encoding",
             match position_encoding with
-            | `UTF16 -> `String "UTF-16"
-            | `UTF8 -> `String "UTF-8" );
+            | `UTF16 -> `String "utf-16"
+            | `UTF8 -> `String "utf-8" );
           ("params", InitializeParams.yojson_of_t params);
         ]
   in
