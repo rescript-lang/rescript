@@ -179,6 +179,54 @@ and field_mutability =
   | Mutability_value of Asttypes.mutable_flag
   | Mutability_link of field_mutability ref
 
+(** {1 Access to type nodes}
+
+    Code reads the fields of a [type_expr] through these accessors and changes
+    them through the logged setters in [Btype] ([link_type], [set_level],
+    [log_type]). This follows upstream OCaml (4.14 and later), where
+    [type_expr] is abstract, and it separates the type checker from the
+    representation of type nodes, so that the representation can change
+    later, for example to an index into a per-request store.
+
+    The record above stays visible for now, so modules which still read its
+    fields directly keep compiling while they are converted. Making
+    [type_expr] abstract is the end state of this refactoring.
+
+    Unlike upstream's [get_desc], [get_desc] does not call [Btype.repr]: it
+    returns the node's own descriptor, which can be [Tlink]. Callers keep
+    calling [repr] first, so path compression and its trail entries happen
+    exactly where they did before.
+
+    [get_desc] and [get_level] are primitives, so they compile to the same
+    field loads as [ty.desc] and [ty.level], also in builds without
+    cross-module inlining. *)
+
+external get_desc : type_expr -> type_desc = "%field0"
+(** The node's descriptor, without following [Tlink]. *)
+
+external get_level : type_expr -> int = "%field1"
+
+val get_id : type_expr -> int
+(** The node's unique identifier, allocated by [Btype.newty2]. *)
+
+(** Creation and unlogged updates of type nodes. The setters change a field
+    without recording its old value on the backtracking trail. Their users are
+    [Btype] (node creation, the trail itself, copy sessions and marking), and
+    the parts of [Ctype] which either restore their own temporary changes
+    (copy marks, level marks, temporary links during unification) or call
+    [Btype.log_type] first, which records the old descriptor before a
+    persistent change. Other code uses the logged setters of [Btype].
+
+    Upstream OCaml's setters take a separate [transient_expr], obtained with
+    [Transient_expr.repr], so that they bypass the [repr] built into its
+    [get_desc]. There is no implicit [repr] here, so they take a [type_expr]. *)
+module Transient_expr : sig
+  val create : type_desc -> level:int -> id:int -> type_expr
+
+  external set_desc : type_expr -> type_desc -> unit = "%setfield0"
+  val set_level : type_expr -> int -> unit
+end
+
 module Type_ops : sig
   type t = type_expr
   val compare : t -> t -> int
