@@ -1291,11 +1291,16 @@ if [ -s "$work/quiet-watch.out" ] || \
   cat "$work/quiet-watch.out" "$work/quiet-watch.err" >&2
   exit 1
 fi
-# macOS and Windows can report one write as several change events, and each
-# rebuild reports the parse error again. Compare the distinct reports only.
+# macOS and Windows can report one write as several change events. The
+# watcher skips a rebuild when the file is unchanged, but a rebuild that sees
+# the write half done would report the error again, so compare the distinct
+# reports only. Each report starts with a blank line; the split is before it
+# and must not cut a CRLF line ending.
 node -e '
   const fs = require("fs");
-  const blocks = fs.readFileSync(process.argv[1], "utf8").split(/^(?=  Syntax error!)/m);
+  const blocks = fs
+    .readFileSync(process.argv[1], "utf8")
+    .split(/(?<=\n)(?=\r?\n  Syntax error!\r?$)/m);
   const distinct = blocks.filter((block, i) => block !== blocks[i - 1]);
   fs.writeFileSync(process.argv[2], distinct.join(""));
 ' "$work/quiet-watch.err" "$work/quiet-watch.err.distinct"

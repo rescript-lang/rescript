@@ -223,12 +223,13 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
       | Some [] -> native_loop watcher scope symlink_targets previous
       | Some changes -> (
         match Watch_snapshot.update_entries digest_cache previous changes with
-        | Some before_build ->
+        | Updated before_build ->
           Output.debug ~verbosity "doing Incremental";
           begin_rebuild Incremental;
           build ~poll ~changes:(Some changes) |> finish_rebuild;
           native_loop watcher scope symlink_targets before_build
-        | None -> native_reconcile watcher scope previous)
+        | Unchanged -> native_loop watcher scope symlink_targets previous
+        | Not_in_snapshot -> native_reconcile watcher scope previous)
       | None -> native_reconcile watcher scope previous)
   and native_reconcile watcher (scope : Watch_scope.t) previous =
     let current = Watch_snapshot.create digest_cache scope in
