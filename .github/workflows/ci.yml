@@ -393,38 +393,52 @@ jobs:
 
       # Checks that the website builds with the generated API docs. These
       # steps stay in this job rather than in one that needs build-compiler,
-      # which would wait for the slowest platform before starting.
-      - name: Checkout rescript-lang.org
+      # which would wait for the slowest platform before starting. The build
+      # depends only on the docs and the website commit, so an empty cache
+      # entry keyed on both records each pair that built, and a pull request
+      # whose docs match an earlier build skips it.
+      - name: Website build key
+        id: website-build-key
         if: ${{ matrix.generate_api_docs }}
+        env:
+          WEBSITE_BRANCH: ${{ steps.api-docs-plan.outputs.website-branch }}
+        run: |
+          sha=$(git ls-remote https://github.com/rescript-lang/rescript-lang.org.git "refs/heads/$WEBSITE_BRANCH" | cut -f1)
+          if [ -z "$sha" ]; then
+            echo "::error::The website has no branch $WEBSITE_BRANCH"
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "value=website-build-v1-$sha-${{ hashFiles('scripts/res/apiDocs/**') }}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Look up website build
+        id: website-build
+        if: ${{ matrix.generate_api_docs }}
+        uses: actions/cache/restore@v6
+        with:
+          path: tmp/website-build
+          key: ${{ steps.website-build-key.outputs.value }}
+          lookup-only: true
+
+      - name: Checkout rescript-lang.org
+        if: ${{ matrix.generate_api_docs && steps.website-build.outputs.cache-hit != 'true' }}
         uses: actions/checkout@v7
         with:
           repository: rescript-lang/rescript-lang.org
-          ref: ${{ steps.api-docs-plan.outputs.website-branch }}
+          ref: ${{ steps.website-build-key.outputs.sha }}
           path: rescript-lang.org
-
-      - name: Check for API docs changes
-        id: api-docs-diff
-        if: ${{ matrix.generate_api_docs }}
-        run: |
-          cp -R scripts/res/apiDocs/. rescript-lang.org/data/api/
-          git -C rescript-lang.org status
-          if [[ -z "$(git -C rescript-lang.org status --porcelain)" ]]; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-        shell: bash
 
       # The website is checked out inside this repository, so its Yarn also
       # reads this repository's .yarnrc.yml and rejects the settings it does
       # not know yet. The steps that need this config are done.
       - name: Hide the compiler's Yarn config from the website
-        if: ${{ matrix.generate_api_docs && steps.api-docs-diff.outputs.changed == 'true' }}
+        if: ${{ matrix.generate_api_docs && steps.website-build.outputs.cache-hit != 'true' }}
         run: mv .yarnrc.yml "$RUNNER_TEMP/rescript.yarnrc.yml"
         shell: bash
 
       - name: Use Node.js for website
-        if: ${{ matrix.generate_api_docs && steps.api-docs-diff.outputs.changed == 'true' }}
+        if: ${{ matrix.generate_api_docs && steps.website-build.outputs.cache-hit != 'true' }}
         uses: actions/setup-node@v7
         with:
           cache: yarn
@@ -432,11 +446,27 @@ jobs:
           node-version-file: rescript-lang.org/.node-version
 
       - name: Build website with the API docs
-        if: ${{ matrix.generate_api_docs && steps.api-docs-diff.outputs.changed == 'true' }}
+        if: ${{ matrix.generate_api_docs && steps.website-build.outputs.cache-hit != 'true' }}
         run: |
+          cp -R ../scripts/res/apiDocs/. data/api/
           yarn
           yarn build
         working-directory: rescript-lang.org
+        shell: bash
+
+      - name: Record website build
+        if: ${{ matrix.generate_api_docs && steps.website-build.outputs.cache-hit != 'true' }}
+        run: mkdir -p tmp/website-build && echo "$KEY" > tmp/website-build/key
+        env:
+          KEY: ${{ steps.website-build-key.outputs.value }}
+        shell: bash
+
+      - name: Save website build record
+        if: ${{ matrix.generate_api_docs && steps.website-build.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: tmp/website-build
+          key: ${{ steps.website-build-key.outputs.value }}
 
   # Compares the words the compiler allocates on fixed inputs, and the
   # instructions it executes on some of them, with the base branch
