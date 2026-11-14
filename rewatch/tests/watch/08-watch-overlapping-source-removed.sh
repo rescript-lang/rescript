@@ -42,18 +42,13 @@ retained_output() {
 rewatch_bg watch > rewatch.log 2>&1 &
 success "Watcher Started"
 
+retained_output_has() {
+  output=$(retained_output)
+  [ -n "$output" ] && grep -q "$1" "$output"
+}
+
 wait_for_retained_value() {
-  local value=$1
-  local timeout=30
-  while [ "$timeout" -gt 0 ]; do
-    output=$(retained_output)
-    if [ -n "$output" ] && grep -q "$value" "$output"; then
-      return 0
-    fi
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
+  poll 30 retained_output_has "$1"
 }
 
 if ! wait_for_retained_value "= 1"; then
@@ -70,12 +65,10 @@ success "Initial build completed"
 # watched on its own
 mkdir "$RETAINED/nested"
 echo 'let value = 1' > "$RETAINED/nested/Nested.res"
-timeout=30
-until [ -n "$(find "$RETAINED/nested" -name 'Nested.*js')" ] || [ "$timeout" -le 0 ]; do
-  sleep 1
-  timeout=$((timeout - 1))
-done
-if [ -n "$(find "$RETAINED/nested" -name 'Nested.*js')" ]; then
+nested_output_exists() {
+  [ -n "$(find "$RETAINED/nested" -name 'Nested.*js')" ]
+}
+if poll 30 nested_output_exists; then
   success "A folder created inside the retained folder is watched"
 else
   error "A folder created inside the retained folder is not watched"

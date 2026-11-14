@@ -1,0 +1,1 @@
+- Build the dev container in CI only for pull requests that change its inputs.

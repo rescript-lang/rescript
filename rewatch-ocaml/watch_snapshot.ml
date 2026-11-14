@@ -316,8 +316,11 @@ let changes_between before after =
     (fun (first : change) second -> String.compare first.path second.path)
     !changes
 
+type entries_update = Unchanged | Updated of entry list | Not_in_snapshot
+
 let update_entries digest_cache previous changes =
   let changed = Hashtbl.create (List.length changes) in
+  let any_changed = ref false in
   List.iter
     (fun (change : change) -> Hashtbl.replace changed change.path change.kind)
     changes;
@@ -329,13 +332,14 @@ let update_entries digest_cache previous changes =
         | Some Removed ->
           Hashtbl.remove changed entry.path;
           Hashtbl.remove digest_cache entry.path;
+          any_changed := true;
           None
         | Some (Added | Modified) -> (
           Hashtbl.remove changed entry.path;
           try
             let stat = Unix.stat entry.path in
             let digest = hash_and_cache digest_cache entry.path stat in
-            Some
+            let updated =
               {
                 path = entry.path;
                 state =
@@ -346,17 +350,24 @@ let update_entries digest_cache previous changes =
                       digest;
                     };
               }
+            in
+            if not (entry_equal updated entry) then any_changed := true;
+            Some updated
           with
           | Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
             Hashtbl.remove digest_cache entry.path;
+            any_changed := true;
             None
           | Unix.Unix_error _ | Sys_error _ ->
             (* Preserve the old baseline so the caller still runs the build.
                Source diagnostics then remain inside the watcher's recoverable
                build boundary instead of terminating the watch loop here. *)
+            any_changed := true;
             Some entry))
   in
-  if Hashtbl.length changed = 0 then Some updated else None
+  if Hashtbl.length changed > 0 then Not_in_snapshot
+  else if !any_changed then Updated updated
+  else Unchanged
 
 let changes_are_incremental changes =
   changes <> []

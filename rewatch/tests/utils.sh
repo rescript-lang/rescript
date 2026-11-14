@@ -60,14 +60,21 @@ replace() {
   fi
 }
 
-wait_for_pid_gone() {
-  local pid="$1"; local timeout
-  timeout=${2:-20}
-  while process_is_running "$pid" && [ "$timeout" -gt 0 ]; do
-    sleep 1
-    timeout=$((timeout - 1))
+# Runs a command every 0.1 seconds until it succeeds or the timeout in
+# seconds (the first argument) has passed. A one-second interval made every
+# wait in the suite take up to a second longer than needed.
+poll() {
+  local deadline=$((SECONDS + $1)); shift
+  until "$@"; do
+    [ "$SECONDS" -lt "$deadline" ] || return 1
+    sleep 0.1
   done
-  ! process_is_running "$pid"
+}
+
+process_is_gone() { ! process_is_running "$1"; }
+
+wait_for_pid_gone() {
+  poll "${2:-20}" process_is_gone "$1"
 }
 
 exit_watcher() {
@@ -116,62 +123,25 @@ clear_locks() {
   rm -f lib/rescript/watch.lock lib/rescript/build.lock
 }
 
-wait_for_file() {
-  local file="$1"; local timeout
-  timeout=${2:-60}
-  while [ "$timeout" -gt 0 ]; do
-    [ -f "$file" ] && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
+file_exists() { [ -f "$1" ]; }
+file_is_gone() { [ ! -f "$1" ]; }
+file_has_pattern() { grep -q "$2" "$1" 2>/dev/null; }
+
+file_lacks_pattern() {
+  [ -f "$1" ] && ! grep -q "$2" "$1" 2>/dev/null
 }
 
-wait_for_pattern() {
-  local file="$1"; local pattern="$2"; local timeout
-  timeout=${3:-60}
-  while [ "$timeout" -gt 0 ]; do
-    grep -q "$pattern" "$file" 2>/dev/null && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
+file_has_pattern_count() {
+  local current_count
+  current_count=$(grep -c "$2" "$1" 2>/dev/null || true)
+  [ "${current_count:-0}" -ge "$3" ]
 }
+
+wait_for_file() { poll "${2:-60}" file_exists "$1"; }
+wait_for_file_gone() { poll "${2:-60}" file_is_gone "$1"; }
+wait_for_pattern() { poll "${3:-60}" file_has_pattern "$1" "$2"; }
+wait_for_pattern_gone() { poll "${3:-60}" file_lacks_pattern "$1" "$2"; }
 
 wait_for_pattern_count() {
-  local file="$1"; local pattern="$2"; local expected="$3"; local timeout
-  timeout=${4:-60}
-  while [ "$timeout" -gt 0 ]; do
-    local current_count
-    current_count=$(grep -c "$pattern" "$file" 2>/dev/null || true)
-    current_count=${current_count:-0}
-    [ "$current_count" -ge "$expected" ] && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
-}
-
-wait_for_pattern_gone() {
-  local file="$1"; local pattern="$2"; local timeout
-  timeout=${3:-60}
-  while [ "$timeout" -gt 0 ]; do
-    if [ -f "$file" ] && ! grep -q "$pattern" "$file" 2>/dev/null; then
-      return 0
-    fi
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
-}
-
-wait_for_file_gone() {
-  local file="$1"; local timeout
-  timeout=${2:-60}
-  while [ "$timeout" -gt 0 ]; do
-    [ ! -f "$file" ] && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
+  poll "${4:-60}" file_has_pattern_count "$1" "$2" "$3"
 }

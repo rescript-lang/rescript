@@ -172,26 +172,36 @@ let tests =
             };
           ]
       in
-      Test_support.write_file source "let value = 2\n";
+      let modified = [Watch_snapshot.{path = source; kind = Modified}] in
       check
-        (Option.is_some
-           (Watch_snapshot.update_entries digest_cache previous
-              [Watch_snapshot.{path = source; kind = Modified}]))
+        (Watch_snapshot.update_entries digest_cache previous modified
+        = Unchanged)
+        "a repeated event for unchanged content needs no rebuild";
+      Test_support.write_file source "let value = 2\n";
+      let updated =
+        match Watch_snapshot.update_entries digest_cache previous modified with
+        | Updated entries -> Some entries
+        | Unchanged | Not_in_snapshot -> None
+      in
+      check (Option.is_some updated)
         "known content events update the retained snapshot";
       check
-        (Option.is_none
-           (Watch_snapshot.update_entries digest_cache previous
-              [
-                Watch_snapshot.
-                  {path = Filename.concat root "B.res"; kind = Added};
-              ]))
+        (match updated with
+        | Some entries ->
+          Watch_snapshot.update_entries digest_cache entries modified
+          = Unchanged
+        | None -> false)
+        "a repeated event after the update needs no rebuild";
+      check
+        (Watch_snapshot.update_entries digest_cache previous
+           [Watch_snapshot.{path = Filename.concat root "B.res"; kind = Added}]
+        = Not_in_snapshot)
         "unknown content events request structural reconciliation";
       Sys.remove source;
       Unix.mkdir source 0o755;
       check
-        (Option.is_some
-           (Watch_snapshot.update_entries digest_cache previous
-              [Watch_snapshot.{path = source; kind = Modified}]))
+        (Watch_snapshot.update_entries digest_cache previous modified
+        = Updated previous)
         "a transient snapshot read failure preserves the rebuild baseline");
   Test_support.with_temp_dir "rewatch-snapshot-racy-" (fun root ->
       let root = Unix.realpath root in
