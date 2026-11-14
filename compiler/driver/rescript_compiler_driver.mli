@@ -24,6 +24,17 @@ val run_request :
     I/O against [cwd] without changing the process working directory. Request
     state is restored on success and failure. *)
 
+type flag_error =
+  | Unknown_flag of string
+  | Missing_argument of string  (** A flag that takes a value, last *)
+  | Not_a_flag of string  (** A value where a flag was expected *)
+  | Reserved_flag of string
+
+val check_flags :
+  reserved:string list -> string list -> (unit, flag_error) Stdlib.result
+(** Checks that [flags] are flags of the compiler with their values, and none of
+    [reserved], without applying them. *)
+
 val run : string array -> int
 (** Command-line entry point of the standalone [bsc]. It writes to the process's
     stdout and stderr as it goes. *)

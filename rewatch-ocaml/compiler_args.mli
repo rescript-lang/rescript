@@ -6,6 +6,11 @@ val source_map_args : Config.t -> watch:bool -> string list
 val parser_flags : ?ppx_flags:string list list -> Config.t -> string list
 (** The flags of a parse, in the order they are passed to the parser. *)
 
+val check_user_flags : Config.t -> unit
+(** Rejects a ["compiler-flags"] entry that the compiler does not know, that
+    lacks its value, that the build system sets itself, or that makes the
+    compiler do something other than compile. Raises {!Project_context.Error}. *)
+
 val compiler_flags : watch:bool -> Config.t -> string list
 (** The configured flags of a compile, including source maps and genType. *)
 

@@ -52,6 +52,45 @@ let parser_flags ?(ppx_flags = []) (config : Config.t) =
   ppx_args @ config.jsx_args @ config.experimental_args @ config.warning_flags
   @ config.compiler_flags
 
+(* The build system passes these flags itself. *)
+let build_system_flags =
+  [
+    "-o";
+    "-bs-ns";
+    "-bs-package-name";
+    "-bs-package-output";
+    "-bs-project-root";
+    "-bs-read-cmi";
+    "-bs-ast";
+    "-runtime-path";
+  ]
+
+(* With these flags the compiler prints, formats or evaluates instead of
+   compiling the module. *)
+let non_compiling_flags =
+  ["-e"; "-v"; "-version"; "-warn-help"; "-format"; "-reprint-source"]
+
+let check_user_flags (config : Config.t) =
+  let fail message =
+    raise
+      (Project_context.Error
+         (Printf.sprintf "%s: field \"compiler-flags\": %s" config.path message))
+  in
+  match
+    Rescript_compiler_driver.check_flags
+      ~reserved:(build_system_flags @ non_compiling_flags)
+      config.compiler_flags
+  with
+  | Ok () -> ()
+  | Error (Unknown_flag flag) -> fail (Printf.sprintf "unknown flag %S" flag)
+  | Error (Missing_argument flag) ->
+    fail (Printf.sprintf "flag %S needs a value" flag)
+  | Error (Not_a_flag value) -> fail (Printf.sprintf "%S is not a flag" value)
+  | Error (Reserved_flag flag) when List.mem flag build_system_flags ->
+    fail (Printf.sprintf "flag %S is set by the build system" flag)
+  | Error (Reserved_flag flag) ->
+    fail (Printf.sprintf "flag %S does not compile a module" flag)
+
 let compiler_flags ~watch (config : Config.t) =
   config.jsx_args
   @ source_map_args config ~watch

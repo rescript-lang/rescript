@@ -1,0 +1,1 @@
+- Report an unknown flag, a flag without its value, or a flag the build system sets itself in `compiler-flags` once, as an error in `rescript.json`, instead of failing every module.
