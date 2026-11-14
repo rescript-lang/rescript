@@ -528,7 +528,38 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
           param_body ();
           semi f
         | Name_top x ->
-          if Js_ts_annot.export_inline x then (
+          let export = Js_ts_annot.export_inline x in
+          (* [-bs-emit-ts]: the function's overloads, each a declaration
+             without a body before the function, which carries its own
+             signature. An overload takes no [async]. *)
+          if Js_ts_annot.enabled () then
+            Ext_list.iter (Js_ts_annot.overloads x) (fun (typed, result) ->
+                if export then (
+                  P.string f L.export;
+                  P.space f);
+                P.string f (L.function_ ~async:false ~arrow:false);
+                ignore (Ext_pp_scope.ident inner_cxt f x : cxt);
+                P.string f (Js_ts_annot.type_params x);
+                ignore
+                  (P.paren_group f 1 (fun _ ->
+                       iter_lst inner_cxt f l
+                         (fun cxt f id ->
+                           let cxt = Ext_pp_scope.ident cxt f id in
+                           (match Js_ts_annot.overload_param_type typed id with
+                           | Some ty ->
+                             P.string f ":";
+                             P.space f;
+                             P.string f ty
+                           | None -> ());
+                           cxt)
+                         comma_sp)
+                    : cxt);
+                P.string f ":";
+                P.space f;
+                P.string f result;
+                semi f;
+                P.newline f);
+          if export then (
             P.string f L.export;
             P.space f);
           P.string f (L.function_ ~async ~arrow);
