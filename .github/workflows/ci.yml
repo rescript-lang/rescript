@@ -665,11 +665,31 @@ jobs:
   test-devcontainer:
     runs-on: ubuntu-26.04-arm
     steps:
+      # Building the dev container takes about 10 minutes. On pull requests it
+      # runs only when the container's inputs change: its definition, the opam
+      # and yarn dependencies its setup installs, the Makefile, or this
+      # workflow. If the changed files can't be listed, it runs.
+      - name: Check whether the dev container is affected
+        id: changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          affected=true
+          if [ "$EVENT" = pull_request ] &&
+            files=$(gh pr diff "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --name-only) &&
+            ! grep -qE '^(\.devcontainer/|Makefile$|dune-project$|[^/]*\.opam(\.template)?$|\.yarnrc\.yml$|yarn\.lock$|\.yarn/|\.github/workflows/ci\.yml$)|(^|/)package\.json$' <<< "$files"; then
+            affected=false
+          fi
+          echo "affected=$affected" | tee -a "$GITHUB_OUTPUT"
       - name: Checkout
+        if: steps.changes.outputs.affected == 'true'
         uses: actions/checkout@v7
       - name: Run make in dev container
+        if: steps.changes.outputs.affected == 'true'
         uses: devcontainers/ci@v0.3
-        with:    
+        with:
           push: never
           runCmd: make
 
