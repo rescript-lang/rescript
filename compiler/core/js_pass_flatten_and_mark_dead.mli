@@ -24,4 +24,8 @@
 
 (** A pass to mark some declarations in JS IR as dead code *)
 
-val program : J.program -> J.program
+val program : assignable:Set_ident.t -> J.program -> J.program
+(** [assignable] are the variables some [Lassign] assigns, see
+    [Lam_stats.assignable]. An element of a block that is one of them or a JS
+    global is bound before the block instead of replacing a later read of the
+    block's field. *)

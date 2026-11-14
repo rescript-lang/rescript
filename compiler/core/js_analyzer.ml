@@ -99,6 +99,9 @@ let is_array_function (e : J.expression) =
     Ext_ident.is_js ident
   | _ -> false
 
+let var_may_change ~assignable (id : Ident.t) =
+  Ext_ident.is_js id || Set_ident.mem id assignable
+
 let rec no_side_effect_expression_desc (x : J.expression_desc) =
   match x with
   | Undefined _ | Null | Bool _ | Var _ -> true

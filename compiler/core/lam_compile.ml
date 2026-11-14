@@ -250,8 +250,7 @@ let rec delay_safe ~assignable (e : J.expression) =
   | Json_literal _ | Fun _
   | Var (Qualified _) ->
     true
-  | Var (Id id) ->
-    (not (Ext_ident.is_js id)) && not (Set_ident.mem id assignable)
+  | Var (Id id) -> not (Js_analyzer.var_may_change ~assignable id)
   | Bin (Eq, _, _) -> false
   | Bin (_, a, b) ->
     Js_analyzer.no_side_effect_expression e
