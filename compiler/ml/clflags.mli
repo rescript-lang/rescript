@@ -23,10 +23,12 @@ type t = {
   keep_locs: bool ref;
   color: Misc.Color.setting option ref;
   assume_no_mli: mli_status ref;
-  dont_record_crc_unit: string option ref;
+  namespace: string option ref;
+      (** Appended to the names of the outputs ([-bs-ns]): [Config] becomes
+          [Config-Ns] *)
   alias_maps: string list ref;
-      (** Alias maps opened with [-bs-open-alias-map]; like the namespace of
-          [-bs-ns], their interface CRCs are not recorded *)
+      (** Opened alias maps, the namespace among them, whose interface CRCs are
+          not recorded ([-bs-ns], [-bs-open-alias-map]) *)
   bs_gentype: bool ref;
   jsx_preserve: bool ref;
       (** Keep JSX in the output ([-bs-jsx-preserve]); read by translcore, and

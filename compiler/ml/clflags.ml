@@ -23,7 +23,7 @@ type t = {
   keep_locs: bool ref;
   color: Misc.Color.setting option ref;
   assume_no_mli: mli_status ref;
-  dont_record_crc_unit: string option ref;
+  namespace: string option ref;
   alias_maps: string list ref;
   bs_gentype: bool ref;
   jsx_preserve: bool ref;
@@ -55,8 +55,8 @@ let create () =
     keep_locs = ref true (* -keep-locs *);
     color = ref None (* -color *);
     assume_no_mli = ref Mli_non_exists;
-    dont_record_crc_unit = ref None;
-    alias_maps = ref [] (* -bs-open-alias-map *);
+    namespace = ref None (* -bs-ns *);
+    alias_maps = ref [] (* -bs-ns, -bs-open-alias-map *);
     bs_gentype = ref false;
     jsx_preserve = ref false (* -bs-jsx-preserve *);
     no_assert_false = ref false;
@@ -102,7 +102,7 @@ let reset () =
   state.keep_locs := true;
   state.color := Some Misc.Color.Always;
   state.assume_no_mli := Mli_non_exists;
-  state.dont_record_crc_unit := None;
+  state.namespace := None;
   state.alias_maps := [];
   state.bs_gentype := false;
   state.jsx_preserve := false;

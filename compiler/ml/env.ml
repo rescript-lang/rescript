@@ -1919,15 +1919,13 @@ let read_signature modname filename =
 (* Return the CRC of the interface of the given compilation unit *)
 
 let imports () =
-  let flags = Clflags.current () in
-  (* A namespace or alias map only holds module aliases, whose targets are
-     recorded themselves, so a unit does not depend on the map's interface. *)
-  let unrecorded =
-    Option.to_list !(flags.dont_record_crc_unit) @ !(flags.alias_maps)
-  in
+  (* An alias map, such as a namespace, only holds module aliases, whose
+     targets are recorded themselves, so a unit does not depend on the map's
+     interface. *)
+  let alias_maps = !((Clflags.current ()).alias_maps) in
   Consistbl.extract
     (String_set.fold
-       (fun m acc -> if List.mem m unrecorded then acc else m :: acc)
+       (fun m acc -> if List.mem m alias_maps then acc else m :: acc)
        !(imported_units ())
        [])
     (crc_units ())
