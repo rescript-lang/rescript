@@ -25,6 +25,7 @@ runs:
     # such as uring can include <linux/...> headers.
     - name: Make Linux headers visible to musl-gcc
       if: runner.os == 'Linux'
+      shell: bash
       run: |
         set -eux
 
