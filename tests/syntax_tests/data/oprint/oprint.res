@@ -314,3 +314,8 @@ type opt = {x:int, y?: option<string>}
 
 let secondOrder = f => f()
 let thirdOrder = f => f(() => ())
+
+@val external parseInt: string => int = "parseInt"
+type el
+@send external focus: el => unit = "focus"
+@module("./local") external relative: int => int = "relative"

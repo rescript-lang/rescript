@@ -242,3 +242,7 @@ let f: (~a: int=?, unit) => int
 type opt = {x: int, y?: option<string>}
 let secondOrder: (unit => 'a) => 'a
 let thirdOrder: ((unit => unit) => 'a) => 'a
+@val external parseInt: string => int = "parseInt"
+type el
+@send external focus: el => unit = "focus"
+let relative: int => int

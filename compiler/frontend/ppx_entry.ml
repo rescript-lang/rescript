@@ -24,6 +24,11 @@
 
 let unsafe_mapper = Bs_builtin_ppx.mapper
 
+(* The type checker resolves externals through this hook. Every compiler
+   driver links this module, also when it type checks a parsed AST without
+   running the built-in PPX. *)
+let () = Primitive.resolve_external := Ast_external.resolve
+
 let rewrite_signature (ast : Parsetree.signature) : Parsetree.signature =
   Bs_ast_invariant.iter_warnings_on_sigi ast;
   Ast_config.process_sig ast;

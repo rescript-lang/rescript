@@ -1628,7 +1628,7 @@ let default_mapper =
         let prim =
           match pval_prim with
           | [] -> None
-          | [s] -> Some (Parsetree.Prim_name s)
+          | [s] -> Some s
           | _ :: _ :: _ ->
             Location.raise_errorf ~loc:pval_loc
               "An external declaration can carry only a single primitive string"
