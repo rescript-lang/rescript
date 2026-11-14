@@ -41,6 +41,7 @@ const shippedExecutables = new Map([
  * @typedef {{
  *   name: string,
  *   opam?: string,
+ *   licenseOpam?: string,
  *   version?: string,
  *   libuvVersionFrom?: string,
  *   source: string,
@@ -269,7 +270,9 @@ function renderComponent(component) {
     component.notes === undefined ? undefined : `Notes: ${component.notes}`,
   ].filter(line => line !== undefined);
   const licenseTexts = [
-    ...(component.opam === undefined ? [] : opamLicenseTexts(component.opam)),
+    ...(component.opam === undefined
+      ? []
+      : opamLicenseTexts(component.licenseOpam ?? component.opam)),
     ...(component.licenseFiles ?? []).map(file =>
       fs.readFileSync(path.join(projectDir, file), "utf8"),
     ),
