@@ -42,17 +42,12 @@ wait_for_next_build() {
     "$completed_builds" 30
 }
 
+tracked_outputs_exist() {
+  [ -z "$(git ls-files --deleted -- '*.mjs')" ]
+}
+
 wait_for_tracked_outputs() {
-  local timeout
-  timeout=60
-  while [ "$timeout" -gt 0 ]; do
-    if [ -z "$(git ls-files --deleted -- '*.mjs')" ]; then
-      return 0
-    fi
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
+  poll 60 tracked_outputs_exist
 }
 
 # Change the suffix in rescript.json (same approach as suffix test)
@@ -118,12 +113,10 @@ else
 fi
 
 # The rebuild after the restore also removes the outputs with the new suffix.
-timeout=30
-while [ "$timeout" -gt 0 ] && [ -n "$(find . -name '*.res.mjs' -print -quit)" ]; do
-  sleep 1
-  timeout=$((timeout - 1))
-done
-if [ -n "$(find . -name '*.res.mjs' -print -quit)" ]; then
+suffixed_outputs_gone() {
+  [ -z "$(find . -name '*.res.mjs' -print -quit)" ]
+}
+if ! poll 30 suffixed_outputs_gone; then
   error "Outputs with the restored configuration's previous suffix were not removed"
   find . -name '*.res.mjs'
   git restore --worktree -- ./src/Test.res

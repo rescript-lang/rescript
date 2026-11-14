@@ -44,18 +44,13 @@ REWATCH_COMPILER_DOMAINS=1 "$REWATCH_EXECUTABLE" watch > rewatch.log 2>&1 &
 watch_pid=$!
 compiler_log=lib/rescript/.compiler.log
 
+compiler_log_changed() {
+  [ -f "$compiler_log" ] && ! cmp -s "$compiler_log" "$1" &&
+    grep -q '#Done(' "$compiler_log"
+}
+
 wait_for_changed_compiler_log() {
-  local baseline="$1"; local timeout
-  timeout=60
-  while [ "$timeout" -gt 0 ]; do
-    if [ -f "$compiler_log" ] && ! cmp -s "$compiler_log" "$baseline" &&
-      grep -q '#Done(' "$compiler_log"; then
-      return 0
-    fi
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
+  poll 60 compiler_log_changed "$1"
 }
 
 if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 60; then
