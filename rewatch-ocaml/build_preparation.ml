@@ -23,6 +23,10 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       ~warn_error ~filter ~attempt
   in
   Module_graph.validate_visible_namespaces ~root_config package_plans;
+  List.iter
+    (fun (package : Package_plan.t) ->
+      Compiler_args.check_user_flags package.config)
+    package_plans;
   let runtime = runtime_path root_config.root in
   let source_map_args = Compiler_args.source_map_args workspace_config ~watch in
   let compiler_context =
