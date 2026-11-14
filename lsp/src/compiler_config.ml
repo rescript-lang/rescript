@@ -103,6 +103,13 @@ module Parse = struct
     package_specs: package_specs option; [@key "package-specs"] [@default None]
     suffix: string option; [@default None]
     dependencies: dependencies list option; [@default None]
+    dev_dependencies: dependencies list option;
+        [@key "dev-dependencies"] [@default None]
+    (* Old fields, deprecated *)
+    bs_dependencies: dependencies list option;
+        [@key "bs-dependencies"] [@default None]
+    bs_dev_dependencies: dependencies list option;
+        [@key "bs-dev-dependencies"] [@default None]
   }
   [@@deriving yojson {strict = false}]
 
@@ -337,20 +344,29 @@ type t = Parse.t Uri_map.t
 
 let parse ~root ~fs =
   let ( /+ ) = Filename.concat in
-  let rescript_json = root /+ "rescript.json" in
-  match Fs.load ~fs rescript_json with
+
+  let config_file =
+    let rescript_json = root /+ Constants.rescript_json in
+    let bsconfig_json = root /+ Constants.bsconfig_json in
+    if Fs.exists ~follow:false ~fs rescript_json then rescript_json
+    else bsconfig_json
+  in
+
+  match Fs.load ~fs config_file with
   | Some content -> (
     match Yojson.Safe.from_string content with
     | json -> (
       match Parse.of_yojson json with
       | Ok s -> Ok s
-      | Error _ ->
+      | Error msg ->
         Error
-          ("Failed to parse compiler config for rescript.json at "
-         ^ rescript_json))
-    | exception _ -> Error ("Failed to parse rescript.json at " ^ rescript_json)
-    )
-  | None -> Error ("Failed to read rescript.json file at " ^ rescript_json)
+          (Printf.sprintf "Failed to parse compiler config %s. %s" config_file
+             msg))
+    | exception exc ->
+      Error
+        (Printf.sprintf "Failed to parse rescript configuration file at %s. %s"
+           root (Printexc.to_string exc)))
+  | None -> Error ("Failed to read rescript configuration file at " ^ root)
 
 type output_config = {suffix: string; folder: string; in_source: bool}
 let get_output_config (config : Parse.t) =
@@ -394,3 +410,19 @@ let get_output_config (config : Parse.t) =
       folder = folder_name Parse.Commonjs;
       in_source = default_in_source;
     }
+
+let get_all_dependecies_names (config : Parse.t) =
+  let names deps =
+    match deps with
+    | None -> []
+    | Some deps ->
+      deps
+      |> List.map (fun dep ->
+          match dep with
+          | Parse.String name -> name
+          | Object {name} -> name)
+  in
+  (config.dependencies |> names)
+  @ (config.dev_dependencies |> names)
+  @ (config.bs_dependencies |> names)
+  @ (config.bs_dev_dependencies |> names)

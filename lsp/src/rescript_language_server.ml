@@ -163,20 +163,9 @@ let discover_subpackages_and_populate ~notify_errors ~workspace_root
     match
       Compiler_config.parse ~root:root_path ~fs:(Server.state server).fs
     with
-    | Ok {dependencies} ->
-      let dependencies_names =
-        match dependencies with
-        | Some deps ->
-          deps
-          |> List.map (fun dep ->
-              match dep with
-              | Compiler_config.Parse.String name -> name
-              | Object {name} -> name)
-        | None -> []
-      in
-
+    | Ok config ->
       let deps_paths, deps_errors =
-        dependencies_names
+        Compiler_config.get_all_dependecies_names config
         |> List.partition_map (fun dep_name ->
             match
               Analysis.Module_resolution.resolve_node_module_path
