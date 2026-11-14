@@ -345,8 +345,8 @@ let%expect_test "compiler syntax diagnostics don't clear type diagnostics" =
     Document.make
       (DidOpenTextDocumentParams.create
          ~textDocument:
-           (TextDocumentItem.create ~languageId:"rescript" ~uri:uri_a
-              ~text:"let x =" ~version:1))
+           (TextDocumentItem.create ~languageId:(LanguageKind.Other "rescript")
+              ~uri:uri_a ~text:"let x =" ~version:1))
       ~position_encoding:`UTF16
   in
   ignore (Document_store.add doc_store ~doc);

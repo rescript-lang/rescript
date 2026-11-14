@@ -31,7 +31,7 @@ let initialization (client_capabilities : ClientCapabilities.t) =
       WorkspaceFoldersServerCapabilities.create ~supported:false
         ~changeNotifications:(`Bool false) ()
     in
-    ServerCapabilities.create_workspace ~workspaceFolders ()
+    WorkspaceOptions.create ~workspaceFolders ()
   in
   let semanticTokensProvider =
     let legend =
@@ -50,7 +50,9 @@ let initialization (client_capabilities : ClientCapabilities.t) =
             "interface";
           ]
     in
-    let full = `Full (SemanticTokensOptions.create_full ~delta:false ()) in
+    let full =
+      `SemanticTokensFullDelta (SemanticTokensFullDelta.create ~delta:false ())
+    in
     `SemanticTokensOptions (SemanticTokensOptions.create ~legend ~full ())
   in
   let codeActionProvider =
@@ -95,9 +97,7 @@ let initialization (client_capabilities : ClientCapabilities.t) =
       ~referencesProvider:(`Bool true) ~documentFormattingProvider:(`Bool true)
       ~executeCommandProvider ~diagnosticProvider ?positionEncoding ()
   in
-  let serverInfo =
-    InitializeResult.create_serverInfo ~name:"rescript-language-server" ()
-  in
+  let serverInfo = ServerInfo.create ~name:"rescript-language-server" () in
   InitializeResult.create ~capabilities ~serverInfo ()
 
 let get_updated_diagnostics_from_log (state : State.t) diagnostics =
@@ -143,9 +143,10 @@ let publish_diagnostics ?(force_publish_uris = []) (state : State.t) diagnostics
    per-server analysis state or accept that repeated calls append/overwrite
    package roots as a side effect. *)
 let discover_subpackages_and_populate ~notify_errors ~workspace_root
-    ~(analysis_state : Analysis.Shared_types.state) ~server =
+    ~(analysis_state : Analysis.Shared_types.state) ~(server : State.t Server.t)
+    =
+  let root_path = workspace_root |> Uri.to_path in
   let root_package =
-    let root_path = workspace_root |> Uri.to_path in
     match Analysis.Packages.new_bs_package ~root_path with
     | Some p -> Some p
     | None ->
@@ -162,11 +163,24 @@ let discover_subpackages_and_populate ~notify_errors ~workspace_root
   in
 
   let resolve_node_modules_paths =
-    match root_package with
-    | Some {dependencies} ->
+    match
+      Compiler_config.parse ~root:root_path ~fs:(Server.state server).fs
+    with
+    | Ok {dependencies} ->
+      let dependencies_names =
+        match dependencies with
+        | Some deps ->
+          deps
+          |> List.map (fun dep ->
+              match dep with
+              | Compiler_config.Parse.String name -> name
+              | Object {name} -> name)
+        | None -> []
+      in
+
       let deps_paths, deps_errors =
-        List.partition_map
-          (fun dep_name ->
+        dependencies_names
+        |> List.partition_map (fun dep_name ->
             match
               Analysis.Module_resolution.resolve_node_module_path
                 ~start_path:(workspace_root |> Uri.to_path)
@@ -175,15 +189,18 @@ let discover_subpackages_and_populate ~notify_errors ~workspace_root
             | Some value -> Either.Left value
             | None -> Either.Right dep_name
             | exception Failure err -> Either.Right err)
-          dependencies
       in
+
       if notify_errors && List.length deps_errors > 0 then
         Server.show_message_notification ~kind:MessageType.Error
-          (Printf.sprintf "Failed to resolve dependencies. %s"
+          (Printf.sprintf "Failed to resolve node modules dependencies: %s"
              (String.concat ", " deps_errors))
           server;
+
       Some deps_paths
-    | None -> None
+    | Error message ->
+      Server.show_message_notification ~kind:MessageType.Error message server;
+      None
   in
 
   (match root_package with
@@ -356,7 +373,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       | Some s -> s
       | None -> SignatureHelp.create ~signatures:[] ()
     in
-    (ok resp, state)
+    (ok (Some resp), state)
   | TextDocumentDefinition {textDocument = {uri}; position} ->
     let full = load_full uri state in
     let resp =
@@ -458,8 +475,8 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         Analysis.Hint.code_lens ~source ~kind_file:(Document.kind doc) ~full
           ~debug:false
       in
-      (ok (resp |> Option.value ~default:[]), state)
-    else (ok [], state)
+      (ok (Some (resp |> Option.value ~default:[])), state)
+    else (ok (Some []), state)
   | InlayHint {textDocument = {uri}; range = {start; end_}} ->
     if state.configuration.inlay_hints.enable then
       let doc = Document_store.get ~uri state.store in
@@ -495,7 +512,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
       | Some we -> we
       | None -> WorkspaceEdit.create ()
     in
-    (ok resp, state)
+    (ok (Some resp), state)
   | TextDocumentPrepareRename {textDocument = {uri}; position} ->
     let full = load_full uri state in
     let resp =
@@ -504,7 +521,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
           ~pos:(position.line, position.character)
           ~debug:false
       with
-      | Some {range} -> Some range
+      | Some {range} -> Some (`Range range)
       | None -> None
     in
     (ok resp, state)
@@ -552,7 +569,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
   | TextDocumentInlineValue _ | WorkspaceSymbolResolve _ | WorkspaceDiagnostic _
   | TextDocumentRangesFormatting _ | TextDocumentPrepareTypeHierarchy _
   | TypeHierarchySupertypes _ | TypeHierarchySubtypes _
-  | TextDocumentDeclaration _ ->
+  | TextDocumentDeclaration _ | WorkspaceTextDocumentContent _ ->
     (error "Request not supported yet!", state)
   | UnknownRequest {meth; params} -> (
     let open Custom_requests in
@@ -621,7 +638,7 @@ let on_notification notification (server : State.t Server.t) =
     in
     diagnostics |> publish_diagnostics state;
     state |> State.update_diagnostics diagnostics
-  | Initialized ->
+  | Initialized _ ->
     (* Register dynamic file watchers for compiler log files.
        ReScript writes one .compiler.log per build root. In monorepos,
        .sourcedirs.json contains the build_root entries for each subpackage,
@@ -733,7 +750,7 @@ let on_notification notification (server : State.t Server.t) =
   | ChangeWorkspaceFolders _ | CancelRequest _ | DidSaveTextDocument _
   | DidCreateFiles _ | DidDeleteFiles _ | DidRenameFiles _
   | WillSaveTextDocument _ | WorkDoneProgressCancel _ | WorkDoneProgress _
-  | NotebookDocumentDidOpen _ | NotebookDocumentDidChange _
+  | Progress _ | NotebookDocumentDidOpen _ | NotebookDocumentDidChange _
   | NotebookDocumentDidSave _ | NotebookDocumentDidClose _ | SetTrace _ ->
     state
   | UnknownNotification {method_} ->

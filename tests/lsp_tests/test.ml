@@ -217,7 +217,8 @@ open Lsp
 open Types
 
 let make_document ~uri ~text =
-  TextDocumentItem.create ~uri ~languageId:"rescript" ~version:0 ~text
+  TextDocumentItem.create ~uri ~languageId:(LanguageKind.Other "rescript")
+    ~version:0 ~text
 
 let write_document path (doc : TextDocumentItem.t) =
   let path = path // (doc.uri |> Uri.to_path |> Filename.basename) in
@@ -226,7 +227,7 @@ let write_document path (doc : TextDocumentItem.t) =
 let setup_project ~root ~rescript_json ~run_build ~documents =
   mkdir_p root;
   write_document root
-    (TextDocumentItem.create ~languageId:"json" ~text:rescript_json
+    (TextDocumentItem.create ~languageId:LanguageKind.JSON ~text:rescript_json
        ~uri:(Uri.of_string "rescript.json")
        ~version:0);
   List.iter (write_document root) documents;
@@ -246,14 +247,13 @@ let client_capabilities =
     ()
 
 let initialize_client ?(capabilities = client_capabilities) ~root client =
-  let id =
-    Client.send_request client
-      (Client_request.Initialize
-         (InitializeParams.create ~capabilities
-            ~rootUri:(DocumentUri.of_path root) ()))
+  let init_params =
+    InitializeParams.create ~capabilities ~rootUri:(DocumentUri.of_path root) ()
   in
+  let id = Client.send_request client (Client_request.Initialize init_params) in
   assert ((Client.read_response client id).result |> Result.is_ok);
-  Client.send_notification client Client_notification.Initialized;
+  Client.send_notification client
+    (Client_notification.Initialized (InitializedParams.t_of_yojson (`Assoc [])));
   let registration = Client.read_request client "client/registerCapability" in
   Client.respond_ok client registration
 
@@ -291,8 +291,9 @@ let open_document (doc : TextDocumentItem.t) =
     Client_notification.TextDocumentDidOpen
       (DidOpenTextDocumentParams.create
          ~textDocument:
-           (TextDocumentItem.create ~uri:doc.uri ~languageId:"rescript"
-              ~version:0 ~text:doc.text))
+           (TextDocumentItem.create ~uri:doc.uri
+              ~languageId:(LanguageKind.Other "rescript") ~version:0
+              ~text:doc.text))
   in
   Notification notification
 
@@ -302,7 +303,11 @@ let change_document client (doc : TextDocumentItem.t) ~version ~text =
        (DidChangeTextDocumentParams.create
           ~textDocument:
             (VersionedTextDocumentIdentifier.create ~uri:doc.uri ~version)
-          ~contentChanges:[TextDocumentContentChangeEvent.create ~text ()]))
+          ~contentChanges:
+            [
+              `TextDocumentContentChangeWholeDocument
+                (TextDocumentContentChangeWholeDocument.create ~text);
+            ]))
 
 let configure client settings =
   Client.send_notification client

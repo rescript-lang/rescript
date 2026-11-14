@@ -993,7 +993,6 @@ let state_to_yojson (state : state) =
   in
 
   let package_to_yojson (package : package) =
-    let major, minor = package.rescript_version in
     `Assoc
       [
         ( "generic_jsx_module",
@@ -1003,15 +1002,11 @@ let state_to_yojson (state : state) =
         ("suffix", `String package.suffix);
         ("root_path", `String package.root_path);
         ("project_files", string_set_to_yojson package.project_files);
-        ( "dependencies",
-          `List (package.dependencies |> List.map (fun x -> `String x)) );
         ("dependencies_files", string_set_to_yojson package.dependencies_files);
         ("paths_for_module", paths_for_module_to_yojson package.paths_for_module);
         ( "namespace",
           option_to_yojson (fun value -> `String value) package.namespace );
         ("opens", `List (List.map path_to_yojson package.opens));
-        ( "rescript_version",
-          `Assoc [("major", `Int major); ("minor", `Int minor)] );
         ("autocomplete", autocomplete_to_yojson package.autocomplete);
       ]
   in

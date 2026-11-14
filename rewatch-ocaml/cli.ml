@@ -301,7 +301,7 @@ let root =
       ~version:("rescript " ^ Rewatch_version.version)
       ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
   in
-  let commands = [build; watch; clean; format; compiler_args; help] in
+  let commands = [build; watch; clean; format; compiler_args; lsp; help] in
   (* Options before a command name make Cmdliner read the name as the folder of
      the default build, so [rescript -v watch] would build a folder named
      watch. *)

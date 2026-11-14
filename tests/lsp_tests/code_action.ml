@@ -82,7 +82,8 @@ let%expect_test "extracts a local module into its own file" =
                 }
               ],
               "textDocument": {
-                "uri": "file:///workspace/ExtractableModule.res"
+                "uri": "file:///workspace/ExtractableModule.res",
+                "version": null
               }
             },
             {
@@ -95,7 +96,10 @@ let%expect_test "extracts a local module into its own file" =
                   }
                 }
               ],
-              "textDocument": { "uri": "file:///workspace/Test.res" }
+              "textDocument": {
+                "uri": "file:///workspace/Test.res",
+                "version": null
+              }
             }
           ]
         },

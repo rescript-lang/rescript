@@ -77,11 +77,32 @@ module Parse = struct
       | Ok package_spec -> Ok [package_spec]
       | Error _ as error -> error)
 
+  type dependencie_object = {
+    name: string;
+    features: string list option; [@default None]
+  }
+  [@@deriving yojson {strict = false}]
+
+  type dependencies = String of string | Object of dependencie_object
+
+  let dependencies_to_yojson = function
+    | String name -> `String name
+    | Object dependency -> dependencie_object_to_yojson dependency
+
+  let dependencies_of_yojson = function
+    | `String name -> Ok (String name)
+    | `Assoc _ as json -> (
+      match dependencie_object_of_yojson json with
+      | Ok dependency -> Ok (Object dependency)
+      | Error message -> Error message)
+    | _ -> Error "Expected a dependency name or object"
+
   type t = {
     name: string;
     namespace: namespace option; [@default None]
     package_specs: package_specs option; [@key "package-specs"] [@default None]
     suffix: string option; [@default None]
+    dependencies: dependencies list option; [@default None]
   }
   [@@deriving yojson {strict = false}]
 
@@ -97,6 +118,18 @@ module Parse = struct
         | Some (Namespace_bool namespace) ->
           Printf.printf "namespace=%b\n" namespace
         | None -> print_endline "namespace=None");
+        (match config.dependencies with
+        | None -> print_endline "dependencies=None"
+        | Some deps ->
+          let deps_names =
+            deps
+            |> List.map (fun dep ->
+                match dep with
+                | String name -> name
+                | Object {name} -> name)
+            |> String.concat ", "
+          in
+          Printf.printf "dependencies=Some(%s)\n" deps_names);
         (match config.package_specs with
         | Some specs ->
           let r =
@@ -117,6 +150,7 @@ module Parse = struct
         {|{
         "name": "app",
         "namespace": "App",
+        "dependencies": [],
         "package-specs": [
           "esmodule",
           {
@@ -133,6 +167,7 @@ module Parse = struct
       {|
       name=app
       namespace=App
+      dependencies=Some()
       package_specs=Some("esmodule", { "in-source": true, "module": "commonjs", "suffix": ".cjs" })
       suffix=.js
       |}];
@@ -170,6 +205,7 @@ module Parse = struct
       {|
       name=@rescript-lang/guide
       namespace=false
+      dependencies=Some(@rescript-lang/playground, @rescript-lang/shared, @rescript/react, @rescript/webapi)
       package_specs=None
       suffix=None
       |}];
@@ -202,8 +238,55 @@ module Parse = struct
       {|
       name=rescript-lang.org-monorepo
       namespace=None
+      dependencies=Some(@rescript-lang/shared, @rescript-lang/playground, @rescript-lang/guide, @rescript-lang/docs)
       package_specs=Some({ "in-source": true, "module": "esmodule" })
       suffix=.jsx
+      |}];
+
+    let json_4 =
+      Yojson.Safe.from_string
+        {|
+{
+  "name": "app",
+  "dependencies": [
+    "@plain/dep",
+    { "name": "@example/lib", "features": ["native"] }
+  ]
+}
+|}
+    in
+    prin_config (of_yojson json_4);
+    [%expect
+      {|
+      name=app
+      namespace=None
+      dependencies=Some(@plain/dep, @example/lib)
+      package_specs=None
+      suffix=None
+      |}]
+
+  let%expect_test "dependency JSON round trips preserve features" =
+    let print json =
+      match dependencies_of_yojson (Yojson.Safe.from_string json) with
+      | Ok dependency ->
+        dependencies_to_yojson dependency
+        |> Yojson.Safe.pretty_to_string |> print_endline
+      | Error message -> Printf.printf "Error: %s\n" message
+    in
+    print {|"@plain/dep"|};
+    print {|{"name":"@example/lib","features":["native"]}|};
+    print {|{"name":"@example/lib"}|};
+    print {|42|};
+    print {|{"features":["native"]}|};
+    print {|{"name":"@example/lib","features":true}|};
+    [%expect
+      {|
+      "@plain/dep"
+      { "name": "@example/lib", "features": [ "native" ] }
+      { "name": "@example/lib" }
+      Error: Expected a dependency name or object
+      Error: Compiler_config.Parse.dependencie_object.name
+      Error: Compiler_config.Parse.dependencie_object.features
       |}]
 end
 
