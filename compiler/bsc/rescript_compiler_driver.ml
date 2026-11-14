@@ -520,6 +520,32 @@ let command_line_flags () : (string * Bsc_args.spec * string) array =
       "*internal* make runtime library" );
   |]
 
+type flag_error =
+  | Unknown_flag of string
+  | Missing_argument of string
+  | Not_a_flag of string
+  | Reserved_flag of string
+
+(* Walks [flags] as the parser does, without applying them: some flags print,
+   exit or compile a file. *)
+let check_flags ~reserved flags =
+  let table = command_line_flags () in
+  let rec check = function
+    | [] -> Ok ()
+    | flag :: rest -> (
+      if flag = "" || flag.[0] <> '-' then Error (Not_a_flag flag)
+      else if List.mem flag reserved then Error (Reserved_flag flag)
+      else
+        match Ext_spec.assoc3 table flag with
+        | None -> Error (Unknown_flag flag)
+        | Some (Bsc_args.Unit_dummy | Unit _) -> check rest
+        | Some (String _) -> (
+          match rest with
+          | [] -> Error (Missing_argument flag)
+          | _argument :: rest -> check rest))
+  in
+  check flags
+
 (** parse flags in config *)
 let file_level_flags_handler (e : Parsetree.expression option) =
   match e with

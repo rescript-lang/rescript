@@ -186,3 +186,21 @@ let tests =
              Test_support.contains_text message
                "Expected to find dependent package outside of app")
           "compiler-args does not search above a workspace dependency boundary"))
+
+let check_flags_tests =
+  "check_flags" >:: fun _context ->
+  let check_flags = Rescript_compiler_driver.check_flags ~reserved:["-bs-ns"] in
+  assert_equal (Ok ())
+    (check_flags ["-bs-g"; "-w"; "-40+6"; "-open"; "Belt"])
+    ~msg:"a flag's value may start with a dash";
+  assert_equal (Ok ())
+    (check_flags ["-ppx"; "-bs-ns"])
+    ~msg:"a reserved flag's name is accepted as a value";
+  assert_equal (Error (Rescript_compiler_driver.Unknown_flag "-bs-fooo"))
+    (check_flags ["-bs-g"; "-bs-fooo"]);
+  assert_equal (Error (Rescript_compiler_driver.Missing_argument "-open"))
+    (check_flags ["-open"]);
+  assert_equal (Error (Rescript_compiler_driver.Not_a_flag "Belt"))
+    (check_flags ["-bs-g"; "Belt"]);
+  assert_equal (Error (Rescript_compiler_driver.Reserved_flag "-bs-ns"))
+    (check_flags ["-bs-ns"; "Ns"])
