@@ -1,5 +1,4 @@
 let ( // ) = Filename.concat
-let ( / ) = Eio.Path.( / )
 
 (* Dune runs inline tests from this library's build directory. Resolve its
    declared CLI dependency before setup changes into temporary workspaces. *)
@@ -205,12 +204,6 @@ module Client = struct
       (try close_out_noerr t.process_stdin with _ -> ());
       try Unix.close_process (t.process_stdout, t.process_stdin)
       with _ -> Unix.WEXITED 0)
-
-  (** Run [f] with a freshly started server, ensuring the process is stopped
-      and the switch is released afterwards. *)
-  let with_server f =
-    let t = start () in
-    Fun.protect ~finally:(fun () -> ignore (stop t)) (fun () -> f t)
 end
 
 open Lsp
@@ -246,7 +239,7 @@ let client_capabilities =
          ())
     ()
 
-let initialize_client ?(capabilities = client_capabilities) ~root client =
+let initialize_client ~capabilities ~root client =
   let init_params =
     InitializeParams.create ~capabilities ~rootUri:(DocumentUri.of_path root) ()
   in
@@ -276,9 +269,6 @@ let start_client_with_capabilities ~capabilities ~root =
   with exn ->
     ignore (Client.stop client);
     raise exn
-
-let start_client ~root =
-  start_client_with_capabilities ~capabilities:client_capabilities ~root
 
 let with_client ?(capabilities = client_capabilities) ~root f =
   let client = start_client_with_capabilities ~capabilities ~root in

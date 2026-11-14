@@ -7,8 +7,9 @@ module Io : sig
   val async : (sw:Eio.Switch.t -> ('a, exn) result) -> 'a t
 
   module O : sig
-    val ( let+ ) : 'a t -> ('a -> 'b) -> 'b t
-    val ( let* ) : 'a t -> ('a -> 'b t) -> 'b t
+    (* Consumed by the external Lsp.Io.Make functor, outside Reanalyze's scan. *)
+    val ( let+ ) : 'a t -> ('a -> 'b) -> 'b t [@@live]
+    val ( let* ) : 'a t -> ('a -> 'b t) -> 'b t [@@live]
   end
 end = struct
   type 'a t = sw:Eio.Switch.t -> ('a, exn) result Eio.Promise.t
@@ -162,15 +163,13 @@ let handle_response (response : Jsonrpc.Response.t) server =
       let result = Error (Response_error err) in
       Some (Response_result (request, result)))
 
-let log_message_notification ?(kind = Lsp.Types.MessageType.Debug) message
-    server =
+let log_message_notification ~kind message server =
   notification
     (Lsp.Server_notification.LogMessage
        (Lsp.Types.LogMessageParams.create ~type_:kind ~message))
     server
 
-let show_message_notification ?(kind = Lsp.Types.MessageType.Info) message
-    server =
+let show_message_notification ~kind message server =
   notification
     (Lsp.Server_notification.ShowMessage
        (Lsp.Types.ShowMessageParams.create ~type_:kind ~message))

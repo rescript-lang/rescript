@@ -106,6 +106,47 @@ module Parse = struct
   }
   [@@deriving yojson {strict = false}]
 
+  let%expect_test "namespace codecs accept the compiler's JSON forms" =
+    List.iter
+      (fun json ->
+        match namespace_of_yojson json with
+        | Ok namespace ->
+          namespace_to_yojson namespace
+          |> Yojson.Safe.to_string |> print_endline
+        | Error message -> print_endline message)
+      [`Bool true; `Bool false; `String "App"; `Int 1];
+    [%expect
+      {|
+      true
+      false
+      "App"
+      Expected namespace to be a boolean or string, got 1
+      |}]
+
+  let%expect_test "package specs codecs accept single values and lists" =
+    List.iter
+      (fun text ->
+        match package_specs_of_yojson (Yojson.Safe.from_string text) with
+        | Ok specs ->
+          package_specs_to_yojson specs
+          |> Yojson.Safe.to_string |> print_endline
+        | Error message -> print_endline message)
+      [
+        {|"commonjs"|};
+        {|["es6","es6-global","esmodule"]|};
+        {|{"module":"esmodule","in-source":true,"suffix":".mjs"}|};
+        {|[]|};
+        {|["commonjs",42]|};
+      ];
+    [%expect
+      {|
+      ["commonjs"]
+      ["es6","es6-global","esmodule"]
+      [{"in-source":true,"module":"esmodule","suffix":".mjs"}]
+      []
+      Compiler_config.Parse.module_format_object
+      |}]
+
   let%expect_test "parse build schema" =
     let prin_config config =
       match config with

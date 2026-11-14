@@ -1,35 +1,5 @@
 module Process = struct
-  type backend = Unix | Eio
-
-  type result = {
-    pid: int;
-    status: Unix.process_status;
-    exit_code: int option;
-    stdout: string;
-    stderr: string;
-  }
-
-  let default_backend = if Sys.os_type = "Win32" then Unix else Eio
-
-  let make_result ~pid ~status ~stdout ~stderr =
-    let exit_code =
-      match status with
-      | Unix.WEXITED code -> Some code
-      | WSIGNALED _ | WSTOPPED _ -> None
-    in
-    {pid; status; exit_code; stdout; stderr}
-
-  let succeeded result = result.status = Unix.WEXITED 0
-
-  let was_killed result =
-    match result.status with
-    | Unix.WSIGNALED _ -> true
-    | WEXITED _ | WSTOPPED _ -> false
-
-  let status_to_string = function
-    | Unix.WEXITED code -> Printf.sprintf "exited with code %d" code
-    | WSIGNALED signal -> Printf.sprintf "killed by signal %d" signal
-    | WSTOPPED signal -> Printf.sprintf "stopped by signal %d" signal
+  type result = {status: Unix.process_status; stdout: string}
 
   let rec waitpid pid =
     match Unix.waitpid [] pid with
@@ -53,7 +23,7 @@ module Process = struct
         output_string input stdin;
         flush input;
         with_temp_file (fun output_path output ->
-            with_temp_file (fun error_path error ->
+            with_temp_file (fun _ error ->
                 In_channel.with_open_bin input_path (fun input ->
                     let pid =
                       Unix.create_process program
@@ -76,27 +46,21 @@ module Process = struct
                           In_channel.with_open_bin output_path
                             In_channel.input_all
                         in
-                        let stderr =
-                          In_channel.with_open_bin error_path
-                            In_channel.input_all
-                        in
-                        make_result ~pid ~status ~stdout ~stderr)))))
+                        {status; stdout})))))
 
   let run_eio ~stdin program args =
     (* The worker needs its own effect handler: Eio operations cannot run in a
        plain systhread using the calling fiber's scheduler. *)
     Eio_main.run (fun env ->
         let stdout = Buffer.create 4096 in
-        let stderr = Buffer.create 4096 in
-        let pid, status =
+        let status =
           Eio.Switch.run (fun sw ->
               let manager = Eio.Stdenv.process_mgr env in
               let input, writer = Eio.Process.pipe ~sw manager in
               let process =
                 Eio.Process.spawn ~sw manager ~executable:program ~stdin:input
                   ~stdout:(Eio.Flow.buffer_sink stdout)
-                  ~stderr:(Eio.Flow.buffer_sink stderr)
-                  (program :: args)
+                  ~stderr:Eio.Flow.null (program :: args)
               in
               Eio.Flow.close input;
               Eio.Fiber.fork ~sw (fun () ->
@@ -108,23 +72,17 @@ module Process = struct
                         (* A child may exit or close stdin without consuming all
                            input. Its exit status and diagnostics still matter. *)
                         ()));
-              let pid = Eio.Process.pid process in
-              let status =
-                match Eio.Process.await process with
-                | `Exited code -> Unix.WEXITED code
-                | `Signaled signal -> Unix.WSIGNALED signal
-              in
-              (pid, status))
+              match Eio.Process.await process with
+              | `Exited code -> Unix.WEXITED code
+              | `Signaled signal -> Unix.WSIGNALED signal)
         in
-        (* Switch completion also waits for the stdout/stderr copying fibers. *)
-        make_result ~pid ~status ~stdout:(Buffer.contents stdout)
-          ~stderr:(Buffer.contents stderr))
+        (* Switch completion also waits for the output copying fibers. *)
+        {status; stdout = Buffer.contents stdout})
 
-  let run ?(backend = default_backend) ?(stdin = "") program args =
+  let run ~stdin program args =
     Eio_unix.run_in_systhread ~label:"lsp process" (fun () ->
-        match backend with
-        | Unix -> run_unix ~stdin program args
-        | Eio -> run_eio ~stdin program args)
+        if Sys.win32 then run_unix ~stdin program args
+        else run_eio ~stdin program args)
 end
 
 open Lsp

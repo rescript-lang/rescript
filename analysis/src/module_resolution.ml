@@ -36,13 +36,11 @@ let rec resolve_from_node_modules ~start_path name =
       else
         resolve_from_node_modules ~start_path:(Filename.dirname start_path) name
 
-let resolve_node_module_path ?(fallback_to_runtime_package = true) ~start_path
-    name =
+let resolve_node_module_path ~start_path name =
   match resolve_from_node_modules ~start_path name with
   | Some path -> Some path
   | None
-    when fallback_to_runtime_package
-         && name = Runtime_package.name
+    when name = Runtime_package.name
          && Files.exists (Runtime_package.get_path ()) ->
     (* Compiler-local fallback for development builds where the runtime package
        is not installed in the target workspace. Real project installs must win

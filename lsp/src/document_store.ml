@@ -1,5 +1,4 @@
 open Lsp
-type document = {text: string; version: int}
 
 type t = {documents: (Uri.t, Document.t) Hashtbl.t}
 

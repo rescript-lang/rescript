@@ -33,8 +33,8 @@ let text t = Text_document.text t
 
 let uri t = Text_document.documentUri t
 
-let update_text ?version t changes =
-  match Text_document.apply_content_changes ?version t changes with
+let update_text ~version t changes =
+  match Text_document.apply_content_changes ~version t changes with
   | exception Text_document.Invalid_utf _ ->
     (* TODO: add log *)
     t

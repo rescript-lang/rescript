@@ -155,7 +155,7 @@ let%expect_test "send can reserve an open document for pull diagnostics" =
    Open-document syntax diagnostics come from the current editor buffer. Compiler
    syntax diagnostics are only useful for closed documents, where the compiler
    log is the freshest source we have. *)
-let to_lsp_format ?(include_syntax = false) ?(include_non_syntax = true)
+let to_lsp_format ~include_syntax ~include_non_syntax
     (workspace_root : DocumentUri.t) (doc_store : Document_store.t) diagnostics
     =
   let workspace_root_path = workspace_root |> DocumentUri.to_path in
