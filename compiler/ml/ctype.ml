@@ -519,6 +519,70 @@ let generalize ty =
   simple_abbrevs () := Mnil;
   generalize ty
 
+(* Generalizes the type of a let-bound value like [generalize], but leaves the
+   parts that contain no type variable at the current level instead of making
+   them generic. [copy] returns non-generic nodes as they are, so every use of
+   the value shares those parts instead of copying them (#9265). They are
+   ordinary non-generic nodes, like the parts of a weak type, so unification
+   and later generalizations handle them as usual.
+
+   A part is variable-free when no [Tvar] or [Tunivar] is reachable from it and
+   its rows are static. A generic node doesn't count, so that a part left
+   non-generic never contains a generic node. Its object rows end in [Tnil],
+   so the mutability cells
+   of its fields can't be promoted any more: cells are merged only together
+   with the tails of their rows, and only an open row is promoted. Cached
+   expansions are dropped from the parts left non-generic, as they may hold
+   nodes this pass doesn't visit. *)
+let generalize_value ty =
+  simple_abbrevs () := Mnil;
+  let level = !(current_level ()) in
+  let memo = Type_hash.create 16 in
+  let rec variable_free ty =
+    let ty = repr ty in
+    match Type_hash.find_opt memo ty with
+    | Some free -> free
+    | None -> (
+      match ty.desc with
+      | _ when ty.level = generic_level -> false
+      | Tvar _ | Tunivar _ | Tsubst _ -> false
+      | Tvariant row when not (static_row row) -> false
+      | _ ->
+        (* Cycles count as not variable-free. *)
+        Type_hash.replace memo ty false;
+        let free =
+          try
+            iter_type_expr
+              (fun t -> if not (variable_free t) then raise_notrace Exit)
+              ty;
+            true
+          with Exit -> false
+        in
+        Type_hash.replace memo ty free;
+        free)
+  in
+  let rec lower ty =
+    let ty = repr ty in
+    if ty.level > level && ty.level <> generic_level then (
+      set_level ty level;
+      (match ty.desc with
+      | Tconstr (_, _, abbrev) -> abbrev := Mnil
+      | _ -> ());
+      iter_type_expr lower ty)
+  in
+  let rec generalize ty =
+    let ty = repr ty in
+    if ty.level > level && ty.level <> generic_level then
+      if variable_free ty then lower ty
+      else (
+        set_level ty generic_level;
+        (match ty.desc with
+        | Tconstr (_, _, abbrev) -> iter_abbrev generalize !abbrev
+        | _ -> ());
+        iter_type_expr generalize ty)
+  in
+  generalize ty
+
 (* Generalize the structure and lower the variables *)
 
 let rec generalize_structure var_level ty =

@@ -5142,7 +5142,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
         iter_pattern (fun pat -> generalize_expansive env pat.pat_type) pat)
     pat_list exp_list;
   List.iter
-    (fun pat -> iter_pattern (fun pat -> generalize pat.pat_type) pat)
+    (fun pat -> iter_pattern (fun pat -> generalize_value pat.pat_type) pat)
     pat_list;
   let l = List.combine pat_list exp_list in
   let l =
