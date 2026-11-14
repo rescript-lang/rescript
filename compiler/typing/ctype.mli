@@ -147,6 +147,11 @@ val filter_row_fields :
 val generalize : type_expr -> unit
 (* Generalize in-place the given type *)
 
+val generalize_value : type_expr -> unit
+(** Generalize the type of a let-bound value in place, leaving the parts that
+    contain no type variable at the current level, so that the uses of the
+    value share them instead of copying them. *)
+
 val generalize_expansive : Env.t -> type_expr -> unit
 (* Generalize the covariant part of a type, making
    contravariant branches non-generalizable *)
