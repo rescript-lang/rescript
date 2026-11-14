@@ -130,6 +130,11 @@ let create directories =
         state_entries);
   state
 
+let directories state =
+  Hashtbl.fold
+    (fun directory _ directories -> directory :: directories)
+    state.files_by_directory []
+
 let files state directory =
   Hashtbl.find_opt state.files_by_directory directory
   |> Option.value ~default:[]

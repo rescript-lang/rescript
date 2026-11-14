@@ -1463,6 +1463,305 @@ let interface_namespace_and_load_path_tests _context =
             ("namespace output is retained: " ^ extension))
         ["cmi"; "cmj"; "cmt"])
 
+let run_with_hooks root ?(extra = []) ?run_external ~hooks input =
+  let argv =
+    [
+      "-nostdlib";
+      "-nopervasives";
+      "-bs-project-root";
+      root;
+      "-bs-package-name";
+      "driver-test";
+      "-bs-package-output";
+      "commonjs:.:.js";
+      "-bs-no-version-header";
+    ]
+    @ extra
+  in
+  try
+    Rescript_compiler_driver.run_request_with_hooks ~hooks ~run_external
+      ~cwd:root ~argv ~input
+  with
+  | Compiler_request_output.Failed {error = Exit} as failed -> raise failed
+  | Compiler_request_output.Failed {error} ->
+    assert_failure ("request failed: " ^ Printexc.to_string error)
+
+let file_contents path =
+  let channel = open_in_bin path in
+  Fun.protect
+    ~finally:(fun () -> close_in_noerr channel)
+    (fun () -> really_input_string channel (in_channel_length channel))
+
+(* The hooks a build system uses to start a dependent before its
+   dependencies finish (rewatch-ocaml pipelining). *)
+let speculation_hook_tests _context =
+  with_temp_dir "rewatch-driver-speculation-" (fun root ->
+      let events = ref [] in
+      let computed = ref [] in
+      let first_build = ref true in
+      let hooks =
+        Compiler_request_state.
+          {
+            no_hooks with
+            interface_computed =
+              Some
+                (fun path bytes ->
+                  events := "computed" :: !events;
+                  computed := (path, bytes) :: !computed);
+            before_effect =
+              (fun () ->
+                if !first_build && not (List.mem "gate" !events) then
+                  check
+                    (not (Sys.file_exists (Filename.concat root "Dep.cmi")))
+                    "the gate is reached before the .cmi is written";
+                events := "gate" :: !events);
+          }
+      in
+      write root "Dep.res" "let value = \"new\"\n";
+      expect_code 0 (run_with_hooks root ~hooks "Dep.res");
+      check
+        (List.rev !events = ["computed"; "gate"; "gate"])
+        "the interface is announced before the gate, which also guards the .cmt";
+      let new_bytes =
+        match !computed with
+        | [(path, bytes)] ->
+          assert_equal "Dep.cmi" (Filename.basename path);
+          bytes
+        | _ -> assert_failure "one interface is announced"
+      in
+      let cmi_path = Filename.concat root "Dep.cmi" in
+      assert_equal new_bytes (file_contents cmi_path);
+      let from_bytes = Cmi_format.read_cmi_contents "Dep.cmi" new_bytes in
+      let from_file = Cmi_format.read_cmi cmi_path in
+      check
+        (from_bytes.cmi_name = from_file.cmi_name
+        && from_bytes.cmi_crcs = from_file.cmi_crcs
+        && from_bytes.cmi_flags = from_file.cmi_flags
+        && Marshal.to_string from_bytes.cmi_sign []
+           = Marshal.to_string from_file.cmi_sign [])
+        "a .cmi decodes the same from bytes as from its file";
+      (* An unchanged interface is kept, with the same bytes. *)
+      events := [];
+      computed := [];
+      first_build := false;
+      expect_code 0 (run_with_hooks root ~hooks "Dep.res");
+      assert_equal new_bytes (file_contents cmi_path);
+      let corrupted contents =
+        try
+          ignore (Cmi_format.read_cmi_contents "Dep.cmi" contents);
+          false
+        with Cmi_format.Error (Corrupted_interface _) -> true
+      in
+      let magic_length = String.length Config.cmi_magic_number in
+      check (corrupted "Caml") "truncated contents are a corrupted interface";
+      check
+        (corrupted (String.sub new_bytes 0 (magic_length + 1)))
+        "a truncated value header is a corrupted interface";
+      check
+        (corrupted
+           (String.sub new_bytes 0 (magic_length + Marshal.header_size + 1)))
+        "a truncated value is a corrupted interface";
+      check
+        (corrupted
+           (Config.cmi_magic_number ^ String.make Marshal.header_size 'x'))
+        "a malformed value is a corrupted interface";
+      (* The published file is older than the redirected bytes. *)
+      write root "Dep.res" "let value = 1\n";
+      expect_code 0 (run root "Dep.res" |> snd);
+      write root "User.res" "let text: string = Dep.value\n";
+      expect_code 2 (run root ~extra:["-I"; root] "User.res" |> snd);
+      let redirected = ref 0 in
+      let redirect_hooks =
+        Compiler_request_state.
+          {
+            no_hooks with
+            redirect_cmi =
+              (fun path ->
+                if path = cmi_path || Filename.basename path = "Dep.cmi" then (
+                  incr redirected;
+                  Some new_bytes)
+                else None);
+          }
+      in
+      expect_code 0
+        (run_with_hooks root ~extra:["-I"; root] ~hooks:redirect_hooks
+           "User.res");
+      check (!redirected > 0) "a redirected interface is read from bytes")
+
+(* A redirected interface bypasses the build file store: neither the store
+   nor this domain's cache of decoded interfaces hands it to a later request,
+   and a dependency that publishes mid-build is read as usual. *)
+let speculation_store_tests _context =
+  with_temp_dir "rewatch-driver-speculation-store-" (fun root ->
+      let cmi_path = Filename.concat root "Dep.cmi" in
+      let compile_dep value =
+        write root "Dep.res" ("let value = " ^ value ^ "\n");
+        expect_code 0 (run root "Dep.res" |> snd)
+      in
+      compile_dep "\"new\"";
+      let new_contents = file_contents cmi_path in
+      compile_dep "1";
+      let old_contents = file_contents cmi_path in
+      write root "User.res" "let text: string = Dep.value\n";
+      let user ~redirect =
+        let lookup path =
+          if
+            redirect
+            && Build_file_store.key path = Build_file_store.key cmi_path
+          then Some new_contents
+          else None
+        in
+        (run_with_hooks root ~extra:["-I"; root]
+           ~hooks:Compiler_request_state.{no_hooks with redirect_cmi = lookup}
+           "User.res")
+          .exit_code
+      in
+      let expect_user ~redirect expected message =
+        assert_equal ~msg:message ~printer:string_of_int expected
+          (user ~redirect)
+      in
+      Build_file_store.with_build (fun () ->
+          expect_user ~redirect:false 2 "the published interface is the old one";
+          expect_user ~redirect:true 0
+            "a redirect wins over the stored interface";
+          check
+            (Build_file_store.cached cmi_path = Some old_contents)
+            "the store keeps the published interface";
+          expect_user ~redirect:false 2
+            "the decoded redirect is not reused for the stored interface";
+          Build_file_store.evict cmi_path;
+          expect_user ~redirect:true 0 "a redirect of an evicted interface";
+          check
+            (Build_file_store.cached cmi_path = None)
+            "a redirect does not read an evicted interface back";
+          expect_user ~redirect:false 2 "an evicted interface is read again";
+          (* The dependency publishes its new interface mid-build. *)
+          compile_dep "\"new\"";
+          check
+            (Build_file_store.cached cmi_path = Some new_contents)
+            "the store keeps the interface written mid-build";
+          expect_user ~redirect:false 0
+            "a dependent reads the interface written mid-build");
+      (* Changed outside the store between builds. *)
+      compile_dep "1";
+      Build_file_store.with_build (fun () ->
+          expect_user ~redirect:true 0 "a redirect in a later build";
+          expect_user ~redirect:false 2
+            "a later build reads the interface changed before it"))
+
+let speculation_gate_tests _context =
+  with_temp_dir "rewatch-driver-speculation-gate-" (fun root ->
+      let announced = ref false in
+      let gated =
+        Compiler_request_state.
+          {
+            no_hooks with
+            interface_computed = Some (fun _ _ -> announced := true);
+            before_effect = (fun () -> raise Exit);
+          }
+      in
+      write root "Held.res" "let value = 1\n";
+      let fails_at_gate input =
+        match run_with_hooks root ~hooks:gated input with
+        | result -> result.exit_code <> 0
+        | exception Compiler_request_output.Failed {error = Exit} -> true
+      in
+      check (fails_at_gate "Held.res") "a raising gate fails the request";
+      check !announced "the interface is announced before the gate";
+      List.iter
+        (fun extension ->
+          check
+            (not (Sys.file_exists (Filename.concat root ("Held." ^ extension))))
+            ("nothing is written past a raising gate: " ^ extension))
+        ["cmi"; "cmt"; "cmj"; "js"];
+      (* Flags can make a compile write an AST too, before type checking. *)
+      (match
+         run_with_hooks root
+           ~extra:["-bs-ast"; "-o"; "Extra.ast"]
+           ~hooks:gated "Held.res"
+       with
+      | result ->
+        check (result.exit_code <> 0) "an AST request fails at the gate"
+      | exception Compiler_request_output.Failed {error = Exit} -> ());
+      check
+        (not (Sys.file_exists (Filename.concat root "Extra.ast")))
+        "an AST waits at the gate too";
+      (* So do the immediate actions of the command line. *)
+      let temp_dir = Filename.concat root "temp" in
+      ensure_dir temp_dir;
+      let previous_temp_dir = Filename.get_temp_dir_name () in
+      Filename.set_temp_dir_name temp_dir;
+      Fun.protect
+        ~finally:(fun () -> Filename.set_temp_dir_name previous_temp_dir)
+        (fun () ->
+          List.iter
+            (fun extra ->
+              match run_with_hooks root ~extra ~hooks:gated "Held.res" with
+              | result ->
+                check (result.exit_code <> 0)
+                  "an immediate action fails at the gate"
+              | exception Compiler_request_output.Failed {error = Exit} -> ())
+            [
+              ["-verbose"; "-bs-syntax-only"; "-e"; "let x = 1"];
+              ["-o"; "Formatted.res"; "-format"; "Held.res"];
+            ];
+          (* A PPX waits at the gate before its input file is written and
+             before it runs. *)
+          let commands = ref 0 in
+          let temp_files_at_gate = ref [||] in
+          let ppx_gated =
+            Compiler_request_state.
+              {
+                no_hooks with
+                before_effect =
+                  (fun () ->
+                    temp_files_at_gate := Sys.readdir temp_dir;
+                    raise Exit);
+              }
+          in
+          (match
+             run_with_hooks root
+               ~extra:["-ppx"; "identity-ppx"; "-reprint-source"; "Held.res"]
+               ~run_external:(fun _ ->
+                 incr commands;
+                 (0, "", ""))
+               ~hooks:ppx_gated "Held.res"
+           with
+          | result -> check (result.exit_code <> 0) "a PPX fails at the gate"
+          | exception Compiler_request_output.Failed {error = Exit} -> ());
+          check (!commands = 0) "a PPX runs after the gate";
+          check
+            (!temp_files_at_gate = [||])
+            "a PPX's input is written after the gate");
+      check
+        (Sys.readdir temp_dir = [||])
+        "an evaluated source waits at the gate";
+      check
+        (not (Sys.file_exists (Filename.concat root "Formatted.res")))
+        "a formatted source waits at the gate";
+      write root "Broken.res" "let value: string = 1\n";
+      check (fails_at_gate "Broken.res") "a type error still fails";
+      check
+        (not (Sys.file_exists (Filename.concat root "Broken.cmt")))
+        "the partial .cmt of a type error waits at the gate too";
+      (* A warning that is an error keeps the interface back. *)
+      announced := false;
+      write root "Warned.res" "let f = x => {\n  let unused = 1\n  x\n}\n";
+      let warned =
+        run_with_hooks root
+          ~extra:["-w"; "+26"; "-warn-error"; "+26"]
+          ~hooks:
+            Compiler_request_state.
+              {
+                no_hooks with
+                interface_computed = Some (fun _ _ -> announced := true);
+              }
+          "Warned.res"
+      in
+      check (warned.exit_code <> 0) "the warning fails the request";
+      check (not !announced)
+        "an interface is not announced while a warning error is pending")
+
 let concurrent_diagnostic_recovery_tests _context =
   with_temp_dir "rewatch-driver-errors-" (fun root ->
       let first = Filename.concat root "first" in
@@ -1742,6 +2041,9 @@ let suites =
          "lambda_exit_isolation" >:: lambda_exit_isolation_tests;
          "type_node_id_isolation" >:: type_node_id_isolation_tests;
          "relative_project_root" >:: relative_project_root_tests;
+         "speculation_hooks" >:: speculation_hook_tests;
+         "speculation_store" >:: speculation_store_tests;
+         "speculation_gate" >:: speculation_gate_tests;
          "failed_writing_closes_files" >:: failed_writing_closes_files_tests;
          "eval_relative_temp_dir" >:: eval_relative_temp_dir_tests;
          "recovery" >:: recovery_tests;

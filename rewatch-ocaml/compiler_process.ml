@@ -49,8 +49,54 @@ let exit_code = function
   | Unix.WEXITED code -> code
   | Unix.WSIGNALED signal | Unix.WSTOPPED signal -> 128 + signal
 
-let run_in_process ?poll (request : request) =
-  log_compiler_request request;
+(* Paths are matched as the build file store keys them. The directories in
+   which the build publishes interfaces are spelled from canonical package
+   roots, both in a redirected path and on the load path, so a lookup there
+   that matches no redirected path names another file. Any other directory,
+   such as one from user flags, may be an alias of one of them, and a file
+   that differs only in case may be the same one: a lookup there of a
+   redirected file name waits, as the file may be stale until then. *)
+let cmi_redirect ~cwd ~cmi_directories ~wait_for_adoption redirects =
+  match redirects with
+  | [] -> fun _ -> None
+  | redirects -> (
+    let key path =
+      Build_file_store.key
+        (if Filename.is_relative path then Filename.concat cwd path else path)
+    in
+    let table length = Hashtbl.create length in
+    let contents_by_key = table (List.length redirects) in
+    let folded_keys = table (List.length redirects) in
+    let folded_names = table (List.length redirects) in
+    List.iter
+      (fun (published, contents) ->
+        let key = key published in
+        Hashtbl.replace contents_by_key key contents;
+        Hashtbl.replace folded_keys (String.lowercase_ascii key) ();
+        Hashtbl.replace folded_names
+          (String.lowercase_ascii (Filename.basename key))
+          ())
+      redirects;
+    let directories = table (List.length cmi_directories) in
+    List.iter
+      (fun directory -> Hashtbl.replace directories (key directory) ())
+      cmi_directories;
+    fun path ->
+      let key = key path in
+      match Hashtbl.find_opt contents_by_key key with
+      | Some _ as contents -> contents
+      | None ->
+        let folded = String.lowercase_ascii key in
+        if
+          Hashtbl.mem folded_names (Filename.basename folded)
+          && (Hashtbl.mem folded_keys folded
+             || not (Hashtbl.mem directories (Filename.dirname key)))
+        then wait_for_adoption ();
+        None)
+
+let run_in_process ?poll ?(log = true)
+    ?(hooks = Compiler_request_state.no_hooks) (request : request) =
+  if log then log_compiler_request request;
   match List.rev request.args with
   | [] ->
     {
@@ -60,7 +106,7 @@ let run_in_process ?poll (request : request) =
     }
   | input :: reversed_argv -> (
     match
-      Rescript_compiler_driver.run_request ~cwd:request.cwd
+      Rescript_compiler_driver.run_request_with_hooks ~hooks ~cwd:request.cwd
         ~argv:(List.rev reversed_argv) ~input
         ~run_external:
           (Some
@@ -95,15 +141,76 @@ let run ?poll request =
   Option.iter (fun poll -> poll ()) poll;
   result
 
-let task request =
+let task ?(hooks = Compiler_scheduler.no_compile_hooks) request =
   let cancelled = Atomic.make false in
+  let gate = hooks.Compiler_scheduler.gate in
+  (* A speculation logs its call once adopted, on its worker as before, so
+     that the test-only REWATCH_COMPILER_CALL_LOG lists only adopted calls. *)
+  (* A logging failure fails every later gate pass too, the final one outside
+     the compiler included, so nothing is written after it and the task fails
+     as when a request logs at its start. The task runs on one domain. *)
+  let logged = ref (if Option.is_none gate then Ok () else Error None) in
+  let wait_for_adoption () =
+    Option.iter Speculation_gate.wait gate;
+    match !logged with
+    | Ok () -> ()
+    | Error (Some error) -> raise error
+    | Error None -> (
+      match log_compiler_request request with
+      | () -> logged := Ok ()
+      | exception error ->
+        logged := Error (Some error);
+        raise error)
+  in
+  let redirect =
+    cmi_redirect ~cwd:request.cwd ~cmi_directories:hooks.cmi_directories
+      ~wait_for_adoption hooks.cmi_redirects
+  in
+  let compiler_hooks =
+    Compiler_request_state.
+      {
+        before_effect = wait_for_adoption;
+        interface_computed =
+          Option.map
+            (fun computed path bytes ->
+              computed
+                (if Filename.is_relative path then
+                   Filename.concat request.cwd path
+                 else path)
+                bytes)
+            hooks.on_interface_computed;
+        redirect_cmi =
+          (match gate with
+          | None -> redirect
+          | Some gate ->
+            fun path ->
+              (* Interfaces load throughout type checking: an abandoned
+                 speculation stops at the next one. *)
+              if Speculation_gate.is_abandoned gate then
+                raise Speculation_gate.Abandoned;
+              redirect path);
+      }
+  in
   Process.concurrent_task
-    ~cancel:(fun () -> Atomic.set cancelled true)
+    ~cancel:(fun () ->
+      Atomic.set cancelled true;
+      Option.iter Speculation_gate.cancel gate)
     (fun () ->
-      run_in_process
-        ~poll:(fun () ->
-          if Atomic.get cancelled then raise (Process.Interrupted 15))
-        request)
+      (* An abandoned speculation that has not started yet does no work. *)
+      Option.iter
+        (fun gate ->
+          if Speculation_gate.is_abandoned gate then
+            raise Speculation_gate.Abandoned)
+        gate;
+      let result =
+        run_in_process ~log:(Option.is_none gate) ~hooks:compiler_hooks
+          ~poll:(fun () ->
+            if Atomic.get cancelled then raise (Process.Interrupted 15))
+          request
+      in
+      (* A speculation's result, and its publication, wait for adoption. *)
+      wait_for_adoption ();
+      result)
 
 let run_tasks ?poll ?on_complete tasks =
   Process.run_tasks

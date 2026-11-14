@@ -22,7 +22,17 @@ type cmi_infos = {
   cmi_flags: pers_flags list;
 }
 
-val create_cmi : ?check_exists:unit -> string -> cmi_infos -> Digest.t
+val cmi_contents : cmi_infos -> string * Digest.t
+(** The contents of the .cmi file for an interface, and its CRC. *)
+
+val create_cmi :
+  ?check_exists:unit ->
+  ?contents:string * Digest.t ->
+  string ->
+  cmi_infos ->
+  Digest.t
+(** [create_cmi filename cmi] writes [cmi] to [filename] and returns its CRC.
+    [contents] is [cmi_contents cmi], when the caller computed it. *)
 
 (* read the cmi information (the magic is supposed to have already been read) *)
 
