@@ -208,6 +208,10 @@ let cleanup_stale ~artifact_files ~ast_sources ~present_source_files
   Config.namespace_compiler_name config.namespace
   |> Option.iter (fun namespace ->
       add_expected namespace [".cmi"; ".cmj"; ".cmt"; ".mlmap"]);
+  (* The dev map's .mlmap is in dev/, which is not scanned for stale files. *)
+  Source.dev_namespace_compiler_name config modules
+  |> Option.iter (fun dev_namespace ->
+      add_expected dev_namespace [".cmi"; ".cmj"; ".cmt"]);
   let removed_modules = ref [] in
   artifact_files
   |> List.iter (fun path ->

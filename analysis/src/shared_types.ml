@@ -503,6 +503,11 @@ and package = {
   paths_for_module: (file, paths) Hashtbl.t;
   namespace: string option;
   opens: path list;
+  dev_opens: path list;
+      (** Opened in the files of [dev_source_directories] only, as the compiler
+          opens a package's dev map in its dev modules only *)
+  dev_source_directories: string list list;
+      (** Relative to [root_path], as path components *)
   autocomplete: file list Misc.String_map.t;
 }
 
