@@ -15,17 +15,12 @@ else
   exit 1
 fi
 
+completed_log_changed() {
+  [ -f "$1" ] && ! cmp -s "$1" "$2" && grep -q "#Done(" "$1" 2>/dev/null
+}
+
 wait_for_changed_completed_log() {
-  local file="$1"; local baseline="$2"; local timeout
-  timeout=${3:-60}
-  while [ "$timeout" -gt 0 ]; do
-    if [ -f "$file" ] && ! cmp -s "$file" "$baseline" && grep -q "#Done(" "$file" 2>/dev/null; then
-      return 0
-    fi
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
+  poll "${3:-60}" completed_log_changed "$1" "$2"
 }
 
 COMPILER_LOG="./packages/watch-warnings/lib/rescript/.compiler.log"
