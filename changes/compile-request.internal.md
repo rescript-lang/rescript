@@ -1,0 +1,1 @@
+- Read bsc's flags into a typed request, and reject invalid values such as an unknown experimental feature, color setting or genType module.
