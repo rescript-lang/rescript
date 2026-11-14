@@ -50,6 +50,14 @@ val is_predef_exn : t -> bool
 val binding_time : t -> int
 val current_time : unit -> int
 val set_current_time : int -> unit
+
+val with_current_time : int -> (unit -> 'a) -> 'a * int
+
+(* [with_current_time t f] runs [f] with the stamp counter set to [t], so the
+   identifiers it creates get the stamps after [t], and returns [f]'s result
+   with the counter value it ended at. The counter is then put back to its
+   value before the call, also if [f] raises. Used to create identifiers whose
+   stamps were reserved earlier. *)
 val reinit : unit -> unit
 
 val capture_request_baseline : unit -> unit
