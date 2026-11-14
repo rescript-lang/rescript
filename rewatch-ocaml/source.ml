@@ -283,10 +283,19 @@ let active_sources (config : Config.t) ~prod ~features =
     (source_is_active ~prod ~all_features ~active_features)
     config.sources
 
-let namespace_members ~entry modules =
+(* The namespace map leaves out dev modules, so that a package opening the
+   namespace does not see them. They are in the dev map, which only the
+   package's own dev modules open. *)
+let namespace_members ~entry ~dev modules =
   modules
-  |> List.filter (fun module_ -> Some module_.name <> entry)
+  |> List.filter (fun (module_ : module_) ->
+      module_.is_dev = dev && Some module_.name <> entry)
   |> List.filter (fun module_ -> is_non_exotic_module_name module_.name)
+
+let dev_namespace_compiler_name (config : Config.t) modules =
+  if List.exists (fun (module_ : module_) -> module_.is_dev) modules then
+    Config.dev_namespace_compiler_name config.namespace
+  else None
 
 let scan_sources ~on_missing (config : Config.t) ~prod ~features
     ~collect_inventory ~collect_gentype =

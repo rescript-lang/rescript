@@ -51,6 +51,12 @@ let set_package_map module_name =
   (Clflags.current ()).open_modules :=
     module_name :: !((Clflags.current ()).open_modules)
 
+(* Opened after the namespace of [-bs-ns], like a [-open] that follows it. *)
+let open_alias_map module_name =
+  let flags = Clflags.current () in
+  flags.alias_maps := module_name :: !(flags.alias_maps);
+  flags.open_modules := module_name :: !(flags.open_modules)
+
 let update_npm_package_path s =
   let state = current () in
   state.packages_info <-

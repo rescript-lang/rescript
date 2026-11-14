@@ -95,15 +95,29 @@ let run ?poll request =
   Option.iter (fun poll -> poll ()) poll;
   result
 
-let task request =
+(* Runs [requests] one after another until one fails. *)
+let sequential_task requests =
   let cancelled = Atomic.make false in
   Process.concurrent_task
     ~cancel:(fun () -> Atomic.set cancelled true)
     (fun () ->
-      run_in_process
-        ~poll:(fun () ->
-          if Atomic.get cancelled then raise (Process.Interrupted 15))
-        request)
+      let poll () =
+        if Atomic.get cancelled then raise (Process.Interrupted 15)
+      in
+      List.fold_left
+        (fun (result : Process.result) request ->
+          if not (Process.succeeded result) then result
+          else
+            let next = run_in_process ~poll request in
+            {
+              next with
+              stdout = result.stdout ^ next.stdout;
+              stderr = result.stderr ^ next.stderr;
+            })
+        {status = Unix.WEXITED 0; stdout = ""; stderr = ""}
+        requests)
+
+let task request = sequential_task [request]
 
 let run_tasks ?poll ?on_complete tasks =
   Process.run_tasks
@@ -225,74 +239,109 @@ let publish_compiler_artifacts ~artifact_dir ~basename artifacts =
   with error ->
     raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
 
-let namespace_task ~runtime ~artifact_dir ~entry ~package_dirty ~force namespace
-    modules =
-  let mlmap = Filename.concat artifact_dir (namespace ^ ".mlmap") in
-  let contents =
-    let buffer = Buffer.create 128 in
-    Buffer.add_string buffer "randjbuildsystem\n";
-    Source.namespace_members ~entry modules
-    |> List.map (fun module_ -> module_.Source.name)
-    |> List.sort String.compare
-    |> List.iter (fun name ->
-        Buffer.add_string buffer name;
-        Buffer.add_char buffer '\n');
-    Buffer.contents buffer
+type namespace_map = {basename: string; mlmap: string; dev: bool}
+
+(* A package's dev modules are aliased by a second map, [Ns-dev], which only
+   they open (Compiler_args.namespace_args). The compiler takes the namespace
+   of the alias targets from the map's file name, so the dev map is
+   [dev/Ns.mlmap], compiled with [-o Ns-dev]. Both maps are compiled by one
+   task, so that a build that fails or is killed before both are published
+   compiles both again. *)
+let namespace_task ~runtime ~artifact_dir ~entry ~package_dirty ~force
+    ~dev_namespace namespace modules =
+  let namespace_map =
+    {basename = namespace; mlmap = namespace ^ ".mlmap"; dev = false}
   in
-  let previous_contents =
-    try Some (File_util.read_file mlmap)
-    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
+  let dev_map =
+    dev_namespace
+    |> Option.map (fun basename ->
+        {
+          basename;
+          mlmap = Filename.concat "dev" (namespace ^ ".mlmap");
+          dev = true;
+        })
   in
-  let mlmap_changed = previous_contents <> Some contents in
-  if mlmap_changed then
-    File_util.write_file_atomic ~ensure_parent:false mlmap contents;
-  let typed_tree = Filename.concat artifact_dir (namespace ^ ".cmt") in
+  let maps = namespace_map :: Option.to_list dev_map in
+  let write_mlmap {mlmap; dev} =
+    let mlmap = Filename.concat artifact_dir mlmap in
+    let contents =
+      let buffer = Buffer.create 128 in
+      Buffer.add_string buffer "randjbuildsystem\n";
+      Source.namespace_members ~entry ~dev modules
+      |> List.map (fun module_ -> module_.Source.name)
+      |> List.sort String.compare
+      |> List.iter (fun name ->
+          Buffer.add_string buffer name;
+          Buffer.add_char buffer '\n');
+      Buffer.contents buffer
+    in
+    let previous_contents =
+      try Some (File_util.read_file mlmap)
+      with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
+    in
+    let changed = previous_contents <> Some contents in
+    if changed then
+      File_util.write_file_atomic ~ensure_parent:dev mlmap contents;
+    changed
+  in
+  (* Every map is written, even when an earlier one changed. *)
+  let mlmap_changed =
+    List.fold_left (fun changed map -> write_mlmap map || changed) false maps
+  in
+  let artifact {basename} extension =
+    Filename.concat artifact_dir (basename ^ extension)
+  in
   let outputs_current =
-    ["cmi"; "cmj"; "cmt"]
-    |> List.for_all (fun extension ->
-        File_util.is_regular_file
-          (Filename.concat artifact_dir (namespace ^ "." ^ extension)))
+    maps
+    |> List.for_all (fun map ->
+        [".cmi"; ".cmj"; ".cmt"]
+        |> List.for_all (fun extension ->
+            File_util.is_regular_file (artifact map extension)))
   in
   if not (force || package_dirty || mlmap_changed || not outputs_current) then
     None
   else (
     (* The typed tree, published last, marks the namespace compiled: without
        it, a build that fails or is killed before then compiles it again. *)
-    File_util.remove_file typed_tree;
+    List.iter (fun map -> File_util.remove_file (artifact map ".cmt")) maps;
+    let request {basename; mlmap; dev} =
+      {
+        args =
+          ["-runtime-path"; runtime; "-w"; "-49"; "-color"; "always"]
+          @ (if dev then ["-o"; basename] else [])
+          @ ["-no-alias-deps"; mlmap];
+        cwd = artifact_dir;
+      }
+    in
+    let publish {basename} =
+      publish_compiler_artifacts ~artifact_dir ~basename
+        [Cmi; Required "cmj"; Typed_tree "cmt"]
+    in
     Some
       Compiler_scheduler.
         {
-          task =
-            task
-              {
-                args =
-                  [
-                    "-runtime-path";
-                    runtime;
-                    "-w";
-                    "-49";
-                    "-color";
-                    "always";
-                    "-no-alias-deps";
-                    Filename.basename mlmap;
-                  ];
-                cwd = artifact_dir;
-              };
+          task = sequential_task (List.map request maps);
           publish =
             (fun result ->
               if not (Process.succeeded result) then (
                 List.iter
-                  (fun extension ->
-                    Build_file_store.forget
-                      (Filename.concat artifact_dir (namespace ^ extension)))
-                  [".cmi"; ".cmt"];
+                  (fun map ->
+                    List.iter
+                      (fun extension ->
+                        Build_file_store.forget (artifact map extension))
+                      [".cmi"; ".cmt"])
+                  maps;
                 raise
                   (Compiler_scheduler.Build_failure
                      (result.Process.stderr ^ result.stdout)));
-              let cmi_change =
-                publish_compiler_artifacts ~artifact_dir ~basename:namespace
-                  [Cmi; Required "cmj"; Typed_tree "cmt"]
-              in
+              let cmi_change = publish namespace_map in
+              (* Only the namespace map's interface matters to dependents: the
+                 modules that open the dev map do not record its interface
+                 (-bs-open-alias-map). *)
+              (try Option.iter (fun map -> ignore (publish map)) dev_map
+               with Compiler_scheduler.Publication_failure (error, _) ->
+                 raise
+                   (Compiler_scheduler.Publication_failure (error, cmi_change)));
               Compiler_scheduler.{stderr = result.stderr; cmi_change});
         })
 
@@ -322,7 +371,7 @@ let compile_request ~artifact_dir ~(config : Config.t) ~common_args
     (module_ : Source.module_) ~source_kind path =
   let args =
     Compiler_args.compiler_arguments_with_common ~config ~common_args
-      ~module_name:module_.name ~source_kind
+      ~module_name:module_.name ~is_dev:module_.is_dev ~source_kind
       ~has_interface:(Option.is_some module_.interface)
       ~path
   in

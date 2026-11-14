@@ -3,6 +3,11 @@ include module type of Config_types
 val namespace_name : namespace -> string option
 val namespace_entry : namespace -> string option
 val namespace_compiler_name : namespace -> string option
+
+val dev_namespace_compiler_name : namespace -> string option
+(** The unit that aliases a package's dev modules, which only its dev modules
+    open: [Ns-dev] for namespace [Ns]. *)
+
 val namespaced_module_name : namespace -> string -> string
 val path_in_root : string -> string
 val exists_in_root : string -> bool

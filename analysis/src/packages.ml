@@ -108,7 +108,17 @@ let new_bs_package ~root_path =
                let cmt = Filename.concat artifact_dir namespace ^ ".cmt" in
                Hashtbl.replace paths_for_module namespace (Namespace {cmt});
                let path = [Find_files.name_space_to_name namespace] in
-               [path]
+               (* The package's dev modules are aliased by its dev map, which
+                  the compiler opens in dev modules only. *)
+               let dev_namespace = namespace ^ "-dev" in
+               let dev_cmt =
+                 Filename.concat artifact_dir dev_namespace ^ ".cmt"
+               in
+               if Files.exists dev_cmt then (
+                 Hashtbl.replace paths_for_module dev_namespace
+                   (Namespace {cmt = dev_cmt});
+                 [path; [dev_namespace]])
+               else [path]
            in
            let bind f x = Option.bind x f in
            let compiler_flags =

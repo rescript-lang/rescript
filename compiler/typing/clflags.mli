@@ -24,6 +24,9 @@ type t = {
   color: Misc.Color.setting option ref;
   assume_no_mli: mli_status ref;
   dont_record_crc_unit: string option ref;
+  alias_maps: string list ref;
+      (** Alias maps opened with [-bs-open-alias-map]; like the namespace of
+          [-bs-ns], their interface CRCs are not recorded *)
   bs_gentype: bool ref;
   jsx_preserve: bool ref;
       (** Keep JSX in the output ([-bs-jsx-preserve]); read by translcore, and

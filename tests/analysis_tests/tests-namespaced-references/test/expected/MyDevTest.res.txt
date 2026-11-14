@@ -1,0 +1,12 @@
+Hover test/MyDevTest.res 0:24
+{ "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
+
+Complete test/MyDevTest.res 2:16
+pos_cursor:[2:16] pos_no_white:[2:15] Found expr:[2:3->2:16]
+Pexp_ident MyDevHelper.d:[2:3->2:16]
+Completable: Cpath Value[MyDevHelper, d]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder MyNamespace.place holder MyNamespace-dev.place holder
+Resolved opens 3 MyNamespace-dev MyNamespace Stdlib
+ContextPath Value[MyDevHelper, d]
+Path MyDevHelper.d
+[ { "detail": "int", "kind": 12, "label": "devValue", "tags": [] } ]

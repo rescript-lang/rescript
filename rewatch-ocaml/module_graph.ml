@@ -17,6 +17,7 @@ type module_node = {
   package_root: string;
   source_path: string;
   namespace: Config.namespace;
+  is_dev: bool;
   visible_packages: (string, unit) Hashtbl.t;
   mutable raw_dependencies: string list;
 }
@@ -94,8 +95,13 @@ let resolve_dependency ~find_module ~find_namespace_maps (node : module_node)
     | _ -> raw_name
   in
   let local_key = Config.namespaced_module_name node.namespace local_name in
+  (* A namespaced package's dev modules are only aliased by its dev map, which
+     only its own dev modules open (Source.namespace_members). *)
   let is_visible (dependency_node : module_node) =
     Hashtbl.mem node.visible_packages dependency_node.package_name
+    && ((not dependency_node.is_dev)
+       || dependency_node.namespace = Config.No_namespace
+       || (node.is_dev && dependency_node.package_root = node.package_root))
   in
   match find_module local_key with
   | Some dependency_node when is_visible dependency_node -> [local_key]
@@ -233,6 +239,7 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
           package_root = package.root;
           source_path = module_.Source.implementation;
           namespace = package.compile_config.namespace;
+          is_dev = module_.Source.is_dev;
           visible_packages;
           raw_dependencies;
         }
@@ -270,7 +277,8 @@ let initialize ~(root_config : Config.t) ~package_plans ~compile_assets
         namespace_details
         |> Option.map (fun (compiler_name, name, namespace_entry) ->
             let members =
-              Source.namespace_members ~entry:namespace_entry package.modules
+              Source.namespace_members ~entry:namespace_entry ~dev:false
+                package.modules
               |> List.map (fun module_ ->
                   Source.compiler_basename package.compile_config
                     module_.Source.name)

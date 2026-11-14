@@ -1,0 +1,1 @@
+- Keep a namespaced package's dev modules out of its namespace, so that `open` of a dependency's namespace no longer shadows your own modules. Dev modules are now only visible to the dev modules of their own package; move test helpers that other packages or non-dev code use to a regular source directory.

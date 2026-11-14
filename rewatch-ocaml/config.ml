@@ -15,6 +15,9 @@ let namespace_compiler_name = function
   | Namespace name -> Some name
   | Namespace_with_entry {name; entry = _} -> Some ("@" ^ name)
 
+let dev_namespace_compiler_name namespace =
+  namespace_compiler_name namespace |> Option.map (fun name -> name ^ "-dev")
+
 let namespaced_module_name namespace module_name =
   match namespace with
   | No_namespace -> module_name

@@ -13,6 +13,10 @@ val with_local_warning_policy : is_local:bool -> Config.t -> Config.t
 val gentype_dependency_args_from_paths :
   Config.t -> (Config.dependency * string) list -> string list
 
+val namespace_args : Config.t -> is_dev:bool -> string -> string list
+(** The namespace arguments of the module with the given name. Dev modules
+    also open their package's dev map. *)
+
 val parser_arguments :
   config:Config.t -> contents:string -> path:string -> string list
 
@@ -22,6 +26,7 @@ val compiler_arguments :
   runtime:string ->
   dependency_dirs:string list ->
   module_name:string ->
+  is_dev:bool ->
   source_kind:Source.source_kind ->
   has_interface:bool ->
   watch:bool ->
@@ -42,6 +47,7 @@ val compiler_arguments_with_common :
   config:Config.t ->
   common_args:string list ->
   module_name:string ->
+  is_dev:bool ->
   source_kind:Source.source_kind ->
   has_interface:bool ->
   path:string ->

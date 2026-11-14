@@ -88,6 +88,7 @@ let dependency_state_tests _context =
       source_path = entry_source.implementation;
       namespace =
         Config.Namespace_with_entry {name = "Namespace"; entry = "Entry"};
+      is_dev = false;
       visible_packages = Hashtbl.create 0;
       raw_dependencies = [];
     }
@@ -112,6 +113,73 @@ let dependency_state_tests _context =
        entry
     = [namespace_map.key])
     "namespace entry implicitly depends on its namespace map"
+
+let dev_module_visibility_tests _context =
+  let visible packages =
+    let table = Hashtbl.create 2 in
+    List.iter (fun package -> Hashtbl.replace table package ()) packages;
+    table
+  in
+  let node ~package ~namespace ~is_dev key raw_dependencies :
+      Module_graph.module_node =
+    {
+      key;
+      package_name = package;
+      package_root = package;
+      source_path = "src/" ^ key ^ ".res";
+      namespace;
+      is_dev;
+      visible_packages = visible ["provider"; "plain"; package];
+      raw_dependencies;
+    }
+  in
+  let provider =
+    node ~package:"provider" ~namespace:(Config.Namespace "Provider")
+  in
+  let consumer =
+    node ~package:"consumer" ~namespace:(Config.Namespace "Consumer")
+  in
+  let plain = node ~package:"plain" ~namespace:Config.No_namespace in
+  let provider_map : Module_graph.namespace_map =
+    {
+      key = Module_graph.namespace_map_key "provider";
+      compiler_name = "Provider";
+      namespace = "Provider";
+      package_name = "provider";
+      package_root = "provider";
+      members = ["Public-Provider"];
+    }
+  in
+  let modules = Hashtbl.create 4 in
+  List.iter
+    (fun (node : Module_graph.module_node) -> Hashtbl.add modules node.key node)
+    [
+      provider ~is_dev:false "Public-Provider" [];
+      provider ~is_dev:true "Config-Provider" [];
+      plain ~is_dev:true "Helper" [];
+    ];
+  let namespace_maps = Hashtbl.create 1 in
+  Hashtbl.add namespace_maps "Provider" [provider_map];
+  let resolved (node : Module_graph.module_node) =
+    Module_graph.resolved_dependencies ~find_module:(Hashtbl.find_opt modules)
+      ~find_namespace_maps:(Hashtbl.find_opt namespace_maps)
+      node
+  in
+  assert_equal ["Config-Provider"]
+    (resolved (provider ~is_dev:true "Local-Provider" ["Config"]))
+    ~msg:"a dev module depends on a dev module of its package";
+  assert_equal []
+    (resolved (provider ~is_dev:false "Bad-Provider" ["Config"]))
+    ~msg:"a non-dev module does not see the dev modules of its package";
+  assert_equal [provider_map.key]
+    (resolved (consumer ~is_dev:true "Leak-Consumer" ["Provider.Config"]))
+    ~msg:"another package does not see a namespaced package's dev modules";
+  assert_equal ["Public-Provider"]
+    (resolved (consumer ~is_dev:true "Use-Consumer" ["Provider.Public"]))
+    ~msg:"another package sees a namespaced package's other modules";
+  assert_equal ["Helper"]
+    (resolved (consumer ~is_dev:false "Plain-Consumer" ["Helper"]))
+    ~msg:"dev modules of a package without a namespace stay global"
 
 let carries_forward_dirty_state_only_for_matching_sources _context =
   let previous = Build_state.create 2 in
@@ -138,6 +206,7 @@ let tests =
   "build_state_tests"
   >::: [
          "dependency state" >:: dependency_state_tests;
+         "dev module visibility" >:: dev_module_visibility_tests;
          "carry forward blocked work"
          >:: carries_forward_dirty_state_only_for_matching_sources;
        ]

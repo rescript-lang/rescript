@@ -145,6 +145,7 @@ For package `A` depending on package `B`:
 Module dependencies discovered from `.ast` files are **filtered**:
 - A module in another package is only valid if that package is declared in `dependencies` or `dev-dependencies`
 - "It compiles locally because the module exists" is **not** sufficient
+- The dev modules (`"type": "dev"` sources) of a namespaced package are only visible to the dev modules of the same package. The namespace `Ns` aliases the other modules; the dev modules are aliased by a separate map `Ns-dev` (compiled from `dev/Ns.mlmap`), which only the package's dev modules open. `open Ns` in another package therefore never brings a dev module into scope.
 
 ---
 

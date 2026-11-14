@@ -80,8 +80,9 @@ let run ~verbosity path =
     | Source.Implementation -> File_util.exists (source ^ "i")
     | Source.Interface -> false
   in
+  let is_dev = Config.source_is_dev config relative in
   let dependencies =
-    (if Config.source_is_dev config relative then
+    (if is_dev then
        List.map (fun dependency -> (false, dependency)) config.dev_dependencies
      else [])
     @ List.map (fun dependency -> (true, dependency)) config.dependencies
@@ -113,8 +114,8 @@ let run ~verbosity path =
     Compiler_args.compiler_arguments ~project_root ~config ~runtime
       ~dependency_dirs
       ~module_name:(Source.module_name source)
-      ~source_kind ~has_interface ~watch:false ~gentype_dependency_args:[]
-      ~path:relative
+      ~is_dev ~source_kind ~has_interface ~watch:false
+      ~gentype_dependency_args:[] ~path:relative
   in
   Yojson.Safe.pretty_to_string
     (`Assoc
