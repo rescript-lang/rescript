@@ -188,8 +188,10 @@ jobs:
         if: matrix.test_commit_records
         run: yarn test-upsert-comment
 
+      # The format check gives the same result everywhere; it runs on Linux
+      # only, where it is fastest.
       - name: Run tests
-        run: node scripts/test.js -all
+        run: node scripts/test.js ${{ runner.os == 'Linux' && '-all' || '-ounit -mocha -build -docstrings' }}
 
       - name: Check for diffs in tests folder
         run: git diff --ignore-cr-at-eol --exit-code tests
