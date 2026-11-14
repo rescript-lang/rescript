@@ -1939,7 +1939,7 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
     List.iter (fun (name, crc) -> prerr_endline name) imports;*)
   Btype.cleanup_abbrev ();
   Subst.reset_for_saving ();
-  let sg = Subst.signature (Subst.for_saving Subst.identity) sg in
+  let sg = Subst.signature (Subst.for_saving_signature Subst.identity) sg in
   let flags =
     match deprecated with
     | Some s -> [Deprecated s]

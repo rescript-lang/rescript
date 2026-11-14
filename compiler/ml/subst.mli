@@ -47,6 +47,11 @@ val for_saving : t -> t
     object-field mutability classes are fresh, while sharing between fields in
     the copied result is preserved. *)
 
+val for_saving_signature : t -> t
+(** Like [for_saving], but also copies each type that contains no type
+    variable once, so that the items of the saved signature share the copy.
+    Use it for one signature between two calls of [reset_for_saving]. *)
+
 val reset_for_saving : unit -> unit
 
 val module_path : t -> Path.t -> Path.t
