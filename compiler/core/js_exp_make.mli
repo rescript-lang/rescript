@@ -160,8 +160,8 @@ val assign : t -> t -> t
 val literal_tag : Variant_runtime.literal_tag -> t
 val tag_type : Variant_runtime.tag_type -> t
 
-val is_instance_of : Variant_runtime.Instance.t -> t -> t
-(** [Array.isArray(e)] or [e instanceof C] *)
+val instanceof : t -> t -> t
+(** [e0 instanceof e1] *)
 
 val triple_equal : ?comment:string -> t -> t -> t
 (* TODO: reduce [triple_equal] use *)

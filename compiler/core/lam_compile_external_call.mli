@@ -59,3 +59,7 @@ val translate_ffi :
 
 val jsx_callee : External_ffi_types.external_decl -> J.expression
 (** The function a JSX external refers to, for [J.Jsx] *)
+
+val class_constructor : Variant_runtime.Instance.class_name -> J.expression
+(** The constructor of a class, [Intl.Locale] for a global or [Three.Mesh]
+    for an export of a module, whose import it adds *)

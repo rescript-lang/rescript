@@ -970,7 +970,9 @@ let compile output_prefix =
         match Variant_runtime.typeof_name block_type with
         | Some name -> E.string_equal (E.typeof e) (E.str name)
         | None -> assert false)
-      | Instance instance -> E.is_instance_of instance e
+      | Instance Array -> E.is_array e
+      | Instance (Class {name}) ->
+        E.instanceof e (Lam_compile_external_call.class_constructor name)
       | Not_null -> E.not (E.is_null e)
       | Not test -> E.not (test_exp test)
       | And (test1, test2) -> E.and_ (test_exp test1) (test_exp test2)

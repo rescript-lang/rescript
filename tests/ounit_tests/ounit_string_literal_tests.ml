@@ -772,14 +772,23 @@ let suites =
              OUnit.assert_failure
                "expected Array.isArray simplification to remain active");
            let date =
-             Variant_runtime.Instance.Class {name = "Date"; ancestors = []}
+             Lam_compile_external_call.class_constructor
+               (Variant_runtime.Instance.global "Date")
            in
-           match Js_exp_make.is_instance_of date value with
+           (match Js_exp_make.instanceof value date with
            | {expression_desc = Bin (InstanceOf, argument, constructor)} ->
              OUnit.assert_bool "expected the original argument"
                (Js_analyzer.eq_expression value argument);
              assert_js_global ~expected:"Date" constructor
-           | _ -> OUnit.assert_failure "expected an instanceof expression" );
+           | _ -> OUnit.assert_failure "expected an instanceof expression");
+           match
+             (Lam_compile_external_call.class_constructor
+                (Variant_runtime.Instance.global "Intl.Locale"))
+               .expression_desc
+           with
+           | Static_index (intl, "Locale", None) ->
+             assert_js_global ~expected:"Intl" intl
+           | _ -> OUnit.assert_failure "expected Intl.Locale" );
          ( "semantic string equality folds directly" >:: fun _ ->
            let assert_equal_result expected left right =
              match (Js_exp_make.string_equal left right).expression_desc with
