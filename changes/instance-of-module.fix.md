@@ -1,0 +1,1 @@
+- `@module` beside `@instanceOf` now imports the class from that module, instead of being ignored. `@scope` on a type is an error: write the path in `@instanceOf`, such as `@instanceOf("THREE.Mesh")`.

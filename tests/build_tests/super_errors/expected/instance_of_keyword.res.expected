@@ -5,4 +5,4 @@
   [1;31m1[0m [2m│[0m [1;31m@instanceOf[0m("class") type t
   2 [2m│[0m 
 
-  @instanceOf expects the name of a global class, such as @instanceOf("Date") or @instanceOf("Intl.Locale").
+  @instanceOf expects the name of a global class, such as @instanceOf("Date") or @instanceOf("Intl.Locale"), or with @module the name of a class the module exports, such as @module("three") @instanceOf("Mesh").

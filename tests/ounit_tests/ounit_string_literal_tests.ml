@@ -772,9 +772,10 @@ let suites =
              OUnit.assert_failure
                "expected Array.isArray simplification to remain active");
            let date =
-             Variant_runtime.Instance.Class {name = "Date"; ancestors = []}
+             Lam_compile_external_call.class_constructor
+               {path = "Date"; module_ = None}
            in
-           match Js_exp_make.is_instance_of date value with
+           match Js_exp_make.instanceof value date with
            | {expression_desc = Bin (InstanceOf, argument, constructor)} ->
              OUnit.assert_bool "expected the original argument"
                (Js_analyzer.eq_expression value argument);

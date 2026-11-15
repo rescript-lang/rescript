@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/untagged_same_module_class_twice.res[0m:[2m4:27-39[0m
+
+  2 [2m│[0m @module("three") @instanceOf("Mesh") type sameMesh
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m @unboxed type t = A(mesh) [1;31m| B(sameMesh)[0m
+  5 [2m│[0m 
+
+  This untagged variant definition is invalid: At most one case can be an instance of Mesh from "three".

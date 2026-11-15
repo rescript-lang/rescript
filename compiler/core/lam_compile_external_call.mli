@@ -57,5 +57,9 @@ val translate_ffi :
     examples: "variadic"
 *)
 
+val class_constructor : Variant_runtime.Instance.class_name -> J.expression
+(** The constructor of a class: its global, or its module's export, imported
+    as an external's value is *)
+
 val jsx_callee : External_ffi_types.external_decl -> J.expression
 (** The function a JSX external refers to, for [J.Jsx] *)

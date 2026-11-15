@@ -1,10 +1,17 @@
 module Instance : sig
-  (** A JavaScript class whose instances a value is recognized by:
-      [name] is the global constructor's path, such as ["Date"] or
-      ["Intl.Locale"], and [ancestors] are the paths of its superclasses that
-      are declared too, nearest first. Arrays are recognized by
-      [Array.isArray] instead. *)
-  type t = Array | Class of {name: string; ancestors: string list}
+  type class_name = {path: string; module_: string option}
+  (** A class constructor: the global at [path], such as ["Date"] or
+      ["Intl.Locale"], or with [module_] the export at [path] of that module,
+      such as ["Mesh"] of ["three"]. Two classes are the same when both parts
+      are equal. *)
+
+  (** A JavaScript class whose instances a value is recognized by, with
+      [ancestors], the superclasses that are declared too, nearest first.
+      Arrays are recognized by [Array.isArray] instead. *)
+  type t = Array | Class of {name: class_name; ancestors: class_name list}
+
+  val class_name_to_string : class_name -> string
+  (** ["Date"], or ["Mesh from \"three\""] for a class of a module *)
 
   val to_string : t -> string
 

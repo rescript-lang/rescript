@@ -138,7 +138,9 @@ level implying the one before:
 - `@typeOf("k")`: their `typeof` is `k`, one of `"string"`, `"number"`,
   `"bigint"`, `"boolean"`, `"symbol"`, `"function"` and `"object"`;
 - `@instanceOf("C")`: they are instances of the global class at the path `C`,
-  such as `"Date"` or `"Intl.Locale"`.
+  such as `"Date"` or `"Intl.Locale"`. With `@module("m")` beside it, `C` is
+  instead the path of an export of the module `m`, such as
+  `@module("three") @instanceOf("Mesh")`; `"default"` is its default export.
 
 A type has at most one of the three, and only abstract types and type
 abbreviations, public or private, can have one.
@@ -239,11 +241,27 @@ rejected as well:
 | `String`, `Number`, `Boolean`, `BigInt`, `Symbol` | Values of type bigint are primitives ... | `instance_of_primitive_wrapper.res` |
 | `globalThis`, `undefined`, `NaN`, `Infinity`, `Math`, `JSON`, `Reflect`, `Atomics`, `Intl`, `Proxy` | Math is not a class ... | `instance_of_not_a_class.res` |
 
-An unknown `typeof` is an error too (`type_of_invalid.res`). The class is read
-as a global; where a local binding of the same name is in scope, it is read
-through `globalThis` (#8785). The compiler trusts the annotations, as it
-trusts the type of an external: a value that is not what its type declares is
-recognized by what it is (rule 10).
+The path of a module's export may start with a keyword, such as `"default"`,
+and is not checked against the globals above. A class is identified by its
+path and its module: `Mesh` of `"three"` and the global `Mesh` are two classes
+(`untagged_same_module_class_twice.res`,
+`instance_of_module_interface_mismatch.res`). `@module` and `@scope` have no
+other meaning on a type declaration:
+
+| Declaration | Error | Fixture |
+| --- | --- | --- |
+| `@module("m")` without `@instanceOf` | @module on a type declaration names the module a class is imported from ... | `instance_of_module_without_class.res`, `instance_of_module_with_type_of.res` |
+| `@module` without a module name | @module on a class expects the name of the module that exports it ... | `instance_of_module_without_name.res` |
+| `@scope("A")` | @scope has no effect on a type declaration. Write the class's path in @instanceOf instead: @instanceOf("A.C"). | `instance_of_scope.res`, `instance_of_scope_without_class.res` |
+
+An unknown `typeof` is an error too (`type_of_invalid.res`). A global class is
+read as a global; where a local binding of the same name is in scope, it is
+read through `globalThis` (#8785). A class of a module is imported where a
+check needs it, as the value of a `@module` external is, and a relative module
+path is written to the output as it is
+(`tests/tests/src/untagged_module_classes_test.res`). The compiler trusts the
+annotations, as it trusts the type of an external: a value that is not what
+its type declares is recognized by what it is (rule 10).
 
 The stdlib annotates the types of the classes it binds:
 
@@ -619,8 +637,8 @@ had to answer, and the answers of rule 5:
    `undefined`.
 8. **Abbreviations.** Annotations are read along the chain of abbreviations,
    and a type is never recognized by its name.
-9. **Globals.** A shadowed class is read through `globalThis`. A missing
-   class throws when the check runs (rule 10).
+9. **Globals and imports.** A shadowed class is read through `globalThis`, a
+   class of a module is imported. A missing class throws when the check runs
+   (rule 10).
 
-Still open: a class imported from a module cannot be named, and the typed
-arrays share one type (#8955).
+Still open: the typed arrays share one type (#8955).

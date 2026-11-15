@@ -45,8 +45,10 @@ and clause_to_string : string D.clause -> string = function
   | Falls_through _ -> "falls through"
   | Body tree -> tree_to_string tree
 
-let class_ ?(ancestors = []) name : R.block_type =
-  InstanceType (Class {name; ancestors})
+let class_ ?(ancestors = []) path : R.block_type =
+  let global path : R.Instance.class_name = {path; module_ = None} in
+  InstanceType
+    (Class {name = global path; ancestors = List.map global ancestors})
 
 (* The plan of a match with these arms on a variant with these literal and
    payload cases; [fallback] is the match's default *)

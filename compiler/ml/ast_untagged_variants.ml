@@ -37,6 +37,10 @@ type error =
   | SubclassOfPublicAbbreviation of string * string
   | ClassOnPublicAbbreviation of string
   | ClassTwiceInChain of string
+  | InvalidClassModule
+  | ModuleWithoutInstanceOf
+  | ScopeOnType of string option
+      (** the [@instanceOf] path that says what the [@scope] meant *)
 exception Error of Location.t * error
 
 let report_error ppf =
@@ -107,7 +111,9 @@ let report_error ppf =
   | InvalidInstanceOf ->
     fprintf ppf
       "@instanceOf expects the name of a global class, such as \
-       @instanceOf(\"Date\") or @instanceOf(\"Intl.Locale\")."
+       @instanceOf(\"Date\") or @instanceOf(\"Intl.Locale\"), or with @module \
+       the name of a class the module exports, such as @module(\"three\") \
+       @instanceOf(\"Mesh\")."
   | UnsupportedInstanceOf (name, reason) -> (
     match reason with
     | Through_global_this ->
@@ -189,6 +195,22 @@ let report_error ppf =
       "%s appears twice in this chain of abbreviations, so it would be its own \
        superclass."
       name
+  | InvalidClassModule ->
+    fprintf ppf
+      "@module on a class expects the name of the module that exports it, such \
+       as @module(\"three\") @instanceOf(\"Mesh\")."
+  | ModuleWithoutInstanceOf ->
+    fprintf ppf
+      "@module on a type declaration names the module a class is imported \
+       from, so it needs @instanceOf too, such as @module(\"three\") \
+       @instanceOf(\"Mesh\")."
+  | ScopeOnType None ->
+    fprintf ppf "@scope has no effect on a type declaration."
+  | ScopeOnType (Some path) ->
+    fprintf ppf
+      "@scope has no effect on a type declaration. Write the class's path in \
+       @instanceOf instead: @instanceOf(\"%s\")."
+      path
 
 (*
   Type of the runtime representation of a tag.
@@ -259,7 +281,7 @@ let report_constructor_more_than_one_arg ~loc ~name =
    states about the runtime representation of its values. *)
 type runtime_annotation =
   | Not_undefined  (** values that are never [undefined] *)
-  | Instance_of of string  (** instances of the global class at this path *)
+  | Instance_of of Instance.class_name  (** instances of this class *)
   | Type_of of block_type  (** values with this [typeof] *)
 
 let not_undefined = "notUndefined"
@@ -288,7 +310,10 @@ let unsupported_class name =
     | _ -> None)
   | _ -> None
 
-let is_class_path name =
+(* A path of identifiers. The first one names a global, which may not be a
+   keyword, or with [~exported] an export of a module, which may: a module's
+   default export is ["default"]. *)
+let is_class_path ~exported name =
   let is_start = function
     | 'A' .. 'Z' | 'a' .. 'z' | '_' | '$' -> true
     | _ -> false
@@ -304,7 +329,7 @@ let is_class_path name =
   | global :: properties ->
     (* Properties may be named like keywords, the global may not *)
     is_identifier global
-    && (not (Js_reserved_map.is_js_keyword global))
+    && (exported || not (Js_reserved_map.is_js_keyword global))
     && List.for_all is_identifier properties
   | [] -> false
 
@@ -319,17 +344,23 @@ let typeof_name block_type =
 
 let runtime_annotation_to_string = function
   | Not_undefined -> "@" ^ not_undefined
-  | Instance_of name -> Printf.sprintf "@%s(\"%s\")" instance_of name
+  | Instance_of {path; module_ = None} ->
+    Printf.sprintf "@%s(\"%s\")" instance_of path
+  | Instance_of {path; module_ = Some module_} ->
+    Printf.sprintf "@module(\"%s\") @%s(\"%s\")" module_ instance_of path
   | Type_of block_type ->
     Printf.sprintf "@%s(\"%s\")" type_of (typeof_name block_type)
 
 (* What a declaration's annotations state about its values, for error
    messages *)
 let describe_declared_values = function
-  | Some (InstanceType (Class {name; ancestors = []})) -> "instances of " ^ name
+  | Some (InstanceType (Class {name; ancestors = []})) ->
+    "instances of " ^ Instance.class_name_to_string name
   | Some (InstanceType (Class {name; ancestors})) ->
-    "instances of " ^ name ^ ", a subclass of "
-    ^ String.concat " and " ancestors
+    "instances of "
+    ^ Instance.class_name_to_string name
+    ^ ", a subclass of "
+    ^ String.concat " and " (List.map Instance.class_name_to_string ancestors)
   | Some (InstanceType Array) -> "arrays"
   | Some block_type -> "typeof \"" ^ typeof_name block_type ^ "\""
   | None -> "no stated class or typeof"
@@ -339,16 +370,30 @@ let describe_declared_values = function
    accepted. *)
 let process_runtime_annotation ?(loc = Location.none)
     (attrs : Parsetree.attributes) =
-  let annotation_of ({Location.txt; loc = attr_loc}, payload) =
-    let loc = if attr_loc = Location.none then loc else attr_loc in
+  let attr_loc attr_loc = if attr_loc = Location.none then loc else attr_loc in
+  (* The module a class is imported from: [@module] beside [@instanceOf] *)
+  let class_module () =
+    List.find_map
+      (fun ({Location.txt; loc}, payload) ->
+        if txt = "module" then
+          match Ast_payload.semantic_string_of_payload payload with
+          | Some module_ when module_ <> "" -> Some module_
+          | _ -> raise (Error (attr_loc loc, InvalidClassModule))
+        else None)
+      attrs
+  in
+  let annotation_of ({Location.txt; loc}, payload) =
+    let loc = attr_loc loc in
     if txt = not_undefined then Some Not_undefined
     else if txt = instance_of then
+      let module_ = class_module () in
       match Ast_payload.semantic_string_of_payload payload with
-      | Some name when is_class_path name -> (
-        match unsupported_class name with
-        | None -> Some (Instance_of name)
-        | Some reason ->
-          raise (Error (loc, UnsupportedInstanceOf (name, reason))))
+      | Some path when is_class_path ~exported:(module_ <> None) path -> (
+        (* A module's export can be named like a global without being it *)
+        match (module_, unsupported_class path) with
+        | None, Some reason ->
+          raise (Error (loc, UnsupportedInstanceOf (path, reason)))
+        | Some _, _ | None, None -> Some (Instance_of {path; module_}))
       | _ -> raise (Error (loc, InvalidInstanceOf))
     else if txt = type_of then
       match Ast_payload.semantic_string_of_payload payload with
@@ -374,7 +419,24 @@ let process_runtime_annotation ?(loc = Location.none)
    [is_abstract_or_abbreviation]. *)
 let check_runtime_annotation ~loc ~is_abstract_or_abbreviation
     (attrs : Parsetree.attributes) =
-  match process_runtime_annotation ~loc attrs with
+  let annotation = process_runtime_annotation ~loc attrs in
+  (* [@module] and [@scope] are read on a type declaration only as the place
+     of a class; anywhere else they would be silently ignored *)
+  Ext_list.iter attrs (fun ({Location.txt; loc}, payload) ->
+      match (txt, annotation) with
+      | "module", Some (Instance_of _) -> ()
+      | "module", _ -> raise (Error (loc, ModuleWithoutInstanceOf))
+      | "scope", Some (Instance_of {path}) ->
+        (* [@scope("THREE")] meant the class at [THREE.Mesh] *)
+        let meant =
+          Option.map
+            (fun scope -> scope ^ "." ^ path)
+            (Ast_payload.semantic_string_of_payload payload)
+        in
+        raise (Error (loc, ScopeOnType meant))
+      | "scope", _ -> raise (Error (loc, ScopeOnType None))
+      | _ -> ());
+  match annotation with
   | None -> ()
   | Some annotation ->
     if not is_abstract_or_abbreviation then
