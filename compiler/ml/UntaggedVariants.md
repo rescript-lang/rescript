@@ -250,15 +250,15 @@ rejected as well:
 
 | Path | Error | Fixture |
 | --- | --- | --- |
-| not a path, or a keyword global | @instanceOf expects the name of a global class ... | `instance_of_invalid_class.res`, `instance_of_keyword.res` |
+| not a string, not a path, or a keyword global | @instanceOf expects the name of a global class ... | `instance_of_invalid_class.res`, `instance_of_keyword.res`, `instance_of_not_string.res` |
 | `globalThis.C` | Write @instanceOf("C") without "globalThis." ... | `instance_of_global_this.res` |
 | `Object`, `Function` | Every object is an instance of Object ... Use @typeOf("object") instead. | `instance_of_object.res` |
 | `Array` | Arrays are recognized by Array.isArray ... | `instance_of_array.res` |
 | `String`, `Number`, `Boolean`, `BigInt`, `Symbol` | Values of type bigint are primitives ... | `instance_of_primitive_wrapper.res` |
 | `globalThis`, `undefined`, `NaN`, `Infinity`, `Math`, `JSON`, `Reflect`, `Atomics`, `Intl`, `Proxy` | Math is not a class ... | `instance_of_not_a_class.res` |
 | not a path, with `@module` | @instanceOf expects the name of a class that "three" exports ... | `instance_of_module_invalid_class.res` |
-| `@module` without one string, or a payload of `@instanceOf` that is not a string with `@module` | @module on an @instanceOf type expects the module that exports the class ...; @instanceOf expects the name of a class that "three" exports ... | `instance_of_module_invalid_payload.res`, `instance_of_module_not_string.res` |
-| a `@scope` property that is not an identifier | @scope on an @instanceOf type expects the properties the class is read through ... | `instance_of_invalid_scope.res` |
+| `@module` without one non-empty string, or a payload of `@instanceOf` that is not a string with `@module` | @module on an @instanceOf type expects the module that exports the class ...; @instanceOf expects the name of a class that "three" exports ... | `instance_of_module_invalid_payload.res`, `instance_of_module_empty.res`, `instance_of_module_not_string.res` |
+| a `@scope` without a string or a tuple of strings, or with a property that is not an identifier | @scope on an @instanceOf type expects the properties the class is read through ... | `instance_of_invalid_scope.res`, `instance_of_scope_not_strings.res`, `instance_of_scope_without_payload.res` |
 | a first `@scope` property named like a keyword, without `@module` | Without @module, the first property of @scope is a global, which cannot be named like the keyword "default". | `instance_of_scope_keyword.res` |
 | a first `@scope` property `globalThis`, without `@module` | Remove "globalThis" from @scope ... | `instance_of_scope_global_this.res` |
 | `@module` or `@scope` twice | Duplicate @module annotation; a type can have only one. | `instance_of_module_duplicate.res` |

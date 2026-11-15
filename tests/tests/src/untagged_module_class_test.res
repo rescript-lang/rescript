@@ -3,17 +3,19 @@ open Test_utils
 open Untagged_module_class_types
 
 // A global class named like an export of the module, and a class read
-// through a global's properties
+// through the properties of a global
 %%raw(`
 globalThis.UntaggedCircle = class UntaggedCircle {}
-globalThis.UntaggedScope = {Triangle: class Triangle {}}
+globalThis.UntaggedScope = {Shapes: {Triangle: class Triangle {}}}
 `)
 
 @instanceOf("UntaggedCircle") type globalCircle
-@scope("UntaggedScope") @instanceOf("Triangle") type triangle
+@scope(("UntaggedScope", "Shapes")) @instanceOf("Triangle") type triangle
 
 @new external makeGlobalCircle: unit => globalCircle = "UntaggedCircle"
-@new @scope("UntaggedScope") external makeTriangle: unit => triangle = "Triangle"
+
+@new @scope(("UntaggedScope", "Shapes"))
+external makeTriangle: unit => triangle = "Triangle"
 
 @unboxed
 type value =

@@ -7,7 +7,7 @@ import * as Untagged_module_class_libMjs from "./untagged_module_class_lib.mjs";
 import Untagged_module_class_libMjs$1 from "./untagged_module_class_lib.mjs";
 
 globalThis.UntaggedCircle = class UntaggedCircle {}
-globalThis.UntaggedScope = {Triangle: class Triangle {}}
+globalThis.UntaggedScope = {Shapes: {Triangle: class Triangle {}}}
 ;
 
 function kind(value) {
@@ -23,7 +23,7 @@ function kind(value) {
     return "shape";
   } else if (value instanceof UntaggedCircle) {
     return "global circle";
-  } else if (value instanceof UntaggedScope.Triangle) {
+  } else if (value instanceof UntaggedScope.Shapes.Triangle) {
     return "triangle";
   } else {
     return "plain";
@@ -32,18 +32,18 @@ function kind(value) {
 
 Mocha.describe("Untagged_module_class_test", () => {
   Mocha.test("a class check imports the class from its module", () => {
-    Test_utils.eq("File \"untagged_module_class_test.res\", line 44, characters 7-14", "shape", kind(Untagged_module_class_types.makeShape()));
-    Test_utils.eq("File \"untagged_module_class_test.res\", line 45, characters 7-14", "circle", kind(Untagged_module_class_types.makeCircle()));
+    Test_utils.eq("File \"untagged_module_class_test.res\", line 46, characters 7-14", "shape", kind(Untagged_module_class_types.makeShape()));
+    Test_utils.eq("File \"untagged_module_class_test.res\", line 47, characters 7-14", "circle", kind(Untagged_module_class_types.makeCircle()));
   });
   Mocha.test("a class check reads the class through its scope", () => {
-    Test_utils.eq("File \"untagged_module_class_test.res\", line 49, characters 7-14", "square", kind(Untagged_module_class_types.makeSquare()));
-    Test_utils.eq("File \"untagged_module_class_test.res\", line 50, characters 7-14", "triangle", kind(new (UntaggedScope.Triangle)()));
+    Test_utils.eq("File \"untagged_module_class_test.res\", line 51, characters 7-14", "square", kind(Untagged_module_class_types.makeSquare()));
+    Test_utils.eq("File \"untagged_module_class_test.res\", line 52, characters 7-14", "triangle", kind(new (UntaggedScope.Shapes.Triangle)()));
   });
-  Mocha.test("a class check imports the default export of a module", () => Test_utils.eq("File \"untagged_module_class_test.res\", line 54, characters 7-14", "polygon", kind(Untagged_module_class_types.makePolygon())));
+  Mocha.test("a class check imports the default export of a module", () => Test_utils.eq("File \"untagged_module_class_test.res\", line 56, characters 7-14", "polygon", kind(Untagged_module_class_types.makePolygon())));
   Mocha.test("an export and a global of the same name are different classes", () => {
-    Test_utils.eq("File \"untagged_module_class_test.res\", line 58, characters 7-14", "global circle", kind(new UntaggedCircle()));
-    Test_utils.eq("File \"untagged_module_class_test.res\", line 59, characters 7-14", "text", "text");
-    Test_utils.eq("File \"untagged_module_class_test.res\", line 60, characters 7-14", "plain", kind({
+    Test_utils.eq("File \"untagged_module_class_test.res\", line 60, characters 7-14", "global circle", kind(new UntaggedCircle()));
+    Test_utils.eq("File \"untagged_module_class_test.res\", line 61, characters 7-14", "text", "text");
+    Test_utils.eq("File \"untagged_module_class_test.res\", line 62, characters 7-14", "plain", kind({
       plain: true
     }));
   });

@@ -395,6 +395,10 @@ let strings_of_payload payload =
   | PStr [{pstr_desc = Pstr_eval (expression, _)}] -> strings [expression]
   | PStr _ | PSig _ | PTyp _ | PPat _ -> None
 
+(* The location of an attribute, or [loc] for one the compiler made *)
+let attribute_loc ~loc (attr_loc : Location.t) =
+  if attr_loc = Location.none then loc else attr_loc
+
 (* The class at the path [name] of [@instanceOf(name)], read through the
    properties of [@scope] in [attrs], among the exports of the module of
    [@module] or else among the globals. [name] is [None] when the payload of
@@ -406,10 +410,10 @@ let class_of_attributes ~loc (attrs : Parsetree.attributes) name =
     with
     | [] -> None
     | [({loc = attr_loc}, payload)] ->
-      Some ((if attr_loc = Location.none then loc else attr_loc), payload)
+      Some (attribute_loc ~loc attr_loc, payload)
     | _ :: ({loc = attr_loc}, _) :: _ ->
-      let loc = if attr_loc = Location.none then loc else attr_loc in
-      raise (Error (loc, DuplicateRuntimeAnnotation txt))
+      raise
+        (Error (attribute_loc ~loc attr_loc, DuplicateRuntimeAnnotation txt))
   in
   let module_ =
     match attribute class_module with
@@ -423,18 +427,16 @@ let class_of_attributes ~loc (attrs : Parsetree.attributes) name =
     match attribute class_scope with
     | None -> []
     | Some (scope_loc, payload) -> (
-      let invalid reason =
-        raise (Error (scope_loc, InvalidClassScope reason))
-      in
+      let invalid reason = Error (scope_loc, InvalidClassScope reason) in
       match strings_of_payload payload with
       | Some (_ :: _ as scopes) when List.for_all is_identifier scopes -> (
         match (module_, scopes) with
         (* Without [@module], the first property is a global *)
-        | None, "globalThis" :: _ -> invalid Scope_through_global_this
+        | None, "globalThis" :: _ -> raise (invalid Scope_through_global_this)
         | None, global :: _ when Js_reserved_map.is_js_keyword global ->
-          invalid (Keyword_global global)
+          raise (invalid (Keyword_global global))
         | (None | Some _), _ -> scopes)
-      | Some _ | None -> invalid Not_properties)
+      | Some _ | None -> raise (invalid Not_properties))
   in
   match (module_, name) with
   | Some module_, Some name when is_export_path name ->
@@ -461,7 +463,7 @@ let class_of_attributes ~loc (attrs : Parsetree.attributes) name =
 let process_runtime_annotation ?(loc = Location.none)
     (attrs : Parsetree.attributes) =
   let annotation_of ({Location.txt; loc = attr_loc}, payload) =
-    let loc = if attr_loc = Location.none then loc else attr_loc in
+    let loc = attribute_loc ~loc attr_loc in
     if txt = not_undefined then Some Not_undefined
     else if txt = instance_of then
       Some

@@ -1,0 +1,1 @@
+@instanceOf(Date) type date
