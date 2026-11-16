@@ -140,6 +140,21 @@ level implying the one before:
 - `@instanceOf("C")`: they are instances of the global class at the path `C`,
   such as `"Date"` or `"Intl.Locale"`.
 
+Like an external, an `@instanceOf` type can say where its class is found:
+`@module("m")` reads the path among the exports of the module `m`, with
+`"default"` for its default export, and imports it as a `@module` external
+does, and `@scope` puts its properties in front of the path, so
+`@scope("THREE") @instanceOf("Mesh")` is `@instanceOf("THREE.Mesh")`:
+
+```rescript
+@module("three") @instanceOf("Mesh") type mesh // x instanceof Three.Mesh
+@module("./shapes.js") @instanceOf("default") type shape
+```
+
+On a type without `@instanceOf`, `@module` and `@scope` have no effect, so
+they are errors. Before #9239 the compiler ignored them on every type without
+a word, which hid that bug.
+
 A type has at most one of the three, and only abstract types and type
 abbreviations, public or private, can have one.
 `@notUndefined` affects only rule 12: `option` of the type, and of an untagged
@@ -222,26 +237,39 @@ a locally abstract type stands for another type and does not count.
 declaration is @notUndefined, but the first declaration can hold undefined".
 An interface that states nothing hides the shape. The same holds for functor
 arguments, `with type` constraints and module type ascriptions. Within one
-variant a class is identified by its path, so two types of the same class are
-one case (rule 6); across a signature the two declarations must also state
-the same superclasses.
+variant a class is identified by its path and its module, so two types of the
+same class are one case (rule 6), while a global `Mesh` and the `Mesh` that
+`"three"` exports are two; across a signature the two declarations must also
+state the same superclasses and module
+(`runtime_annotation_interface_module_class.res`).
 
 The class path is a dot-separated list of identifiers whose first one is not
-a JavaScript keyword. Paths that name no class to recognize values by are
+a JavaScript keyword. In a module, the path names an export, which can be
+named like a keyword and can be any class, so none of the global paths below
+is rejected there. Paths that name no class to recognize values by are
 rejected as well:
 
 | Path | Error | Fixture |
 | --- | --- | --- |
-| not a path, or a keyword global | @instanceOf expects the name of a global class ... | `instance_of_invalid_class.res`, `instance_of_keyword.res` |
+| not a string, not a path, or a keyword global | @instanceOf expects the name of a global class ... | `instance_of_invalid_class.res`, `instance_of_keyword.res`, `instance_of_not_string.res` |
 | `globalThis.C` | Write @instanceOf("C") without "globalThis." ... | `instance_of_global_this.res` |
 | `Object`, `Function` | Every object is an instance of Object ... Use @typeOf("object") instead. | `instance_of_object.res` |
 | `Array` | Arrays are recognized by Array.isArray ... | `instance_of_array.res` |
 | `String`, `Number`, `Boolean`, `BigInt`, `Symbol` | Values of type bigint are primitives ... | `instance_of_primitive_wrapper.res` |
 | `globalThis`, `undefined`, `NaN`, `Infinity`, `Math`, `JSON`, `Reflect`, `Atomics`, `Intl`, `Proxy` | Math is not a class ... | `instance_of_not_a_class.res` |
+| not a path, with `@module` | @instanceOf expects the name of a class that "three" exports ... | `instance_of_module_invalid_class.res` |
+| `@module` without one non-empty string, or a payload of `@instanceOf` that is not a string with `@module` | @module on an @instanceOf type expects the module that exports the class ...; @instanceOf expects the name of a class that "three" exports ... | `instance_of_module_invalid_payload.res`, `instance_of_module_empty.res`, `instance_of_module_not_string.res` |
+| a `@scope` without a string or a tuple of strings, or with a property that is not an identifier | @scope on an @instanceOf type expects the properties the class is read through ... | `instance_of_invalid_scope.res`, `instance_of_scope_not_strings.res`, `instance_of_scope_without_payload.res` |
+| a first `@scope` property named like a keyword, without `@module` | Without @module, the first property of @scope is a global, which cannot be named like the keyword "default". | `instance_of_scope_keyword.res` |
+| a first `@scope` property `globalThis`, without `@module` | Remove "globalThis" from @scope ... | `instance_of_scope_global_this.res` |
+| `@module` or `@scope` twice | Duplicate @module annotation; a type can have only one. | `instance_of_module_duplicate.res` |
+| `@module` or `@scope` on a type without `@instanceOf` | @module on a type declaration names the module a class is imported from, so it needs @instanceOf ..., with what to do for an abstract type, a type with `@typeOf` or `@notUndefined`, and a record or variant | `module_without_instance_of.res`, `scope_without_instance_of.res`, `module_on_record.res` |
 
 An unknown `typeof` is an error too (`type_of_invalid.res`). The class is read
 as a global; where a local binding of the same name is in scope, it is read
-through `globalThis` (#8785). The compiler trusts the annotations, as it
+through `globalThis` (#8785). A class of a module is read through the module's
+import, which the module that compiles the check adds, wherever the type is
+declared (`untagged_module_class_test.res`). The compiler trusts the annotations, as it
 trusts the type of an external: a value that is not what its type declares is
 recognized by what it is (rule 10).
 
@@ -267,7 +295,8 @@ written (Known bugs).
   `undefinedness`; `ast_untagged_variants.ml:process_runtime_annotation`,
   `unsupported_class`, `check_runtime_annotation`;
   `includecore.ml:compare_runtime_annotations`;
-  `variant_runtime.ml:Instance`; `js_exp_make.ml:class_constructor`.
+  `variant_runtime.ml:Instance`;
+  `lam_compile_external_call.ml:class_constructor`.
 - Tests: `spec_test` rules 4 and 5;
   `tests/tests/src/untagged_runtime_annotations_test.res`,
   `untagged_runtime_annotations_shadow_test.res`,
@@ -292,7 +321,7 @@ The type checker rejects an untagged variant, with
 | Condition | Reason | Fixture |
 | --- | --- | --- |
 | two object cases | At most one case can be an object type. | `UntaggedAtMostOneObject.res` |
-| two cases of one instance class, compared by path (arrays, tuples and records represented as arrays share `Array`) | At most one case can be an instance of C; for `Array`, an array, a tuple or a record represented as an array. | `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res`, `untagged_array_record_and_array.res`, `untagged_same_class_twice.res` |
+| two cases of one instance class, compared by path and module (arrays, tuples and records represented as arrays share `Array`) | At most one case can be an instance of C; for `Array`, an array, a tuple or a record represented as an array. | `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res`, `untagged_array_record_and_array.res`, `untagged_same_class_twice.res` |
 | two function cases | At most one case can be a function type. | `UntaggedAtMostOneFunction.res` |
 | two string cases | At most one case can be a string type. | `UntaggedAtMostOneString.res` |
 | two number cases (`int` and `float` count together) | At most one case can be a number type (int or float). | `UntaggedAtMostOneNumber.res` |
@@ -621,6 +650,3 @@ had to answer, and the answers of rule 5:
    and a type is never recognized by its name.
 9. **Globals.** A shadowed class is read through `globalThis`. A missing
    class throws when the check runs (rule 10).
-
-Still open: a class imported from a module cannot be named, and the typed
-arrays share one type (#8955).

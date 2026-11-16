@@ -45,8 +45,10 @@ and clause_to_string : string D.clause -> string = function
   | Falls_through _ -> "falls through"
   | Body tree -> tree_to_string tree
 
-let class_ ?(ancestors = []) name : R.block_type =
-  InstanceType (Class {name; ancestors})
+(* A class at [path], with superclasses of the same module *)
+let class_ ?module_ ?(ancestors = []) path : R.block_type =
+  let name path : R.Instance.class_name = {module_; path} in
+  InstanceType (Class {name = name path; ancestors = List.map name ancestors})
 
 (* The plan of a match with these arms on a variant with these literal and
    payload cases; [fallback] is the match's default *)
@@ -246,6 +248,39 @@ let suites =
                   ]
                 ~fallback:"default" []
                 [(class_ "Animal", "animal"); (StringType, "string")] );
+         ( "a module's class is checked before its superclass" >:: fun _ ->
+           "switch (typeof x) {string: string; default: if (x instanceof Dog \
+            from \"zoo\") dog else animal}"
+           =~ plan ~literals:[]
+                ~kinds:
+                  [
+                    class_ ~module_:"zoo" "Animal";
+                    class_ ~module_:"zoo" "Dog" ~ancestors:["Animal"];
+                    StringType;
+                  ]
+                ~fallback:"default" []
+                [
+                  (class_ ~module_:"zoo" "Animal", "animal");
+                  (class_ ~module_:"zoo" "Dog" ~ancestors:["Animal"], "dog");
+                  (StringType, "string");
+                ] );
+         ( "a global class is not the superclass of a module's class"
+         >:: fun _ ->
+           "switch (typeof x) {string: string; default: if (x instanceof \
+            Animal) animal else dog}"
+           =~ plan ~literals:[]
+                ~kinds:
+                  [
+                    class_ "Animal";
+                    class_ ~module_:"zoo" "Dog" ~ancestors:["Animal"];
+                    StringType;
+                  ]
+                ~fallback:"default" []
+                [
+                  (class_ "Animal", "animal");
+                  (class_ ~module_:"zoo" "Dog" ~ancestors:["Animal"], "dog");
+                  (StringType, "string");
+                ] );
          ( "the last arm of a complete match is not checked" >:: fun _ ->
            "{if (x instanceof Date) date else regexp}"
            =~ plan ~literals:[]

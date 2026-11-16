@@ -5,11 +5,21 @@
    each declaration. *)
 
 module Instance = struct
-  type t = Array | Class of {name: string; ancestors: string list}
+  type class_name = {module_: string option; path: string}
+
+  type t = Array | Class of {name: class_name; ancestors: class_name list}
+
+  let global path = {module_ = None; path}
+
+  let class_name_to_string = function
+    | {module_ = None; path} -> path
+    | {module_ = Some module_; path} ->
+      Printf.sprintf "%s from \"%s\"" path
+        (String_literal.encode_js_string module_)
 
   let to_string = function
     | Array -> "Array"
-    | Class {name} -> name
+    | Class {name} -> class_name_to_string name
 
   let is_subclass t ~of_ =
     match (t, of_) with

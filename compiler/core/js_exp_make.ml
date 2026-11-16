@@ -1418,19 +1418,9 @@ let literal_tag = function
   | Null -> nil
   | Undefined -> undefined
 
-(* The constructor of a class at a global path such as "Intl.Locale": a
-   global with properties, so that a binding that shadows the global's name
-   is noticed. *)
-let class_constructor (instance : Variant_runtime.Instance.t) =
-  match
-    String.split_on_char '.' (Variant_runtime.Instance.to_string instance)
-  with
-  | [] -> assert false
-  | global :: properties -> List.fold_left dot (js_global global) properties
-
 (* The [typeof] string an untagged payload answers to, as a [switch] key.
-   Instances are told apart by [is_instance_of], an unknown payload is not
-   checked *)
+   Instances are told apart by [instanceof] or [Array.isArray], an unknown
+   payload is not checked *)
 let block_type_name block_type =
   match Variant_runtime.typeof_name block_type with
   | Some name -> str name
@@ -1439,11 +1429,6 @@ let block_type_name block_type =
 let tag_type = function
   | Variant_runtime.Literal d -> literal_tag d
   | Payload_shape b -> block_type_name b
-
-let is_instance_of (instance : Variant_runtime.Instance.t) e =
-  match instance with
-  | Array -> is_array e
-  | Class _ -> instanceof e (class_constructor instance)
 
 (* Whether a value of a tagged variant is a constant rather than a block,
    given the literals of its constants *)

@@ -371,7 +371,13 @@ let common_initial_env add_type add_extension empty_env =
       type_arity = 1;
       type_variance = [Variance.covariant];
       type_shape =
-        Recognized_as (InstanceType (Class {name = "Promise"; ancestors = []}));
+        Recognized_as
+          (InstanceType
+             (Class
+                {
+                  name = Variant_runtime.Instance.global "Promise";
+                  ancestors = [];
+                }));
     }
   and decl_tagged_template =
     let tvar1, tvar2 = (newgenvar (), newgenvar ()) in

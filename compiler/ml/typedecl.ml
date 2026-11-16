@@ -373,7 +373,7 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
            them apart *)
         match outer with
         | Instance_of name when decl.type_private = Public ->
-          error (ClassOnPublicAbbreviation name)
+          error (ClassOnPublicAbbreviation (Instance.class_name_to_string name))
         | Not_undefined | Instance_of _ | Type_of _ -> ())
       | Stands_for_another -> stands_for_another ()
       | Not_abstract -> unrelated ())
@@ -387,15 +387,18 @@ let check_manifest_annotation ~loc ~env (decl : Types.type_declaration) =
       let superclass, ancestors =
         match inner with
         | InstanceType (Class {name = ancestor; ancestors}) ->
-          (ancestor, ancestor :: ancestors)
+          (Instance.class_name_to_string ancestor, ancestor :: ancestors)
         (* Every class instance is an object *)
         | _ -> ("Object", [])
       in
       if decl.type_private = Public then
-        error (SubclassOfPublicAbbreviation (name, superclass))
-      else if List.mem name ancestors then error (ClassTwiceInChain name)
-    | Instance_of name, Some (InstanceType Array) ->
-      error (SubclassOfArray name)
+        error
+          (SubclassOfPublicAbbreviation
+             (Instance.class_name_to_string name, superclass))
+      else if List.mem name ancestors then
+        error (ClassTwiceInChain (Instance.class_name_to_string name))
+    | Instance_of _, Some (InstanceType Array) ->
+      error (SubclassOfArray (runtime_annotation_to_string outer))
     | (Instance_of _ | Type_of _), Some inner ->
       let recognized_by =
         match inner with
