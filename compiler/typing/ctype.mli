@@ -54,6 +54,16 @@ type subtype_context =
   | Coercion_into_private_type of {typename: Path.t}
       (** The target is a private record or variant, whose values only its own
           module can build. *)
+  | Class_not_an_ancestor of {
+      source: Path.t;
+      source_class: Variant_runtime.Instance.class_name;
+      ancestors: Variant_runtime.Instance.class_name list;
+      target: Path.t;
+      target_class: Variant_runtime.Instance.class_name;
+    }
+      (** Both types are class types ([@instanceOf]), and the class of
+          [target] is neither the class of [source] nor one of its declared
+          superclasses, which are [ancestors], nearest first. *)
   | Record_array_mismatch of {
       array_record_name: Path.t;
       object_record_name: Path.t;

@@ -1834,6 +1834,22 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
             "@ @{<info>%s@} is private: its values can only be built in the \
              module that defines it, so another type cannot be coerced to it."
             (Path.name typename)
+        | Class_not_an_ancestor
+            {source; source_class; ancestors; target; target_class} ->
+          let class_name = Variant_runtime.Instance.class_name_to_string in
+          fprintf ppf "@ @{<info>%s@} is the class %s" (Path.name source)
+            (class_name source_class);
+          (match List.rev ancestors with
+          | [] -> fprintf ppf " and declares no superclass."
+          | [parent] -> fprintf ppf ", a subclass of %s." (class_name parent)
+          | last :: rev_parents ->
+            fprintf ppf ", a subclass of %s and %s."
+              (String.concat ", " (List.rev_map class_name rev_parents))
+              (class_name last));
+          fprintf ppf
+            " @{<info>%s@} is the class %s. A class type coerces to its own \
+             class and to the superclasses it declares."
+            (Path.name target) (class_name target_class)
         | Record_array_mismatch {array_record_name; object_record_name} ->
           fprintf ppf
             "@ The record @{<info>%s@} is represented as a JavaScript array \
