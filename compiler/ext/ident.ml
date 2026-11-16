@@ -82,6 +82,19 @@ let set_current_time t =
   let state = counter () in
   state.currentstamp <- max state.currentstamp t
 
+let with_current_time t f =
+  let state = counter () in
+  let saved = state.currentstamp in
+  state.currentstamp <- t;
+  match f () with
+  | result ->
+    let final = state.currentstamp in
+    state.currentstamp <- saved;
+    (result, final)
+  | exception exn ->
+    state.currentstamp <- saved;
+    raise exn
+
 let reinit () =
   let state = counter () in
   if state.reinit_level < 0 then state.reinit_level <- state.currentstamp

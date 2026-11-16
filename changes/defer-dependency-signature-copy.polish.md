@@ -1,0 +1,1 @@
+- Build: copy a dependency's interface only when it is read, after the first copy of the same interface in a build, instead of every time a module checks whether the dependency is an alias.
