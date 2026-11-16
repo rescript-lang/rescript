@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/external_scope_not_strings.res[0m:[2m1:1-6[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@scope[0m(("window", 3)) @val external d: int = "d"
+  2 [2m│[0m 
+  3 [2m│[0m let x = d
+
+  @scope on an external expects the properties its value is read through, such as @scope("document") or @scope(("window", "location")).

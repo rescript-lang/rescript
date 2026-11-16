@@ -34,6 +34,7 @@ type error =
   | Invalid_bs_unwrap_type
   | Conflict_ffi_attribute of string
   | Illegal_attribute
+  | Invalid_scope of Ast_payload.scope_error
   (* we still rqeuire users to have explicit annotation to avoid
      {[ (((int -> int) -> int) -> int )]}
   *)
@@ -61,6 +62,21 @@ let pp_error fmt err =
       "Unsupported @return directive. Supported directives are `null_to_opt`, \
        `null_undefined_to_opt` (or `nullable`), and `identity`."
     | Illegal_attribute -> "Illegal attributes"
+    | Invalid_scope Scope_not_strings ->
+      "@scope on an external expects the properties its value is read through, \
+       such as @scope(\"document\") or @scope((\"window\", \"location\"))."
+    | Invalid_scope (Scope_global_not_identifier global) ->
+      Printf.sprintf
+        "Without @module, the first property of @scope is a global, so it must \
+         be an identifier, and \"%s\" is not one. To read a property of the \
+         global object of that name, put \"globalThis\" first in @scope."
+        (String_literal.encode_js_string global)
+    | Invalid_scope (Scope_global_keyword global) ->
+      Printf.sprintf
+        "Without @module, the first property of @scope is a global, which \
+         cannot be named like the keyword \"%s\". To read a property of the \
+         global object of that name, put \"globalThis\" first in @scope."
+        global
     | Duplicated_bs_deriving ->
       "Duplicate @deriving attribute; a type can only have one."
     | Conflict_attributes names ->

@@ -150,8 +150,9 @@ type external_desc = {
   module_as_val: External_ffi_types.external_module_name option;
   val_send: bundle_source option;
   splice: bool;
-  (* mutable *)
-  scopes: string list;
+  scope: (Location.t * Parsetree.payload) option;
+      (** the [@scope] attribute, read by [scopes] once the kind of external
+          says whether its first property is a global *)
   set_index: bool;
   (* mutable *)
   get_index: bool;
@@ -170,7 +171,7 @@ let init_st =
     module_as_val = None;
     val_send = None;
     splice = false;
-    scopes = [];
+    scope = None;
     set_index = false;
     get_index = false;
     new_name = None;
@@ -336,13 +337,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                       };
                 }
               | _ -> Bs_syntaxerr.err loc Illegal_attribute))
-          | "scope" -> (
-            match Ast_payload.assert_strings loc payload with
-            | [] -> Bs_syntaxerr.err loc Illegal_attribute
-            (* We need err on empty scope, so we can tell the difference
-               between unset/set
-            *)
-            | scopes -> {st with scopes})
+          | "scope" -> {st with scope = Some (loc, payload)}
           | "taggedTemplate" ->
             Location.raise_errorf ~loc
               "The @@taggedTemplate decorator has been removed. Bind the \
@@ -436,8 +431,9 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
    return_wrapper = Return_unset;
    set_index = false;
    mk_obj = _;
-   scopes =
-     [] (* wrapper does not work with @obj
+   scope =
+     None
+     (* wrapper does not work with @obj
         TODO: better error message *);
   } ->
     if String.length prim_name <> 0 then
@@ -613,6 +609,17 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
       External_ffi_types.external_decl =
     {kind; module_; scopes; variadic; effective_arity = arg_type_specs_length}
   in
+  (* The properties of a [@scope]. The first one is a global when the external
+     reads a value or a class without [@module], and otherwise a property of
+     the module or of the object the external is called on. *)
+  let scopes ~global scope =
+    match scope with
+    | None -> []
+    | Some (loc, payload) -> (
+      match Ast_payload.scopes_of_payload ~global payload with
+      | Ok scopes -> scopes
+      | Error error -> Bs_syntaxerr.err loc (Invalid_scope error))
+  in
   match st with
   | {
    set_index = true;
@@ -621,7 +628,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    module_as_val = None;
    val_send = None;
    splice = false;
-   scopes;
+   scope;
    get_index = false;
    new_name = None;
    call_name = None;
@@ -630,7 +637,8 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    return_wrapper = _;
    mk_obj = _;
   } ->
-    if arg_type_specs_length = 3 then mk ~scopes Decl_set_index
+    if arg_type_specs_length = 3 then
+      mk ~scopes:(scopes ~global:false scope) Decl_set_index
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@set_index (arity of 3)"
@@ -644,7 +652,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    module_as_val = None;
    val_send = None;
    splice = false;
-   scopes;
+   scope;
    new_name = None;
    call_name = None;
    set_name = None;
@@ -653,7 +661,8 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    mk_obj = _;
    return_wrapper = _;
   } ->
-    if arg_type_specs_length = 2 then mk ~scopes Decl_get_index
+    if arg_type_specs_length = 2 then
+      mk ~scopes:(scopes ~global:false scope) Decl_get_index
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@get_index (arity expected 2 : while %d)"
@@ -668,7 +677,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    new_name;
    external_module_name = None;
    val_send = None;
-   scopes = [];
+   scope = None;
    (* module as var does not need scopes *)
    splice;
    call_name = None;
@@ -717,16 +726,19 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    set_name = None;
    external_module_name = None;
    splice;
-   scopes;
+   scope;
    mk_obj = _;
    (* mk_obj is always false *)
    return_wrapper = _;
   } ->
-    mk ~scopes ~variadic:splice (Decl_val {name = prim_name_or_pval_prim.name})
+    mk
+      ~scopes:(scopes ~global:true scope)
+      ~variadic:splice
+      (Decl_val {name = prim_name_or_pval_prim.name})
   | {
    call_name = Some {name; source = _};
    splice;
-   scopes;
+   scope;
    external_module_name;
    val_name = None;
    module_as_val = None;
@@ -744,7 +756,8 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
         (Option.map
            (fun m -> External_ffi_types.Module_named m)
            external_module_name)
-      ~scopes ~variadic:splice
+      ~scopes:(scopes ~global:(external_module_name = None) scope)
+      ~variadic:splice
       (Decl_val {name})
   | {call_name = Some _} ->
     Bs_syntaxerr.err loc
@@ -763,21 +776,21 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    mk_obj = _;
    return_wrapper = _;
    splice = false;
-   scopes;
+   scope;
   } ->
     mk
       ?module_:
         (Option.map
            (fun m -> External_ffi_types.Module_named m)
            external_module_name)
-      ~scopes
+      ~scopes:(scopes ~global:(external_module_name = None) scope)
       (Decl_val {name})
   | {val_name = Some _} ->
     Bs_syntaxerr.err loc
       (Conflict_ffi_attribute "Attribute found that conflicts with @val")
   | {
    splice;
-   scopes;
+   scope;
    external_module_name = Some _ as external_module_name;
    val_name = None;
    call_name = None;
@@ -796,12 +809,13 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
         (Option.map
            (fun m -> External_ffi_types.Module_named m)
            external_module_name)
-      ~scopes ~variadic:splice
+      ~scopes:(scopes ~global:false scope)
+      ~variadic:splice
       (Decl_val {name = prim_name_or_pval_prim.name})
   | {
    val_send = Some {name; source = _};
    splice;
-   scopes;
+   scope;
    val_name = None;
    call_name = None;
    module_as_val = None;
@@ -825,7 +839,11 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
     | {arg_type = Arg_cst _; arg_label = _} :: _ ->
       Location.raise_errorf ~loc
         "Ill defined attribute %@send(first argument can't be const)"
-    | _ :: _ -> mk ~scopes ~variadic:splice (Decl_send {name}))
+    | _ :: _ ->
+      mk
+        ~scopes:(scopes ~global:false scope)
+        ~variadic:splice
+        (Decl_send {name}))
   | {val_send = Some _} ->
     Location.raise_errorf ~loc
       "You used a FFI attribute that can't be used with %@send"
@@ -841,7 +859,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    set_name = None;
    get_name = None;
    splice;
-   scopes;
+   scope;
    mk_obj = _;
    return_wrapper = _;
   } ->
@@ -850,7 +868,8 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
         (Option.map
            (fun m -> External_ffi_types.Module_named m)
            external_module_name)
-      ~scopes ~variadic:splice
+      ~scopes:(scopes ~global:(external_module_name = None) scope)
+      ~variadic:splice
       (Decl_new {name})
   | {new_name = Some _} ->
     Bs_syntaxerr.err loc
@@ -869,9 +888,10 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    splice = false;
    mk_obj = _;
    return_wrapper = _;
-   scopes;
+   scope;
   } ->
-    if arg_type_specs_length = 2 then mk ~scopes (Decl_set {name})
+    if arg_type_specs_length = 2 then
+      mk ~scopes:(scopes ~global:false scope) (Decl_set {name})
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@set (two args required)"
@@ -891,7 +911,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    splice = false;
    mk_obj = _;
    return_wrapper = _;
-   scopes;
+   scope;
   } ->
     if arg_type_specs_length = 1 then
       (* Check if the first argument is unit, which is invalid for @get *)
@@ -899,7 +919,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
       | [{arg_type = Extern_unit}] ->
         Location.raise_errorf ~loc
           "Ill defined attribute %@get (unit argument is not allowed)"
-      | _ -> mk ~scopes (Decl_get {name})
+      | _ -> mk ~scopes:(scopes ~global:false scope) (Decl_get {name})
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@get (only one argument)"

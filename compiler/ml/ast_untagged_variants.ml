@@ -352,21 +352,10 @@ let unsupported_class name =
     | _ -> None)
   | _ -> None
 
-let is_identifier segment =
-  let is_start = function
-    | 'A' .. 'Z' | 'a' .. 'z' | '_' | '$' -> true
-    | _ -> false
-  in
-  let is_part = function
-    | '0' .. '9' -> true
-    | c -> is_start c
-  in
-  segment <> "" && is_start segment.[0] && String.for_all is_part segment
-
 (* A path of properties of a module's exports, such as "default" or
    "shapes.Mesh": properties may be named like keywords *)
 let is_export_path name =
-  List.for_all is_identifier (String.split_on_char '.' name)
+  List.for_all Ast_payload.is_identifier (String.split_on_char '.' name)
 
 let is_class_path name =
   match String.split_on_char '.' name with
@@ -409,20 +398,6 @@ let describe_declared_values = function
   | Some block_type -> "typeof \"" ^ typeof_name block_type ^ "\""
   | None -> "no stated class or typeof"
 
-(* The strings of a payload such as ["a"] or [("a", "b")] *)
-let strings_of_payload payload =
-  let strings expressions =
-    let strings =
-      List.filter_map Ast_payload.semantic_string_of_expression expressions
-    in
-    if List.length strings = List.length expressions then Some strings else None
-  in
-  match Ast_payload.unwrap_payload_expression payload with
-  | PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_tuple expressions}, _)}] ->
-    strings expressions
-  | PStr [{pstr_desc = Pstr_eval (expression, _)}] -> strings [expression]
-  | PStr _ | PSig _ | PTyp _ | PPat _ -> None
-
 (* The location of an attribute, or [loc] for one the compiler made *)
 let attribute_loc ~loc (attr_loc : Location.t) =
   if attr_loc = Location.none then loc else attr_loc
@@ -456,15 +431,21 @@ let class_of_attributes ~loc (attrs : Parsetree.attributes) name =
     | None -> []
     | Some (scope_loc, payload) -> (
       let invalid reason = Error (scope_loc, InvalidClassScope reason) in
-      match strings_of_payload payload with
-      | Some (_ :: _ as scopes) when List.for_all is_identifier scopes -> (
-        match (module_, scopes) with
-        (* Without [@module], the first property is a global *)
-        | None, "globalThis" :: _ -> raise (invalid Scope_through_global_this)
-        | None, global :: _ when Js_reserved_map.is_js_keyword global ->
-          raise (invalid (Keyword_global global))
-        | (None | Some _), _ -> scopes)
-      | Some _ | None -> raise (invalid Not_properties))
+      (* Without [@module], the first property is a global *)
+      match Ast_payload.scopes_of_payload ~global:(module_ = None) payload with
+      | Ok scopes when not (List.for_all Ast_payload.is_identifier scopes) ->
+        (* The path of a class is a string of identifiers and dots *)
+        raise (invalid Not_properties)
+      | Ok ("globalThis" :: _) when module_ = None ->
+        raise (invalid Scope_through_global_this)
+      | Ok ("import" :: _) when module_ = None ->
+        (* [import.meta] holds no global class *)
+        raise (invalid (Keyword_global "import"))
+      | Ok scopes -> scopes
+      | Error (Scope_not_strings | Scope_global_not_identifier _) ->
+        raise (invalid Not_properties)
+      | Error (Scope_global_keyword global) ->
+        raise (invalid (Keyword_global global)))
   in
   match (module_, name) with
   | Some module_, Some name when is_export_path name ->

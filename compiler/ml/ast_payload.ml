@@ -336,6 +336,49 @@ let assert_strings loc (x : t) : string list =
   | PSig _ | PStr _ | PTyp _ | PPat _ ->
     Location.raise_errorf ~loc "expect string tuple list"
 
+let is_identifier name =
+  let is_start = function
+    | 'A' .. 'Z' | 'a' .. 'z' | '_' | '$' -> true
+    | _ -> false
+  in
+  let is_part = function
+    | '0' .. '9' -> true
+    | c -> is_start c
+  in
+  name <> "" && is_start name.[0] && String.for_all is_part name
+
+type scope_error =
+  | Scope_not_strings
+  | Scope_global_not_identifier of string
+  | Scope_global_keyword of string
+
+let scopes_of_payload ~global (payload : t) =
+  let strings expressions =
+    let strings = List.filter_map semantic_string_of_expression expressions in
+    if List.length strings = List.length expressions then Some strings else None
+  in
+  let scopes =
+    match unwrap_payload_expression payload with
+    | PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_tuple expressions}, _)}]
+      ->
+      strings expressions
+    | PStr [{pstr_desc = Pstr_eval (expression, _)}] -> strings [expression]
+    | PStr _ | PSig _ | PTyp _ | PPat _ -> None
+  in
+  match scopes with
+  | None | Some [] -> Error Scope_not_strings
+  | Some (first :: rest as scopes) -> (
+    if not global then Ok scopes
+    else if not (is_identifier first) then
+      Error (Scope_global_not_identifier first)
+    else
+      match (first, rest) with
+      (* [import.meta] starts with a keyword, and is valid JavaScript *)
+      | "import", "meta" :: _ -> Ok scopes
+      | _ when Js_reserved_map.is_js_keyword first ->
+        Error (Scope_global_keyword first)
+      | _ -> Ok scopes)
+
 let assert_bool_lit (e : Parsetree.expression) =
   match (unwrap_braces e).pexp_desc with
   | Pexp_construct ({txt = Lident "true"}, {txt = []}) -> true

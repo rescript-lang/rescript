@@ -34,6 +34,7 @@ type error =
   | Invalid_bs_unwrap_type
   | Conflict_ffi_attribute of string
   | Illegal_attribute
+  | Invalid_scope of Ast_payload.scope_error
   (* we still rqeuire users to have explicit annotation to avoid
      {[ (((int -> int) -> int) -> int )]}
   *)
