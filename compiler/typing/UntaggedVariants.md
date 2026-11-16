@@ -243,6 +243,42 @@ same class are one case (rule 6), while a global `Mesh` and the `Mesh` that
 state the same superclasses and module
 (`runtime_annotation_interface_module_class.res`).
 
+Coercions go by the class too, so that every package can declare the slice
+of a class it uses, such as the DOM's `Element`, and still hand its values to
+another package's declaration of the class. The declarations' contents are
+not compared: each states what its module knows about the class.
+
+```rescript
+module WebAPI = {
+  @instanceOf("Node") type node
+  @instanceOf("Element") type element = private node
+  @instanceOf("HTMLInputElement") type input = private element
+  @send external focus: element => unit = "focus"
+}
+module ReactDOM = {
+  @instanceOf("Element") type element
+  type props = {container: element}
+}
+
+let f = (el: ReactDOM.element, input: WebAPI.input) => {
+  WebAPI.focus(el :> WebAPI.element) // the same class
+  let props: ReactDOM.props = {container: (input :> ReactDOM.element)} // a subclass
+  (el :> WebAPI.element) // the same class
+}
+```
+
+- `(x :> t)` holds between two class types when `t`'s own declaration states
+  the class of `x`'s type or one of its superclasses, whichever modules the
+  declarations are in. A private abbreviation without an annotation of its
+  own, such as `type mine = private element`, refines the class, and nothing
+  coerces into it. Where a coercion needs equal types, an invariant parameter
+  as in `array<_>` and `ref<_>` or a mutable field, two declarations of the
+  same class count as equal, and a subclass does not.
+
+| Coercion | Error | Fixture |
+| --- | --- | --- |
+| `(el :> WebAPI.input)` with `el: ReactDOM.element` | ReactDOM.element is the class Element, a subclass of Node. WebAPI.input is the class HTMLInputElement. A class type coerces to its own class and to the superclasses it declares. | `class_identity_not_an_ancestor.res` |
+
 The class path is a dot-separated list of identifiers whose first one is not
 a JavaScript keyword. In a module, the path names an export, which can be
 named like a keyword and can be any class, so none of the global paths below
@@ -296,11 +332,13 @@ written (Known bugs).
   `unsupported_class`, `check_runtime_annotation`;
   `includecore.ml:compare_runtime_annotations`;
   `variant_runtime.ml:Instance`;
-  `lam_compile_external_call.ml:class_constructor`.
+  `lam_compile_external_call.ml:class_constructor`; coercions:
+  `ctype.ml:class_step`.
 - Tests: `spec_test` rules 4 and 5;
   `tests/tests/src/untagged_runtime_annotations_test.res`,
   `untagged_runtime_annotations_shadow_test.res`,
   `untagged_file_blob_test.res`, `not_undefined_interface_test.res`,
+  `class_identity_test.res`,
   `not_undefined_abbreviation_test.res`; the fixtures above,
   `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res`,
   `not_undefined_functor_argument.res`, `not_undefined_functor_parameter.res`;
