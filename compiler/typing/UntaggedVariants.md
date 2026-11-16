@@ -261,8 +261,8 @@ module ReactDOM = {
 }
 
 let f = (el: ReactDOM.element, input: WebAPI.input) => {
-  WebAPI.focus(el :> WebAPI.element) // the same class
-  let props: ReactDOM.props = {container: (input :> ReactDOM.element)} // a subclass
+  WebAPI.focus(el) // no :> needed at an argument
+  let props: ReactDOM.props = {container: input} // a subclass is accepted too
   (el :> WebAPI.element) // the same class
 }
 ```
@@ -274,10 +274,24 @@ let f = (el: ReactDOM.element, input: WebAPI.input) => {
   coerces into it. Where a coercion needs equal types, an invariant parameter
   as in `array<_>` and `ref<_>` or a mutable field, two declarations of the
   same class count as equal, and a subclass does not.
+- At a site that declares the type it expects, the parameter of a function,
+  a field of a record being built, so a JSX prop, and the payload of a
+  constructor, the coercion is made without `:>`: when the argument's type
+  does not unify with the expected one, it is accepted if it is a class type
+  of the expected class or of a subclass, or equal to the expected type up to
+  two declarations of one class inside it (a subclass is not accepted there).
+  The argument then has the expected type. Elsewhere the expected type can
+  come from a neighbouring expression, such as the other branch of an `if`,
+  and the result would depend on their order, so `:>` is written there, as
+  for an assignment to a mutable field. Programs that compiled before keep
+  their types, since the rule only applies where unification fails.
 
 | Coercion | Error | Fixture |
 | --- | --- | --- |
 | `(el :> WebAPI.input)` with `el: ReactDOM.element` | ReactDOM.element is the class Element, a subclass of Node. WebAPI.input is the class HTMLInputElement. A class type coerces to its own class and to the superclasses it declares. | `class_identity_not_an_ancestor.res` |
+| `first ? a : b` with two declarations of one class | This has type: Dom.element But this ternary is expected to return: View.element | `class_identity_branches.res` |
+| `option<Dom.input>` passed for `option<View.element>` | The incompatible parts: Dom.input vs View.element ... use the coercion operator | `class_identity_nested_subclass.res` |
+| `ref.current = el` with another declaration of the field's class | You're assigning something to this field that has type: Dom.element ... use the coercion operator | `class_identity_set_field.res` |
 
 The class path is a dot-separated list of identifiers whose first one is not
 a JavaScript keyword. In a module, the path names an export, which can be
@@ -333,7 +347,8 @@ written (Known bugs).
   `includecore.ml:compare_runtime_annotations`;
   `variant_runtime.ml:Instance`;
   `lam_compile_external_call.ml:class_constructor`; coercions:
-  `ctype.ml:class_step`.
+  `ctype.ml:class_step`, `coerces_between_class_declarations`,
+  `typecore.ml:unify_exp_at_argument`.
 - Tests: `spec_test` rules 4 and 5;
   `tests/tests/src/untagged_runtime_annotations_test.res`,
   `untagged_runtime_annotations_shadow_test.res`,

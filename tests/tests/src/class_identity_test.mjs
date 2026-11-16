@@ -11,7 +11,35 @@ globalThis.ClassIdentityInput = class ClassIdentityInput extends globalThis.Clas
 globalThis.ClassIdentityEvent = class ClassIdentityEvent {}
 ;
 
-let View = {};
+function render(child) {
+  if (typeof child === "string") {
+    return child;
+  } else {
+    return "element";
+  }
+}
+
+function mount(container) {
+  return {
+    TAG: "Mounted",
+    _0: container
+  };
+}
+
+function containerOf(param) {
+  return param.container;
+}
+
+function handle(listener, event) {
+  listener(event);
+}
+
+let View = {
+  render: render,
+  mount: mount,
+  containerOf: containerOf,
+  handle: handle
+};
 
 let input = new ClassIdentityInput();
 
@@ -21,17 +49,34 @@ function same(a, b) {
 
 Mocha.describe("Class_identity_test", () => {
   Mocha.test("a class type coerces to another declaration of its class", () => {
-    Test_utils.ok("File \"class_identity_test.res\", line 27, characters 7-14", input === input);
-    Test_utils.ok("File \"class_identity_test.res\", line 28, characters 7-14", input === input);
-    Test_utils.ok("File \"class_identity_test.res\", line 29, characters 7-14", input === input);
+    Test_utils.ok("File \"class_identity_test.res\", line 44, characters 7-14", input === input);
+    Test_utils.ok("File \"class_identity_test.res\", line 45, characters 7-14", input === input);
+    Test_utils.ok("File \"class_identity_test.res\", line 46, characters 7-14", input === input);
   });
   Mocha.test("two declarations of a class are equal inside other types", () => {
     let elements = [input];
-    Test_utils.eq("File \"class_identity_test.res\", line 35, characters 7-14", 1, elements.length);
+    Test_utils.eq("File \"class_identity_test.res\", line 52, characters 7-14", 1, elements.length);
     let cell = {
       contents: input
     };
-    Test_utils.ok("File \"class_identity_test.res\", line 38, characters 7-14", cell === cell);
+    Test_utils.ok("File \"class_identity_test.res\", line 55, characters 7-14", cell === cell);
+  });
+  Mocha.test("an argument is accepted for the parameter's declaration of its class", () => {
+    input.focus();
+    Test_utils.ok("File \"class_identity_test.res\", line 61, characters 7-14", input.focused);
+    Test_utils.ok("File \"class_identity_test.res\", line 62, characters 7-14", containerOf({
+      container: input
+    }) === input);
+  });
+  Mocha.test("a constructor payload is checked by the class it is declared with", () => {
+    Test_utils.eq("File \"class_identity_test.res\", line 66, characters 7-14", "element", render(input));
+    Test_utils.eq("File \"class_identity_test.res\", line 67, characters 7-14", "text", "text");
+  });
+  Mocha.test("a function over one declaration is accepted for another", () => {
+    let received = false;
+    new ClassIdentityEvent();
+    received = true;
+    Test_utils.ok("File \"class_identity_test.res\", line 74, characters 7-14", received);
   });
 });
 
