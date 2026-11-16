@@ -2494,6 +2494,24 @@ let unify_exp ~context env exp expected_ty =
   let loc = proper_exp_loc exp in
   unify_exp_types ~context loc env exp.exp_type expected_ty
 
+(* [unify_exp] for an expression at a site that declares the type it expects:
+   the parameter of a function, a field of a record being built (a JSX prop is
+   one), the payload of a constructor. Only there is a class type accepted for
+   another declaration of its class, or of one of its superclasses, without a
+   written coercion: the expression is then typed as if [(exp :> expected_ty)]
+   were written. Elsewhere the expected type may come from a neighbouring
+   expression, such as the other branch of an [if], and which of the two types
+   the result has would depend on their order. *)
+let unify_exp_at_argument ~context env exp expected_ty =
+  try
+    unify_exp ~context env exp expected_ty;
+    exp
+  with
+  | Error (_, _, Expr_type_clash _)
+  when Ctype.coerces_between_class_declarations env exp.exp_type expected_ty
+  ->
+    {exp with exp_type = expected_ty}
+
 let is_ignore ~env funct =
   match funct.exp_desc with
   | Texp_ident (_, _, {val_kind = Val_prim {Primitive.prim_name = "%ignore"}})
@@ -2580,8 +2598,8 @@ let rec type_exp ?deprecated_context ~context ?recarg env sexp =
    In the principal case, [type_expected'] may be at generic_level.
 *)
 
-and type_expect ~context ?deprecated_context ?recarg ?match_context env sexp
-    ty_expected =
+and type_expect ~context ?deprecated_context ?(class_coercion = false) ?recarg
+    ?match_context env sexp ty_expected =
   (* Special errors for braced identifiers passed to records *)
   let context =
     match sexp.pexp_desc with
@@ -2592,8 +2610,8 @@ and type_expect ~context ?deprecated_context ?recarg ?match_context env sexp
   let previous_saved_types = Cmt_format.get_saved_types () in
   let exp =
     Builtin_attributes.warning_scope sexp.pexp_attributes (fun () ->
-        type_expect_ ?deprecated_context ~context ?recarg ?match_context env
-          sexp ty_expected)
+        type_expect_ ?deprecated_context ~context ~class_coercion ?recarg
+          ?match_context env sexp ty_expected)
   in
   Cmt_format.set_saved_types
     (Cmt_format.Partial_expression exp :: previous_saved_types);
@@ -2602,14 +2620,19 @@ and type_expect ~context ?deprecated_context ?recarg ?match_context env sexp
 (* [match_context] is set where the type checker itself rewrites source into
    a match, and says what that match stands for in the source: it decides the
    wording of the match's diagnostics, which would otherwise speak of a
-   switch. *)
-and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
-    ?(match_context : [`Function] option) env sexp ty_expected =
+   switch. [class_coercion] says that [sexp] is at a site that declares
+   [ty_expected], see [unify_exp_at_argument]. *)
+and type_expect_ ?deprecated_context ~context ~class_coercion
+    ?(recarg = Rejected) ?(match_context : [`Function] option) env sexp
+    ty_expected =
   let loc = sexp.pexp_loc in
   (* Record the expression type before unifying it with the expected type *)
   let rue exp =
-    unify_exp ~context env (re exp) (instance env ty_expected);
-    exp
+    if class_coercion then
+      unify_exp_at_argument ~context env (re exp) (instance env ty_expected)
+    else (
+      unify_exp ~context env (re exp) (instance env ty_expected);
+      exp)
   in
   let process_optional_label (id, ld, e, opt) =
     let exp_optional_attr = check_optional_attr env ld opt e.pexp_loc in
@@ -2625,7 +2648,8 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
   match sexp.pexp_desc with
   | Pexp_braces {expr = inner} ->
     let exp =
-      type_expect ~context ?deprecated_context ~recarg env inner ty_expected
+      type_expect ~context ?deprecated_context ~class_coercion ~recarg env inner
+        ty_expected
     in
     {exp with exp_attributes = sexp.pexp_attributes @ exp.exp_attributes}
   | Pexp_ident lid ->
@@ -4343,7 +4367,9 @@ and type_label_exp ~call_context create env loc ty_expected
              {jsx; record_type = ty_expected; field_name; optional = false})
     in
     let arg =
-      type_argument ~context:field_context env sarg ty_arg (instance env ty_arg)
+      type_argument ~context:field_context
+        ~class_coercion:(call_context <> `SetRecordField)
+        env sarg ty_arg (instance env ty_arg)
     in
     end_def ();
     try
@@ -4366,10 +4392,15 @@ and type_label_exp ~call_context create env loc ty_expected
   in
   (lid, label, {arg with exp_type = instance env arg.exp_type}, opt)
 
-and type_argument ~context ?recarg env sarg ty_expected' ty_expected =
-  let texp = type_expect ~context ?recarg env sarg ty_expected' in
-  unify_exp ~context env texp ty_expected;
-  texp
+and type_argument ~context ?(class_coercion = false) ?recarg env sarg
+    ty_expected' ty_expected =
+  let texp =
+    type_expect ~context ~class_coercion ?recarg env sarg ty_expected'
+  in
+  if class_coercion then unify_exp_at_argument ~context env texp ty_expected
+  else (
+    unify_exp ~context env texp ty_expected;
+    texp)
 
 (** This is ad-hoc translation for unifying specific primitive operations
      See [Unified_ops] module for detailed explanation.
@@ -4579,11 +4610,15 @@ and type_application ~context total_app env funct (sargs : sargs) :
             in
             let thunk =
               if (not optional) || is_optional l' then fun () ->
-                type_argument ~context:argument_context env sarg0 ty
-                  (instance env ty)
+                type_argument ~context:argument_context
+                  ~class_coercion:
+                    (match argument_context with
+                    | Some (FunctionArgument _) -> true
+                    | _ -> false)
+                  env sarg0 ty (instance env ty)
               else fun () ->
                 option_some
-                  (type_argument
+                  (type_argument ~class_coercion:true
                      ~context:
                        (Some
                           (FunctionArgument
@@ -4773,7 +4808,8 @@ and type_construct ~context env loc lid sargs ty_expected attrs =
   in
   let args =
     List.map2
-      (fun e (t, t0) -> type_argument ~context ~recarg env e t t0)
+      (fun e (t, t0) ->
+        type_argument ~context ~class_coercion:true ~recarg env e t t0)
       sargs
       (List.combine ty_args ty_args0)
   in
