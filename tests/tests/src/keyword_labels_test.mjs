@@ -2,6 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 import * as JsxRuntime from "react/jsx-runtime";
 
 function make(kind) {
@@ -65,6 +66,42 @@ let field = JsxRuntime.jsx(Keyword_labels_test$Field, {
   in: 3
 });
 
+function dialog(open, privateOpt, as) {
+  let $$private = privateOpt !== undefined ? privateOpt : false;
+  return {
+    open: open,
+    private: $$private,
+    as: as
+  };
+}
+
+function toggle(d) {
+  return {
+    open: !d.open,
+    private: d.private,
+    as: d.as
+  };
+}
+
+function firstError(errors) {
+  let found;
+  errors.forEach(exception => {
+    if (found !== undefined) {
+      return;
+    }
+    found = Primitive_option.some(exception);
+  });
+  return found;
+}
+
+function countdown(rec) {
+  if (rec <= 0) {
+    return /* [] */0;
+  } else {
+    return {hd: rec, tl: countdown(rec - 1 | 0)};
+  }
+}
+
 Mocha.describe("Keyword_labels_test", () => {
   Mocha.test("record fields", () => {
     let r = {
@@ -72,12 +109,12 @@ Mocha.describe("Keyword_labels_test", () => {
       open: false,
       "data-for": "target"
     };
-    Test_utils.eq("File \"keyword_labels_test.res\", line 55, characters 7-14", "text", r.type);
-    Test_utils.eq("File \"keyword_labels_test.res\", line 56, characters 7-14", false, r.open);
+    Test_utils.eq("File \"keyword_labels_test.res\", line 75, characters 7-14", "text", r.type);
+    Test_utils.eq("File \"keyword_labels_test.res\", line 76, characters 7-14", false, r.open);
     r.open = true;
-    Test_utils.eq("File \"keyword_labels_test.res\", line 58, characters 7-14", true, r.open);
-    Test_utils.eq("File \"keyword_labels_test.res\", line 59, characters 7-14", 1, update(r).in);
-    Test_utils.eq("File \"keyword_labels_test.res\", line 60, characters 7-14", "updated", update(r).type);
+    Test_utils.eq("File \"keyword_labels_test.res\", line 78, characters 7-14", true, r.open);
+    Test_utils.eq("File \"keyword_labels_test.res\", line 79, characters 7-14", 1, update(r).in);
+    Test_utils.eq("File \"keyword_labels_test.res\", line 80, characters 7-14", "updated", update(r).type);
   });
   Mocha.test("runtime representation", () => {
     let r = {
@@ -85,33 +122,33 @@ Mocha.describe("Keyword_labels_test", () => {
       open: false,
       "data-for": "target"
     };
-    Test_utils.eq("File \"keyword_labels_test.res\", line 65, characters 7-14", "text", r.type);
-    Test_utils.eq("File \"keyword_labels_test.res\", line 66, characters 7-14", "target", r["data-for"]);
+    Test_utils.eq("File \"keyword_labels_test.res\", line 85, characters 7-14", "text", r.type);
+    Test_utils.eq("File \"keyword_labels_test.res\", line 86, characters 7-14", "target", r["data-for"]);
   });
   Mocha.test("record patterns", () => {
-    Test_utils.eq("File \"keyword_labels_test.res\", line 70, characters 7-14", 2, classify({
+    Test_utils.eq("File \"keyword_labels_test.res\", line 90, characters 7-14", 2, classify({
       type: "number",
       open: false,
       in: 2,
       "data-for": ""
     }));
-    Test_utils.eq("File \"keyword_labels_test.res\", line 71, characters 7-14", -1, classify({
+    Test_utils.eq("File \"keyword_labels_test.res\", line 91, characters 7-14", -1, classify({
       type: "text",
       open: true,
       "data-for": ""
     }));
-    Test_utils.eq("File \"keyword_labels_test.res\", line 72, characters 7-14", undefined, classify({
+    Test_utils.eq("File \"keyword_labels_test.res\", line 92, characters 7-14", undefined, classify({
       type: "text",
       open: false,
       "data-for": ""
     }));
   });
   Mocha.test("argument labels", () => {
-    Test_utils.eq("File \"keyword_labels_test.res\", line 76, characters 7-14", "submit", describeInput("submit", undefined, undefined));
-    Test_utils.eq("File \"keyword_labels_test.res\", line 77, characters 7-14", "submit for form", describeInput("submit", "form", undefined));
+    Test_utils.eq("File \"keyword_labels_test.res\", line 96, characters 7-14", "submit", describeInput("submit", undefined, undefined));
+    Test_utils.eq("File \"keyword_labels_test.res\", line 97, characters 7-14", "submit for form", describeInput("submit", "form", undefined));
   });
   Mocha.test("variant tags", () => {
-    Test_utils.eq("File \"keyword_labels_test.res\", line 82, characters 6-13", [
+    Test_utils.eq("File \"keyword_labels_test.res\", line 102, characters 6-13", [
       "type",
       "module",
       "true",
@@ -125,9 +162,29 @@ Mocha.describe("Keyword_labels_test", () => {
         VAL: 1
       }
     ].map(tokenName));
-    Test_utils.eq("File \"keyword_labels_test.res\", line 86, characters 7-14", "type", "type");
+    Test_utils.eq("File \"keyword_labels_test.res\", line 106, characters 7-14", "type", "type");
   });
-  Mocha.test("JSX props", () => Test_utils.eq("File \"keyword_labels_test.res\", line 91, characters 6-13", "email:3", field.props.type + ":" + field.props.in.toString()));
+  Mocha.test("contextual keywords as names", () => {
+    let $$private = false;
+    let d = {
+      open: true,
+      private: $$private,
+      as: "h1"
+    };
+    Test_utils.eq("File \"keyword_labels_test.res\", line 111, characters 7-14", {
+      open: true,
+      private: false,
+      as: "h1"
+    }, d);
+    Test_utils.eq("File \"keyword_labels_test.res\", line 112, characters 7-14", false, toggle(d).open);
+    Test_utils.eq("File \"keyword_labels_test.res\", line 113, characters 7-14", false, d.private);
+    Test_utils.eq("File \"keyword_labels_test.res\", line 114, characters 7-14", "b", firstError([
+      "b",
+      "c"
+    ]));
+    Test_utils.eq("File \"keyword_labels_test.res\", line 115, characters 7-14", {hd: 2, tl: {hd: 1, tl: /* [] */0}}, countdown(2));
+  });
+  Mocha.test("JSX props", () => Test_utils.eq("File \"keyword_labels_test.res\", line 120, characters 6-13", "email:3", field.props.type + ":" + field.props.in.toString()));
 });
 
 let Field$make = Keyword_labels_test$Field;
@@ -140,6 +197,10 @@ export {
   tokenName,
   Field,
   field,
+  dialog,
+  toggle,
+  firstError,
+  countdown,
   Field$make,
 }
 /* field Not a pure module */

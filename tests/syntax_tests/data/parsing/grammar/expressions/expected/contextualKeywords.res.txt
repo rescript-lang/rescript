@@ -1,0 +1,35 @@
+let as = 1
+let constraint = 2
+let exception = 3
+let external = 4
+let mutable = 5
+let of = 6
+let open = 7
+let private = 8
+let rec = 9
+let when = 10
+let (rec : int) = 11
+let rec rec [arity:1]() = rec ()
+let x = open file
+let x = open -> close
+let x = external.contents
+let x = exception -> Console.error
+let x = when + (of * as)
+let next = { dialog with open }
+let options = { as; private; open = true }
+let render [arity:3]~as  ?(open= false)  ?exception  =
+  <Dialog as open ?exception />
+let x = f ~as ?open ~private:1
+let f [arity:1]errors =
+  errors ->
+    (Array.forEach (fun [arity:1]exception -> Console.error exception))
+;;for of of items do () done
+;;for exception of errors do () done
+let f [arity:1]() = {let open = dialog.open in open}
+let x = { open = true; private = 1 }
+let f [arity:1]() = {ignore (); open; Belt.x; exception; Foo}
+;;external
+;;r.x <- 1
+let f [arity:1]() = {let open Belt in let exception Foo  in 1}
+let x = {let open M in 1}
+;;for x of xs do () done

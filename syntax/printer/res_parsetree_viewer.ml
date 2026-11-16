@@ -631,3 +631,16 @@ let unary_element_closing_token (expression_loc : Location.t) =
         pos_bol = expression_loc.loc_end.pos_bol - 2;
       };
   }
+
+let rec leftmost_pattern_var (pat : Parsetree.pattern) =
+  match pat.ppat_desc with
+  | Ppat_var {txt} -> Some txt
+  | Ppat_alias (pat, _) | Ppat_or (pat, _) | Ppat_constraint (pat, _) ->
+    leftmost_pattern_var pat
+  | _ -> None
+
+let rec typ_starts_with_lident name (typ : Parsetree.core_type) =
+  match typ.ptyp_desc with
+  | Ptyp_constr ({txt = Lident txt}, _) -> txt = name
+  | Ptyp_alias (typ, _) -> typ_starts_with_lident name typ
+  | _ -> false

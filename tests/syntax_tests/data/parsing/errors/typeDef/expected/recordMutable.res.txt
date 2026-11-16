@@ -1,13 +1,25 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typeDef/recordMutable.res:2:16-3:1
+  syntax_tests/data/parsing/errors/typeDef/recordMutable.res:2:16-24
 
   1 │ type d = {
-  2 │   foo: string, mutable
+  2 │   foo: string, mutable 1
   3 │ }
   4 │ 
 
   The `mutable` qualifier can only be used at the beginning of a field declaration
 
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/recordMutable.res:3:1
+
+  1 │ type d = {
+  2 │   foo: string, mutable 1
+  3 │ }
+  4 │ 
+
+  I'm not sure what to parse here when looking at "}".
+
 type nonrec d = {
   foo: string }
+;;1

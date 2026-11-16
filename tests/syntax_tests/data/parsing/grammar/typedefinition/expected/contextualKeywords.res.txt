@@ -1,0 +1,33 @@
+type nonrec open = int
+type nonrec 'a as = 'a
+type nonrec rec = int
+type rec = rec list
+type nonrec of =
+  | A 
+type nonrec when = {
+  when: int }
+type nonrec t = {
+  mutable: bool ;
+  mutable?: int ;
+  mutable mutable: string }
+type nonrec t = {
+  foo: string ;
+  mutable: mutable }
+type nonrec t = private
+type nonrec t = private as 'a
+type nonrec t = int private
+type nonrec t = private private
+module X = (M : (S with type  t =  private))
+type nonrec fn = as:int -> ?open:bool -> unit (a:2)
+type nonrec t = as -> of (a:1)
+type nonrec 'a t = 'a constraint 'a = int
+type nonrec t = private int
+type nonrec t = private {
+  x: int }
+type nonrec t = private
+  | A 
+  | B 
+type nonrec t = [ `a ] as 'x
+type t =
+  | A of t 
+external open : int -> int (a:1) = "open"

@@ -49,6 +49,26 @@ module Field = {
 
 let field = <Field type="email" in=3 />
 
+// Contextual keywords are names outside the positions where they are keywords:
+// variables, shorthands and parameters.
+
+type dialog = {open: bool, private: bool, as: string}
+
+let dialog = (~open, ~private=false, ~as) => {open, private, as}
+let toggle = ({open} as d) => {...d, open: !open}
+
+let firstError = errors => {
+  let found = ref(None)
+  errors->Array.forEach(exception => {
+    if found.contents == None {
+      found := Some(exception)
+    }
+  })
+  found.contents
+}
+
+let rec countdown = rec => rec <= 0 ? list{} : list{rec, ...countdown(rec - 1)}
+
 describe(__MODULE__, () => {
   test("record fields", () => {
     let r = make("text")
@@ -84,6 +104,15 @@ describe(__MODULE__, () => {
       [#type, #module, #true, #if(1)]->Array.map(tokenName),
     )
     eq(__LOC__, "type", Obj.magic(#type))
+  })
+
+  test("contextual keywords as names", () => {
+    let d = dialog(~open=true, ~as="h1")
+    eq(__LOC__, {open: true, private: false, as: "h1"}, d)
+    eq(__LOC__, false, toggle(d).open)
+    eq(__LOC__, Some(false), Obj.magic(d)["private"])
+    eq(__LOC__, Some("b"), firstError(["b", "c"]))
+    eq(__LOC__, list{2, 1}, countdown(2))
   })
 
   test("JSX props", () => {
