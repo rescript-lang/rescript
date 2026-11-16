@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/external_scope_not_identifier.res[0m:[2m1:1-6[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@scope[0m("foo-bar") @val external d: int = "d"
+  2 [2m│[0m 
+  3 [2m│[0m let x = d
+
+  Without @module, the first property of @scope is a global, so it must be an identifier, and "foo-bar" is not one. To read a property of the global object of that name, put "globalThis" first in @scope.

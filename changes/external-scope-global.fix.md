@@ -1,0 +1,1 @@
+- Report an error for an external whose `@scope` starts at a global that JavaScript cannot name, such as `@scope("class")` or `@scope("foo-bar")` on a `@val` or `@new` without `@module`, instead of emitting invalid JavaScript.

@@ -95,6 +95,28 @@ val assert_strings : Location.t -> t -> string list
 
 val ident_or_record_as_config : Location.t -> t -> action list
 
+val is_identifier : string -> bool
+(** A JavaScript identifier of ASCII characters, such as [THREE] or [$x1], which
+    may be named like a keyword *)
+
+(** Why a [@scope] payload does not give the properties a value is read
+    through *)
+type scope_error =
+  | Scope_not_strings  (** not a string or a tuple of strings *)
+  | Scope_global_not_identifier of string
+      (** the first property, a global, is not an identifier *)
+  | Scope_global_keyword of string
+      (** the first property, a global, is named like a keyword *)
+
+val scopes_of_payload : global:bool -> t -> (string list, scope_error) result
+(** The properties of the payload of a [@scope], such as ["THREE"] or
+    [("lib", "shapes")], that the value of an external or the class of an
+    [@instanceOf] type is read through. When [global], the first one is a
+    global: an identifier not named like a keyword, as the JavaScript output
+    names it as is, while [import.meta] is a valid start too. The other
+    properties are read with a computed access where they need one, so they
+    may be any string. *)
+
 val assert_bool_lit : Parsetree.expression -> bool
 
 val empty : t

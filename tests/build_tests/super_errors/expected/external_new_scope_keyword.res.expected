@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/external_new_scope_keyword.res[0m:[2m3:6-11[0m
+
+  1 [2m│[0m type t
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m @new [1;31m@scope[0m("default") external make: unit => t = "Klass"
+  4 [2m│[0m 
+  5 [2m│[0m let k = make()
+
+  Without @module, the first property of @scope is a global, which cannot be named like the keyword "default". To read a property of the global object of that name, put "globalThis" first in @scope.

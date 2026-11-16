@@ -6,4 +6,4 @@
   2 [2m│[0m external x: int = "x"
   3 [2m│[0m 
 
-  Illegal attributes
+  @scope on an external expects the properties its value is read through, such as @scope("document") or @scope(("window", "location")).
