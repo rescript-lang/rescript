@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/scope_without_instance_of.res[0m:[2m1:1-6[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@scope[0m("THREE") @notUndefined type mesh
+  2 [2m│[0m 
+
+  @scope on a type declaration names the properties a class is read through, so it needs @instanceOf, and this type has @notUndefined instead. Remove @scope, or write @instanceOf instead of @notUndefined if its values are instances of a class.

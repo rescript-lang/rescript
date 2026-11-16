@@ -271,7 +271,7 @@ You will need this decorator whenever you want to use a JSX component in ReScrip
     ( "instanceOf",
       Some "instanceOf(\"$0\")",
       [
-        {|The `@instanceOf` decorator states that the values of an abstract type are instances of a global JavaScript class. Such a type can be the payload of an untagged variant case, which is then recognized with `instanceof`, and is never `undefined`, like with `@notUndefined`.
+        {|The `@instanceOf` decorator states that the values of an abstract type are instances of a JavaScript class. Such a type can be the payload of an untagged variant case, which is then recognized with `instanceof`, and is never `undefined`, like with `@notUndefined`.
 
 With `@module("m")`, the class is the one the module `m` exports under that name, `"default"` for its default export, imported like with a `@module` external. `@scope` reads the class through the given properties, like for an external.
 

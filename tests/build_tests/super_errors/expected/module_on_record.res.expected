@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/module_on_record.res[0m:[2m1:1-7[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@module[0m("x") type record = {a: int}
+  2 [2m│[0m 
+
+  @module on a type declaration names the module a class is imported from, so it needs @instanceOf, which only abstract types and type abbreviations can have. Remove @module.

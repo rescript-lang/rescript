@@ -151,8 +151,9 @@ does, and `@scope` puts its properties in front of the path, so
 @module("./shapes.js") @instanceOf("default") type shape
 ```
 
-Without `@instanceOf`, `@module` and `@scope` state nothing about the values
-of a type and are ignored, as they were before they located classes (#9239).
+On a type without `@instanceOf`, `@module` and `@scope` have no effect, so
+they are errors. Before #9239 the compiler ignored them on every type without
+a word, which hid that bug.
 
 A type has at most one of the three, and only abstract types and type
 abbreviations, public or private, can have one.
@@ -262,6 +263,7 @@ rejected as well:
 | a first `@scope` property named like a keyword, without `@module` | Without @module, the first property of @scope is a global, which cannot be named like the keyword "default". | `instance_of_scope_keyword.res` |
 | a first `@scope` property `globalThis`, without `@module` | Remove "globalThis" from @scope ... | `instance_of_scope_global_this.res` |
 | `@module` or `@scope` twice | Duplicate @module annotation; a type can have only one. | `instance_of_module_duplicate.res` |
+| `@module` or `@scope` on a type without `@instanceOf` | @module on a type declaration names the module a class is imported from, so it needs @instanceOf ..., with what to do for an abstract type, a type with `@typeOf` or `@notUndefined`, and a record or variant | `module_without_instance_of.res`, `scope_without_instance_of.res`, `module_on_record.res` |
 
 An unknown `typeof` is an error too (`type_of_invalid.res`). The class is read
 as a global; where a local binding of the same name is in scope, it is read

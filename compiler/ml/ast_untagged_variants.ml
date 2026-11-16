@@ -22,6 +22,13 @@ and invalid_scope =
   | Keyword_global of string  (** without [@module], the first is a global *)
   | Scope_through_global_this
 
+(* Why a declaration with [@module] or [@scope] has no [@instanceOf] class
+   for them to locate *)
+and missing_class =
+  | No_annotation  (** an abstract type or an abbreviation *)
+  | Other_annotation of string  (** names the [@typeOf] or [@notUndefined] *)
+  | Represented_type  (** a record, a variant or an extensible type *)
+
 type error =
   | InvalidVariantAsAnnotation
   | VariantAsIntegerOutOfRange of string
@@ -34,6 +41,7 @@ type error =
   | InvalidModuleClass of string
   | InvalidClassModule
   | InvalidClassScope of invalid_scope
+  | ClassLocationWithoutClass of string * missing_class
   | UnsupportedInstanceOf of string * unsupported_class
   | InvalidTypeOf of string
   | ConflictingRuntimeAnnotations
@@ -136,6 +144,26 @@ let report_error ppf =
       "Without @module, the first property of @scope is a global, which cannot \
        be named like the keyword \"%s\"."
       global
+  | ClassLocationWithoutClass (attribute, missing) -> (
+    fprintf ppf "@%s on a type declaration names %s, so it needs @instanceOf"
+      attribute
+      (if attribute = "module" then "the module a class is imported from"
+       else "the properties a class is read through");
+    match missing with
+    | No_annotation ->
+      fprintf ppf
+        " too. Add @instanceOf with the name of the class, or remove @%s."
+        attribute
+    | Other_annotation annotation ->
+      fprintf ppf
+        ", and this type has @%s instead. Remove @%s, or write @instanceOf \
+         instead of @%s if its values are instances of a class."
+        annotation attribute annotation
+    | Represented_type ->
+      fprintf ppf
+        ", which only abstract types and type abbreviations can have. Remove \
+         @%s."
+        attribute)
   | InvalidClassScope Scope_through_global_this ->
     fprintf ppf
       "Remove \"globalThis\" from @scope: the compiler reads the class through \
@@ -456,10 +484,8 @@ let class_of_attributes ~loc (attrs : Parsetree.attributes) name =
   | None, None -> raise (Error (loc, InvalidInstanceOf))
 
 (* The [@notUndefined], [@instanceOf] or [@typeOf] annotation in [attrs],
-   validated, with the [@module] and [@scope] of an [@instanceOf]. Elsewhere
-   [@module] and [@scope] state nothing about the values of a type, and are
-   ignored as they always were. Only [Typedecl] passes [~loc]; later readers
-   see attributes it accepted. *)
+   validated, with the [@module] and [@scope] of an [@instanceOf]. Only
+   [Typedecl] passes [~loc]; later readers see attributes it accepted. *)
 let process_runtime_annotation ?(loc = Location.none)
     (attrs : Parsetree.attributes) =
   let annotation_of ({Location.txt; loc = attr_loc}, payload) =
@@ -491,18 +517,39 @@ let process_runtime_annotation ?(loc = Location.none)
            else ConflictingRuntimeAnnotations ))
 
 (* Checks the runtime annotations of a declaration whose kind is
-   [is_abstract_or_abbreviation]. *)
+   [is_abstract_or_abbreviation]. [@module] and [@scope] say where the class
+   of an [@instanceOf] is found, so they need one. Only [Typedecl] calls this:
+   a declaration read from an interface compiled before keeps its
+   attributes. *)
 let check_runtime_annotation ~loc ~is_abstract_or_abbreviation
     (attrs : Parsetree.attributes) =
-  match process_runtime_annotation ~loc attrs with
+  let annotation = process_runtime_annotation ~loc attrs in
+  (match annotation with
+  | Some annotation when not is_abstract_or_abbreviation ->
+    raise
+      (Error
+         ( loc,
+           RuntimeAnnotationOnRepresentedType
+             (runtime_attribute_name annotation) ))
+  | Some _ | None -> ());
+  let missing =
+    match annotation with
+    | Some (Instance_of _) -> None
+    | Some ((Not_undefined | Type_of _) as annotation) ->
+      Some (Other_annotation (runtime_attribute_name annotation))
+    | None ->
+      Some
+        (if is_abstract_or_abbreviation then No_annotation else Represented_type)
+  in
+  match missing with
   | None -> ()
-  | Some annotation ->
-    if not is_abstract_or_abbreviation then
-      raise
-        (Error
-           ( loc,
-             RuntimeAnnotationOnRepresentedType
-               (runtime_attribute_name annotation) ))
+  | Some missing ->
+    Ext_list.iter attrs (fun ({Location.txt; loc = attr_loc}, _) ->
+        if txt = class_module || txt = class_scope then
+          raise
+            (Error
+               ( attribute_loc ~loc attr_loc,
+                 ClassLocationWithoutClass (txt, missing) )))
 
 let process_tag_name (attrs : Parsetree.attributes) =
   let st = ref None in

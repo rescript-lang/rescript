@@ -14,11 +14,6 @@ type square = private shape
 @module("./untagged_module_class_lib.mjs") @instanceOf("default")
 type polygon = private shape
 
-// Without @instanceOf, @module states nothing about the values of a type and
-// is ignored, as it always was
-@module("./untagged_module_class_lib.mjs") @notUndefined
-type handle
-
 @new @module("./untagged_module_class_lib.mjs")
 external makeShape: unit => shape = "UntaggedShape"
 
