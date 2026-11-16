@@ -44,6 +44,9 @@ val print_interface :
 val print_ident_like :
   ?allow_uident:bool -> ?allow_hyphen:bool -> string -> Res_doc.t
 
+val print_label_like :
+  ?allow_uident:bool -> ?allow_hyphen:bool -> string -> Res_doc.t
+
 val print_poly_var_ident : string -> Res_doc.t
 
 val polyvar_ident_to_string : string -> string [@@live]

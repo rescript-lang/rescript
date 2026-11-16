@@ -41,6 +41,11 @@ val expect : ?grammar:Grammar.t -> Token.t -> t -> unit
 val optional : t -> Token.t -> bool
 val next : t -> unit
 val next_unsafe : t -> unit
+
+val split_let_unwrap : t -> unit
+(** Consume [let] of the current [let?] token and leave [?] as the current
+    token. *)
+
 val finish : t -> unit
 
 (* The newline of the source: CRLF when its first line break between tokens is

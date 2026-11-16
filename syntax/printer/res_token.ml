@@ -274,6 +274,41 @@ let is_keyword = function
     true
   | _ -> false
 
+(* The text of a reserved word, for the positions where the grammar expects a
+   name that no variable is bound to: a record field, an argument label, a JSX
+   prop, a polymorphic variant tag or a lowercase JSX tag name. [let?] is a
+   single token; the name it stands for is [let], followed by [?]. *)
+let keyword_name = function
+  | And -> Some "and"
+  | As -> Some "as"
+  | Assert -> Some "assert"
+  | Await -> Some "await"
+  | Break -> Some "break"
+  | Constraint -> Some "constraint"
+  | Continue -> Some "continue"
+  | Else -> Some "else"
+  | Exception -> Some "exception"
+  | External -> Some "external"
+  | False -> Some "false"
+  | For -> Some "for"
+  | If -> Some "if"
+  | In -> Some "in"
+  | Include -> Some "include"
+  | Let _ -> Some "let"
+  | Module -> Some "module"
+  | Mutable -> Some "mutable"
+  | Of -> Some "of"
+  | Open -> Some "open"
+  | Private -> Some "private"
+  | Rec -> Some "rec"
+  | Switch -> Some "switch"
+  | True -> Some "true"
+  | Try -> Some "try"
+  | Typ -> Some "type"
+  | When -> Some "when"
+  | While -> Some "while"
+  | _ -> None
+
 let lookup_keyword str =
   try keyword_table str
   with Not_found -> (
@@ -286,6 +321,14 @@ let is_keyword_txt str =
     let _ = keyword_table str in
     true
   with Not_found -> false
+
+(* Whether [str] is a reserved word: a keyword spelled like an identifier,
+   which [keyword_name] accepts as a name. [let?], [list{] and [dict{] are
+   keywords but not words. *)
+let is_keyword_name_txt str =
+  match keyword_table str with
+  | token -> keyword_name token = Some str
+  | exception Not_found -> false
 
 let catch = Lident "catch"
 let finally = Lident "finally"

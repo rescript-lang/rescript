@@ -1,6 +1,6 @@
 type \"type" = User.\"type" = {
-  \"module": \"type",
-  \"let": \"module",
+  module: \"type",
+  let: \"module",
 }
 
 type \"Color" =

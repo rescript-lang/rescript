@@ -156,14 +156,14 @@ type numberFormatPartType = [
 ]
 
 type numberFormatPart = {
-  \"type": numberFormatPartType,
+  type: numberFormatPartType,
   value: string,
 }
 
 type rangeSource = [#startRange | #endRange | #shared]
 
 type numberFormatRangePart = {
-  \"type": numberFormatPartType,
+  type: numberFormatPartType,
   value: string,
   source: rangeSource,
 }

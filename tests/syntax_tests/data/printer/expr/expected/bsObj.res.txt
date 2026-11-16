@@ -39,8 +39,8 @@ React.jsx(
           | #location
           | #date
           | #time
-          | #"true"
-          | #"false"
+          | #true
+          | #false
         ]
       ),
     }

@@ -10,7 +10,7 @@ type options = {
   calendar?: Stdlib_Intl_Common.calendar,
   collation?: Stdlib_Intl_Common.collation,
   hourCycle?: [#h11 | #h12 | #h23 | #h24],
-  caseFirst?: [#upper | #lower | #"false"],
+  caseFirst?: [#upper | #lower | #false],
   numberingSystem?: Stdlib_Intl_Common.numberingSystem,
   numeric?: bool,
   language?: string,

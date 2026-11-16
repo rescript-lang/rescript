@@ -36,13 +36,13 @@ Color(\"let", \"module")
 
 let importType = {
   ...\"let",
-  \"type": \"module",
+  type: \"module",
 }
 
-let userType = user.\"type"
-let m = user.\"type".\"module"
+let userType = user.type
+let m = user.type.module
 
-user.\"type" = \"module"
+user.type = \"module"
 
 let () = {
   \"let"()

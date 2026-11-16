@@ -405,7 +405,7 @@ and print_record_decl_row_doc (name, runtime_name, mut, opt, arg) =
              ]
          | None -> Doc.nil);
          (if mut then Doc.text "mutable " else Doc.nil);
-         Printer.print_ident_like ~allow_uident:false name;
+         Printer.print_label_like ~allow_uident:false name;
          (if opt then Doc.text "?" else Doc.nil);
          Doc.text ": ";
          print_out_type_doc arg;

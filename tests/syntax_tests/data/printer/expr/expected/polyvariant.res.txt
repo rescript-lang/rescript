@@ -105,7 +105,7 @@ switch x {
 }
 
 let r = #"Reducer⛪️"
-let r = #"type"(\"module", \"let")
+let r = #type(\"module", \"let")
 
 let r = #lident
 let r = #lident(a, b)

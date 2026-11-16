@@ -528,6 +528,14 @@ let print_ident_like ?allow_uident ?allow_hyphen txt =
   | ExoticIdent -> Doc.concat [Doc.text "\\\""; Doc.text txt; Doc.text "\""]
   | UppercaseExoticIdent | NormalIdent -> Doc.text txt
 
+(* A name where the grammar expects a label (a record field, an argument
+   label, a JSX prop), a variant tag or a lowercase JSX tag name. A reserved
+   word needs no escape there: [{type: x}], [~type=x], [<switch />]. A
+   shorthand names a variable too, so it is printed with [print_ident_like]. *)
+let print_label_like ?allow_uident ?allow_hyphen txt =
+  if Token.is_keyword_name_txt txt then Doc.text txt
+  else print_ident_like ?allow_uident ?allow_hyphen txt
+
 let rec unsafe_for_all_range s ~start ~finish p =
   start > finish
   || p (String.unsafe_get s start)
@@ -563,6 +571,7 @@ let print_poly_var_ident txt =
       (* UppercaseExoticIdent follows the \"..." format,
          so removing the leading backslash is enough to transform it into polyvar style *)
       Doc.text ((String.sub [@doesNotThrow]) txt 1 (len - 1))
+    | ExoticIdent when Token.is_keyword_name_txt txt -> Doc.text txt
     | ExoticIdent -> Doc.concat [Doc.text "\""; Doc.text txt; Doc.text "\""]
     | NormalIdent -> (
       match txt with
@@ -621,6 +630,21 @@ let print_lident l =
         Doc.dot;
         print_ident_like txt;
       ]
+
+(* A record field path: [x], [M.x], [type], [M.type]. *)
+let print_field_lident l =
+  match l with
+  | Longident.Lident txt -> print_label_like txt
+  | Longident.Ldot (path, txt) ->
+    Doc.concat
+      [
+        Doc.join ~sep:Doc.dot (List.map Doc.text (Longident.flatten path));
+        Doc.dot;
+        print_label_like txt;
+      ]
+
+let print_field_lident_path path cmt_tbl =
+  print_comments (print_field_lident path.Location.txt) cmt_tbl path.loc
 
 let print_longident_location l cmt_tbl =
   let doc = print_longident l.Location.txt in
@@ -1906,7 +1930,7 @@ and print_label_declaration ?inline_record_definitions ~state
   let name, is_dot =
     let doc, is_dot =
       if ld.pld_name.txt = "..." then (Doc.text ld.pld_name.txt, true)
-      else (print_ident_like ld.pld_name.txt, false)
+      else (print_label_like ld.pld_name.txt, false)
     in
     (print_comments doc cmt_tbl ld.pld_name.loc, is_dot)
   in
@@ -2383,9 +2407,9 @@ and print_type_parameter ?inline_record_definitions ~state parameter cmt_tbl =
     match lbl with
     | Asttypes.Nolabel -> Doc.nil
     | Labelled {txt = lbl} ->
-      Doc.concat [Doc.text "~"; print_ident_like lbl; Doc.text ": "]
+      Doc.concat [Doc.text "~"; print_label_like lbl; Doc.text ": "]
     | Optional {txt = lbl} ->
-      Doc.concat [Doc.text "~"; print_ident_like lbl; Doc.text ": "]
+      Doc.concat [Doc.text "~"; print_label_like lbl; Doc.text ": "]
   in
   let optional_indicator =
     match lbl with
@@ -3056,7 +3080,7 @@ and print_pattern_record_row ~state row cmt_tbl =
       Doc.group
         (Doc.concat
            [
-             print_lident_path longident cmt_tbl;
+             print_field_lident_path longident cmt_tbl;
              Doc.text ":";
              (if Parsetree_viewer.is_huggable_pattern pattern then
                 Doc.concat [Doc.space; rhs_doc]
@@ -3608,7 +3632,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         | Braced braces -> print_braces doc expr braces
         | Nothing -> doc
       in
-      Doc.concat [lhs; Doc.dot; print_lident_path longident_loc cmt_tbl]
+      Doc.concat [lhs; Doc.dot; print_field_lident_path longident_loc cmt_tbl]
     | Pexp_setfield (expr1, longident_loc, expr2) ->
       print_set_field_expr ~state e.pexp_attributes expr1 longident_loc expr2
         e.pexp_loc cmt_tbl
@@ -3991,7 +4015,7 @@ and print_set_field_expr ~state attrs lhs longident_loc rhs loc cmt_tbl =
          [
            lhs_doc;
            Doc.dot;
-           print_lident_path longident_loc cmt_tbl;
+           print_field_lident_path longident_loc cmt_tbl;
            print_assignment_rhs ~operator:" =" rhs rhs_doc;
          ])
   in
@@ -5003,7 +5027,7 @@ and print_jsx_prop ~state prop cmt_tbl =
       let doc =
         Doc.concat
           [
-            print_comments (print_ident_like name.txt) cmt_tbl name.loc;
+            print_comments (print_label_like name.txt) cmt_tbl name.loc;
             Doc.equal;
             (if is_optional then Doc.question else Doc.nil);
             (if has_trailing_comment_after_name then Doc.hard_line else Doc.nil);
@@ -5032,7 +5056,7 @@ and print_jsx_name (tag_name : Parsetree.jsx_tag_name) =
     (* Preserve exactly what the parser recorded as invalid *)
     Doc.text invalid
   | Parsetree.JsxLowerTag name ->
-    print_ident_like ~allow_uident:true ~allow_hyphen:true name
+    print_label_like ~allow_uident:true ~allow_hyphen:true name
   | Parsetree.JsxQualifiedLowerTag {path; name} ->
     let upper_segs = Longident.flatten path in
     let printed_upper =
@@ -5050,9 +5074,9 @@ and print_jsx_name (tag_name : Parsetree.jsx_tag_name) =
 and print_callback_label = function
   | Asttypes.Nolabel -> Doc.nil
   | Asttypes.Labelled {txt} ->
-    Doc.concat [Doc.tilde; print_ident_like txt; Doc.equal]
+    Doc.concat [Doc.tilde; print_label_like txt; Doc.equal]
   | Asttypes.Optional {txt} ->
-    Doc.concat [Doc.tilde; print_ident_like txt; Doc.equal; Doc.question]
+    Doc.concat [Doc.tilde; print_label_like txt; Doc.equal; Doc.question]
 
 and print_arguments_with_callback_in_first_position ~state ~partial args cmt_tbl
     =
@@ -5353,12 +5377,12 @@ and print_argument ~state (arg_lbl, arg) cmt_tbl =
         (loc, print_comments doc cmt_tbl arg_loc, true)
       | Labelled {txt = lbl; loc} ->
         let arg_loc = loc in
-        let doc = Doc.concat [Doc.tilde; print_ident_like lbl; Doc.equal] in
+        let doc = Doc.concat [Doc.tilde; print_label_like lbl; Doc.equal] in
         (loc, print_comments doc cmt_tbl arg_loc, false)
       | Optional {txt = lbl; loc} ->
         let arg_loc = loc in
         let doc =
-          Doc.concat [Doc.tilde; print_ident_like lbl; Doc.equal; Doc.question]
+          Doc.concat [Doc.tilde; print_label_like lbl; Doc.equal; Doc.question]
         in
         (loc, print_comments doc cmt_tbl arg_loc, false)
     in
@@ -5628,7 +5652,7 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
           [
             print_attributes ~state pattern.ppat_attributes cmt_tbl;
             Doc.text "~";
-            print_ident_like lbl;
+            print_label_like lbl;
             Doc.text " as ";
             print_pattern ~state {pattern with ppat_attributes = []} cmt_tbl;
           ]
@@ -5856,7 +5880,7 @@ and print_expression_record_row ~state {lid = lbl; x = expr; opt = optional}
       | _ ->
         Doc.concat
           [
-            print_lident_path lbl cmt_tbl;
+            print_field_lident_path lbl cmt_tbl;
             Doc.text ": ";
             (if optional then Doc.text "?" else Doc.nil);
             (let doc = print_expression_with_comments ~state expr cmt_tbl in

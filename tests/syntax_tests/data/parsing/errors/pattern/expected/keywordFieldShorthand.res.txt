@@ -1,0 +1,12 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/keywordFieldShorthand.res:1:6-9
+
+  1 │ let {type} = r
+  2 │ 
+  3 │ 
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `{type: pattern}`
+
+let { type } = r

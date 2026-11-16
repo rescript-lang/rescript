@@ -15,7 +15,7 @@ type style = [
 
 type options = {
   localeMatcher?: Stdlib_Intl_Common.localeMatcher,
-  \"type"?: listType,
+  type?: listType,
   style?: style,
 }
 
@@ -25,14 +25,14 @@ type listPartComponentType = [
 ]
 
 type listPart = {
-  \"type": listPartComponentType,
+  type: listPartComponentType,
   value: string,
 }
 
 type resolvedOptions = {
   locale: string,
   style: style,
-  \"type": listType,
+  type: listType,
 }
 
 type supportedLocalesOptions = {localeMatcher: Stdlib_Intl_Common.localeMatcher}

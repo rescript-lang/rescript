@@ -2,7 +2,7 @@ type s = \"type"
 type s = '\"type"
 type s = \"module" as '\"type"
 
-type s = (~\"let": \"type") => \"module"
+type s = (~let: \"type") => \"module"
 
 type t = (\"let", \"module", \"type")
 

@@ -29,7 +29,7 @@ type resolvedOptions = {
 type relativeTimePartComponent = [#literal | #integer]
 
 type relativeTimePart = {
-  \"type": relativeTimePartComponent,
+  type: relativeTimePartComponent,
   value: string,
   unit?: timeUnit,
 }

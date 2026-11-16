@@ -6,7 +6,7 @@ let _formatter = Intl.PluralRules.make(~locales=["en-US", "en-GB"])
 
 let _formatter = Intl.PluralRules.make(
   ~options={
-    \"type": #ordinal,
+    type: #ordinal,
     maximumSignificantDigits: #5,
     minimumSignificantDigits: #3,
   },
@@ -15,7 +15,7 @@ let _formatter = Intl.PluralRules.make(
 let formatter = Intl.PluralRules.make(
   ~locales=["en-US"],
   ~options={
-    \"type": #ordinal,
+    type: #ordinal,
     maximumSignificantDigits: #5,
     minimumSignificantDigits: #3,
   },

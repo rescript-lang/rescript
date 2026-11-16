@@ -3,7 +3,7 @@ type t
 
 type usage = [#sort | #search]
 type sensitivity = [#base | #accent | #case | #variant]
-type caseFirst = [#upper | #lower | #"false"]
+type caseFirst = [#upper | #lower | #false]
 
 type options = {
   localeMatcher?: Stdlib_Intl_Common.localeMatcher,

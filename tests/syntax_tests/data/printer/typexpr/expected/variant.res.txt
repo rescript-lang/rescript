@@ -3,7 +3,7 @@ type color = [rgb | #Orange | #Yellow | #Purple]
 
 type t = [#variant]
 type t = [#Variant]
-type t = [#"type"]
+type t = [#type]
 type t = [#"va r ia nt"]
 type t = [#"Variant ⛰"]
 
@@ -17,7 +17,7 @@ type shape = [
   | #Circle(point, float)
 ]
 
-type madness = [< #"type" & (\"let") & (\"Super exotic") | #"Bad Idea"]
+type madness = [< #type & (\"let") & (\"Super exotic") | #"Bad Idea"]
 
 let error_of_exn: exn => option<[#Ok(error) | #Already_displayed]> = x
 
