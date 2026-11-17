@@ -154,6 +154,9 @@ package-specs/empty-suffix
 package-specs/top-level-suffix
   compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.mjs A.ast
   parser: -absname -bs-ast -o A.ast ../../src/A.res
+package-specs/top-level-suffix-default-spec
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.mjs A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 package-specs/same-suffix-different-location
   compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.mjs -bs-package-output commonjs:lib/js/src:.mjs A.ast
   parser: -absname -bs-ast -o A.ast ../../src/A.res
@@ -467,7 +470,7 @@ gentype/extension
   compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-generated-extension .gen.tsx -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
   parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/explicit-suffix
-  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-suffix .mjs -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-suffix .mjs -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.mjs A.ast
   parser: -absname -bs-ast -o A.ast ../../src/A.res
 gentype/shims-empty-object
   compiler: -I . -runtime-path <RUNTIME> -bs-gentype -bs-gentype-bsb-project-root <PROJECT> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
