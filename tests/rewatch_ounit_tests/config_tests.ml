@@ -733,9 +733,16 @@ let semantics_tests =
       let config = Config.load path in
       check
         (match config.package_specs with
+        | [spec] -> Config.package_spec_suffix config spec = ".mjs"
+        | _ -> false)
+        "the default package spec uses the top-level suffix";
+      write_file path {|{"name":"default-output"}|};
+      let config = Config.load path in
+      check
+        (match config.package_specs with
         | [spec] -> Config.package_spec_suffix config spec = ".js"
         | _ -> false)
-        "package-specs default output suffix is .js";
+        "the default package spec falls back to .js";
       write_file path
         {|{"name":"legacy-output","package-specs":{"module":"cjs"}}|};
       let config = Config.load path in
