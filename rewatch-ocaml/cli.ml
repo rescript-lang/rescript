@@ -219,12 +219,36 @@ let compiler_args_term =
   Compiler_args {verbosity; path}
 
 let lsp_term =
-  Arg.(
-    required
-    & vflag None
-        [
-          (Some Lsp, info ["stdio"] ~doc:"Use standard input/output (required).");
-        ])
+  let stdio =
+    Arg.(
+      required
+      & vflag None
+          [
+            ( Some Lsp,
+              info ["stdio"] ~doc:"Use standard input/output (required)." );
+          ])
+  in
+  let client_process_id =
+    let parse value =
+      match int_of_string_opt value with
+      | Some pid when pid > 0 -> Ok pid
+      | Some _ | None ->
+        Error (`Msg "client process ID must be a positive integer")
+    in
+    let converter = Arg.conv (parse, Stdlib.Format.pp_print_int) in
+    Arg.(
+      value
+      & opt (some converter) None
+      & info ["clientProcessId"] ~docv:"PID"
+          ~doc:
+            "Accept a client process ID for editor compatibility. The server \
+             does not monitor this process.")
+  in
+  let+ command = stdio and+ client_process_id in
+  (* Some editors append this argument automatically. It is accepted only for
+     launch compatibility; shutdown and exit still follow the LSP lifecycle. *)
+  ignore client_process_id;
+  command
 
 let exits =
   [
