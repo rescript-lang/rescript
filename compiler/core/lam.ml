@@ -414,18 +414,67 @@ and eq_option l1 l2 =
 
 and eq_approx_list ls ls1 = Ext_list.for_all2_no_exn ls ls1 eq_approx
 
+(** The [sw_consts] key selected by a constant scrutinee, if it can be known.
+
+    Constant cases of a variant switch are keyed by the constructor's position
+    in its type declaration, but a constant constructor does not carry that
+    position: [Lam_constant_convert] stores the runtime value of an [@as(int)]
+    constructor in [i], and a coercion between variant types can reorder
+    constructors. So a constructor is looked up by its tag in [sw_names],
+    which lists the constant constructors in position order; this is the
+    inverse of [Lam_compile.get_const_tag]. *)
+let switch_const_key (i : int32) (comment : Lam_constant.pointer_info)
+    (sw_names : Ast_untagged_variants.switch_names option) : int option =
+  match (comment, sw_names) with
+  | Pt_constructor {cstr_name}, Some {consts} ->
+    let key = Ext_array.rfind_with_index consts ( = ) cstr_name in
+    if key < 0 then None else Some key
+  | (Pt_constructor _ | None | Pt_assertfalse | Some _), (Some _ | None) ->
+    Some (Int32.to_int i)
+
+(** The [sw_blocks] key selected by a constant block scrutinee, if it can be
+    known.
+
+    A constructor block carries its position in its own type, which a coercion
+    to a variant type with another constructor order does not preserve. So,
+    as in [switch_const_key], a constructor is looked up by name in
+    [sw_names], which lists the block constructors in position order; this is
+    the inverse of [Lam_compile.get_block]. *)
+let switch_block_key (tag : int) (tag_info : Lambda.tag_info)
+    (sw_names : Ast_untagged_variants.switch_names option) : int option =
+  match (tag_info, sw_names) with
+  | (Blk_constructor {name} | Blk_record_inlined {name}), Some {blocks} ->
+    let key =
+      Ext_array.rfind_with_index blocks
+        (fun (block : Ast_untagged_variants.block) name ->
+          block.tag.name = name)
+        name
+    in
+    if key < 0 then None else Some key
+  | ( ( Blk_constructor _ | Blk_record_inlined _ | Blk_tuple | Blk_poly_var _
+      | Blk_record _ | Blk_module _ | Blk_module_export _ | Blk_extension
+      | Blk_some | Blk_some_not_nested | Blk_record_ext _ ),
+      (Some _ | None) ) ->
+    Some tag
+
 let switch lam (lam_switch : lambda_switch) : t =
   match lam with
-  | Lconst (Const_int {i}) -> (
+  | Lconst (Const_int {i; comment}) -> (
     (* Because of inlining and dead code, we might be looking at a value of unexpected type
        e.g. an integer, so the const case might not be found *)
-    try
-      Ext_list.assoc_by_int lam_switch.sw_consts (Int32.to_int i)
-        lam_switch.sw_failaction
-    with _ -> Lswitch (lam, lam_switch))
-  | Lconst (Const_block (i, _, _)) -> (
-    try Ext_list.assoc_by_int lam_switch.sw_blocks i lam_switch.sw_failaction
-    with _ -> Lswitch (lam, lam_switch))
+    match switch_const_key i comment lam_switch.sw_names with
+    | None -> Lswitch (lam, lam_switch)
+    | Some key -> (
+      try
+        Ext_list.assoc_by_int lam_switch.sw_consts key lam_switch.sw_failaction
+      with _ -> Lswitch (lam, lam_switch)))
+  | Lconst (Const_block (tag, tag_info, _)) -> (
+    match switch_block_key tag tag_info lam_switch.sw_names with
+    | None -> Lswitch (lam, lam_switch)
+    | Some key -> (
+      try
+        Ext_list.assoc_by_int lam_switch.sw_blocks key lam_switch.sw_failaction
+      with _ -> Lswitch (lam, lam_switch)))
   | _ -> Lswitch (lam, lam_switch)
 
 let stringswitch (lam : t) cases default : t =
