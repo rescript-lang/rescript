@@ -58,6 +58,31 @@ type t =
    [constant] is [undefined] or not
 *)
 
+type int_value =
+  | Number of int32
+  | String of string
+  | Literal of Ast_untagged_variants.tag_type
+
+let int_value (i : int32) (comment : pointer_info) : int_value =
+  match comment with
+  | None | Pt_assertfalse | Some _ -> Number i
+  | Pt_constructor {cstr_name = {tag_type = Some (Int value)}} ->
+    Number (Int32.of_int value)
+  | Pt_constructor {cstr_name = {name = "[]"; tag_type = None}} -> Number i
+  | Pt_constructor {cstr_name = {name; tag_type = None}} -> String name
+  | Pt_constructor {cstr_name = {tag_type = Some (String s)}} -> String s
+  | Pt_constructor
+      {
+        cstr_name =
+          {
+            tag_type =
+              Some
+                ((Float _ | BigInt _ | Bool _ | Null | Undefined | Untagged _)
+                 as literal);
+          };
+      } ->
+    Literal literal
+
 let rec eq_approx (x : t) (y : t) =
   match x with
   | Const_module_alias -> y = Const_module_alias
@@ -67,7 +92,7 @@ let rec eq_approx (x : t) (y : t) =
   | Const_js_false -> y = Const_js_false
   | Const_int ix -> (
     match y with
-    | Const_int iy -> ix.i = iy.i
+    | Const_int iy -> int_value ix.i ix.comment = int_value iy.i iy.comment
     | _ -> false)
   | Const_char ix -> (
     match y with

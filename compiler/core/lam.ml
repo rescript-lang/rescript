@@ -547,8 +547,18 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
     | _ -> default ())
   | [Lconst a; Lconst b] -> (
     match (prim, a, b) with
-    | Pintcomp cmp, Const_int a, Const_int b ->
-      Lift.bool (Lam_compat.cmp_int32 cmp a.i b.i)
+    | Pintcomp cmp, Const_int a, Const_int b -> (
+      match
+        ( Lam_constant.int_value a.i a.comment,
+          Lam_constant.int_value b.i b.comment )
+      with
+      | Number a, Number b -> Lift.bool (Lam_compat.cmp_int32 cmp a b)
+      | String a, String b -> (
+        match cmp with
+        | Ceq -> Lift.bool (a = b)
+        | Cneq -> Lift.bool (a <> b)
+        | Cgt | Cle | Clt | Cge -> default ())
+      | (Number _ | String _ | Literal _), _ -> default ())
     | Pfloatcomp cmp, Const_float a, Const_float b ->
       (* FIXME: could raise? *)
       Lift.bool
