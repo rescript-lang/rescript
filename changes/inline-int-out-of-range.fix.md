@@ -1,0 +1,1 @@
+- An `@inline` integer constant outside the int range reports an error instead of crashing the compiler.
