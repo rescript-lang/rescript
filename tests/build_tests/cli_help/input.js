@@ -39,7 +39,7 @@ const cliHelp =
   "       help [OPTION]… [COMMAND]\n" +
   "           Print this message or command help.\n" +
   "\n" +
-  "       lsp --stdio [OPTION]…\n" +
+  "       lsp [--clientProcessId=PID] --stdio [OPTION]…\n" +
   "           Start the ReScript language server over stdio.\n" +
   "\n" +
   "       watch [OPTION]… [FOLDER]\n" +
@@ -319,6 +319,46 @@ const compilerArgsHelp =
   "       rescript(1)\n" +
   "\n";
 
+const lspHelp =
+  "NAME\n" +
+  "       rescript-lsp - Start the ReScript language server over stdio.\n" +
+  "\n" +
+  "SYNOPSIS\n" +
+  "       rescript lsp [--clientProcessId=PID] --stdio [OPTION]…\n" +
+  "\n" +
+  "OPTIONS\n" +
+  "       --clientProcessId=PID\n" +
+  "           Accept a client process ID for editor compatibility. The server\n" +
+  "           does not monitor this process.\n" +
+  "\n" +
+  "       --stdio (required)\n" +
+  "           Use standard input/output (required).\n" +
+  "\n" +
+  "COMMON OPTIONS\n" +
+  "       --help[=FMT] (default=auto)\n" +
+  "           Show this help in format FMT. The value FMT must be one of auto,\n" +
+  "           pager, groff or plain. With auto, the format is pager or plain\n" +
+  "           whenever the TERM env var is dumb or undefined.\n" +
+  "\n" +
+  "       --version\n" +
+  "           Show version information.\n" +
+  "\n" +
+  "EXIT STATUS\n" +
+  "       rescript lsp exits with:\n" +
+  "\n" +
+  "       0   on success.\n" +
+  "\n" +
+  "       1   on build, configuration, dependency, or file system errors.\n" +
+  "\n" +
+  "       2   on command-line usage errors.\n" +
+  "\n" +
+  "       129-143\n" +
+  "           when interrupted by a signal (128 plus the signal number).\n" +
+  "\n" +
+  "SEE ALSO\n" +
+  "       rescript(1)\n" +
+  "\n";
+
 /**
  * @param {string[]} params
  * @param {{ stdout: string; stderr: string; status: number; }} expected
@@ -345,7 +385,7 @@ async function test(params, expected) {
 await test(["lsp"], {
   stdout: "",
   stderr:
-    "Usage: rescript lsp [--help] --stdio [OPTION]…\n" +
+    "Usage: rescript lsp [--help] [--clientProcessId=PID] --stdio [OPTION]…\n" +
     "rescript: required option --stdio is missing\n",
   status: 2,
 });
@@ -354,7 +394,7 @@ for (const flag of ["--quiet", "--verbose"]) {
   await test(["lsp", "--stdio", flag], {
     stdout: "",
     stderr:
-      "Usage: rescript lsp [--help] --stdio [OPTION]…\n" +
+      "Usage: rescript lsp [--help] [--clientProcessId=PID] --stdio [OPTION]…\n" +
       `rescript: unknown option ${flag}\n`,
     status: 2,
   });
@@ -447,3 +487,10 @@ await test(["compiler-args", "-h"], {
   stderr: "",
   status: 0,
 });
+
+for (const params of [
+  ["lsp", "--help"],
+  ["help", "lsp"],
+]) {
+  await test(params, { stdout: lspHelp, stderr: "", status: 0 });
+}

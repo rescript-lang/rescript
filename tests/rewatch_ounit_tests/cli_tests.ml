@@ -39,6 +39,25 @@ let tests =
     "lsp selects the stdio language server";
   check (rejects ["lsp"]) "lsp requires --stdio";
   List.iter
+    (fun arguments ->
+      check (parse arguments = Cli.Lsp) "lsp accepts the client process ID")
+    [
+      ["lsp"; "--stdio"; "--clientProcessId"; "123"];
+      ["lsp"; "--clientProcessId=123"; "--stdio"];
+    ];
+  check
+    (rejects ["lsp"; "--clientProcessId"; "123"])
+    "a client process ID does not replace --stdio";
+  check
+    (rejects ["lsp"; "--stdio"; "--clientProcessId"])
+    "the client process ID requires a value";
+  List.iter
+    (fun value ->
+      check
+        (rejects ["lsp"; "--stdio"; "--clientProcessId=" ^ value])
+        "lsp rejects invalid client process IDs")
+    ["abc"; "0"; "-1"; "1.5"; "999999999999999999999999999999999999"];
+  List.iter
     (fun flag ->
       check
         (rejects ["lsp"; "--stdio"; flag])
