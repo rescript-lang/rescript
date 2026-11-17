@@ -24,8 +24,47 @@ let discover_with_inventory config ?(prod = false) ?features () =
   Source.discover_with_inventory config ~on_missing:ignore ~prod ~features
     ~filter:None
 
+let visibility_tests () =
+  Test_support.with_temp_dir "rewatch-source-visibility-" (fun root ->
+      List.iter
+        (fun path -> write_file (Test_support.path root path) "let value = 1\n")
+        [
+          "src/Public.res";
+          "src/Helper.res";
+          "src/nested/Nested.res";
+          "src/exposed/Exposed.res";
+        ];
+      let path = Filename.concat root "rescript.json" in
+      write_file path
+        {|{"name":"visibility","sources":{"dir":"src","public":["Public"],
+          "subdirs":["nested",{"dir":"exposed","public":"all"}]}}|};
+      let modules = discover (Config.load path) () in
+      let public_names =
+        modules
+        |> List.filter (fun module_ -> module_.Source.is_public)
+        |> names
+      in
+      check
+        (public_names = ["Exposed"; "Public"])
+        "public is inherited by nested source entries and can be overridden";
+      write_file path
+        {|{"name":"visibility","sources":{"dir":"src","public":[],"subdirs":true}}|};
+      check
+        (discover (Config.load path) ()
+        |> List.for_all (fun module_ -> not module_.Source.is_public))
+        "an empty public list keeps every recursive module project-owned";
+      write_file path
+        {|{"name":"visibility","sources":{"dir":"src","public":false}}|};
+      check
+        (try
+           ignore (Config.load path);
+           false
+         with Config.Error _ -> true)
+        "invalid public specifications fail rather than being ignored")
+
 let tests =
   "source_tests" >:: fun _context ->
+  visibility_tests ();
   let namespace_modules =
     [
       Source.
@@ -34,6 +73,7 @@ let tests =
           implementation = "Entry.res";
           interface = None;
           is_dev = false;
+          is_public = true;
         };
       Source.
         {
@@ -41,6 +81,7 @@ let tests =
           implementation = "Member.res";
           interface = None;
           is_dev = false;
+          is_public = true;
         };
       Source.
         {
@@ -48,6 +89,7 @@ let tests =
           implementation = "Member-with-dash.res";
           interface = None;
           is_dev = false;
+          is_public = true;
         };
     ]
   in

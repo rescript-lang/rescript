@@ -35,6 +35,15 @@ sources	duplicate-dir	reject	{"name":"config-shape","sources":{"dir":"src","dir"
 sources	duplicate-subdirs	reject	{"name":"config-shape","sources":{"dir":"src","subdirs":true,"subdirs":false}}
 sources	duplicate-type	reject	{"name":"config-shape","sources":{"dir":"src","type":"dev","type":"other"}}
 sources	duplicate-feature	reject	{"name":"config-shape","sources":{"dir":"src","feature":"a","feature":"b"}}
+sources	public-null	accept	{"name":"config-shape","sources":{"dir":"src","public":null}}
+sources	public-all	accept	{"name":"config-shape","sources":{"dir":"src","public":"all"}}
+sources	public-empty	accept	{"name":"config-shape","sources":{"dir":"src","public":[]}}
+sources	public-selected	accept	{"name":"config-shape","sources":{"dir":"src","public":["A"]}}
+sources	public-unlisted	accept	{"name":"config-shape","sources":{"dir":"src","public":["Other"]}}
+sources	public-invalid-string	reject	{"name":"config-shape","sources":{"dir":"src","public":"none"}}
+sources	public-boolean	reject	{"name":"config-shape","sources":{"dir":"src","public":false}}
+sources	public-mixed-list	reject	{"name":"config-shape","sources":{"dir":"src","public":["A",false]}}
+sources	duplicate-public	reject	{"name":"config-shape","sources":{"dir":"src","public":[],"public":"all"}}
 dependencies	omitted	accept	{"name":"config-shape"}
 dependencies	null	accept	{"name":"config-shape","dependencies":null}
 dependencies	empty	accept	{"name":"config-shape","dependencies":[]}

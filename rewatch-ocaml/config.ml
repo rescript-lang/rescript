@@ -2,6 +2,10 @@ include Config_types
 
 open Config_decode
 
+(* A resolved project, not its npm name or namespace, owns internal units.
+   Source packages are recompiled after moving; the key is not a portable ABI. *)
+let project_owner (config : t) = Digest.to_hex (Digest.string config.root)
+
 let namespace_name = function
   | No_namespace -> None
   | Namespace name | Namespace_with_entry {name; entry = _} -> Some name
@@ -31,7 +35,7 @@ let exists_in_root root =
   File_util.exists (Filename.concat root "rescript.json")
   || File_util.exists (Filename.concat root "bsconfig.json")
 
-let source_is_dev (config : t) relative_path =
+let source_for_path (config : t) relative_path =
   let canonical path =
     try Some (Platform.canonicalize_path path)
     with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
@@ -40,7 +44,7 @@ let source_is_dev (config : t) relative_path =
     Filename.concat config.root relative_path |> Filename.dirname |> canonical
   in
   match source_parent with
-  | None -> false
+  | None -> None
   | Some source_parent ->
     let comparable = Platform.normalize_path_for_comparison in
     List.find_map
@@ -54,10 +58,24 @@ let source_is_dev (config : t) relative_path =
                && String.starts_with
                     ~prefix:(Filename.concat directory "" |> comparable)
                     (comparable source_parent)
-          then Some source.is_dev
+          then Some source
           else None)
       config.sources
-    |> Option.value ~default:false
+
+let source_is_dev config path =
+  source_for_path config path
+  |> Option.fold ~none:false ~some:(fun source -> source.is_dev)
+
+let module_is_public (source : source) name =
+  Option.fold ~none:true ~some:(List.mem name) source.public_modules
+
+let source_is_public config path =
+  let name =
+    Filename.basename path |> Filename.remove_extension
+    |> String.capitalize_ascii
+  in
+  source_for_path config path
+  |> Option.fold ~none:true ~some:(fun source -> module_is_public source name)
 
 (* Every package in one invocation must use the root project's effective
    compiler options so dependencies expose outputs their consumers can use. *)

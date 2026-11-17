@@ -24,6 +24,7 @@ val compiler_arguments :
   module_name:string ->
   source_kind:Source.source_kind ->
   has_interface:bool ->
+  is_public:bool ->
   watch:bool ->
   gentype_dependency_args:string list ->
   path:string ->
@@ -44,5 +45,6 @@ val compiler_arguments_with_common :
   module_name:string ->
   source_kind:Source.source_kind ->
   has_interface:bool ->
+  is_public:bool ->
   path:string ->
   string list

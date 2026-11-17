@@ -106,6 +106,7 @@ let parsed_dependencies_tests _context =
                 implementation = path;
                 interface = None;
                 is_dev = false;
+                is_public = true;
               };
             ];
           source_mtimes = Hashtbl.create 1;

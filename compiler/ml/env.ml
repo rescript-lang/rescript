@@ -67,6 +67,7 @@ type error =
   | Inconsistent_import of string * string * string
   | Missing_module of Location.t * Path.t * Path.t
   | Illegal_value_name of Location.t * string
+  | Internal_module of Location.t * string
 
 exception Error of error
 
@@ -657,6 +658,7 @@ type pers_struct = {
   ps_comps: module_components;
   ps_crcs: (string * Digest.t option) list;
   ps_filename: string;
+  ps_internal: string option;
 }
 
 let persistent_structures_key =
@@ -717,12 +719,18 @@ module Persistent_signature = struct
         | exception Not_found -> None)
 end
 
-(* The CRC create_cmi wrote for the contents of the .cmi (its name and
-   signature). *)
+(* The CRC create_cmi wrote for the signature and its access restrictions. *)
 let own_crc (cmi : Cmi_format.cmi_infos) =
   match cmi.cmi_crcs with
   | (name, Some crc) :: _ when name = cmi.cmi_name -> Some crc
   | _ -> None
+
+let internal_owner flags =
+  List.find_map
+    (function
+      | Internal owner -> Some owner
+      | Deprecated _ -> None)
+    flags
 
 let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
   let name = cmi.cmi_name in
@@ -731,8 +739,9 @@ let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
   let flags = cmi.cmi_flags in
   let deprecated =
     List.fold_left
-      (fun _ -> function
-        | Deprecated s -> Some s)
+      (fun previous -> function
+        | Deprecated s -> Some s
+        | Internal _ -> previous)
       None flags
   in
   let comps =
@@ -747,6 +756,7 @@ let acknowledge_pers_struct check modname {Persistent_signature.filename; cmi} =
       ps_comps = comps;
       ps_crcs = crcs;
       ps_filename = filename;
+      ps_internal = internal_owner flags;
     }
   in
   if ps.ps_name <> modname then
@@ -798,7 +808,7 @@ let check_pers_struct name =
           Location.print_filename filename ps_name name
       | Inconsistent_import _ -> assert false
       | Missing_module _ -> assert false
-      | Illegal_value_name _ -> assert false
+      | Illegal_value_name _ | Internal_module _ -> assert false
     in
     let warn = Warnings.No_cmi_file (name, Some msg) in
     Location.prerr_warning Location.none warn
@@ -1086,6 +1096,48 @@ let mark_module_used env name loc =
     try Hashtbl.find (module_declarations ()) (name, loc) ()
     with Not_found -> ()
 
+(* Reading access metadata must not add a CRC dependency: transparent aliases
+   and namespace maps deliberately do not depend on their targets' signatures. *)
+let unit_internal_owner name =
+  match Hashtbl.find_opt (persistent_structures ()) name with
+  | Some (Some ps) -> ps.ps_internal
+  | Some None | None ->
+    !Persistent_signature.load ~unit_name:name |> fun loaded ->
+    Option.bind loaded (fun loaded -> internal_owner loaded.cmi.cmi_flags)
+
+let check_unit_access ~loc path id =
+  if Ident.name id <> !(current_unit ()) then
+    match unit_internal_owner (Ident.name id) with
+    | Some owner when Some owner <> !((Clflags.current ()).project_owner) ->
+      error (Internal_module (loc, Path.name path))
+    | Some _ | None -> ()
+
+(* Internal path lookup still loads hidden interfaces for type equalities and
+   optimization. Source lookup checks the spelling and every alias target. *)
+let check_module_access ?(loc = Location.none) env path =
+  let requested = path in
+  let rec check visited path =
+    if not (List.exists (Path.same path) visited) then
+      let visited = path :: visited in
+      match path with
+      | Path.Pident id when Ident.persistent id ->
+        check_unit_access ~loc requested id
+      | Pident _ -> check_alias visited path
+      | Pdot (parent, _, _) ->
+        check visited parent;
+        check_alias visited path
+      | Papply (fn, argument) ->
+        check visited fn;
+        check visited argument;
+        check_alias visited path
+  and check_alias visited path =
+    match module_alias_target path env with
+    | Some target -> check visited target
+    | None -> ()
+    | exception Not_found -> ()
+  in
+  check [] path
+
 let rec lookup_module_descr_aux ?loc lid env =
   match lid with
   | Lident s -> (
@@ -1104,6 +1156,7 @@ let rec lookup_module_descr_aux ?loc lid env =
 
 and lookup_module_descr ?loc lid env =
   let ((p, comps) as res) = lookup_module_descr_aux ?loc lid env in
+  check_module_access ?loc env p;
   mark_module_used env (Path.last p) comps.loc;
   report_deprecated ?loc p comps.deprecated;
   res
@@ -1150,6 +1203,11 @@ and lookup_module ~load ?loc lid env : Path.t =
       report_deprecated ?loc p comps.deprecated;
       p
     | Functor_comps _ -> raise Not_found)
+
+let lookup_module ~load ?loc lid env =
+  let path = lookup_module ~load ?loc lid env in
+  check_module_access ?loc env path;
+  path
 
 let lookup proj1 proj2 ?loc lid env =
   match lid with
@@ -2085,6 +2143,14 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
     | Some s -> [Deprecated s]
     | None -> []
   in
+  let flags =
+    if not !((Clflags.current ()).internal_unit) then flags
+    else
+      match !((Clflags.current ()).project_owner) with
+      | Some owner -> Internal owner :: flags
+      | None ->
+        Location.raise_errorf "An internal module needs -bs-project-owner."
+  in
   try
     let cmi =
       {cmi_name = modname; cmi_sign = sg; cmi_crcs = imports; cmi_flags = flags}
@@ -2104,6 +2170,7 @@ let save_signature_with_imports ?check_exists ~deprecated sg modname filename
         ps_comps = comps;
         ps_crcs = (cmi.cmi_name, Some crc) :: imports;
         ps_filename = filename;
+        ps_internal = internal_owner flags;
       }
     in
     save_pers_struct crc ps;
@@ -2264,12 +2331,20 @@ let report_error ppf = function
     fprintf ppf "@]@ @[%s@ %s@ %s.@]@]" "The compiled interface for module"
       (Ident.name (Path.head path2))
       "was not found"
+  | Internal_module (_, name) ->
+    fprintf ppf
+      "Module %s is internal to another ReScript project.@ Only source files \
+       belonging to its defining project may access it."
+      name
   | Illegal_value_name (_loc, name) ->
     fprintf ppf "'%s' is not a valid value identifier." name
 
 let () =
   Location.register_error_of_exn (function
-    | Error ((Missing_module (loc, _, _) | Illegal_value_name (loc, _)) as err)
+    | Error
+        (( Missing_module (loc, _, _)
+         | Illegal_value_name (loc, _)
+         | Internal_module (loc, _) ) as err)
       when loc <> Location.none ->
       Some (Location.error_of_printer loc report_error err)
     | Error err -> Some (Location.error_of_printer_file report_error err)

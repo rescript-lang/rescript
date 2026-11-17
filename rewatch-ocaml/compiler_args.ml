@@ -110,9 +110,12 @@ let compiler_common_arguments ~project_root ~(config : Config.t) ~runtime
   @ compiler_flags ~watch config
   @ gentype_dependency_args
   @ ["-bs-package-name"; config.name; "-bs-project-root"; project_root]
+  @
+  if project_root = config.root then []
+  else ["-bs-project-owner"; Config.project_owner config]
 
 let compiler_arguments_with_common ~(config : Config.t) ~common_args
-    ~module_name ~source_kind ~has_interface ~path =
+    ~module_name ~source_kind ~has_interface ~is_public ~path =
   let interface_args =
     match source_kind with
     | Source.Implementation when has_interface -> ["-bs-read-cmi"]
@@ -126,15 +129,16 @@ let compiler_arguments_with_common ~(config : Config.t) ~common_args
         (fun spec -> ["-bs-package-output"; package_output config path spec])
         config.package_specs
   in
-  namespace_args config module_name
+  (if is_public then [] else ["-bs-internal"])
+  @ namespace_args config module_name
   @ interface_args @ common_args @ output_args
   @ [Source.ast_path path]
 
 let compiler_arguments ~project_root ~(config : Config.t) ~runtime
-    ~dependency_dirs ~module_name ~source_kind ~has_interface ~watch
+    ~dependency_dirs ~module_name ~source_kind ~has_interface ~is_public ~watch
     ~gentype_dependency_args ~path =
   compiler_arguments_with_common ~config
     ~common_args:
       (compiler_common_arguments ~project_root ~config ~runtime ~dependency_dirs
          ~watch ~gentype_dependency_args)
-    ~module_name ~source_kind ~has_interface ~path
+    ~module_name ~source_kind ~has_interface ~is_public ~path

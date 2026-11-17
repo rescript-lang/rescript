@@ -7,6 +7,7 @@ type module_ = {
   implementation: string;
   interface: string option;
   is_dev: bool;
+  is_public: bool;
 }
 
 type discovery = {

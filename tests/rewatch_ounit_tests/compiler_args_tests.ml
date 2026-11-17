@@ -71,6 +71,22 @@ let tests =
         File_util.path_of_parts root
           ["node_modules"; "development"; "lib"; "rescript"]
       in
+      check
+        (not (List.mem "-bs-internal" (compiler_args source)))
+        "sources are public by default";
+      write_file
+        (Filename.concat root "rescript.json")
+        {|{"name":"compiler-args-test","sources":[{"dir":"src","public":[]},
+          {"dir":"dev","type":"dev","subdirs":true}],
+          "dependencies":["regular"],"dev-dependencies":["development"]}|};
+      check
+        (List.mem "-bs-internal" (compiler_args source))
+        "editor and build compiler arguments preserve internal visibility";
+      let orphan = Filename.concat root "src/Orphan.resi" in
+      write_file orphan "let value: int\n";
+      check
+        (List.mem "-bs-internal" (compiler_args orphan))
+        "an interface being edited before its implementation stays internal";
       let ordinary_includes = compiler_args source |> adjacent_positions "-I" in
       check
         (Option.is_some (position regular ordinary_includes))

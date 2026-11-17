@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type pers_flags = Deprecated of string
+type pers_flags = Deprecated of string | Internal of string
 
 type error =
   | Not_an_interface of string
@@ -83,7 +83,20 @@ let create_cmi ?check_exists filename (cmi : cmi_infos) =
     Config.cmi_magic_number ^ Marshal.to_string (cmi.cmi_name, cmi.cmi_sign) []
     (* checkout [output_value] in {!Pervasives} module *)
   in
-  let crc = Digest.string content in
+  (* Ownership changes access even when the signature is byte-identical.
+     Include it in the interface CRC so transitive readers are invalidated. *)
+  let internal =
+    List.filter
+      (function
+        | Internal _ -> true
+        | Deprecated _ -> false)
+      cmi.cmi_flags
+  in
+  let crc =
+    Digest.string
+      (if internal = [] then content
+       else content ^ Marshal.to_string internal [])
+  in
   let cmi_infos =
     if check_exists = None then None
     else

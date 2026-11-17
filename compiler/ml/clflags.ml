@@ -23,6 +23,8 @@ type t = {
   keep_locs: bool ref;
   color: Misc.Color.setting option ref;
   assume_no_mli: mli_status ref;
+  project_owner: string option ref;
+  internal_unit: bool ref;
   dont_record_crc_unit: string option ref;
   bs_gentype: bool ref;
   jsx_preserve: bool ref;
@@ -54,6 +56,8 @@ let create () =
     keep_locs = ref true (* -keep-locs *);
     color = ref None (* -color *);
     assume_no_mli = ref Mli_non_exists;
+    project_owner = ref None;
+    internal_unit = ref false;
     dont_record_crc_unit = ref None;
     bs_gentype = ref false;
     jsx_preserve = ref false (* -bs-jsx-preserve *);
@@ -100,6 +104,8 @@ let reset () =
   state.keep_locs := true;
   state.color := Some Misc.Color.Always;
   state.assume_no_mli := Mli_non_exists;
+  state.project_owner := None;
+  state.internal_unit := false;
   state.dont_record_crc_unit := None;
   state.bs_gentype := false;
   state.jsx_preserve := false;

@@ -20,8 +20,9 @@ let publication_tests _context =
       File_util.ensure_dir artifact_dir;
       in_build (fun () ->
           let namespace_task =
-            Compiler_process.namespace_task ~runtime:"unused" ~artifact_dir
-              ~entry:None ~package_dirty:true ~force:false "Ns" []
+            Compiler_process.namespace_task ~project_owner:None
+              ~runtime:"unused" ~artifact_dir ~entry:None ~package_dirty:true
+              ~force:false "Ns" []
             |> Option.get
           in
           (* The compiler wrote an interface, but no implementation. *)
@@ -49,8 +50,8 @@ let publication_tests _context =
         (fun extension -> Test_support.write_file (path extension) "old")
         ["cmi"; "cmj"; "cmt"];
       let task ~package_dirty ~force =
-        Compiler_process.namespace_task ~runtime:"unused" ~artifact_dir
-          ~entry:None ~package_dirty ~force "Ns" []
+        Compiler_process.namespace_task ~project_owner:None ~runtime:"unused"
+          ~artifact_dir ~entry:None ~package_dirty ~force "Ns" []
       in
       check
         (Option.is_some (task ~package_dirty:false ~force:false))

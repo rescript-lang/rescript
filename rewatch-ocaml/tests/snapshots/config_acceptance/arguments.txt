@@ -52,6 +52,21 @@ sources/feature-string
 sources/unknown-qualified-field
   compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
   parser: -absname -bs-ast -o A.ast ../../src/A.res
+sources/public-null
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
+sources/public-all
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
+sources/public-empty
+  compiler: -bs-internal -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
+sources/public-selected
+  compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
+sources/public-unlisted
+  compiler: -bs-internal -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
+  parser: -absname -bs-ast -o A.ast ../../src/A.res
 dependencies/omitted
   compiler: -I . -runtime-path <RUNTIME> -bs-package-name config-shape -bs-project-root <PROJECT> -bs-package-output esmodule:src:.js A.ast
   parser: -absname -bs-ast -o A.ast ../../src/A.res

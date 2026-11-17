@@ -304,12 +304,22 @@ let command_line_flags () : (string * Bsc_args.spec * string) array =
       string_call Js_packages_state.update_npm_package_path,
       "*internal* Set npm-output-path: [opt_module]:path, for example: \
        'lib/cjs', 'amdjs:lib/amdjs', 'es6:lib/es6' " );
+    ( "-bs-project-owner",
+      string_call (fun owner ->
+          (Clflags.current ()).project_owner := Some owner),
+      "*internal* Set the resolved compilation project's identity" );
+    ( "-bs-internal",
+      set (Clflags.current ()).internal_unit,
+      "*internal* Restrict this compilation unit to its defining project" );
     ( "-bs-project-root",
       string_call (fun s ->
           (* Writers open paths under the root without resolving them against
              the request's working directory, so make it absolute here. *)
           let root = Ext_path.absolute_cwd_path s in
           Ext_path.set_project_root root;
+          if !((Clflags.current ()).project_owner) = None then
+            (Clflags.current ()).project_owner :=
+              Some (Digest.to_hex (Digest.string root));
           Gentype_config.project_root () := root),
       "*internal* Set the project root directory" );
     ( "-bs-ast",

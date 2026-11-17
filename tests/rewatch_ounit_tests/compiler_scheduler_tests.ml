@@ -33,6 +33,7 @@ let source name =
       implementation = Filename.concat "src" (name ^ ".res");
       interface = None;
       is_dev = false;
+      is_public = true;
     }
 
 let tests =

@@ -10,7 +10,13 @@ type package_spec = {
   suffix: string option;
 }
 
-type source = {dir: string; recurse: bool; is_dev: bool; feature: string option}
+type source = {
+  dir: string;
+  recurse: bool;
+  is_dev: bool;
+  feature: string option;
+  public_modules: string list option;
+}
 
 type dependency = {name: string; features: string list option}
 

@@ -9,6 +9,7 @@ Focused documentation:
 - [configuration support matrix](CompilerConfigurationSpec.md)
 - [monorepo discovery and build scope](MonorepoSupport.md)
 - [feature-gated source directories](Features.md)
+- [project-owned module visibility](ProjectVisibility.md)
 - [integration-test workspace](testrepo/README.md)
 
 The ReScript website owns user-facing configuration documentation. The support
