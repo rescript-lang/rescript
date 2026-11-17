@@ -459,6 +459,16 @@ let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
 let typ_mapper (self : mapper) (typ : Parsetree.core_type) =
   Ast_core_type_class_type.typ_mapper self typ
 
+(* An inlined int constant is emitted as a 32-bit JS integer, so a literal
+   outside that range cannot be inlined. *)
+let inline_int_of_literal ~loc s =
+  match Int32.of_string_opt s with
+  | Some i -> i
+  | None ->
+    Location.raise_errorf ~loc
+      "This @inline integer constant is outside the int range (-2147483648 to \
+       2147483647)."
+
 let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
     Parsetree.signature_item =
   match sigi.psig_desc with
@@ -491,8 +501,8 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
                 };
           }
         | Pexp_constant (Pconst_integer (s, None)) ->
+          let s = inline_int_of_literal ~loc:expression.pexp_loc s in
           succeed attr pval_attributes;
-          let s = Int32.of_string s in
           {
             sigi with
             psig_desc =
@@ -617,7 +627,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
             };
       }
     | Some attr, Pexp_constant (Pconst_integer (s, None)) ->
-      let s = Int32.of_string s in
+      let s = inline_int_of_literal ~loc:pvb_expr.pexp_loc s in
       succeed attr pvb_attributes;
       {
         str with

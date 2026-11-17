@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inline_int_out_of_range.res[0m:[2m1:19-29[0m
+
+  [1;31m1[0m [2m│[0m @inline let big = [1;31m10000000000[0m
+  2 [2m│[0m let use = () => big
+  3 [2m│[0m 
+
+  This @inline integer constant is outside the int range (-2147483648 to 2147483647).
