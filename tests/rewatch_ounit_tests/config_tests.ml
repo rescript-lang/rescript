@@ -885,7 +885,30 @@ let build_schema_tests _context =
   let allowed_dependents = member "allowed-dependents" properties in
   assert_equal ~printer:Fun.id "array" (type_of allowed_dependents);
   assert_equal ~printer:Fun.id "string"
-    (type_of (member "items" allowed_dependents))
+    (type_of (member "items" allowed_dependents));
+  (* package-specs takes an object or an array of objects, never a bare module
+     string, and an object without "in-source" builds in source. *)
+  let package_spec = "#/definitions/module-format-object" in
+  assert_equal ~printer:(String.concat ", ")
+    [package_spec; package_spec]
+    (definition "package-specs" |> member "oneOf" |> to_list
+    |> List.map (fun alternative ->
+        match member "items" alternative with
+        | `Null -> alternative |> member "$ref" |> to_string
+        | items -> items |> member "$ref" |> to_string));
+  let in_source_description =
+    definition "module-format-object"
+    |> member "properties" |> member "in-source" |> member "description"
+    |> to_string
+  in
+  check
+    (contains in_source_description "Default: true.")
+    "the in-source description gives its default as true";
+  check
+    (Config_decode.parse_package_spec "rescript.json"
+       (`Assoc [("module", `String "esmodule")]))
+      .Config_types.in_source
+    "in-source defaults to true"
 
 let tests =
   "config_tests"
