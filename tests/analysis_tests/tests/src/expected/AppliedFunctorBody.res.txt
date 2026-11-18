@@ -1,0 +1,77 @@
+Hover src/AppliedFunctorBody.res 21:7
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n(t, O.t) => array<O.t>\n```\n\n---\n\n```\n \n```\n```rescript\ntype t = array<O.t>\n```\nGo to: [Type definition](AppliedFunctorBody.res#L20,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype O.t\n```\nGo to: [Type definition](AppliedFunctorBody.res#L5,3)\n"
+  }
+}
+
+Complete src/AppliedFunctorBody.res 26:15
+pos_cursor:[26:15] pos_no_white:[26:14] Found expr:[26:13->26:15]
+Pexp_ident ad:[26:13->26:15]
+Completable: Cpath Value[ad]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[ad]
+Path ad
+[
+  {
+    "detail": "(t, O.t) => array<O.t>",
+    "kind": 12,
+    "label": "add",
+    "tags": []
+  }
+]
+
+Complete src/AppliedFunctorBody.res 28:20
+pos_cursor:[28:20] pos_no_white:[28:19] Found expr:[28:13->28:20]
+Pexp_ident Nested.:[28:13->28:20]
+Completable: Cpath Value[Nested, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Nested, ""]
+Path Nested.
+[
+  { "detail": "O.t => O.t", "kind": 12, "label": "nestedValue", "tags": [] }
+]
+
+Complete src/AppliedFunctorBody.res 30:15
+pos_cursor:[30:15] pos_no_white:[30:14] Found expr:[30:13->30:15]
+Pexp_construct Bo:[30:13->30:15] None
+Completable: Cpath Value[Bo]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Bo]
+Path Bo
+[
+  {
+    "detail": "Box(O.t)",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nBox(O.t)\n```\n\n```rescript\ntype shape = Dot | Box(O.t)\n```"
+    },
+    "kind": 4,
+    "label": "Box",
+    "tags": []
+  },
+  { "detail": "module Bool", "kind": 9, "label": "Bool", "tags": [] }
+]
+
+References src/AppliedFunctorBody.res 38:10
+[
+  {
+    "range": {
+      "end": { "character": 9, "line": 21 },
+      "start": { "character": 6, "line": 21 }
+    },
+    "uri": "file:///AppliedFunctorBody.res"
+  },
+  {
+    "range": {
+      "end": { "character": 13, "line": 38 },
+      "start": { "character": 10, "line": 38 }
+    },
+    "uri": "file:///AppliedFunctorBody.res"
+  }
+]
+

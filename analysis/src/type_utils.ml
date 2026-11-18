@@ -1342,9 +1342,11 @@ let rec get_obj_fields (texp : Types.type_expr) =
   | Tvar None -> []
   | _ -> []
 
-let path_to_builtin path =
-  Predef.builtin_idents
-  |> List.find_opt (fun (_, i) -> Ident.same i (Path.head path))
+let path_to_builtin (path : Path.t) =
+  match path with
+  | Pident id ->
+    Predef.builtin_idents |> List.find_opt (fun (_, i) -> Ident.same i id)
+  | Pdot _ | Papply _ -> None
 
 let completion_path_from_maybe_builtin path =
   match path_to_builtin path with
