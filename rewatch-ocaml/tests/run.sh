@@ -2052,15 +2052,17 @@ test ! -f "$feature_dependencies/packages/dep-union/extra/UnionExtra.js"
 "$port" build "$gentype"
 test -f "$gentype/src/Main.js"
 
+# The root's top-level suffix applies to the dependency as well, which
+# sets ".cjs" of its own.
 "$port" build "$dependency"
-test -f "$dependency/src/Main.js"
-test -f "$dependency/node_modules/dep/src/Dep.js"
-rm "$dependency/node_modules/dep/src/Dep.js"
+test -f "$dependency/src/Main.mjs"
+test -f "$dependency/node_modules/dep/src/Dep.mjs"
+rm "$dependency/node_modules/dep/src/Dep.mjs"
 "$port" build "$dependency"
-test -f "$dependency/node_modules/dep/src/Dep.js"
+test -f "$dependency/node_modules/dep/src/Dep.mjs"
 "$port" clean "$dependency"
-test ! -f "$dependency/src/Main.js"
-test ! -f "$dependency/node_modules/dep/src/Dep.js"
+test ! -f "$dependency/src/Main.mjs"
+test ! -f "$dependency/node_modules/dep/src/Dep.mjs"
 
 printf 'let extra = 1\n' \
   > "$package_output_dependency/node_modules/dep/src/Extra.res"

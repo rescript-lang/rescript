@@ -1,0 +1,1 @@
+- Use the top-level `suffix` for the default output when `package-specs` is missing, instead of always `.js`.

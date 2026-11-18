@@ -86,7 +86,8 @@ let decode_package_specs path ~suffix fields =
   let package_specs =
     match optional_member "package-specs" fields with
     | None ->
-      [{module_format = Esmodule; in_source = true; suffix = Some ".js"}]
+      (* No suffix of its own, so the top-level "suffix" applies. *)
+      [{module_format = Esmodule; in_source = true; suffix = None}]
     | Some (`List values) -> List.map (parse_package_spec path) values
     | Some value -> [parse_package_spec path value]
   in

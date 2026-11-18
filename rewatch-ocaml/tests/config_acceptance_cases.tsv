@@ -89,6 +89,7 @@ package-specs	null-suffix	accept	{"name":"config-shape","package-specs":{"module
 package-specs	explicit-suffix	accept	{"name":"config-shape","package-specs":{"module":"esmodule","suffix":".mjs"}}
 package-specs	empty-suffix	accept	{"name":"config-shape","package-specs":{"module":"esmodule","suffix":""}}
 package-specs	top-level-suffix	accept	{"name":"config-shape","suffix":".mjs","package-specs":{"module":"esmodule"}}
+package-specs	top-level-suffix-default-spec	accept	{"name":"config-shape","suffix":".mjs"}
 package-specs	same-suffix-different-location	accept	{"name":"config-shape","package-specs":[{"module":"esmodule","in-source":true,"suffix":".mjs"},{"module":"commonjs","in-source":false,"suffix":".mjs"}]}
 package-specs	unknown-field	accept	{"name":"config-shape","package-specs":{"module":"esmodule","future":true}}
 package-specs	boolean-outer	reject	{"name":"config-shape","package-specs":true}
