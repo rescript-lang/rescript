@@ -1,0 +1,1 @@
+- Correct the `rescript.json` schema: `in-source` defaults to `true`, and `package-specs` takes only objects, not a bare module string.

@@ -17,23 +17,13 @@
         },
         "in-source": {
           "type": "boolean",
-          "description": "Default: false."
+          "description": "true to write the JS output next to the source file, false to write it under `lib/es6/` (esmodule) or `lib/js/` (commonjs). Default: true."
         },
         "suffix": {
           "$ref": "#/definitions/suffix-spec"
         }
       },
       "required": ["module"]
-    },
-    "package-spec": {
-      "oneOf": [
-        {
-          "$ref": "#/definitions/module-format"
-        },
-        {
-          "$ref": "#/definitions/module-format-object"
-        }
-      ]
     },
     "namespace-spec": {
       "oneOf": [
@@ -83,11 +73,11 @@
         {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/package-spec"
+            "$ref": "#/definitions/module-format-object"
           }
         },
         {
-          "$ref": "#/definitions/package-spec"
+          "$ref": "#/definitions/module-format-object"
         }
       ]
     },
