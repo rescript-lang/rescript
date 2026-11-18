@@ -171,7 +171,15 @@ let super = Js_record_map.super
 let add_substitue substitution (ident : Ident.t) (e : J.expression) =
   Hash_ident.replace substitution ident e
 
-let subst_map (substitution : J.expression Hash_ident.t) =
+(* Whether [e] is a variable that may hold another value when it is read
+   later, see [Js_analyzer.var_may_change]. *)
+let is_changing_var ~assignable (e : J.expression) =
+  match e.expression_desc with
+  | Var (Id id) -> Js_analyzer.var_may_change ~assignable id
+  | _ -> false
+
+let subst_map (assignable : Set_ident.t)
+    (substitution : J.expression Hash_ident.t) =
   {
     super with
     statement =
@@ -208,8 +216,14 @@ let subst_map (substitution : J.expression Hash_ident.t) =
             Ext_list.fold_left ls (0, [], []) (fun (i, e, acc) x ->
                 match x.expression_desc with
                 | Var _ | Number _ | Str _ | Template_literal _ | J.Bool _
-                | Undefined _ ->
+                | Undefined _
+                  when not (is_changing_var ~assignable x) ->
                   (* TODO: check the optimization *)
+                  (* The element stays in the block, and [expression] below
+                     replaces a later [ident[i]] with it. A JS global or a
+                     variable in [assignable] is bound like other expressions
+                     instead: by the time of that read, an assignment may have
+                     changed it. *)
                   (i + 1, x :: e, acc)
                 | _ ->
                   (* tradeoff,
@@ -306,8 +320,8 @@ let subst_map (substitution : J.expression Hash_ident.t) =
     there is no need to add another pass
 *)
 
-let program (js : J.program) =
-  let obj = subst_map (Hash_ident.create 32) in
+let program ~assignable (js : J.program) =
+  let obj = subst_map assignable (Hash_ident.create 32) in
   let js = obj.program obj js in
   mark_dead_code js
 (* |> mark_dead_code *)

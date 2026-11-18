@@ -53,7 +53,10 @@ let rec substituted_truth (consts : J.expression Map_ident.t) (e : J.expression)
 
 (* [vars] maps a parameter to the variable argument that replaces it, [consts]
    to the constant argument that replaces it. Both apply only to parameters
-   that are never assigned, so every occurrence of such a parameter is a read.
+   that are never assigned, so every occurrence of such a parameter is a read,
+   and [vars] only to variables for which [Js_analyzer.var_may_change] is
+   false (see [inline_call]), so reading one in place of the parameter gives
+   the value it had at the call.
    A conditional whose condition becomes a constant keeps only the branch it
    takes, and the negation of such a condition becomes a boolean. *)
 let substitute_arguments (vars : Ident.t Map_ident.t)
@@ -117,11 +120,17 @@ let is_substitutable_constant (e : J.expression) =
       if it is substitued, the assignment will align the value which is incorrect
 *)
 
-let inline_call (immutable_list : bool list) params (args : J.expression list)
-    processed_blocks =
+(* [assignable] are the variables some [Lassign] assigns, see
+   [Lam_stats.assignable]. An argument that is one of them or a JS global
+   ([Js_analyzer.var_may_change]) is bound like other expressions: where the
+   inlined body reads the parameter, the variable may already hold a value
+   that the body, a function it calls or a later assignment stored. *)
+let inline_call (assignable : Set_ident.t) (immutable_list : bool list) params
+    (args : J.expression list) processed_blocks =
   let substitute param (arg : J.expression) (vars, consts, acc) =
     match arg.expression_desc with
-    | Var (Id id) -> (Map_ident.add param id vars, consts, acc)
+    | Var (Id id) when not (Js_analyzer.var_may_change ~assignable id) ->
+      (Map_ident.add param id vars, consts, acc)
     | _ when is_substitutable_constant arg ->
       (vars, Map_ident.add param arg consts, acc)
     | _ -> (vars, consts, S.define_variable ~kind:Variable param arg :: acc)
@@ -170,7 +179,7 @@ let inline_call (immutable_list : bool list) params (args : J.expression list)
 *)
 let super = Js_record_map.super
 
-let subst (export_set : Set_ident.t) stats =
+let subst (export_set : Set_ident.t) (assignable : Set_ident.t) stats =
   {
     super with
     statement =
@@ -254,7 +263,7 @@ let subst (export_set : Set_ident.t) stats =
               self.block self body
               (* see #278 before changes*)
             in
-            inline_call no_tailcall params args processed_blocks
+            inline_call assignable no_tailcall params args processed_blocks
           (* Ext_list.fold_right2
              params args  processed_blocks
              (fun param arg acc ->
@@ -293,13 +302,13 @@ let subst (export_set : Set_ident.t) stats =
             self.block self body
             (* see #278 before changes*)
           in
-          inline_call no_tailcall params args processed_blocks
+          inline_call assignable no_tailcall params args processed_blocks
         | x :: xs -> self.statement self x :: self.block self xs
         | [] -> []);
   }
 
-let tailcall_inline (program : J.program) =
+let tailcall_inline ~assignable (program : J.program) =
   let stats = Js_pass_get_used.get_stats program in
   let export_set = program.export_set in
-  let obj = subst export_set stats in
+  let obj = subst export_set assignable stats in
   obj.program obj program

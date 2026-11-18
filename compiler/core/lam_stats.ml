@@ -49,7 +49,8 @@ type t = {
   awaited_units: Set_ident.t;
   assignable: Set_ident.t;
       (** The variables some [Lassign] assigns. [Lam_compile] never delays
-          reading one of them past other code. *)
+          reading one of them past other code, and neither do
+          [Js_pass_tailcall_inline] and [Js_pass_flatten_and_mark_dead]. *)
 }
 
 let pp = Format.fprintf

@@ -39,11 +39,13 @@ let add_binding (ident : Ident.t) names =
   else String_set.add (Ext_ident.convert ident.name) names
 
 (* A JS [let], [const] or function declaration is in scope in its whole block,
-   including before the declaration. *)
-let add_declarations (block : J.block) names =
+   including before the declaration. A [Block] statement is printed without
+   braces, so its declarations are in the enclosing block. *)
+let rec add_declarations (block : J.block) names =
   Ext_list.fold_left block names (fun acc (st : J.statement) ->
       match st.statement_desc with
       | Variable {ident} -> add_binding ident acc
+      | Block block -> add_declarations block acc
       | _ -> acc)
 
 (* The cases of a switch are printed without braces, so they share one scope. *)

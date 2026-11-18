@@ -35,4 +35,7 @@
     ]} 
 *)
 
-val tailcall_inline : J.program -> J.program
+val tailcall_inline : assignable:Set_ident.t -> J.program -> J.program
+(** [assignable] are the variables some [Lassign] assigns, see
+    [Lam_stats.assignable]. An argument that is one of them or a JS global is
+    bound to the parameter instead of replacing it in the inlined body. *)

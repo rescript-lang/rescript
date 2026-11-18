@@ -33,6 +33,13 @@ val free_variables_of_expression : J.expression -> Set_ident.t
 
 val is_array_function : J.expression -> bool
 
+val var_may_change : assignable:Set_ident.t -> Ident.t -> bool
+(** Whether reading the variable [id] after other code may give another value
+    than reading it now: [id] is a JS global, such as a [@val] external, which
+    JS code may assign, or one of [assignable], the local variables some
+    [Lassign] assigns (see [Lam_stats.assignable]), which the other code or a
+    closure it calls may assign. *)
+
 (* val no_side_effect_expression_desc :
    J.expression_desc -> bool *)
 

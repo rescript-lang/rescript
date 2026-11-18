@@ -1,0 +1,1 @@
+- Fix a value read from a ref or `@val` global into a tuple, record or variant, or passed to a local function, changing when the ref or global is assigned later.
