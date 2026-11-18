@@ -18,6 +18,10 @@ name: Semantic Diff
 # executes only the default branch's code, and the fork's commits are
 # fetched as git data and never checked out.
 #
+# Maintenance branches have no renderer, so a pull request from a fork into
+# one of them doesn't run this workflow. One from a branch of this
+# repository doesn't either, since the merge has no workflow.
+#
 # Pages are never deleted, so the links in the comments stay valid after a
 # pull request is merged or closed.
 
@@ -26,6 +30,7 @@ on:
     types: [opened, synchronize, reopened]
   pull_request_target:
     types: [opened, synchronize, reopened]
+    branches-ignore: ["maintenance/**"]
 
 concurrency:
   group: semantic-diff-${{ github.event_name }}-${{ github.event.pull_request.number }}
