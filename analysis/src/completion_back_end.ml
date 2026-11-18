@@ -830,6 +830,28 @@ let mk_item ?data ?additional_text_edits name ~kind ~detail ~deprecated
     ?deprecated ?data ?additionalTextEdits:additional_text_edits ?sortText:None
     ?insertText:None ?insertTextFormat:None ?filterText:None ()
 
+(* The doc comment of a completed value that is a member of an applied
+   functor, which has none of its own: that of the declaration it copies.
+   A pipe completion names the value with its module, as in [M.add]. *)
+let applied_docstring ~state ~full ~(env : Query_env.t) name
+    (kind : Completion.kind) =
+  match kind with
+  | Value _ -> (
+    let name =
+      match String.rindex_opt name '.' with
+      | Some i -> String.sub name (i + 1) (String.length name - i - 1)
+      | None -> name
+    in
+    match Exported.find env.exported Exported.Value name with
+    | Some stamp ->
+      References.applied_docstring ~state ~package:full.package env.file stamp
+        Value
+    | None -> [])
+  | Module _ | ObjLabel _ | Label _ | Type _ | Constructor _
+  | PolyvariantConstructor _ | Field _ | FileModule _ | Snippet _
+  | ExtractedType _ | FollowContextPath _ ->
+    []
+
 let completion_to_item ~state
     {
       Completion.name;
@@ -855,8 +877,11 @@ let completion_to_item ~state
         | Some detail -> detail)
       ~docstring:
         (match
-           kind_to_documentation ~state ~current_docstring:docstring ~full ~env
-             name kind
+           kind_to_documentation ~state ~full ~env name kind
+             ~current_docstring:
+               (match docstring with
+               | [] -> applied_docstring ~state ~full ~env name kind
+               | docstring -> docstring)
          with
         | "" -> []
         | docstring -> [docstring])
@@ -1226,7 +1251,19 @@ and get_completions_for_context_path ~state ~debug ~full ~opens ~raw_opens ~pos
         cp_as_pipe_completion
         |> get_completions_for_context_path ~state ~debug ~full ~opens
              ~raw_opens ~pos ~env:env_completion_is_made_from ~exact ~scope
-        |> List.filter_map (fun c ->
+        |> List.filter_map (fun (c : Completion.t) ->
+            (* Its doc comment is looked up in its own environment, which the
+               pipe completion replaces. *)
+            let c =
+              match c.docstring with
+              | [] ->
+                {
+                  c with
+                  docstring =
+                    applied_docstring ~state ~full ~env:c.env c.name c.kind;
+                }
+              | _ -> c
+            in
             Type_utils.transform_completion_to_pipe_completion ~synthetic:true
               ~env ?pos_of_dot c)
       in

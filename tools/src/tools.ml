@@ -458,6 +458,7 @@ let extract_docs ~entry_point_file ~debug =
             items =
               structure.items
               |> List.filter_map (fun (item : Module.item) ->
+                  let exported_name = item.name in
                   let item =
                     {
                       item with
@@ -471,7 +472,21 @@ let extract_docs ~entry_point_file ~debug =
                       (Value
                          {
                            id = module_path |> make_id ~identifier:item.name;
-                           docstring = item.docstring |> List.map String.trim;
+                           docstring =
+                             (match item.docstring with
+                               | [] -> (
+                                 (* A member of an applied functor has the doc
+                                  comment of the declaration it copies. *)
+                                 match
+                                   Exported.find structure.exported
+                                     Exported.Value exported_name
+                                 with
+                                 | Some stamp ->
+                                   References.applied_docstring ~state
+                                     ~package:full.package file stamp Value
+                                 | None -> [])
+                               | docstring -> docstring)
+                             |> List.map String.trim;
                            signature =
                              "let " ^ item.name ^ ": "
                              ^ Shared.type_to_string typ;

@@ -1,0 +1,36 @@
+References src/AppliedFunctorCollide.res 6:4
+[
+  {
+    "range": {
+      "end": { "character": 33, "line": 14 },
+      "start": { "character": 31, "line": 14 }
+    },
+    "uri": "file:///AppliedFunctorFar.res"
+  },
+  {
+    "range": {
+      "end": { "character": 6, "line": 6 },
+      "start": { "character": 4, "line": 6 }
+    },
+    "uri": "file:///AppliedFunctorCollide.res"
+  }
+]
+
+References src/AppliedFunctorCollide.res 8:4
+[
+  {
+    "range": {
+      "end": { "character": 60, "line": 14 },
+      "start": { "character": 58, "line": 14 }
+    },
+    "uri": "file:///AppliedFunctorFar.res"
+  },
+  {
+    "range": {
+      "end": { "character": 6, "line": 8 },
+      "start": { "character": 4, "line": 8 }
+    },
+    "uri": "file:///AppliedFunctorCollide.res"
+  }
+]
+

@@ -83,6 +83,69 @@ let from_compiler_path ~(env : Query_env.t) path : resolution =
   | Exported (env, name) -> Exported (env, name)
   | Global (module_name, full_path) -> Global (module_name, full_path)
 
+type origin =
+  | Origin_local of int
+  | Origin_global of file_path * file_path list
+
+(* The declaration that a renamed member of an applied functor copies (see
+   [Process_cmt.for_module]): the member's module path starts with the
+   functor's path, and the member's path inside the application is its path
+   inside the functor. A functor of this file can be a partial application
+   or a member of another application, whose members are copies too, so the
+   lookup repeats until it reaches a declaration. *)
+let rec applied_origin ~(env : Query_env.t) stamp (tip : Tip.t) =
+  let kind : Exported.kind =
+    match tip with
+    | Value -> Value
+    | Type | Field _ | Constructor _ -> Type
+    | Module -> Module
+  in
+  let in_module (env : Query_env.t) module_stamp inner =
+    match Stamps.find_module env.file.stamps module_stamp with
+    | None -> None
+    | Some {item} -> (
+      match find_in_module ~env item inner with
+      | None -> None
+      | Some (`Global (module_name, path)) ->
+        Some (Origin_global (module_name, path))
+      | Some (`Local (env, name)) -> (
+        match Exported.find env.exported kind name with
+        | None -> None
+        | Some stamp -> (
+          match applied_origin ~env stamp tip with
+          | Some origin -> Some origin
+          | None -> Some (Origin_local stamp))))
+  in
+  let rec loop (module_path : Module_path.t) inner =
+    match module_path with
+    | IncludedModule (functor_path, _) -> (
+      match from_compiler_path ~env functor_path with
+      | Global (module_name, path) ->
+        Some (Origin_global (module_name, path @ inner))
+      | Stamp stamp -> in_module env stamp inner
+      | Exported (env, name) -> (
+        match Exported.find env.exported Module name with
+        | None -> None
+        | Some stamp -> in_module env stamp inner)
+      | GlobalMod _ | NotFound -> None)
+    | ExportedModule {name; module_path} -> loop module_path (name :: inner)
+    | File _ | NotVisible -> None
+  in
+  if not (Stamps.is_renamed stamp) then None
+  else
+    let declared =
+      let of_declared (d : _ Declared.t) = (d.module_path, d.name.txt) in
+      match kind with
+      | Value ->
+        Stamps.find_value env.file.stamps stamp |> Option.map of_declared
+      | Type -> Stamps.find_type env.file.stamps stamp |> Option.map of_declared
+      | Module ->
+        Stamps.find_module env.file.stamps stamp |> Option.map of_declared
+    in
+    match declared with
+    | Some (module_path, name) -> loop module_path [name]
+    | None -> None
+
 let resolve_module_from_compiler_path ~state ~env ~package path =
   match from_compiler_path ~env path with
   | Global (module_name, path) -> (

@@ -1,0 +1,52 @@
+Rename src/IncludedModuleType.res 3:9 renamedInner
+[
+  {
+    "edits": [
+      {
+        "newText": "renamedInner",
+        "range": {
+          "end": { "character": 14, "line": 3 },
+          "start": { "character": 9, "line": 3 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///IncludedModuleType.res", "version": 0 }
+  }
+]
+
+References src/IncludedModuleType.res 5:8
+[
+  {
+    "range": {
+      "end": { "character": 12, "line": 5 },
+      "start": { "character": 8, "line": 5 }
+    },
+    "uri": "file:///IncludedModuleType.res"
+  },
+  {
+    "range": {
+      "end": { "character": 21, "line": 18 },
+      "start": { "character": 17, "line": 18 }
+    },
+    "uri": "file:///IncludedModuleType.res"
+  }
+]
+
+References src/IncludedModuleType.res 18:17
+[
+  {
+    "range": {
+      "end": { "character": 12, "line": 5 },
+      "start": { "character": 8, "line": 5 }
+    },
+    "uri": "file:///IncludedModuleType.res"
+  },
+  {
+    "range": {
+      "end": { "character": 21, "line": 18 },
+      "start": { "character": 17, "line": 18 }
+    },
+    "uri": "file:///IncludedModuleType.res"
+  }
+]
+

@@ -58,7 +58,7 @@ extracted params:
         {
           "documentation": {
             "kind": "markdown",
-            "value": "```rescript\ntype t = array<O.t>\n```\nGo to: [Type definition](DefinitionFileSource.res#L10,3)"
+            "value": "```rescript\ntype t = array<DefinitionFileSource.IntOrd.t>\n```\nGo to: [Type definition](DefinitionFileSource.res#L10,3)"
           },
           "label": [ 0, 9 ]
         }

@@ -1,0 +1,182 @@
+Hover src/AppliedFunctorPath.res 20:10
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nB.box => IntOrd.t\n```\n---\n doc of get \n\n---\n\n```\n \n```\n```rescript\ntype B.box = {v: IntOrd.t, mutable n: int}\n```\nGo to: [Type definition](AppliedFunctorPath.res#L10,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype IntOrd.t = int\n```\nGo to: [Type definition](AppliedFunctorPath.res#L7,3)\n"
+  }
+}
+
+Complete src/AppliedFunctorPath.res 22:6
+pos_cursor:[22:6] pos_no_white:[22:5] Found expr:[22:3->0:-1]
+Completable: Cpath Value[b]->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[b]->
+ContextPath Value[b]
+Path b
+CPPipe path_from_env:B found:true
+Path B.
+Path 
+[
+  {
+    "detail": "box => IntOrd.t",
+    "documentation": { "kind": "markdown", "value": " doc of get " },
+    "kind": 12,
+    "label": "B.get",
+    "tags": []
+  }
+]
+
+Complete src/AppliedFunctorPath.res 24:5
+pos_cursor:[24:5] pos_no_white:[24:4] Found expr:[24:3->24:5]
+Pexp_field [24:3->24:4] _:[26:0->24:5]
+Completable: Cpath Value[b].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[b].""
+ContextPath Value[b]
+Path b
+ContextPath Value[b]->
+ContextPath Value[b]
+Path b
+CPPipe path_from_env:B found:true
+Path B.
+Path 
+[
+  {
+    "detail": "IntOrd.t",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nv: IntOrd.t\n```\n\n```rescript\ntype box = {v: IntOrd.t, mutable n: int}\n```"
+    },
+    "kind": 5,
+    "label": "v",
+    "tags": []
+  },
+  {
+    "detail": "int",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nn: int\n```\n\n```rescript\ntype box = {v: IntOrd.t, mutable n: int}\n```"
+    },
+    "kind": 5,
+    "label": "n",
+    "tags": []
+  },
+  {
+    "additionalTextEdits": [
+      {
+        "newText": "",
+        "range": {
+          "end": { "character": 5, "line": 24 },
+          "start": { "character": 4, "line": 24 }
+        }
+      }
+    ],
+    "detail": "box => IntOrd.t",
+    "documentation": { "kind": "markdown", "value": " doc of get " },
+    "insertText": "->B.get",
+    "kind": 12,
+    "label": "->B.get",
+    "sortText": "get",
+    "tags": []
+  }
+]
+
+Complete src/AppliedFunctorPath.res 27:6
+pos_cursor:[27:6] pos_no_white:[27:5] Found expr:[27:3->0:-1]
+Completable: Cpath Value[a]->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[a]->
+ContextPath Value[a]
+Path a
+CPPipe path_from_env:B found:true
+Path B.
+Path 
+[ { "detail": "abs => int", "kind": 12, "label": "B.useAbs", "tags": [] } ]
+
+Hover src/AppliedFunctorPath.res 29:4
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nB.kind\n```\n\n---\n\n```\n \n```\n```rescript\ntype B.kind = Leaf | Node(IntOrd.t)\n```\nGo to: [Type definition](AppliedFunctorPath.res#L11,3)\n\n\n---\n\n```\n \n```\n```rescript\ntype IntOrd.t = int\n```\nGo to: [Type definition](AppliedFunctorPath.res#L7,3)\n"
+  }
+}
+
+Complete src/AppliedFunctorPath.res 31:19
+XXX Not found!
+[]
+
+Complete src/AppliedFunctorPath.res 33:15
+XXX Not found!
+Completable: Cpattern Value[k]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[k]
+Path k
+[
+  {
+    "detail": "Leaf",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nLeaf\n```\n\n```rescript\ntype kind = Leaf | Node(IntOrd.t)\n```"
+    },
+    "insertText": "Leaf",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Leaf",
+    "tags": []
+  },
+  {
+    "detail": "Node(IntOrd.t)",
+    "documentation": {
+      "kind": "markdown",
+      "value": "```rescript\nNode(IntOrd.t)\n```\n\n```rescript\ntype kind = Leaf | Node(IntOrd.t)\n```"
+    },
+    "insertText": "Node(${1:_})",
+    "insertTextFormat": 2,
+    "kind": 4,
+    "label": "Node(_)",
+    "tags": []
+  }
+]
+
+Signature help src/AppliedFunctorPath.res 36:5
+pos_cursor:[36:4] pos_no_white:[36:3] Found expr:[36:3->36:5]
+Pexp_apply ...[36:3->36:4] (...[41:0->36:5])
+pos_cursor:[36:4] pos_no_white:[36:3] Found expr:[36:3->36:4]
+Pexp_ident f:[36:3->36:4]
+Completable: Cpath Value[f]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[f]
+Path f
+arg_at_cursor: unlabelled<0>
+extracted params: 
+[B.box]
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "B.box => B.box",
+      "parameters": [
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "```rescript\ntype box = {v: IntOrd.t, mutable n: int}\n```\nGo to: [Type definition](AppliedFunctorPath.res#L10,3)\n```rescript\ntype t = int\n```\nGo to: [Type definition](AppliedFunctorPath.res#L7,3)"
+          },
+          "label": [ 0, 5 ]
+        }
+      ]
+    }
+  ]
+}
+
+Complete src/AppliedFunctorPath.res 38:6
+pos_cursor:[38:6] pos_no_white:[38:5] Found expr:[38:3->38:6]
+Pexp_apply ...[38:3->38:4] ()
+[]
+

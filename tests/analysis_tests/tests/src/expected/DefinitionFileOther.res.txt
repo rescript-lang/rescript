@@ -37,7 +37,7 @@ Hover src/DefinitionFileOther.res 16:8
 {
   "contents": {
     "kind": "markdown",
-    "value": "```rescript\nmodule MakeOther: {\n  type t = array<O.t>\n  let add: O.t => array<O.t>\n}\n```"
+    "value": "```rescript\nmodule Bridged: {\n  type t = array<DefinitionFileSource.IntOrd.t>\n  let add: DefinitionFileSource.IntOrd.t => array<\n  DefinitionFileSource.IntOrd.t,\n>\n}\n```"
   }
 }
 
