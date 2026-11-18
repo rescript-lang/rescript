@@ -1,0 +1,1 @@
+- Skip the Semantic Diff workflow for fork pull requests into maintenance branches, which have no renderer.
