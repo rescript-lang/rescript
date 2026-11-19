@@ -6,7 +6,7 @@ module Exn_set = Set.Make (Exn)
 
 type missing_throw_info = {
   exn_name: string;
-  exn_table: (Exn.t, Loc_set.t) Hashtbl.t;
+  exn_table: Loc_set.t Exn.Table.t;
   loc_full: Location.t;
   missing_annotations: Exn_set.t;
   throw_set: Exn_set.t;

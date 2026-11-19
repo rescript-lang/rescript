@@ -1429,9 +1429,10 @@ and type_structure funct_body anchor env sstr =
   let type_str_item env {pstr_loc = loc; pstr_desc = desc} =
     match desc with
     | Pstr_eval (sexpr, attrs) ->
-      let expr =
+      let expr, attrs =
         Builtin_attributes.warning_scope attrs (fun () ->
-            Typecore.type_expression ~context:None env sexpr)
+            ( Typecore.type_expression ~context:None env sexpr,
+              Throws_attribute.resolve env attrs ))
       in
       (Tstr_eval (expr, attrs), [], env)
     | Pstr_value (rec_flag, sdefs) ->
@@ -1449,7 +1450,10 @@ and type_structure funct_body anchor env sstr =
          would make editing it recompile the module's dependents. *)
       let signature_attributes (attrs : Parsetree.attributes) =
         Builtin_attributes.deprecated_attributes attrs
-        @ List.filter (fun ({txt}, _) -> txt = "throws") attrs
+        @ List.filter
+            (fun ({txt}, _) ->
+              txt = "throws" || txt = Throws_attribute.generated)
+            attrs
       in
       let kept_attributes =
         List.concat_map
