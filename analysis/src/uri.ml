@@ -7,9 +7,15 @@ let from_string str = Lsp.Uri.of_string str
 let is_interface uri =
   Lsp.Uri.to_path uri |> String.ends_with ~suffix:Literals.suffix_resi
 let to_path uri =
-  (* Lsp.Uri.to_path remove the schema file:// but keep the `/` on start of path. *)
+  (* Lsp.Uri.to_path remove the schema file:// but keep the `/` on start of path.
+     Tests pass relative paths, which get a leading `/` this way, so tests strip
+     it. Dependency files have absolute paths: keep those whole when only the
+     whole path exists. *)
   let p = Lsp.Uri.to_path uri in
-  if !strip_path then String.sub p 1 (String.length p - 1) else p
+  if !strip_path then
+    let stripped = String.sub p 1 (String.length p - 1) in
+    if Sys.file_exists p && not (Sys.file_exists stripped) then p else stripped
+  else p
 
 let to_top_level_loc (uri : Lsp.Uri.t) =
   let top_pos =

@@ -1,0 +1,1 @@
+- Go to definition into a stdlib module with an interface no longer lands on a wrong line of whichever of its `.res` and `.resi` was found first.
