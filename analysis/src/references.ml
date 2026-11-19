@@ -440,8 +440,11 @@ let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
         | None -> []
         | Some declared ->
           if is_visible declared then (
+            let alternate =
+              alternate_declared ~state ~package ~file declared tip
+            in
             let alternative_references =
-              match alternate_declared ~state ~package ~file declared tip with
+              match alternate with
               | None -> []
               | Some (file, extra, {stamp}) -> (
                 match
@@ -475,28 +478,67 @@ let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
               normalize_external_reference_key ~namespace:package.namespace
                 ~module_name:this_module_name ~path
             in
+            (* A use in another file is recorded under the path it is written
+               with, e.g. Use.S.add for a functor application S in Use.res, or
+               Dep.Utils.x for a module of the namespaced dependency Dep.
+               Such a path names the same declaration when it resolves to the
+               declaration's stamp (or to the stamp of its .res/.resi
+               counterpart). Only paths ending in the declaration's name can
+               do that; their resolutions are cached per key. *)
+            let targets =
+              (Uri.is_interface file.uri, stamp)
+              ::
+              (match alternate with
+              | None -> []
+              | Some (alternate_file, _extra, {stamp}) ->
+                [(Uri.is_interface alternate_file.uri, stamp)])
+            in
+            let resolutions = Hashtbl.create 16 in
+            let resolves_to_declaration module_name path =
+              match Hashtbl.find_opt resolutions (module_name, path) with
+              | Some result -> result
+              | None ->
+                let result =
+                  match
+                    Process_cmt.file_for_module ~state ~package module_name
+                  with
+                  | None -> false
+                  | Some module_file -> (
+                    let env = Query_env.from_file module_file in
+                    match exported_for_tip ~state ~env ~path ~package ~tip with
+                    | None -> false
+                    | Some (env, _name, resolved_stamp) ->
+                      env.file.module_name = file.module_name
+                      && List.mem
+                           (Uri.is_interface env.file.uri, resolved_stamp)
+                           targets)
+                in
+                Hashtbl.replace resolutions (module_name, path) result;
+                result
+            in
+            let refers_to_declaration module_name path =
+              (module_name = normalized_module_name && path = normalized_path)
+              ||
+              match List.rev path with
+              | name :: _ when name = declared.name.txt ->
+                resolves_to_declaration module_name path
+              | _ -> false
+            in
             let externals =
               package.project_files |> File_set.elements
               |> List.filter (fun name -> name <> file.module_name)
-              |> List.map (fun module_name ->
+              |> List.concat_map (fun module_name ->
                   Cmt.fulls_from_module ~package ~module_name
-                  |> List.map (fun {file; extra} ->
-                      match
-                        Hashtbl.find_opt extra.external_references
-                          normalized_module_name
-                      with
-                      | None -> []
-                      | Some refs ->
-                        let locs =
-                          refs
-                          |> List.filter_map (fun (p, t, locs) ->
-                              if p = normalized_path && t = tip then Some locs
-                              else None)
-                        in
-                        locs
-                        |> List.map (fun loc ->
-                            {uri = file.uri; loc_opt = Some loc})))
-              |> List.concat |> List.concat
+                  |> List.concat_map (fun {file; extra} ->
+                      Hashtbl.fold
+                        (fun module_name refs acc ->
+                          (refs
+                          |> List.filter_map (fun (p, t, loc) ->
+                              if t = tip && refers_to_declaration module_name p
+                              then Some {uri = file.uri; loc_opt = Some loc}
+                              else None))
+                          @ acc)
+                        extra.external_references []))
             in
             alternative_references @ externals)
           else (

@@ -1,0 +1,25 @@
+References src/NamespacedDependency.res 0:28
+[
+  {
+    "range": {
+      "end": { "character": 33, "line": 0 },
+      "start": { "character": 28, "line": 0 }
+    },
+    "uri": "file:///NamespacedDependency.res"
+  },
+  {
+    "range": {
+      "end": { "character": 15, "line": 4 },
+      "start": { "character": 10, "line": 4 }
+    },
+    "uri": "file:///NamespacedDependency.res"
+  },
+  {
+    "range": {
+      "end": { "character": 11, "line": 1 },
+      "start": { "character": 6, "line": 1 }
+    },
+    "uri": "file:///NsUtils.res"
+  }
+]
+

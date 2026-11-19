@@ -2,6 +2,13 @@ References src/SignatureItemsIntf.resi 1:6
 [
   {
     "range": {
+      "end": { "character": 30, "line": 3 },
+      "start": { "character": 29, "line": 3 }
+    },
+    "uri": "file:///SignatureItemsUse.res"
+  },
+  {
+    "range": {
       "end": { "character": 7, "line": 1 },
       "start": { "character": 6, "line": 1 }
     },

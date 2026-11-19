@@ -1,0 +1,118 @@
+References src/PathRefsFar.res 0:22
+[
+  {
+    "range": {
+      "end": { "character": 13, "line": 1 },
+      "start": { "character": 10, "line": 1 }
+    },
+    "uri": "file:///PathRefsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 4 },
+      "start": { "character": 16, "line": 4 }
+    },
+    "uri": "file:///PathRefsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 25, "line": 0 },
+      "start": { "character": 22, "line": 0 }
+    },
+    "uri": "file:///PathRefsFar.res"
+  },
+  {
+    "range": {
+      "end": { "character": 25, "line": 8 },
+      "start": { "character": 22, "line": 8 }
+    },
+    "uri": "file:///PathRefsFar.res"
+  },
+  {
+    "range": {
+      "end": { "character": 9, "line": 8 },
+      "start": { "character": 6, "line": 8 }
+    },
+    "uri": "file:///PathRefs.res"
+  }
+]
+
+References src/PathRefsFar.res 3:22
+[
+  {
+    "range": {
+      "end": { "character": 25, "line": 3 },
+      "start": { "character": 22, "line": 3 }
+    },
+    "uri": "file:///PathRefsFar.res"
+  },
+  {
+    "range": {
+      "end": { "character": 31, "line": 6 },
+      "start": { "character": 28, "line": 6 }
+    },
+    "uri": "file:///PathRefsFar.res"
+  },
+  {
+    "range": {
+      "end": { "character": 21, "line": 7 },
+      "start": { "character": 18, "line": 7 }
+    },
+    "uri": "file:///PathRefs.res"
+  }
+]
+
+Rename src/PathRefsFar.res 8:22 plus
+[
+  {
+    "edits": [
+      {
+        "newText": "plus",
+        "range": {
+          "end": { "character": 13, "line": 1 },
+          "start": { "character": 10, "line": 1 }
+        }
+      },
+      {
+        "newText": "plus",
+        "range": {
+          "end": { "character": 19, "line": 4 },
+          "start": { "character": 16, "line": 4 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///PathRefsUse.res", "version": 0 }
+  },
+  {
+    "edits": [
+      {
+        "newText": "plus",
+        "range": {
+          "end": { "character": 25, "line": 0 },
+          "start": { "character": 22, "line": 0 }
+        }
+      },
+      {
+        "newText": "plus",
+        "range": {
+          "end": { "character": 25, "line": 8 },
+          "start": { "character": 22, "line": 8 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///PathRefsFar.res", "version": 0 }
+  },
+  {
+    "edits": [
+      {
+        "newText": "plus",
+        "range": {
+          "end": { "character": 9, "line": 8 },
+          "start": { "character": 6, "line": 8 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///PathRefs.res", "version": 0 }
+  }
+]
+

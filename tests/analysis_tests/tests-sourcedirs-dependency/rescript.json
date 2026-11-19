@@ -6,7 +6,10 @@
       "subdirs": true
     }
   ],
-  "dependencies": ["@tests/sourcedirs-dependency-lib"],
+  "dependencies": [
+    "@tests/sourcedirs-dependency-lib",
+    "@tests/sourcedirs-namespaced-dependency-lib"
+  ],
   "package-specs": [{ "module": "commonjs", "in-source": false }],
   "suffix": ".res.js"
 }
