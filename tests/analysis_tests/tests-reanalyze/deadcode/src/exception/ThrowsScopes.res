@@ -34,3 +34,16 @@ module MakeThrower = (X: {}) => {
     | Inner => 0
     }
 }
+
+// A list payload
+@throws(list{ThrowsErrors.NotFound, Not_found})
+let listPayload = x => x > 0 ? throw(Not_found) : throw(ThrowsErrors.NotFound)
+
+// An exception of the runtime, whose .cmi keeps no locations
+@throws(Lazy.Undefined)
+let lazyUndefined = () => throw(Lazy.Undefined)
+
+let catchLazyUndefined = () =>
+  try lazyUndefined() catch {
+  | Lazy.Undefined => 0
+  }
