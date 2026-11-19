@@ -814,6 +814,10 @@ and transl_signature env sg =
         let tyext, newenv =
           Typedecl.transl_type_extension false env item.psig_loc styext
         in
+        List.iter
+          (fun (ext : Typedtree.extension_constructor) ->
+            Throws_attribute.define ext.ext_id)
+          tyext.tyext_constructors;
         let trem, rem, final_env = transl_sig newenv srem in
         let constructors = tyext.tyext_constructors in
         ( mksig (Tsig_typext tyext) env loc :: trem,
@@ -824,6 +828,7 @@ and transl_signature env sg =
       | Psig_exception sext ->
         check_name check_typext names sext.pext_name;
         let ext, newenv = Typedecl.transl_exception env sext in
+        Throws_attribute.define ext.ext_id;
         let trem, rem, final_env = transl_sig newenv srem in
         ( mksig (Tsig_exception ext) env loc :: trem,
           Sig_typext (ext.ext_id, ext.ext_type, Text_exception) :: rem,
@@ -831,9 +836,11 @@ and transl_signature env sg =
       | Psig_module pmd ->
         check_name check_module names pmd.pmd_name;
         let id = Ident.create pmd.pmd_name.txt in
+        Throws_attribute.define id;
         let tmty =
           Builtin_attributes.warning_scope pmd.pmd_attributes (fun () ->
-              transl_modtype env pmd.pmd_type)
+              Throws_attribute.in_module pmd.pmd_name.txt (fun () ->
+                  transl_modtype env pmd.pmd_type))
         in
         let md =
           {
@@ -927,7 +934,10 @@ and transl_modtype_decl names env pmtd =
 and transl_modtype_decl_aux names env
     {pmtd_name; pmtd_type; pmtd_attributes; pmtd_loc} =
   check_name check_modtype names pmtd_name;
-  let tmty = Option.map (transl_modtype env) pmtd_type in
+  let tmty =
+    Throws_attribute.in_module pmtd_name.txt (fun () ->
+        Option.map (transl_modtype env) pmtd_type)
+  in
   let decl =
     {
       Types.mtd_type = Option.map (fun t -> t.mty_type) tmty;
@@ -1545,6 +1555,10 @@ and type_structure funct_body anchor env sstr =
         (fun pext -> check_name check_typext names pext.pext_name)
         styext.ptyext_constructors;
       let tyext, newenv = Typedecl.transl_type_extension true env loc styext in
+      List.iter
+        (fun (ext : Typedtree.extension_constructor) ->
+          Throws_attribute.define ext.ext_id)
+        tyext.tyext_constructors;
       ( Tstr_typext tyext,
         map_ext
           (fun es ext -> Sig_typext (ext.ext_id, ext.ext_type, es))
@@ -1553,6 +1567,7 @@ and type_structure funct_body anchor env sstr =
     | Pstr_exception sext ->
       check_name check_typext names sext.pext_name;
       let ext, newenv = Typedecl.transl_exception env sext in
+      Throws_attribute.define ext.ext_id;
       ( Tstr_exception ext,
         [Sig_typext (ext.ext_id, ext.ext_type, Text_exception)],
         newenv )
@@ -1561,11 +1576,13 @@ and type_structure funct_body anchor env sstr =
       check_name check_module names name;
       let id = Ident.create name.txt in
       (* create early for PR#6752 *)
+      Throws_attribute.define id;
       let modl =
         Builtin_attributes.warning_scope attrs (fun () ->
-            type_module ~alias:true true funct_body
-              (anchor_submodule name.txt anchor)
-              env smodl)
+            Throws_attribute.in_module name.txt (fun () ->
+                type_module ~alias:true true funct_body
+                  (anchor_submodule name.txt anchor)
+                  env smodl))
       in
       let md =
         {
