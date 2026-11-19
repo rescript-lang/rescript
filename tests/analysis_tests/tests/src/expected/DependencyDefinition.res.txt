@@ -1,0 +1,36 @@
+Definition src/DependencyDefinition.res 2:14
+{
+  "range": {
+    "end": { "character": 12, "line": 967 },
+    "start": { "character": 9, "line": 967 }
+  },
+  "uri": "file:///Stdlib_Array.resi"
+}
+
+Definition src/DependencyDefinition.res 5:19
+{
+  "range": {
+    "end": { "character": 7, "line": 321 },
+    "start": { "character": 4, "line": 321 }
+  },
+  "uri": "file:///Belt_Array.res"
+}
+
+TypeDefinition src/DependencyDefinition.res 8:12
+{
+  "range": {
+    "end": { "character": 18, "line": 12 },
+    "start": { "character": 0, "line": 10 }
+  },
+  "uri": "file:///Stdlib_Null.resi"
+}
+
+Definition src/DependencyDefinition.res 11:37
+{
+  "range": {
+    "end": { "character": 9, "line": 8 },
+    "start": { "character": 4, "line": 8 }
+  },
+  "uri": "file:///Belt_SetInt.res"
+}
+

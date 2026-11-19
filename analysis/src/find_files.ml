@@ -71,12 +71,13 @@ let get_name x =
   Filename.basename x |> Filename.chop_extension |> String.capitalize_ascii
 
 let filter_duplicates cmts =
-  (* Remove .cmt's that have .cmti's *)
+  (* Remove .cmt's that have .cmti's, and sources that have interfaces *)
   let intfs = Hashtbl.create 100 in
   cmts
   |> List.iter (fun path ->
       if
         Filename.check_suffix path ".rei"
+        || Filename.check_suffix path ".resi"
         || Filename.check_suffix path ".mli"
         || Filename.check_suffix path ".cmti"
       then Hashtbl.add intfs (get_name path) true);
@@ -84,6 +85,7 @@ let filter_duplicates cmts =
   |> List.filter (fun path ->
       not
         ((Filename.check_suffix path ".re"
+         || Filename.check_suffix path ".res"
          || Filename.check_suffix path ".ml"
          || Filename.check_suffix path ".cmt")
         && Hashtbl.mem intfs (get_name path)))
