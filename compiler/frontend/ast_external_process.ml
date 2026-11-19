@@ -1004,6 +1004,9 @@ let resolve (loc : Location.t) (type_annotation : Parsetree.core_type)
             new_arg_types,
             if arg_type = Ignore then i else i + 1 ))
     in
+    (* The checks of [external_decl_of_non_obj] are about the declared
+       arguments, not the [unit] parameter added below. *)
+    let declared_arg_type_specs = arg_type_specs in
     (* If every original argument was erased (e.g. all `@as(json ...) _`),
        keep the external binding callable by threading a final `unit`
        parameter through the type and arg specs. *)
@@ -1026,7 +1029,7 @@ let resolve (loc : Location.t) (type_annotation : Parsetree.core_type)
     in
     let decl : External_ffi_types.external_decl =
       external_decl_of_non_obj loc external_desc prim_name_with_source
-        arg_type_specs_length arg_type_specs
+        arg_type_specs_length declared_arg_type_specs
     in
     External_ffi_types.check_decl ~loc decl ~prim_name;
     (* result type can not be labeled *)

@@ -23,11 +23,17 @@ let x = somescope.somefn({foo:true});
 
 let y = somescope.stringfn("ab");
 
+let getX = {"x": 1}.x;
+
+let getK = {"k": 2}["k"];
+
 export {
   mo,
   options,
   shouldNotFail,
   x,
   y,
+  getX,
+  getK,
 }
 /* x Not a pure module */
