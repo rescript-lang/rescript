@@ -1,0 +1,59 @@
+Rename src/SignatureItems.res 1:6 renamed
+[
+  {
+    "edits": [
+      {
+        "newText": "renamed",
+        "range": {
+          "end": { "character": 10, "line": 1 },
+          "start": { "character": 6, "line": 1 }
+        }
+      },
+      {
+        "newText": "renamed",
+        "range": {
+          "end": { "character": 17, "line": 7 },
+          "start": { "character": 13, "line": 7 }
+        }
+      }
+    ],
+    "textDocument": { "uri": "file:///SignatureItems.res", "version": 0 }
+  }
+]
+
+References src/SignatureItems.res 23:23
+[
+  {
+    "range": {
+      "end": { "character": 16, "line": 11 },
+      "start": { "character": 8, "line": 11 }
+    },
+    "uri": "file:///SignatureItems.res"
+  },
+  {
+    "range": {
+      "end": { "character": 31, "line": 23 },
+      "start": { "character": 23, "line": 23 }
+    },
+    "uri": "file:///SignatureItems.res"
+  }
+]
+
+References src/SignatureItems.res 28:8
+[
+  {
+    "range": {
+      "end": { "character": 32, "line": 0 },
+      "start": { "character": 31, "line": 0 }
+    },
+    "uri": "file:///SignatureItemsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 9, "line": 28 },
+      "start": { "character": 8, "line": 28 }
+    },
+    "uri": "file:///SignatureItems.res"
+  }
+]
+

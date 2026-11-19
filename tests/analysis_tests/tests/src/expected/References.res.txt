@@ -66,8 +66,8 @@ References src/References.res 20:12
 [
   {
     "range": {
-      "end": { "character": 13, "line": 13 },
-      "start": { "character": 2, "line": 13 }
+      "end": { "character": 8, "line": 13 },
+      "start": { "character": 6, "line": 13 }
     },
     "uri": "file:///References.res"
   },

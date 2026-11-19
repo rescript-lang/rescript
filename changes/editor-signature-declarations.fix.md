@@ -1,0 +1,1 @@
+- Fix editor rename, references and go to definition for values declared in module types, module signatures and `.resi` files.

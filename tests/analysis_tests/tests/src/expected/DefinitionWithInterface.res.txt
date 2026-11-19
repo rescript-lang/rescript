@@ -10,8 +10,8 @@ Definition src/DefinitionWithInterface.res 0:4
 Definition src/DefinitionWithInterface.res 9:6
 {
   "range": {
-    "end": { "character": 12, "line": 6 },
-    "start": { "character": 2, "line": 6 }
+    "end": { "character": 7, "line": 6 },
+    "start": { "character": 6, "line": 6 }
   },
   "uri": "file:///DefinitionWithInterface.resi"
 }

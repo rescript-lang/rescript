@@ -1,0 +1,45 @@
+References src/SignatureItemsUse.res 0:31
+[
+  {
+    "range": {
+      "end": { "character": 32, "line": 0 },
+      "start": { "character": 31, "line": 0 }
+    },
+    "uri": "file:///SignatureItemsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 9, "line": 28 },
+      "start": { "character": 8, "line": 28 }
+    },
+    "uri": "file:///SignatureItems.res"
+  }
+]
+
+Definition src/SignatureItemsUse.res 3:29
+{
+  "range": {
+    "end": { "character": 7, "line": 1 },
+    "start": { "character": 6, "line": 1 }
+  },
+  "uri": "file:///SignatureItemsIntf.res"
+}
+
+References src/SignatureItemsUse.res 6:31
+[
+  {
+    "range": {
+      "end": { "character": 32, "line": 6 },
+      "start": { "character": 31, "line": 6 }
+    },
+    "uri": "file:///SignatureItemsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 14, "line": 40 },
+      "start": { "character": 4, "line": 40 }
+    },
+    "uri": "file:///SignatureItems.res"
+  }
+]
+
