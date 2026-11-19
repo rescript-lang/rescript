@@ -693,6 +693,14 @@ and for_module ~env mod_desc module_name =
   | Tmod_unpack (_expr, module_type) ->
     let env = env |> Env.add_module ~name:module_name in
     for_type_module ~name:module_name ~env module_type
+  | Tmod_constraint
+      (({mod_desc = Tmod_ident _} as expr), _typ, Tmodtype_implicit, _coercion)
+    ->
+    (* The type checker wraps an alias used where it cannot stay an alias,
+       e.g. `Make` in `Make(Arg)` after `module Make = Fn.MakeSet`, in an
+       implicit constraint with the expanded signature. Keep the alias, so
+       that paths through it resolve to the module it names. *)
+    for_module ~env expr.mod_desc module_name
   | Tmod_constraint (expr, typ, constraint_, _coercion) ->
     (* TODO do this better I think *)
     let mod_kind = for_module ~env expr.mod_desc module_name in

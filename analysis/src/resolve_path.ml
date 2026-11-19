@@ -136,6 +136,14 @@ let resolve_from_compiler_path ~state ~env ~package path =
   | NotFound -> NotFound
   | Exported (env, name) -> Exported (env, name)
 
+(* Like [resolve_module_from_compiler_path], but follows module aliases such
+   as [module Make = Fn.MakeSet] to the module they name. *)
+let rec resolve_module_alias ~state ~env ~package path =
+  match resolve_module_from_compiler_path ~state ~env ~package path with
+  | Some (env, Some {item = Ident path}) ->
+    resolve_module_alias ~state ~env ~package path
+  | result -> result
+
 let rec get_source_uri ~state ~(env : Query_env.t) ~package
     (path : Module_path.t) =
   match path with
@@ -143,7 +151,7 @@ let rec get_source_uri ~state ~(env : Query_env.t) ~package
   | NotVisible -> env.file.uri
   | IncludedModule (path, inner) -> (
     Log.log "INCLUDED MODULE";
-    match resolve_module_from_compiler_path ~state ~env ~package path with
+    match resolve_module_alias ~state ~env ~package path with
     | None ->
       Log.log "NOT FOUND";
       get_source_uri ~state ~env ~package inner

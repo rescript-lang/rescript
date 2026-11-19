@@ -1,0 +1,52 @@
+Definition src/DefinitionFileOther.res 2:31
+{
+  "range": {
+    "end": { "character": 9, "line": 10 },
+    "start": { "character": 6, "line": 10 }
+  },
+  "uri": "file:///DefinitionFileSource.res"
+}
+
+TypeDefinition src/DefinitionFileOther.res 5:4
+{
+  "range": {
+    "end": { "character": 21, "line": 9 },
+    "start": { "character": 2, "line": 9 }
+  },
+  "uri": "file:///DefinitionFileSource.res"
+}
+
+Hover src/DefinitionFileOther.res 8:4
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nDefinitionFile.IncludesOther.base\n```\n\n---\n\n```\n \n```\n```rescript\ntype DefinitionFile.IncludesOther.base = int\n```\nGo to: [Type definition](DefinitionFileSource.res#L17,3)\n"
+  }
+}
+
+Definition src/DefinitionFileOther.res 12:14
+{
+  "range": {
+    "end": { "character": 9, "line": 10 },
+    "start": { "character": 6, "line": 10 }
+  },
+  "uri": "file:///DefinitionFileSource.res"
+}
+
+Hover src/DefinitionFileOther.res 16:8
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nmodule MakeOther: {\n  type t = array<O.t>\n  let add: O.t => array<O.t>\n}\n```"
+  }
+}
+
+Definition src/DefinitionFileOther.res 18:16
+{
+  "range": {
+    "end": { "character": 9, "line": 10 },
+    "start": { "character": 6, "line": 10 }
+  },
+  "uri": "file:///DefinitionFileSource.res"
+}
+
