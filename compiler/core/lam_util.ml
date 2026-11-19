@@ -62,9 +62,14 @@ let refine_let ?original ~assignable ~kind param (arg : Lambda.t) (l : Lambda.t)
     | _ -> false
   in
   (* JavaScript evaluates the callee of a call before the arguments, so
-     [f(e)] runs [e] after [f], while the binding ran it before *)
+     [f(e)] runs [e] after [f], while the binding ran it before. This is
+     [Lam_analysis.conflict] with one walk of [arg], or none: what is safe to
+     delay has no side effects. *)
   let may_follow (callee : Lam_analysis.motion) =
-    not (Lam_analysis.conflict callee (Lam_analysis.motion ~assignable arg))
+    match callee with
+    | Anywhere -> true
+    | Reads -> Lam_analysis.no_side_effects arg
+    | Effects -> Lam_analysis.delay_safe ~assignable arg
   in
   (* SafeAlias is the predicate that justifies the (Alias) rewrite
        let[k] x = e in body  -->  let[Alias] x = e in body
