@@ -1,0 +1,1 @@
+- Find References and Rename in the editor now also find uses written through another module path, such as a functor application in another file, a local alias of a functor, or a namespaced dependency.
