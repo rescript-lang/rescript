@@ -12,14 +12,20 @@ let generated = "res.throws"
    extension, and its name, as [src/Lib#E]. A module's .res and .resi share it,
    and it does not change when the definition moves within the file. Two
    exceptions of the same name in one file share it. Rebinding with
-   [exception E = Lib.F] defines a new identity. *)
+   [exception E = Lib.F] defines a new identity. A .cmi built with
+   [-no-keep-locs], as the runtime's and Belt's are, has no locations, so
+   its exceptions are identified by their name alone, as [#Undefined]. *)
 let identity (cstr : Types.constructor_description) =
   match cstr.cstr_kind with
   | Extension_constructor (Pident id) when Ident.is_predef_exn id ->
     Some (Ident.name id)
   | Extension_constructor _ ->
     let file = cstr.cstr_loc.loc_start.pos_fname in
-    Some (Filename.remove_extension file ^ "#" ^ cstr.cstr_name)
+    let file =
+      if file = Location.none.loc_start.pos_fname then ""
+      else Filename.remove_extension file
+    in
+    Some (file ^ "#" ^ cstr.cstr_name)
   | Ordinary_constructor _ -> None
 
 (* [Lib-Ns] is the module [Lib] of namespace [Ns]. *)
@@ -50,12 +56,16 @@ let display_name env (cstr : Types.constructor_description) =
   | Extension_constructor (Papply _ as path) -> Path.name path
   | Ordinary_constructor _ -> cstr.cstr_name
 
-(* The names a [@throws] payload lists. A payload-less [@throws] lists none. *)
+(* The names a [@throws] payload lists: one name, as [E] or [M.E(_)], or
+   several in an array, a tuple or a [list{...}]. A payload-less [@throws]
+   lists none. *)
 let names (payload : Parsetree.payload) =
   let rec of_expr (e : Parsetree.expression) =
     match e.pexp_desc with
-    | Pexp_construct ({txt; loc}, {txt = []}) | Pexp_ident {txt; loc} ->
-      [(txt, loc)]
+    | Pexp_construct ({txt = Lident "[]"}, {txt = []}) -> []
+    | Pexp_construct ({txt = Lident "::"}, {txt = [head; tail]}) ->
+      of_expr head @ of_expr tail
+    | Pexp_construct ({txt; loc}, _) | Pexp_ident {txt; loc} -> [(txt, loc)]
     | Pexp_constant (Pconst_string s) ->
       [(Longident.parse (String_literal.string_semantic s), e.pexp_loc)]
     | Pexp_tuple es | Pexp_array es -> List.concat_map of_expr es
