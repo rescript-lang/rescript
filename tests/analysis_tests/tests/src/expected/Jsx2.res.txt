@@ -164,7 +164,7 @@ Definition src/Jsx2.res 58:11
     "end": { "character": 8, "line": 1 },
     "start": { "character": 4, "line": 1 }
   },
-  "uri": "file:///Component.resi"
+  "uri": "file:///Component.res"
 }
 
 Complete src/Jsx2.res 68:10

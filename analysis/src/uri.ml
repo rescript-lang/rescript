@@ -4,7 +4,8 @@ let strip_path = ref false (* for use in tests *)
 
 let from_path path = Lsp.Uri.of_path path
 let from_string str = Lsp.Uri.of_string str
-let is_interface uri = uri |> Lsp.Uri.to_string |> Filename.check_suffix "i"
+let is_interface uri =
+  Lsp.Uri.to_path uri |> String.ends_with ~suffix:Literals.suffix_resi
 let to_path uri =
   (* Lsp.Uri.to_path remove the schema file:// but keep the `/` on start of path. *)
   let p = Lsp.Uri.to_path uri in
