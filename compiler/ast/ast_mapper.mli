@@ -39,13 +39,13 @@ let rewrite (str : structure) = test_mapper.structure test_mapper str]}
 
   External rewriters passed to [bsc] with [-ppx] are separate
   executables. {!Cmd_ppx_apply} prepends the [ocaml.ppx.context]
-  attribute ({!add_ppx_context_str}, {!add_ppx_context_sig}), writes the
+  attribute ({!Ppx_context.add_str}, {!Ppx_context.add_sig}), writes the
   AST to a temporary file as the magic number of {!Ml_binary}, the
   source file name and the marshalled {!Parsetree0} structure or
   signature, and runs [ppx input output]. The executable writes its
   result to [output] in the same format; {!Cmd_ppx_apply} reads it back,
   converts it to {!Parsetree}, and removes the context attribute
-  ({!drop_ppx_context_str}, {!drop_ppx_context_sig}).
+  ({!Ppx_context.drop_str}, {!Ppx_context.drop_sig}).
   *)
 
 open Parsetree
@@ -102,21 +102,3 @@ val extension_of_error : Location.error -> extension
 (** Encode an error into an 'error' extension node which can be
     inserted in a generated Parsetree.  The compiler will be
     responsible for reporting the error. *)
-
-val add_ppx_context_str :
-  tool_name:string -> Parsetree.structure -> Parsetree.structure
-(** Extract information from the current environment and encode it
-    into an attribute which is prepended to the list of structure
-    items in order to pass the information to an external
-    processor. *)
-
-val add_ppx_context_sig :
-  tool_name:string -> Parsetree.signature -> Parsetree.signature
-(** Same as [add_ppx_context_str], but for signatures. *)
-
-val drop_ppx_context_str : Parsetree.structure -> Parsetree.structure
-(** Drop the ocaml.ppx.context attribute from a structure. The compiler does
-    not take back any of its data, such as cookies a PPX set. *)
-
-val drop_ppx_context_sig : Parsetree.signature -> Parsetree.signature
-(** Same as [drop_ppx_context_str], but for signatures. *)

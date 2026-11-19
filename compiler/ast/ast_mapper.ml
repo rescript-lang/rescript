@@ -215,7 +215,7 @@ module MT = struct
     | Pmty_signature sg -> signature ~loc ~attrs (sub.signature sub sg)
     | Pmty_functor (s, mt1, mt2) ->
       functor_ ~loc ~attrs (map_loc sub s)
-        (Misc.may_map (sub.module_type sub) mt1)
+        (Option.map (sub.module_type sub) mt1)
         (sub.module_type sub mt2)
     | Pmty_with (mt, l) ->
       with_ ~loc ~attrs (sub.module_type sub mt)
@@ -263,7 +263,7 @@ module M = struct
     | Pmod_structure str -> structure ~loc ~attrs (sub.structure sub str)
     | Pmod_functor (arg, arg_ty, body) ->
       functor_ ~loc ~attrs (map_loc sub arg)
-        (Misc.may_map (sub.module_type sub) arg_ty)
+        (Option.map (sub.module_type sub) arg_ty)
         (sub.module_expr sub body)
     | Pmod_apply (m1, m2) ->
       apply ~loc ~attrs (sub.module_expr sub m1) (sub.module_expr sub m2)
@@ -661,80 +661,3 @@ let rec extension_of_error {loc; msg; if_highlight; sub} =
          Str.eval (Exp.constant (Const.string if_highlight));
        ]
       @ List.map (fun ext -> Str.extension (extension_of_error ext)) sub) )
-
-module Ppx_context = struct
-  open Longident
-  open Asttypes
-  open Ast_helper
-
-  let lid name = {txt = Lident name; loc = Location.none}
-
-  let make_string x =
-    Exp.constant
-      ~attrs:[(Location.mknoloc "_res.ppx_context_string", Parsetree.PStr [])]
-      (Const.string x)
-
-  let make_bool x =
-    if x then Exp.construct (lid "true") (Location.mknoloc [])
-    else Exp.construct (lid "false") (Location.mknoloc [])
-
-  let rec make_list f lst =
-    match lst with
-    | x :: rest ->
-      Exp.construct (lid "::") (Location.mknoloc [f x; make_list f rest])
-    | [] -> Exp.construct (lid "[]") (Location.mknoloc [])
-
-  let mk fields =
-    ( {txt = "ocaml.ppx.context"; loc = Location.none},
-      Parsetree.PStr [Str.eval (Exp.record fields None)] )
-
-  let make ~tool_name () =
-    let fields =
-      [
-        {lid = lid "tool_name"; x = make_string tool_name; opt = false};
-        {
-          lid = lid "include_dirs";
-          x = make_list make_string !((Clflags.current ()).include_dirs);
-          opt = false;
-        };
-        {
-          lid = lid "load_path";
-          x = make_list make_string (Config.get_load_path ());
-          opt = false;
-        };
-        {
-          lid = lid "open_modules";
-          x = make_list make_string !((Clflags.current ()).open_modules);
-          opt = false;
-        };
-        {
-          lid = lid "debug";
-          x = make_bool !((Clflags.current ()).debug);
-          opt = false;
-        };
-        (* The compiler doesn't read back the cookies a PPX sets. *)
-        {lid = lid "cookies"; x = make_list Fun.id []; opt = false};
-      ]
-    in
-    mk fields
-end
-
-let ppx_context = Ppx_context.make
-
-let drop_ppx_context_str = function
-  | {pstr_desc = Pstr_attribute ({Location.txt = "ocaml.ppx.context"}, _)}
-    :: items ->
-    items
-  | items -> items
-
-let drop_ppx_context_sig = function
-  | {psig_desc = Psig_attribute ({Location.txt = "ocaml.ppx.context"}, _)}
-    :: items ->
-    items
-  | items -> items
-
-let add_ppx_context_str ~tool_name ast =
-  Ast_helper.Str.attribute (ppx_context ~tool_name ()) :: ast
-
-let add_ppx_context_sig ~tool_name ast =
-  Ast_helper.Sig.attribute (ppx_context ~tool_name ()) :: ast

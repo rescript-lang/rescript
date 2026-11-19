@@ -1,0 +1,1 @@
+- Reduce the `rescript_ast` library's dependencies on `ext`.

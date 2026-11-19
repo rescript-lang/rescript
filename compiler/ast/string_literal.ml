@@ -65,9 +65,8 @@ let normalize_semantic semantic =
           Buffer.add_substring buffer semantic index decoded_length;
           loop (index + decoded_length))
         else (
-          Buffer.add_string buffer
-            (Ext_utf8.encode_codepoint
-               (Char.code (String.unsafe_get semantic index)));
+          Buffer.add_utf_8_uchar buffer
+            (Uchar.of_char (String.unsafe_get semantic index));
           loop (index + 1))
     in
     loop 0;
@@ -354,13 +353,17 @@ let encode_char_source codepoint =
   | codepoint when codepoint >= 0x20 && codepoint <= 0x7e ->
     String.make 1 (Char.unsafe_chr codepoint)
   | codepoint when Uchar.is_valid codepoint ->
-    Ext_utf8.encode_codepoint codepoint
+    let buffer = Buffer.create 4 in
+    Buffer.add_utf_8_uchar buffer (Uchar.of_int codepoint);
+    Buffer.contents buffer
   | codepoint -> Printf.sprintf {e|\u{%X}|e} codepoint
+
+exception Invalid_utf8 of string
 
 let decode_utf8_uchar_exn s index =
   let decoded = String.get_utf_8_uchar s index in
   if Uchar.utf_decode_is_valid decoded then decoded
-  else raise (Ext_utf8.Invalid_utf8 "Invalid UTF-8 sequence")
+  else raise (Invalid_utf8 "Invalid UTF-8 sequence")
 
 let utf16_length s =
   let len = String.length s in
