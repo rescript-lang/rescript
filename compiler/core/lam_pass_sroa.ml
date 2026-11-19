@@ -97,7 +97,9 @@ let fields_for_block block info field_count =
     | Some names ->
       Array.map (fun name -> Ident.create (Ident.name block ^ "_" ^ name)) names
 
-let replace ~block ~info ~initializers body =
+(* [assignable] holds the variables assigned so far. A replaced block adds the
+   fields it assigns. *)
+let replace_block ~assignable ~block ~info ~initializers body =
   match initializers with
   | [] -> None
   | _ ->
@@ -109,9 +111,11 @@ let replace ~block ~info ~initializers body =
     else
       let fields = fields_for_block block info field_count in
       let body = rewrite block fields uses body in
-      (* The fields that are written, of this block and of the ones replaced
-         in [body] *)
-      let assignable = lazy (Lambda_traverse.assigned_variables body) in
+      Array.iteri
+        (fun index use ->
+          if use.read && use.written then
+            assignable := Set_ident.add fields.(index) !assignable)
+        uses;
       let rec bind_fields index initializers body =
         match initializers with
         | [] -> body
@@ -124,27 +128,39 @@ let replace ~block ~info ~initializers body =
              still needs a mutable scalar binding. *)
           if not use.read then discard_value init body
           else if not use.written then
-            Lam_util.refine_let ~assignable:(Lazy.force assignable) ~kind:Strict
+            Lam_util.refine_let ~assignable:!assignable ~kind:Strict
               fields.(index) init body
           else Lambda.let_ Variable fields.(index) init body
       in
       Some (bind_fields 0 initializers body)
 
-let rec simplify (lam : Lambda.t) =
-  match lam with
-  | Llet (kind, block, init, body) -> (
-    let init' = simplify init in
-    let body' = simplify body in
-    match (kind, init') with
-    | ( (Strict | StrictOpt),
-        Lambda.Lprim {primitive = Pmakeblock info; args = initializers} )
-      when not (Lambda.is_immutable_block info) -> (
-      match replace ~block ~info ~initializers body' with
-      | Some replacement -> replacement
-      | None ->
+let replace ~block ~info ~initializers body =
+  let assignable = ref (Lambda_traverse.assigned_variables body) in
+  replace_block ~assignable ~block ~info ~initializers body
+
+let simplify (lam : Lambda.t) =
+  (* Blocks are replaced from the inside out, so when a block is replaced the
+     set has every assignment in its initializers and its body. A field of an
+     enclosing block is not in it yet, and is still a field of a record, which
+     [refine_let] takes to change as well. *)
+  let assignable = ref (Lambda_traverse.assigned_variables lam) in
+  let rec simplify (lam : Lambda.t) =
+    match lam with
+    | Llet (kind, block, init, body) -> (
+      let init' = simplify init in
+      let body' = simplify body in
+      match (kind, init') with
+      | ( (Strict | StrictOpt),
+          Lambda.Lprim {primitive = Pmakeblock info; args = initializers} )
+        when not (Lambda.is_immutable_block info) -> (
+        match replace_block ~assignable ~block ~info ~initializers body' with
+        | Some replacement -> replacement
+        | None ->
+          if init' == init && body' == body then lam
+          else Lambda.let_ kind block init' body')
+      | _ ->
         if init' == init && body' == body then lam
         else Lambda.let_ kind block init' body')
-    | _ ->
-      if init' == init && body' == body then lam
-      else Lambda.let_ kind block init' body')
-  | _ -> Lambda_traverse.shallow_map_sharing simplify lam
+    | _ -> Lambda_traverse.shallow_map_sharing simplify lam
+  in
+  simplify lam
