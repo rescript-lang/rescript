@@ -148,7 +148,7 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
     let name = Ident.name ident in
     let declared =
       add_declared ~extent:md_loc
-        ~item:(for_type_module ~name ~env md_type)
+        ~item:(for_type_module ~name ~env:(env |> Env.add_module ~name) md_type)
         ~name:(Location.mkloc name md_loc)
         ~stamp:(Ident.binding_time ident) ~env md_attributes
         (Exported.add exported Exported.Module)
@@ -165,7 +165,7 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
         loc = declared.extent_loc;
       };
     ]
-  | _ -> []
+  | Sig_modtype _ | Sig_typext _ -> []
 
 and for_type_signature ~name ~env signature =
   let exported = Exported.init () in
@@ -358,12 +358,11 @@ let rec for_signature_item ~env ~(exported : Exported.t)
           | _ -> Types.Trec_next
         in
         decl |> for_type_declaration ~env ~exported ~rec_status)
-  | Tsig_module
-      {md_id; md_attributes; md_loc; md_name = name; md_type = {mty_type}} ->
+  | Tsig_module {md_id; md_attributes; md_loc; md_name = name; md_type} ->
     let item =
-      for_type_module ~name:name.txt
+      for_module_type ~name:name.txt
         ~env:(env |> Env.add_module ~name:name.txt)
-        mty_type
+        md_type
     in
     let declared =
       add_declared ~item ~name ~extent:md_loc ~stamp:(Ident.binding_time md_id)
@@ -401,8 +400,57 @@ let rec for_signature_item ~env ~(exported : Exported.t)
         incl_type []
     in
     top_level
+  | Tsig_modtype module_type_declaration ->
+    for_module_type_declaration ~env ~exported module_type_declaration
   (* TODO: process other things here *)
   | _ -> []
+
+(* A module type written in source: read its signature from the typed tree,
+   which has the location of each item's name. *)
+and for_module_type ~name ~env (module_type : Typedtree.module_type) =
+  match module_type.mty_desc with
+  | Tmty_signature signature ->
+    let exported = Exported.init () in
+    (* Right to left, as in for_type_signature, so that the last of several
+       items with the same name is the one exported. *)
+    let items =
+      List.fold_right
+        (fun item items -> for_signature_item ~env ~exported item @ items)
+        signature.sig_items []
+    in
+    Structure {Module.name; docstring = []; exported; items; deprecated = None}
+  | Tmty_ident _ | Tmty_alias _ | Tmty_functor _ | Tmty_with _ | Tmty_typeof _
+    ->
+    for_type_module ~name ~env module_type.mty_type
+
+(* A module type declaration written in source. *)
+and for_module_type_declaration ~env ~(exported : Exported.t)
+    ({mtd_name = name; mtd_id; mtd_attributes; mtd_type; mtd_loc} :
+      Typedtree.module_type_declaration) =
+  match mtd_type with
+  | None -> []
+  | Some mod_type ->
+    let env = env |> Env.add_module_type ~name:name.txt in
+    let declared =
+      add_declared
+        ~item:(for_module_type ~name:name.txt ~env mod_type)
+        ~name ~extent:mtd_loc
+        ~stamp:(Ident.binding_time mtd_id)
+        ~env mtd_attributes
+        (Exported.add exported Exported.Module)
+        Stamps.add_module
+    in
+    [
+      {
+        Module.kind =
+          Module
+            {type_ = declared.item; is_module_type = is_module_type declared};
+        name = declared.name.txt;
+        docstring = declared.docstring;
+        deprecated = declared.deprecated;
+        loc = declared.extent_loc;
+      };
+    ]
 
 let for_signature ~name ~env sig_items =
   let exported = Exported.init () in
@@ -576,34 +624,8 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
         for_structure_item ~env ~exported
           {item with str_desc = Tstr_module mod_decl})
     |> List.flatten
-  | Tstr_modtype
-      {
-        mtd_name = name;
-        mtd_id;
-        mtd_attributes;
-        mtd_type = Some {mty_type = mod_type};
-        mtd_loc;
-      } ->
-    let env = env |> Env.add_module_type ~name:name.txt in
-    let mod_type_item = for_type_module ~name:name.txt ~env mod_type in
-    let declared =
-      add_declared ~item:mod_type_item ~name ~extent:mtd_loc
-        ~stamp:(Ident.binding_time mtd_id)
-        ~env mtd_attributes
-        (Exported.add exported Exported.Module)
-        Stamps.add_module
-    in
-    [
-      {
-        Module.kind =
-          Module
-            {type_ = declared.item; is_module_type = is_module_type declared};
-        name = declared.name.txt;
-        docstring = declared.docstring;
-        deprecated = declared.deprecated;
-        loc = declared.extent_loc;
-      };
-    ]
+  | Tstr_modtype module_type_declaration ->
+    for_module_type_declaration ~env ~exported module_type_declaration
   | Tstr_include {incl_mod; incl_type} ->
     let env =
       match get_module_path incl_mod.mod_desc with
@@ -671,11 +693,16 @@ and for_module ~env mod_desc module_name =
   | Tmod_unpack (_expr, module_type) ->
     let env = env |> Env.add_module ~name:module_name in
     for_type_module ~name:module_name ~env module_type
-  | Tmod_constraint (expr, typ, _constraint, _coercion) ->
+  | Tmod_constraint (expr, typ, constraint_, _coercion) ->
     (* TODO do this better I think *)
     let mod_kind = for_module ~env expr.mod_desc module_name in
     let env = env |> Env.add_module ~name:module_name in
-    let mod_type_kind = for_type_module ~name:module_name ~env typ in
+    let mod_type_kind =
+      match constraint_ with
+      | Tmodtype_explicit module_type ->
+        for_module_type ~name:module_name ~env module_type
+      | Tmodtype_implicit -> for_type_module ~name:module_name ~env typ
+    in
     Constraint (mod_kind, mod_type_kind)
 
 (*

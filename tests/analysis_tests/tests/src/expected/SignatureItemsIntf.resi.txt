@@ -1,0 +1,18 @@
+References src/SignatureItemsIntf.resi 1:6
+[
+  {
+    "range": {
+      "end": { "character": 7, "line": 1 },
+      "start": { "character": 6, "line": 1 }
+    },
+    "uri": "file:///SignatureItemsIntf.res"
+  },
+  {
+    "range": {
+      "end": { "character": 7, "line": 1 },
+      "start": { "character": 6, "line": 1 }
+    },
+    "uri": "file:///SignatureItemsIntf.resi"
+  }
+]
+

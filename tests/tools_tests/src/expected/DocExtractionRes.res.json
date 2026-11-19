@@ -332,7 +332,7 @@
           "docstrings": [ "The maker of stuff!" ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 78,
+            "line": 79,
             "col": 3
           },
           "detail": {
@@ -389,7 +389,7 @@
           "docstrings": [ "function from t to t" ],
           "source": {
             "filepath": "src/DocExtractionRes.res",
-            "line": 116,
+            "line": 119,
             "col": 3
           },
           "detail": {
