@@ -598,6 +598,19 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
       External_ffi_types.ffi_obj_create arg_kinds )
   | _ -> Location.raise_errorf ~loc "Attribute found that conflicts with %@obj"
 
+(* A [unit] argument is left out of the JS code, so property and index
+   accesses would be missing their object, index or value. *)
+let reject_unit_arg ~loc attr (arg_type_specs : External_arg_spec.params) =
+  if
+    List.exists
+      (function
+        | ({arg_type = Extern_unit} : External_arg_spec.param) -> true
+        | _ -> false)
+      arg_type_specs
+  then
+    Location.raise_errorf ~loc
+      "Ill defined attribute %@%s (unit argument is not allowed)" attr
+
 let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
     (prim_name_or_pval_prim : bundle_source) (arg_type_specs_length : int)
     (arg_type_specs : External_arg_spec.params) :
@@ -623,7 +636,9 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    return_wrapper = _;
    mk_obj = _;
   } ->
-    if arg_type_specs_length = 3 then mk ~scopes Decl_set_index
+    if arg_type_specs_length = 3 then (
+      reject_unit_arg ~loc "set_index" arg_type_specs;
+      mk ~scopes Decl_set_index)
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@set_index (arity of 3)"
@@ -646,7 +661,9 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    mk_obj = _;
    return_wrapper = _;
   } ->
-    if arg_type_specs_length = 2 then mk ~scopes Decl_get_index
+    if arg_type_specs_length = 2 then (
+      reject_unit_arg ~loc "get_index" arg_type_specs;
+      mk ~scopes Decl_get_index)
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@get_index (arity expected 2 : while %d)"
@@ -864,7 +881,9 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    return_wrapper = _;
    scopes;
   } ->
-    if arg_type_specs_length = 2 then mk ~scopes (Decl_set {name})
+    if arg_type_specs_length = 2 then (
+      reject_unit_arg ~loc "set" arg_type_specs;
+      mk ~scopes (Decl_set {name}))
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@set (two args required)"
@@ -886,13 +905,9 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
    return_wrapper = _;
    scopes;
   } ->
-    if arg_type_specs_length = 1 then
-      (* Check if the first argument is unit, which is invalid for @get *)
-      match arg_type_specs with
-      | [{arg_type = Extern_unit}] ->
-        Location.raise_errorf ~loc
-          "Ill defined attribute %@get (unit argument is not allowed)"
-      | _ -> mk ~scopes (Decl_get {name})
+    if arg_type_specs_length = 1 then (
+      reject_unit_arg ~loc "get" arg_type_specs;
+      mk ~scopes (Decl_get {name}))
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@get (only one argument)"
