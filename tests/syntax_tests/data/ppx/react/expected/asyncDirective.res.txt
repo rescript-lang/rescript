@@ -1,0 +1,44 @@
+module Async = {
+  @res.jsxComponentProps
+  type props<'id> = {
+    id: 'id,
+  }
+
+  let make =
+    @directive("'use cache';") async ({id, _}: props<string>): React.element =>
+      ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.string(id)})})
+
+  let make = React.component({
+    let \"AsyncDirective$Async" = (props: props<_>) => Jsx.promise(make(props))
+    \"AsyncDirective$Async"
+  })
+}
+
+module AsyncWithProps = {
+  type props = {id: string}
+
+  let make =
+    @directive("'use cache';") async (props: props): React.element =>
+      ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.string(props.id)})})
+
+  let make = React.component({
+    let \"AsyncDirective$AsyncWithProps" = (props: props): React.element => Jsx.promise(make(props))
+    \"AsyncDirective$AsyncWithProps"
+  })
+}
+
+module Sync = {
+  @res.jsxComponentProps
+  type props<'id> = {
+    id: 'id,
+  }
+
+  let make = ({id, _}: props<string>): React.element =>
+    ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.string(id)})})
+
+  let make = React.component({
+    let \"AsyncDirective$Sync" = @directive("'use no memo';") (props: props<_>) => make(props)
+
+    \"AsyncDirective$Sync"
+  })
+}
