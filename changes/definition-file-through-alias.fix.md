@@ -1,0 +1,1 @@
+- Go to definition, type definition and the hover's type definition link open the declaring file for a declaration reached through a local functor alias or an include, instead of the current file.

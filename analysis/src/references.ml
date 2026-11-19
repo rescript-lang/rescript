@@ -395,7 +395,11 @@ let type_definition_for_loc_item ~state ~full:{file; package} loc_item =
     | None -> None
     | Some path -> (
       match dig_constructor ~state ~env ~package path with
-      | Some (env, declared) -> Some (env.file.uri, declared.item.decl.type_loc)
+      | Some (env, declared) ->
+        let uri =
+          Resolve_path.get_source_uri ~state ~env ~package declared.module_path
+        in
+        Some (uri, declared.item.decl.type_loc)
       | None -> None))
 
 let is_visible (declared : _ Declared.t) =

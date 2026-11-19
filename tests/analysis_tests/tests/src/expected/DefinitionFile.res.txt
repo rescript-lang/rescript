@@ -1,0 +1,111 @@
+Definition src/DefinitionFile.res 5:16
+{
+  "range": {
+    "end": { "character": 9, "line": 10 },
+    "start": { "character": 6, "line": 10 }
+  },
+  "uri": "file:///DefinitionFileSource.res"
+}
+
+TypeDefinition src/DefinitionFile.res 8:4
+{
+  "range": {
+    "end": { "character": 21, "line": 9 },
+    "start": { "character": 2, "line": 9 }
+  },
+  "uri": "file:///DefinitionFileSource.res"
+}
+
+Definition src/DefinitionFile.res 13:14
+{
+  "range": {
+    "end": { "character": 9, "line": 10 },
+    "start": { "character": 6, "line": 10 }
+  },
+  "uri": "file:///DefinitionFileSource.res"
+}
+
+Definition src/DefinitionFile.res 20:19
+{
+  "range": {
+    "end": { "character": 9, "line": 10 },
+    "start": { "character": 6, "line": 10 }
+  },
+  "uri": "file:///DefinitionFileSource.res"
+}
+
+Definition src/DefinitionFile.res 24:23
+{
+  "range": {
+    "end": { "character": 9, "line": 10 },
+    "start": { "character": 6, "line": 10 }
+  },
+  "uri": "file:///DefinitionFileSource.res"
+}
+
+Signature help src/DefinitionFile.res 28:13
+arg_at_cursor: unlabelled<0>
+extracted params: 
+[Aliased.t]
+{
+  "activeParameter": 0,
+  "activeSignature": 0,
+  "signatures": [
+    {
+      "activeParameter": 0,
+      "label": "Aliased.t => Aliased.t",
+      "parameters": [
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "```rescript\ntype t = array<O.t>\n```\nGo to: [Type definition](DefinitionFileSource.res#L10,3)"
+          },
+          "label": [ 0, 9 ]
+        }
+      ]
+    }
+  ]
+}
+
+Hover src/DefinitionFile.res 34:4
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nIncludesOther.base\n```\n\n---\n\n```\n \n```\n```rescript\ntype IncludesOther.base = int\n```\nGo to: [Type definition](DefinitionFileSource.res#L17,3)\n"
+  }
+}
+
+Hover src/DefinitionFile.res 41:4
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nIncludesLocalAlias.base\n```\n\n---\n\n```\n \n```\n```rescript\ntype IncludesLocalAlias.base = int\n```\nGo to: [Type definition](DefinitionFileSource.res#L17,3)\n"
+  }
+}
+
+Hover src/DefinitionFile.res 52:4
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\nIncludesOwn.own\n```\n\n---\n\n```\n \n```\n```rescript\ntype IncludesOwn.own = int\n```\nGo to: [Type definition](DefinitionFile.res#L48,3)\n"
+  }
+}
+
+Definition src/DefinitionFile.res 60:18
+{
+  "range": {
+    "end": { "character": 11, "line": 56 },
+    "start": { "character": 6, "line": 56 }
+  },
+  "uri": "file:///DefinitionFile.res"
+}
+
+Definition src/DefinitionFile.res 64:8
+{
+  "range": {
+    "end": { "character": 5, "line": 63 },
+    "start": { "character": 4, "line": 63 }
+  },
+  "uri": "file:///DefinitionFile.res"
+}
+

@@ -55,7 +55,8 @@ let rec show_module ~state ~docstring ~(file : File.t) ~package ~name
       References.resolve_module_reference ~state ~file ~package declared
     with
     | None -> Some ("Unable to resolve module reference " ^ Path.name path)
-    | Some (_, declared) ->
+    | Some (file, declared) ->
+      (* Continue in the file that declares the module the alias names. *)
       show_module ~state ~docstring ~file ~name ~package declared)
 
 type extracted_type = {
@@ -63,6 +64,7 @@ type extracted_type = {
   path: Path.t;
   decl: Types.type_declaration;
   env: Shared_types.Query_env.t;
+  uri: Uri.t;  (** The file that declares the type. *)
   loc: Warnings.loc;
 }
 
@@ -103,8 +105,9 @@ let find_relevant_types_from_type ~state ~file ~package typ =
   let from_constructor_path ~env path =
     match References.dig_constructor ~state ~env ~package path with
     | None -> None
-    | Some (env, {name = {txt}; extent_loc; item = {decl}}) ->
-      Some {name = txt; env; loc = extent_loc; decl; path}
+    | Some (env, {name = {txt}; extent_loc; item = {decl}; module_path}) ->
+      let uri = Resolve_path.get_source_uri ~state ~env ~package module_path in
+      Some {name = txt; env; uri; loc = extent_loc; decl; path}
   in
   let constructors = Shared.find_type_constructors types_to_search in
   constructors |> List.filter_map (from_constructor_path ~env:env_to_search)
@@ -141,12 +144,12 @@ let expand_types ~state ~file ~package ~supports_markdown_links typ =
           else (
             types_seen := String_set.add type_id !types_seen;
             true))
-      |> List.map (fun {decl; env; loc; path} ->
+      |> List.map (fun {decl; uri; loc; path} ->
           let link_to_type_definition_str =
             if
               supports_markdown_links
               && not (is_inline_record_definition decl path)
-            then Markdown.go_to_definition_text ~env ~pos:loc.Warnings.loc_start
+            then Markdown.go_to_definition_text ~uri ~pos:loc.Warnings.loc_start
             else ""
           in
           Markdown.divider
