@@ -105,3 +105,11 @@ module UseS = (X: ThrowsLibExn.S) => {
     | ThrowsLibExn.E => 0
     }
 }
+
+// Reported with the exceptions' full names, which an annotation can use.
+let uncaughtNested = x => ThrowsLibExn.Inner.find(x)
+
+let uncaughtLocal = x => Local.find(x)
+
+@throws(Local.G)
+let annotatedLocal = x => Local.find(x)

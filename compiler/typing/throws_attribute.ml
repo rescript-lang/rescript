@@ -8,13 +8,15 @@
 
 let generated = "res.throws"
 
-(* An exception's identity: the source file that defines it, without its
-   extension, and its name, as [src/Lib#E]. A module's .res and .resi share it,
-   and it does not change when the definition moves within the file. Two
-   exceptions of the same name in one file share it. Rebinding with
-   [exception E = Lib.F] defines a new identity. A .cmi built with
-   [-no-keep-locs], as the runtime's and Belt's are, has no locations, so
-   its exceptions are identified by their name alone, as [#Undefined]. *)
+(* An exception's identity: the path of the source file that defines it, as
+   the compiler was given it, without the extension, and its name, as
+   [src/Lib#E]. A module's .res and .resi share it, and it does not change when
+   the definition moves within the file. Exceptions of the same name in one
+   file share it, as do the exceptions of two applications of one functor.
+   Rebinding with [exception E = Lib.F] defines a new identity. A file
+   compiled with [-no-keep-locs], as the runtime and Belt are, keeps no
+   locations in its .cmi, so its exceptions are identified by their name
+   alone, as [#Undefined], also while that file itself is compiled. *)
 let identity (cstr : Types.constructor_description) =
   match cstr.cstr_kind with
   | Extension_constructor (Pident id) when Ident.is_predef_exn id ->
@@ -22,7 +24,10 @@ let identity (cstr : Types.constructor_description) =
   | Extension_constructor _ ->
     let file = cstr.cstr_loc.loc_start.pos_fname in
     let file =
-      if file = Location.none.loc_start.pos_fname then ""
+      if
+        file = Location.none.loc_start.pos_fname
+        || not !((Clflags.current ()).keep_locs)
+      then ""
       else Filename.remove_extension file
     in
     Some (file ^ "#" ^ cstr.cstr_name)
@@ -34,25 +39,58 @@ let without_namespace name =
   | Some i -> String.sub name 0 i
   | None -> name
 
+(* Where the current file defines its modules and exceptions, as module paths
+   within the file ([M; N; E] for [E] in [M.N]), and the module being typed.
+   [Typemod] records them, so messages can name a file's own exceptions
+   exactly. *)
+type definitions = {
+  mutable current: string list;  (** The module being typed, outermost first *)
+  defined: (Ident.t, string list) Hashtbl.t;
+  warned: (Location.t, unit) Hashtbl.t;
+      (** Names already warned about: a [let] that destructures a tuple
+          carries its attributes on every binding *)
+}
+
+let definitions =
+  Request_local.new_key (fun () ->
+      {current = []; defined = Hashtbl.create 16; warned = Hashtbl.create 1})
+
+(* Type the module [name] with [f], recording what it defines under [name]. *)
+let in_module name f =
+  let d = Request_local.get definitions in
+  let outer = d.current in
+  d.current <- outer @ [name];
+  Fun.protect ~finally:(fun () -> d.current <- outer) f
+
+(* Record that the module being typed defines [id]. *)
+let define id =
+  let d = Request_local.get definitions in
+  Hashtbl.replace d.defined id (d.current @ [Ident.name id])
+
 (* A readable name for messages: [Lib.E] for another module's exception,
-   aliases resolved, and the current module's name in front of its own. *)
+   aliases resolved, and [Lib.M.E] for one that the current file [Lib]
+   defines in its module [M]. *)
 let display_name env (cstr : Types.constructor_description) =
+  let unit = without_namespace (Env.get_unit_name ()) in
+  let local id =
+    match Hashtbl.find_opt (Request_local.get definitions).defined id with
+    | Some path -> unit :: path
+    | None -> [unit; Ident.name id]
+  in
   match cstr.cstr_kind with
   | Extension_constructor (Pident id) when Ident.is_predef_exn id ->
     Ident.name id
+  | Extension_constructor (Pident id) -> String.concat "." (local id)
   | Extension_constructor (Pdot (prefix, name, _)) -> (
     let prefix = Env.normalize_path None env prefix in
     match Path.flatten prefix with
     | `Ok (head, rest) ->
-      let names = (without_namespace (Ident.name head) :: rest) @ [name] in
-      let names =
-        if Ident.persistent head then names
-        else without_namespace (Env.get_unit_name ()) :: names
+      let head =
+        if Ident.persistent head then [without_namespace (Ident.name head)]
+        else local head
       in
-      String.concat "." names
+      String.concat "." (head @ rest @ [name])
     | `Contains_apply -> Path.name prefix ^ "." ^ name)
-  | Extension_constructor (Pident id) ->
-    without_namespace (Env.get_unit_name ()) ^ "." ^ Ident.name id
   | Extension_constructor (Papply _ as path) -> Path.name path
   | Ordinary_constructor _ -> cstr.cstr_name
 
@@ -101,7 +139,10 @@ let resolve env (attributes : Parsetree.attributes) =
           | Some entry -> entry
           | None ->
             let written = String.concat "." (Longident.flatten lid) in
-            Loc_report.prerr_warning loc (Warnings.Bs_throws_unbound written);
+            let warned = (Request_local.get definitions).warned in
+            if not (Hashtbl.mem warned loc) then (
+              Hashtbl.replace warned loc ();
+              Loc_report.prerr_warning loc (Warnings.Bs_throws_unbound written));
             (written, written))
     in
     match resolved with

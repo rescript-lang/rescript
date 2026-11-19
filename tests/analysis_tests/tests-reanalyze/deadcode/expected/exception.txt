@@ -215,5 +215,13 @@
   Exception Analysis
   ThrowsLibExnCalls.res:81:5-16
   catchRebound might throw ThrowsLibExn.E (ThrowsLibExnCalls.res:82:6) and is not annotated with @throws(ThrowsLibExn.E)
+
+  Exception Analysis
+  ThrowsLibExnCalls.res:110:5-18
+  uncaughtNested might throw ThrowsLibExn.Inner.F (ThrowsLibExnCalls.res:110:26) and is not annotated with @throws(ThrowsLibExn.Inner.F)
+
+  Exception Analysis
+  ThrowsLibExnCalls.res:112:5-17
+  uncaughtLocal might throw Local.G (ThrowsLibExnCalls.res:112:25) and is not annotated with @throws(Local.G)
   
-  Analysis reported 54 issues (Exception Analysis:54)
+  Analysis reported 56 issues (Exception Analysis:56)
