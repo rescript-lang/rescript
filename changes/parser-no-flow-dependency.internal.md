@@ -1,0 +1,1 @@
+- Move `%raw` JavaScript validation out of `Ast_payload`, so the AST modules no longer depend on the Flow JS parser.
