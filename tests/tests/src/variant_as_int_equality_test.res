@@ -125,6 +125,18 @@ describe(__MODULE__, () => {
     eq(__LOC__, toHalf(id(Y)), LHalf)
   })
 
+  // The order of a number and a string is left to the runtime, so a folded
+  // comparison must agree with the same comparison computed at runtime.
+  test("ordering of constructors", () => {
+    eq(__LOC__, One < Two, true)
+    eq(__LOC__, Two <= One, false)
+    eq(__LOC__, id(One) < id(Two), true)
+    eq(__LOC__, A < B, id(A) < id(B))
+    eq(__LOC__, A <= B, id(A) <= id(B))
+    eq(__LOC__, A > B, id(A) > id(B))
+    eq(__LOC__, A >= B, id(A) >= id(B))
+  })
+
   test("switch arms returning different constructors", () => {
     eq(__LOC__, toMixed(X), B)
     eq(__LOC__, toMixed(Y), A)

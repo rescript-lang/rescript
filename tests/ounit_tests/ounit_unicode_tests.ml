@@ -35,6 +35,16 @@ let suites =
   __FILE__
   >::: [
          (__LOC__ >:: fun _ -> Ast_utf8_string.transform_test {|x|} =~ {|x|});
+         ( __LOC__ >:: fun _ ->
+           let ( =? ) (a, b) expected =
+             OUnit.assert_equal expected (Ast_utf8_string.literals_equal a b)
+           in
+           ({|A|}, {|A|}) =? Some true;
+           ({|A|}, {|B|}) =? Some false;
+           ({|\u0041|}, {|\u0041|}) =? Some true;
+           ({|\u0041|}, {|A|}) =? None;
+           ({|\u0041|}, {|\x42|}) =? None;
+           ({|é|}, {|ü|}) =? None );
          (__LOC__ >:: fun _ -> Ast_utf8_string.transform_test "a\nb" =~ {|a\nb|});
          (__LOC__ >:: fun _ -> Ast_utf8_string.transform_test "\\n" =~ "\\n");
          ( __LOC__ >:: fun _ ->
