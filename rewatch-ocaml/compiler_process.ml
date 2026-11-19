@@ -225,8 +225,8 @@ let publish_compiler_artifacts ~artifact_dir ~basename artifacts =
   with error ->
     raise (Compiler_scheduler.Publication_failure (error, !cmi_change))
 
-let namespace_task ~runtime ~artifact_dir ~entry ~package_dirty ~force namespace
-    modules =
+let namespace_task ~project_owner ~runtime ~artifact_dir ~entry ~package_dirty
+    ~force namespace modules =
   let mlmap = Filename.concat artifact_dir (namespace ^ ".mlmap") in
   let contents =
     let buffer = Buffer.create 128 in
@@ -266,16 +266,19 @@ let namespace_task ~runtime ~artifact_dir ~entry ~package_dirty ~force namespace
             task
               {
                 args =
-                  [
-                    "-runtime-path";
-                    runtime;
-                    "-w";
-                    "-49";
-                    "-color";
-                    "always";
-                    "-no-alias-deps";
-                    Filename.basename mlmap;
-                  ];
+                  Option.fold ~none:[]
+                    ~some:(fun owner -> ["-bs-project-owner"; owner])
+                    project_owner
+                  @ [
+                      "-runtime-path";
+                      runtime;
+                      "-w";
+                      "-49";
+                      "-color";
+                      "always";
+                      "-no-alias-deps";
+                      Filename.basename mlmap;
+                    ];
                 cwd = artifact_dir;
               };
           publish =
@@ -322,7 +325,7 @@ let compile_request ~artifact_dir ~(config : Config.t) ~common_args
     (module_ : Source.module_) ~source_kind path =
   let args =
     Compiler_args.compiler_arguments_with_common ~config ~common_args
-      ~module_name:module_.name ~source_kind
+      ~module_name:module_.name ~is_public:module_.is_public ~source_kind
       ~has_interface:(Option.is_some module_.interface)
       ~path
   in

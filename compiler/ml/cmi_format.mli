@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-type pers_flags = Deprecated of string
+type pers_flags = Deprecated of string | Internal of string
 
 type cmi_infos = {
   cmi_name: string;

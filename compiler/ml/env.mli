@@ -205,6 +205,7 @@ type error =
   | Inconsistent_import of string * string * string
   | Missing_module of Location.t * Path.t * Path.t
   | Illegal_value_name of Location.t * string
+  | Internal_module of Location.t * string
 
 exception Error of error
 

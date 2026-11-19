@@ -264,7 +264,7 @@
                   "enum": ["all"]
                 }
               ],
-              "description": "Default: export all modules. It is recommended for library developers to hide some files/interfaces"
+              "description": "Default: export all modules. Unlisted modules are accessible only within their defining ReScript project. Nested source entries inherit this selection unless overridden."
             },
             "resources": {
               "type": "array",

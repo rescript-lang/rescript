@@ -160,6 +160,13 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           || attempt.freshness_mode = Build_attempt.Initialize_freshness
         then
           Compiler_process.namespace_task
+            ~project_owner:
+              (if
+                 List.exists
+                   (fun module_ -> not module_.Source.is_public)
+                   modules
+               then Some (Config.project_owner config)
+               else None)
             ~runtime:prepared.compiler_context.runtime_path ~artifact_dir
             ~entry:(Config.namespace_entry config.namespace)
             ~package_dirty ~force:namespace_state.compile_dirty compiler_name

@@ -295,6 +295,7 @@ let compiler_job_tests =
             implementation = "src/A.res";
             interface = None;
             is_dev = false;
+            is_public = true;
           }
       in
       let compile_job =

@@ -3,6 +3,7 @@ type module_ = {
   implementation: string;
   interface: string option;
   is_dev: bool;
+  is_public: bool;
 }
 
 type discovery = {
@@ -13,7 +14,7 @@ type discovery = {
   gentype_dirs: string list;
 }
 
-type discovered_file = {path: string; modified: float}
+type discovered_file = {path: string; modified: float; is_public: bool}
 type source_kind = Implementation | Interface
 
 type scanned_file = {file: discovered_file; kind: source_kind; is_dev: bool}
@@ -154,6 +155,8 @@ let scan_source ~root (source : Config.source) ~discover_modules ~on_missing
                   {
                     path = without_current_dir_segments relative_path;
                     modified = metadata.Unix.st_mtime;
+                    is_public =
+                      Config.module_is_public source (module_name relative_path);
                   };
                 kind;
                 is_dev = source.is_dev;
@@ -413,6 +416,7 @@ let discover_with_inventory ?(on_orphan = fun _ -> ()) ~on_missing
               implementation = implementation.path;
               interface = Option.map (fun file -> file.path) interface;
               is_dev;
+              is_public = implementation.is_public;
             })
     |> List.of_seq
     |> List.sort (fun a b -> String.compare a.name b.name)

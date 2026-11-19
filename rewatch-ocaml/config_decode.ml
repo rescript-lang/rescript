@@ -97,7 +97,8 @@ let gentype_fields =
 let js_post_build_fields = reject_all_duplicates ["cmd"]
 let dependency_fields = reject_all_duplicates ["name"; "features"]
 
-let source_fields = reject_all_duplicates ["dir"; "subdirs"; "type"; "feature"]
+let source_fields =
+  reject_all_duplicates ["dir"; "subdirs"; "type"; "feature"; "public"]
 
 let package_spec_fields =
   reject_all_duplicates ["module"; "in-source"; "suffix"]
@@ -263,8 +264,8 @@ let dependency_alias path modern legacy fields =
   | None, Some _ -> parse_dependencies path legacy fields
   | None, None -> []
 
-let rec sources_of_json path inherited_dir forced_dev inherited_feature =
-  function
+let rec sources_of_json path inherited_dir forced_dev inherited_feature
+    inherited_public = function
   | `String dir ->
     [
       {
@@ -272,6 +273,7 @@ let rec sources_of_json path inherited_dir forced_dev inherited_feature =
         recurse = false;
         is_dev = Option.value forced_dev ~default:false;
         feature = inherited_feature;
+        public_modules = inherited_public;
       };
     ]
   | `Assoc fields ->
@@ -295,6 +297,17 @@ let rec sources_of_json path inherited_dir forced_dev inherited_feature =
       | None -> inherited_feature
       | Some value -> Some (string path "feature" value)
     in
+    let public_modules =
+      match optional_member "public" fields with
+      | None -> inherited_public
+      | Some (`String "all") -> None
+      | Some (`List values) ->
+        Some (List.map (string path "sources.public") values)
+      | Some _ ->
+        fail path
+          "field \"public\" in \"sources\" must be \"all\" or an array of \
+           module names"
+    in
     let recurse, children =
       match optional_member "subdirs" fields with
       | None -> (false, [])
@@ -302,13 +315,13 @@ let rec sources_of_json path inherited_dir forced_dev inherited_feature =
       | Some (`List values) ->
         ( false,
           List.concat_map
-            (sources_of_json path dir (Some is_dev) feature)
+            (sources_of_json path dir (Some is_dev) feature public_modules)
             values )
       | Some _ ->
         fail path
           "field \"subdirs\" in \"sources\" must be a boolean or an array"
     in
-    {dir; recurse; is_dev; feature} :: children
+    {dir; recurse; is_dev; feature; public_modules} :: children
   | _ ->
     fail path
       "field \"sources\" must be a string, an object, or an array of them"
@@ -317,8 +330,8 @@ let parse_sources path fields =
   match optional_member "sources" fields with
   | None -> []
   | Some (`List values) ->
-    List.concat_map (sources_of_json path "" None None) values
-  | Some value -> sources_of_json path "" None None value
+    List.concat_map (sources_of_json path "" None None None) values
+  | Some value -> sources_of_json path "" None None None value
 
 let nested_unknown_fields parent supported = function
   | `Assoc fields ->

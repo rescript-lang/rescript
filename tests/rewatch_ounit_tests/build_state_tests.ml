@@ -78,6 +78,7 @@ let dependency_state_tests _context =
       implementation = "src/Entry.res";
       interface = None;
       is_dev = false;
+      is_public = true;
     }
   in
   let entry : Module_graph.module_node =

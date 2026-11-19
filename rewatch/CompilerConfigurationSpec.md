@@ -49,8 +49,8 @@ recommended for new projects.
 | files            | array of string          |        |     [_]      |
 | files            | File-Object              |        |     [_]      |
 | generators       | array of Build-Generator |        |     [_]      |
-| public           | "all"                    |        |     [_]      |
-| public           | array of string          |        |     [_]      |
+| public           | "all"                    | See [ProjectVisibility.md](./ProjectVisibility.md). |     [x]      |
+| public           | array of string          | Project-owned units; inherited by subdirectories. |     [x]      |
 | resources        | array of string          |        |     [_]      |
 | subdirs          | boolean                  |        |     [x]      |
 | subdirs          | string                   |        |     [_]      |

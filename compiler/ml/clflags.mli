@@ -23,6 +23,8 @@ type t = {
   keep_locs: bool ref;
   color: Misc.Color.setting option ref;
   assume_no_mli: mli_status ref;
+  project_owner: string option ref;
+  internal_unit: bool ref;
   dont_record_crc_unit: string option ref;
   bs_gentype: bool ref;
   jsx_preserve: bool ref;

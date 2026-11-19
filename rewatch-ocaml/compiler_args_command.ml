@@ -113,8 +113,9 @@ let run ~verbosity path =
     Compiler_args.compiler_arguments ~project_root ~config ~runtime
       ~dependency_dirs
       ~module_name:(Source.module_name source)
-      ~source_kind ~has_interface ~watch:false ~gentype_dependency_args:[]
-      ~path:relative
+      ~source_kind ~has_interface
+      ~is_public:(Config.source_is_public config relative)
+      ~watch:false ~gentype_dependency_args:[] ~path:relative
   in
   Yojson.Safe.pretty_to_string
     (`Assoc
