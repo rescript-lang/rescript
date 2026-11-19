@@ -75,6 +75,7 @@ type t =
   | Bs_todo of string option (* 110 *)
   | Bs_private_record_mutation of string (* 111 *)
   | Bs_record_rest_optional_overlap of string list (* 112 *)
+  | Bs_throws_unbound of string (* 113 *)
 
 (* If you remove a warning, leave a hole in the numbering.  NEVER change
    the numbers of existing warnings.
@@ -128,8 +129,9 @@ let number = function
   | Bs_todo _ -> 110
   | Bs_private_record_mutation _ -> 111
   | Bs_record_rest_optional_overlap _ -> 112
+  | Bs_throws_unbound _ -> 113
 
-let last_warning_number = 112
+let last_warning_number = 113
 
 let letter_all =
   let rec loop i = if i = 0 then [] else i :: loop (i - 1) in
@@ -465,6 +467,11 @@ let message = function
        you implement this before running the code."
   | Bs_private_record_mutation field_name ->
     Printf.sprintf "Mutation of private record field %S." field_name
+  | Bs_throws_unbound name ->
+    Printf.sprintf
+      "@throws names %s, which is not an exception in scope here. Exception \
+       analysis cannot match it with the exceptions callers catch."
+      name
 
 let sub_locs = function
   | Deprecated (_, def, use, _) ->
@@ -563,6 +570,7 @@ let descriptions =
     (110, "Todo found");
     (111, "Mutation of private record field");
     (112, "Record rest pattern will always be empty");
+    (113, "@throws names something that is not an exception in scope");
   ]
 
 let help_warnings () =

@@ -109,16 +109,17 @@ module Event = struct
     if config.Dce_config.cli.debug then (
       Log_.item "@.";
       Log_.item "Events combine: #events %d@." (events |> List.length));
-    let exn_table = Hashtbl.create 1 in
+    let exn_table = Exn.Table.create 1 in
     let extend_exn_table exn loc =
-      match Hashtbl.find_opt exn_table exn with
-      | Some loc_set -> Hashtbl.replace exn_table exn (Loc_set.add loc loc_set)
-      | None -> Hashtbl.replace exn_table exn (Loc_set.add loc Loc_set.empty)
+      match Exn.Table.find_opt exn_table exn with
+      | Some loc_set ->
+        Exn.Table.replace exn_table exn (Loc_set.add loc loc_set)
+      | None -> Exn.Table.replace exn_table exn (Loc_set.add loc Loc_set.empty)
     in
     let shrink_exn_table exn loc =
-      match Hashtbl.find_opt exn_table exn with
+      match Exn.Table.find_opt exn_table exn with
       | Some loc_set ->
-        Hashtbl.replace exn_table exn (Loc_set.remove loc loc_set)
+        Exn.Table.replace exn_table exn (Loc_set.remove loc loc_set)
       | None -> ()
     in
     let rec loop exn_set events =
@@ -208,6 +209,21 @@ module Checks = struct
     in
     let missing_annotations = Exceptions.diff throw_set exceptions in
     let redundant_annotations = Exceptions.diff exceptions throw_set in
+    (* The compiler names a module's own exceptions with the module's name in
+       front, as [Lib.E]; messages about [Lib] show them as [E]. *)
+    let prefix = module_name ^ "." in
+    let relative exn =
+      let name = Exn.to_string exn in
+      if String.starts_with ~prefix name then
+        Exn.with_name
+          (String.sub name (String.length prefix)
+             (String.length name - String.length prefix))
+          exn
+      else exn
+    in
+    let throw_set = Exceptions.map relative throw_set in
+    let missing_annotations = Exceptions.map relative missing_annotations in
+    let redundant_annotations = Exceptions.map relative redundant_annotations in
     (if not (Exceptions.is_empty missing_annotations) then
        let description =
          Issue.ExceptionAnalysisMissing
@@ -261,8 +277,8 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
     |> List.fold_left
          (fun acc desc ->
            match desc with
-           | Typedtree.Tpat_construct ({txt}, _, _) ->
-             Exceptions.add (Exn.from_lid txt) acc
+           | Typedtree.Tpat_construct ({txt}, cstr, _) ->
+             Exceptions.add (Exn.of_constructor txt cstr) acc
            | _ -> acc)
          Exceptions.empty
   in
@@ -306,8 +322,8 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
   in
   let throw_args args =
     match args with
-    | [(_, Some {Typedtree.exp_desc = Texp_construct ({txt}, _, _)})] ->
-      [Exn.from_lid txt] |> Exceptions.from_list
+    | [(_, Some {Typedtree.exp_desc = Texp_construct ({txt}, cstr, _)})] ->
+      [Exn.of_constructor txt cstr] |> Exceptions.from_list
     | [(_, Some {Typedtree.exp_desc = Texp_ident _})] ->
       [Exn.from_string "genericException"] |> Exceptions.from_list
     | _ -> [Exn.from_string "TODO_from_raise1"] |> Exceptions.from_list
@@ -317,29 +333,15 @@ let traverse_ast ~file ~values_builder ~checks_builder () =
     |> Annotation.get_attribute_payload (fun s -> s = "doesNotThrow")
     <> None
   in
+  (* The type checker resolves the names a [@throws] lists where they are
+     written, and records the exceptions in [@res.throws]. *)
   let get_exceptions_from_annotations attributes =
-    let throws_annotation_payload =
-      attributes |> Annotation.get_attribute_payload (fun s -> s = "throws")
-    in
-    let rec get_exceptions payload =
-      match payload with
-      | Annotation.StringPayload s ->
-        [Exn.from_string s] |> Exceptions.from_list
-      | Annotation.ConstructPayload s when s <> "::" ->
-        [Exn.from_string s] |> Exceptions.from_list
-      | Annotation.IdentPayload s ->
-        [Exn.from_string (s |> Longident.flatten |> String.concat ".")]
-        |> Exceptions.from_list
-      | Annotation.TuplePayload tuple ->
-        tuple
-        |> List.map (fun payload ->
-            payload |> get_exceptions |> Exceptions.to_list)
-        |> List.concat |> Exceptions.from_list
-      | _ -> Exceptions.empty
-    in
-    match throws_annotation_payload with
+    match Throws_attribute.read attributes with
     | None -> Exceptions.empty
-    | Some payload -> payload |> get_exceptions
+    | Some entries ->
+      entries
+      |> List.map (fun (name, id) -> Exn.make ~id ~name)
+      |> Exceptions.from_list
   in
   let expr ~(module_path : Module_path.t) (self : Tast_mapper.mapper)
       (expr : Typedtree.expression) =

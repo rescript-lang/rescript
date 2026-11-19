@@ -203,5 +203,17 @@
   Exception Analysis
   ThrowsDeclCalls.res:37:5-22
   callViaLetIncluded might throw Not_found (ThrowsDeclCalls.res:37:30) and is not annotated with @throws(Not_found)
+
+  Exception Analysis
+  ThrowsLibExnCalls.res:42:5-23
+  catchUnrelatedLocal might throw ThrowsLibExn.E (ThrowsLibExnCalls.res:43:6) and is not annotated with @throws(ThrowsLibExn.E)
+
+  Exception Analysis
+  ThrowsLibExnCalls.res:48:5-12
+  uncaught might throw ThrowsLibExn.E (ThrowsLibExnCalls.res:48:20) and is not annotated with @throws(ThrowsLibExn.E)
+
+  Exception Analysis
+  ThrowsLibExnCalls.res:81:5-16
+  catchRebound might throw ThrowsLibExn.E (ThrowsLibExnCalls.res:82:6) and is not annotated with @throws(ThrowsLibExn.E)
   
-  Analysis reported 44 issues (Exception Analysis:44)
+  Analysis reported 54 issues (Exception Analysis:54)

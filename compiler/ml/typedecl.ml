@@ -1947,6 +1947,7 @@ let transl_value_decl env loc valdecl =
      the attribute, as it always has. *)
   let attributes =
     Ast_helper.Val.description_attributes {valdecl with pval_attributes}
+    |> Throws_attribute.resolve env
   in
   let v =
     match prim with
