@@ -7,6 +7,36 @@ function id(x) {
   return x;
 }
 
+function toNull(x) {
+  switch (x) {
+    case "Y" :
+      return null;
+    case "X" :
+    case "Z" :
+      return 1;
+  }
+}
+
+function toTrue(x) {
+  switch (x) {
+    case "Y" :
+      return true;
+    case "X" :
+    case "Z" :
+      return 2;
+  }
+}
+
+function toHalf(x) {
+  switch (x) {
+    case "Y" :
+      return 1.5;
+    case "X" :
+    case "Z" :
+      return 4;
+  }
+}
+
 function toMixed(x) {
   switch (x) {
     case "Y" :
@@ -19,43 +49,67 @@ function toMixed(x) {
 
 Mocha.describe("Variant_as_int_equality_test", () => {
   Mocha.test("an @as(int) constructor and the constructor at its position", () => {
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 42, characters 7-14", 1 === "B", false);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 43, characters 7-14", 1 !== "B", true);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 44, characters 7-14", 1 === "x", false);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 45, characters 7-14", id(1) === id("B"), false);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 46, characters 7-14", id(1) === id("x"), false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 76, characters 7-14", 1 === "B", false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 77, characters 7-14", 1 !== "B", true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 78, characters 7-14", 1 === "x", false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 79, characters 7-14", id(1) === id("B"), false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 80, characters 7-14", id(1) === id("x"), false);
   });
   Mocha.test("constructors equal to themselves", () => {
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 50, characters 7-14", true, true);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 51, characters 7-14", true, true);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 52, characters 7-14", false, false);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 53, characters 7-14", true, true);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 54, characters 7-14", id("B") === id("C"), false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 84, characters 7-14", true, true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 85, characters 7-14", true, true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 86, characters 7-14", false, false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 87, characters 7-14", true, true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 88, characters 7-14", id("B") === id("C"), false);
   });
   Mocha.test("a coerced @as(int) constructor and an int", () => {
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 58, characters 7-14", true, true);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 59, characters 7-14", false, false);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 60, characters 7-14", id(1) === 1, true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 92, characters 7-14", true, true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 93, characters 7-14", false, false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 94, characters 7-14", id(1) === 1, true);
   });
   Mocha.test("@as strings spelled differently with the same value", () => {
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 64, characters 7-14", "\u0041" === "A", true);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 65, characters 7-14", "\u0041" !== "A", false);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 66, characters 7-14", id("\u0041") === "A", true);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 67, characters 7-14", "\u0041" === "\x42", false);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 68, characters 7-14", id("\u0041") === id("\x42"), false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 98, characters 7-14", "\u0041" === "A", true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 99, characters 7-14", "\u0041" !== "A", false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 100, characters 7-14", id("\u0041") === "A", true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 101, characters 7-14", "\u0041" === "\x42", false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 102, characters 7-14", id("\u0041") === id("\x42"), false);
+  });
+  Mocha.test("literal constructors and the @as(int) constructor at their position", () => {
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 106, characters 7-14", null === 1, false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 107, characters 7-14", true === 2, false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 108, characters 7-14", 1.5 === 4, false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 109, characters 7-14", null === true, false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 110, characters 7-14", null === null, true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 111, characters 7-14", id(null) === id(1), false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 112, characters 7-14", id(true) === id(2), false);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 113, characters 7-14", id(1.5) === id(4), false);
+  });
+  Mocha.test("switch arms returning literal constructors", () => {
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 117, characters 7-14", null, null);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 118, characters 7-14", true, true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 119, characters 7-14", 1.5, 1.5);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 120, characters 7-14", toNull(id("X")), 1);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 121, characters 7-14", toNull(id("Y")), null);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 122, characters 7-14", toTrue(id("X")), 2);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 123, characters 7-14", toTrue(id("Y")), true);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 124, characters 7-14", toHalf(id("X")), 4);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 125, characters 7-14", toHalf(id("Y")), 1.5);
   });
   Mocha.test("switch arms returning different constructors", () => {
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 72, characters 7-14", "B", "B");
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 73, characters 7-14", 1, 1);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 74, characters 7-14", "B", "B");
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 75, characters 7-14", toMixed(id("X")), "B");
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 76, characters 7-14", toMixed(id("Y")), 1);
-    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 77, characters 7-14", toMixed(id("Z")), "B");
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 129, characters 7-14", "B", "B");
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 130, characters 7-14", 1, 1);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 131, characters 7-14", "B", "B");
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 132, characters 7-14", toMixed(id("X")), "B");
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 133, characters 7-14", toMixed(id("Y")), 1);
+    Test_utils.eq("File \"variant_as_int_equality_test.res\", line 134, characters 7-14", toMixed(id("Z")), "B");
   });
 });
 
 export {
   id,
+  toNull,
+  toTrue,
+  toHalf,
   toMixed,
 }
 /*  Not a pure module */

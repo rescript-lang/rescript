@@ -65,10 +65,12 @@ type int_value =
 
 let int_value (i : int32) (comment : pointer_info) : int_value =
   match comment with
-  | None | Pt_assertfalse | Some _ -> Number i
-  | Pt_constructor {cstr_name = {tag_type = Some (Int value)}} ->
-    Number (Int32.of_int value)
-  | Pt_constructor {cstr_name = {name = "[]"; tag_type = None}} -> Number i
+  (* [Lam_constant_convert] already stores an [@as(int)] value in [i]. *)
+  | None | Pt_assertfalse | Some _
+  | Pt_constructor
+      {cstr_name = {tag_type = Some (Int _)} | {name = "[]"; tag_type = None}}
+    ->
+    Number i
   | Pt_constructor {cstr_name = {name; tag_type = None}} -> String name
   | Pt_constructor {cstr_name = {tag_type = Some (String s)}} -> String s
   | Pt_constructor

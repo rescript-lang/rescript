@@ -7,9 +7,11 @@ has none. Folding an equality between constructors, or merging switch arms
 that return them, must compare those values, not the constructor's position in
 its type, which an `@as(int)` value can collide with.
 
-Each comparison is computed with constants, which the optimizer folds, and
+Each comparison is computed with constants, which the optimizer may fold, and
 through [id], whose [@inline(never)] leaves the comparison to the runtime. The
-compiled output next to this file shows which comparisons fold.
+compiled output next to this file shows which comparisons fold; a comparison
+whose result cannot be known from the constants, such as a number against a
+string, is left to the runtime.
 */
 
 @inline(never) let id = x => x
@@ -28,6 +30,38 @@ type source = X | Y | Z
 // `EscapedB` is "B".
 type escaped = | @as("\u0041") Escaped | @as("\x42") EscapedB
 @unboxed type letter = | @as("A") Letter | Text(string)
+
+// Each literal is at the position matching the @as(int) value before it:
+// `LNull` and `LOne` at 1, `LTrue` and `LTwo` at 2, `LHalf` and `LFour` at 4.
+type literal =
+  | @as(1) LOne
+  | @as(null) LNull
+  | @as(true) LTrue
+  | @as(2) LTwo
+  | @as(1.5) LHalf
+  | @as(4) LFour
+
+// The arms for `X` and `Z` may be merged, but not with the arm for `Y`.
+let toNull = (x: source): literal =>
+  switch x {
+  | X => LOne
+  | Y => LNull
+  | Z => LOne
+  }
+
+let toTrue = (x: source): literal =>
+  switch x {
+  | X => LTwo
+  | Y => LTrue
+  | Z => LTwo
+  }
+
+let toHalf = (x: source): literal =>
+  switch x {
+  | X => LFour
+  | Y => LHalf
+  | Z => LFour
+  }
 
 // The arms for `X` and `Z` may be merged, but not with the arm for `Y`.
 let toMixed = (x: source): mixed =>
@@ -66,6 +100,29 @@ describe(__MODULE__, () => {
     eq(__LOC__, ((id(Escaped) :> string) :> letter) == Letter, true)
     eq(__LOC__, Escaped == EscapedB, false)
     eq(__LOC__, id(Escaped) == id(EscapedB), false)
+  })
+
+  test("literal constructors and the @as(int) constructor at their position", () => {
+    eq(__LOC__, LNull == LOne, false)
+    eq(__LOC__, LTrue == LTwo, false)
+    eq(__LOC__, LHalf == LFour, false)
+    eq(__LOC__, LNull == LTrue, false)
+    eq(__LOC__, LNull == LNull, true)
+    eq(__LOC__, id(LNull) == id(LOne), false)
+    eq(__LOC__, id(LTrue) == id(LTwo), false)
+    eq(__LOC__, id(LHalf) == id(LFour), false)
+  })
+
+  test("switch arms returning literal constructors", () => {
+    eq(__LOC__, toNull(Y), LNull)
+    eq(__LOC__, toTrue(Y), LTrue)
+    eq(__LOC__, toHalf(Y), LHalf)
+    eq(__LOC__, toNull(id(X)), LOne)
+    eq(__LOC__, toNull(id(Y)), LNull)
+    eq(__LOC__, toTrue(id(X)), LTwo)
+    eq(__LOC__, toTrue(id(Y)), LTrue)
+    eq(__LOC__, toHalf(id(X)), LFour)
+    eq(__LOC__, toHalf(id(Y)), LHalf)
   })
 
   test("switch arms returning different constructors", () => {
