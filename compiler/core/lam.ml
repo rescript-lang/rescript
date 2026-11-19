@@ -554,10 +554,12 @@ let prim ~primitive:(prim : Lam_primitive.t) ~args loc : t =
       with
       | Number a, Number b -> Lift.bool (Lam_compat.cmp_int32 cmp a b)
       | String a, String b -> (
-        match cmp with
-        | Ceq -> Lift.bool (a = b)
-        | Cneq -> Lift.bool (a <> b)
-        | Cgt | Cle | Clt | Cge -> default ())
+        (* [@as] strings are kept as written, so different spellings may
+           still be the same JavaScript string. *)
+        match (cmp, Ast_utf8_string.literals_equal a b) with
+        | Ceq, Some equal -> Lift.bool equal
+        | Cneq, Some equal -> Lift.bool (not equal)
+        | (Ceq | Cneq), None | (Cgt | Cle | Clt | Cge), _ -> default ())
       | (Number _ | String _ | Literal _), _ -> default ())
     | Pfloatcomp cmp, Const_float a, Const_float b ->
       (* FIXME: could raise? *)

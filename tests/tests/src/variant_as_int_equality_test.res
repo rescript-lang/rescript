@@ -24,6 +24,11 @@ type numbers = | @as(1) One | @as(2) Two
 
 type source = X | Y | Z
 
+// `Escaped` is written with an escape, `Letter` without, but both are "A".
+// `EscapedB` is "B".
+type escaped = | @as("\u0041") Escaped | @as("\x42") EscapedB
+@unboxed type letter = | @as("A") Letter | Text(string)
+
 // The arms for `X` and `Z` may be merged, but not with the arm for `Y`.
 let toMixed = (x: source): mixed =>
   switch x {
@@ -53,6 +58,14 @@ describe(__MODULE__, () => {
     eq(__LOC__, (One :> int) == 1, true)
     eq(__LOC__, (Two :> int) == 1, false)
     eq(__LOC__, (id(One) :> int) == 1, true)
+  })
+
+  test("@as strings spelled differently with the same value", () => {
+    eq(__LOC__, ((Escaped :> string) :> letter) == Letter, true)
+    eq(__LOC__, ((Escaped :> string) :> letter) != Letter, false)
+    eq(__LOC__, ((id(Escaped) :> string) :> letter) == Letter, true)
+    eq(__LOC__, Escaped == EscapedB, false)
+    eq(__LOC__, id(Escaped) == id(EscapedB), false)
   })
 
   test("switch arms returning different constructors", () => {

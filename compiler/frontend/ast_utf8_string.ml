@@ -207,3 +207,8 @@ let rec check_no_escapes_or_unicode (s : string) (byte_offset : int)
     | Invalid | Cont _ | Leading _ -> false
 
 let simple_comparison s = check_no_escapes_or_unicode s 0 (String.length s)
+
+let literals_equal a b =
+  if Ext_string.equal a b then Some true
+  else if simple_comparison a && simple_comparison b then Some false
+  else None

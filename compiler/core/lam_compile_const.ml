@@ -42,6 +42,8 @@ let rec translate_some (x : Lam_constant.t) : J.expression =
       (E.optional_block (translate (Const_js_undefined {is_unit = false})))
 
 and translate (x : Lam_constant.t) : J.expression =
+  (* [Lam_constant.int_value] describes the value a [Const_int] is compiled to
+     here, and must be kept in sync with it. *)
   match x with
   | Const_module_alias -> E.undefined (*  TODO *)
   | Const_some s -> translate_some s
