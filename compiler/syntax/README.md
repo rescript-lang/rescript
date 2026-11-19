@@ -60,7 +60,7 @@ parser interface.
 A syntax change can affect more than the grammar. Check each relevant layer:
 
 1. scanner tokens and parser recovery;
-2. the current parsetree in `compiler/ml/parsetree.ml`;
+2. the current parsetree in `compiler/ast/parsetree.ml`;
 3. printing, parentheses, and comment attachment;
 4. the v0 AST bridges in `compiler/ml/ast_mapper_from0.ml` and
    `compiler/ml/ast_mapper_to0.ml`;

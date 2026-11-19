@@ -22,4 +22,4 @@
  (private_modules cmt_format_common cmt_format_persistence)
  (instrumentation
   (backend bisect_ppx))
- (libraries ext flow_parser))
+ (libraries ext rescript_ast flow_parser))

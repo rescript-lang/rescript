@@ -2,4 +2,4 @@
  (name analysis)
  (instrumentation
   (backend bisect_ppx))
- (libraries unix str ext ml yojson lsp syntax reanalyze))
+ (libraries unix str ext ml yojson lsp syntax outcome_printer reanalyze))

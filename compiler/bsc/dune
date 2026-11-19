@@ -24,7 +24,15 @@
  (modules rescript_compiler_driver rescript_compiler_build_identity)
  (instrumentation
   (backend bisect_ppx))
- (libraries common core depends flow_parser gentype syntax unix))
+ (libraries
+  common
+  core
+  depends
+  flow_parser
+  gentype
+  outcome_printer
+  syntax
+  unix))
 
 (executable
  (name rescript_compiler_main)
