@@ -1,0 +1,1 @@
+- Find References and Rename no longer list a value of a `.resi` file twice and miss its `.res` side, and go to definition from a `.resi` declaration opens the implementation again.

@@ -8,7 +8,15 @@ Rename src/RenameWithInterface.resi 0:4 y
           "end": { "character": 5, "line": 0 },
           "start": { "character": 4, "line": 0 }
         }
-      },
+      }
+    ],
+    "textDocument": {
+      "uri": "file:///RenameWithInterface.resi",
+      "version": 0
+    }
+  },
+  {
+    "edits": [
       {
         "newText": "y",
         "range": {
@@ -18,7 +26,7 @@ Rename src/RenameWithInterface.resi 0:4 y
       }
     ],
     "textDocument": {
-      "uri": "file:///RenameWithInterface.resi",
+      "uri": "file:///RenameWithInterface.res",
       "version": 0
     }
   },
