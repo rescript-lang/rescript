@@ -113,7 +113,12 @@ and translate_signature_item ~config ~output_file_relative ~resolver ~type_env
       value_description.val_attributes
       |> Annotation.has_attribute Annotation.tag_is_gentype_import
     in
-    if value_description.val_prim <> None || is_import then
+    let is_primitive =
+      match value_description.val_val.val_kind with
+      | Val_prim _ -> true
+      | Val_reg -> false
+    in
+    if is_primitive || is_import then
       value_description
       |> Translation.translate_primitive ~config ~output_file_relative ~resolver
            ~type_env

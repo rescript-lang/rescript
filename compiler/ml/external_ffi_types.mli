@@ -40,7 +40,7 @@ type arg_type = External_arg_spec.attr
 type arg_label = External_arg_spec.label
 
 (* The declaration, as the attribute language states it. The backend
-   compiles it directly; digestion validates it with [check_decl]. *)
+   compiles it directly; resolution validates it with [check_decl]. *)
 type module_source =
   | Module_named of external_module_name (* @module("...") payload forms *)
   | Module_itself
@@ -89,9 +89,12 @@ type t = private
   | Ffi_bs of External_arg_spec.params * return_wrapper * external_decl
   | Ffi_obj_create of External_arg_spec.obj_params
 
-val check_decl : ?loc:Location.t -> external_decl -> prim_name:string -> bool
-(** Validation of a declaration; returns whether the binding refers to a
-    package-relative path (which disables cross-module inlining). *)
+val check_decl : ?loc:Location.t -> external_decl -> prim_name:string -> unit
+(** Validation of a declaration *)
+
+val is_relative : external_decl -> prim_name:string -> bool
+(** Does the declaration refer to a package-relative path? Other modules must
+    not inline such an external, since the path is relative to its own file. *)
 
 val inclusion_compatible : t -> t -> bool
 (** [inclusion_compatible impl intf]: can an implementation's spec satisfy an

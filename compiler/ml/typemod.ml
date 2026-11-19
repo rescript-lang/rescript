@@ -1469,9 +1469,56 @@ and type_structure funct_body anchor env sstr =
             Sig_value (id, vd))
           (let_bound_idents defs),
         newenv )
-    | Pstr_primitive sdesc ->
+    | Pstr_primitive sdesc -> (
       let desc, newenv = Typedecl.transl_value_decl env loc sdesc in
-      (Tstr_primitive desc, [Sig_value (desc.val_id, desc.val_val)], newenv)
+      let item = Sig_value (desc.val_id, desc.val_val) in
+      match desc.val_val.val_kind with
+      | Val_prim prim when Primitive.no_cross_module_inline prim ->
+        (* An external with a relative path, such as [@module("./x")], must
+           not be inlined in other modules, so the module exports it as a
+           value: [include (struct external x = ... end : {let x: t})]. *)
+        let structure =
+          {
+            mod_desc =
+              Tmod_structure
+                {
+                  str_items =
+                    [
+                      {
+                        str_desc = Tstr_primitive desc;
+                        str_loc = loc;
+                        str_env = env;
+                      };
+                    ];
+                  str_type = [item];
+                  str_final_env = newenv;
+                };
+            mod_type = Mty_signature [item];
+            mod_env = env;
+            mod_attributes = [];
+            mod_loc = loc;
+          }
+        in
+        let value_sig =
+          Mty_signature
+            [Sig_value (desc.val_id, {desc.val_val with val_kind = Val_reg})]
+        in
+        let modl = wrap_constraint env structure value_sig Tmodtype_implicit in
+        (* Rename the identifier, as an [include] does *)
+        let sg =
+          Subst.signature Subst.identity
+            (extract_sig_open env loc modl.mod_type)
+        in
+        let incl =
+          {
+            incl_mod = modl;
+            incl_type = sg;
+            incl_attributes = [];
+            incl_loc = loc;
+          }
+        in
+        (Tstr_include incl, sg, Env.add_signature sg env)
+      | _ -> (Tstr_primitive desc, [item], newenv))
     | Pstr_type (rec_flag, sdecls) ->
       List.iter (fun decl -> check_name check_type names decl.ptype_name) sdecls;
       let decls, newenv = Typedecl.transl_type_decl env rec_flag sdecls in

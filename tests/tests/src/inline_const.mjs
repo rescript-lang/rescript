@@ -27,12 +27,18 @@ let h = "hello";
 
 let hh = "hellohello";
 
+let bigs = [
+  10n,
+  -3n
+];
+
 export {
   x,
   N,
   N1,
   h,
   hh,
+  bigs,
   BigintConsts,
 }
 /*  Not a pure module */

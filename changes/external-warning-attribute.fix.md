@@ -1,0 +1,1 @@
+- `@warning` on an external, or a `@@warning` anywhere before it in the file, now applies to the warnings about its FFI attributes, such as an unused `@as`.

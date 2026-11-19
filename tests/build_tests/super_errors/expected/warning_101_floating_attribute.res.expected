@@ -1,0 +1,13 @@
+
+  [1;31mWarning number 101[0m (configured as error) 
+  [36m/.../fixtures/warning_101_floating_attribute.res[0m:[2m2:32-34[0m
+
+  1 [2m│[0m // A @@warning in the middle of a file applies to the externals after it
+    [2m│[0m .
+  [1;31m2[0m [2m│[0m @send external first: (string, [1;31m@as[0m("x") int) => unit = "first"
+  3 [2m│[0m 
+  4 [2m│[0m @@warning("-101")
+
+  Unused attribute: @as
+This attribute has no effect here.
+For example, some attributes are only meaningful in externals.
