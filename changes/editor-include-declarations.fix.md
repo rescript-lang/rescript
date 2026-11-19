@@ -1,0 +1,1 @@
+- Editor: find references, definition and rename handle members brought in by `include` correctly, without duplicate or wrong locations.

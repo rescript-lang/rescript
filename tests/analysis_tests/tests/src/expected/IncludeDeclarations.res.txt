@@ -1,0 +1,436 @@
+References src/IncludeDeclarations.res 6:4
+[
+  {
+    "range": {
+      "end": { "character": 30, "line": 0 },
+      "start": { "character": 28, "line": 0 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 6, "line": 6 },
+      "start": { "character": 4, "line": 6 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 8:4
+[
+  {
+    "range": {
+      "end": { "character": 55, "line": 0 },
+      "start": { "character": 53, "line": 0 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 6, "line": 8 },
+      "start": { "character": 4, "line": 8 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 16:6
+[
+  {
+    "range": {
+      "end": { "character": 80, "line": 0 },
+      "start": { "character": 78, "line": 0 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 10, "line": 22 },
+      "start": { "character": 8, "line": 22 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 8, "line": 16 },
+      "start": { "character": 6, "line": 16 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 22:8
+[
+  {
+    "range": {
+      "end": { "character": 80, "line": 0 },
+      "start": { "character": 78, "line": 0 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 10, "line": 22 },
+      "start": { "character": 8, "line": 22 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 8, "line": 16 },
+      "start": { "character": 6, "line": 16 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 25:10
+[
+  {
+    "range": {
+      "end": { "character": 41, "line": 5 },
+      "start": { "character": 38, "line": 5 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 5 },
+      "start": { "character": 15, "line": 5 }
+    },
+    "uri": "file:///IncludeDeclarationsLib.res"
+  },
+  {
+    "range": {
+      "end": { "character": 13, "line": 25 },
+      "start": { "character": 10, "line": 25 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+Definition src/IncludeDeclarations.res 27:10
+{
+  "range": {
+    "end": { "character": 24, "line": 5 },
+    "start": { "character": 21, "line": 5 }
+  },
+  "uri": "file:///IncludeDeclarationsLib.res"
+}
+
+References src/IncludeDeclarations.res 32:10
+[
+  {
+    "range": {
+      "end": { "character": 52, "line": 7 },
+      "start": { "character": 50, "line": 7 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 15, "line": 9 },
+      "start": { "character": 13, "line": 9 }
+    },
+    "uri": "file:///IncludeDeclarationsLib.res"
+  },
+  {
+    "range": {
+      "end": { "character": 12, "line": 32 },
+      "start": { "character": 10, "line": 32 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 34:8
+[
+  {
+    "range": {
+      "end": { "character": 43, "line": 9 },
+      "start": { "character": 39, "line": 9 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 10, "line": 10 },
+      "start": { "character": 6, "line": 10 }
+    },
+    "uri": "file:///IncludeDeclarationsLib.res"
+  },
+  {
+    "range": {
+      "end": { "character": 12, "line": 34 },
+      "start": { "character": 8, "line": 34 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 44:8
+[
+  {
+    "range": {
+      "end": { "character": 30, "line": 3 },
+      "start": { "character": 28, "line": 3 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 10, "line": 44 },
+      "start": { "character": 8, "line": 44 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 17, "line": 38 },
+      "start": { "character": 15, "line": 38 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+Definition src/IncludeDeclarations.res 46:9
+{
+  "range": {
+    "end": { "character": 22, "line": 38 },
+    "start": { "character": 20, "line": 38 }
+  },
+  "uri": "file:///IncludeDeclarations.res"
+}
+
+References src/IncludeDeclarations.res 48:10
+[
+  {
+    "range": {
+      "end": { "character": 43, "line": 4 },
+      "start": { "character": 41, "line": 4 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 12, "line": 48 },
+      "start": { "character": 10, "line": 48 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 14, "line": 39 },
+      "start": { "character": 12, "line": 39 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 52:6
+[
+  {
+    "range": {
+      "end": { "character": 30, "line": 1 },
+      "start": { "character": 28, "line": 1 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 32, "line": 97 },
+      "start": { "character": 30, "line": 97 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 21, "line": 97 },
+      "start": { "character": 19, "line": 97 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 62 },
+      "start": { "character": 17, "line": 62 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 14, "line": 62 },
+      "start": { "character": 12, "line": 62 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 8, "line": 52 },
+      "start": { "character": 6, "line": 52 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 63:11
+[
+  {
+    "range": {
+      "end": { "character": 16, "line": 63 },
+      "start": { "character": 11, "line": 63 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 33, "line": 63 },
+      "start": { "character": 28, "line": 63 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 14, "line": 54 },
+      "start": { "character": 9, "line": 54 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 81:9
+[
+  {
+    "range": {
+      "end": { "character": 10, "line": 81 },
+      "start": { "character": 9, "line": 81 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 7, "line": 69 },
+      "start": { "character": 6, "line": 69 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 83:21
+[
+  {
+    "range": {
+      "end": { "character": 22, "line": 83 },
+      "start": { "character": 21, "line": 83 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 9, "line": 71 },
+      "start": { "character": 8, "line": 71 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 85:16
+[
+  {
+    "range": {
+      "end": { "character": 17, "line": 85 },
+      "start": { "character": 16, "line": 85 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 14, "line": 72 },
+      "start": { "character": 13, "line": 72 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 87:24
+[
+  {
+    "range": {
+      "end": { "character": 25, "line": 87 },
+      "start": { "character": 24, "line": 87 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 11, "line": 74 },
+      "start": { "character": 10, "line": 74 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 97:30
+[
+  {
+    "range": {
+      "end": { "character": 30, "line": 1 },
+      "start": { "character": 28, "line": 1 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 32, "line": 97 },
+      "start": { "character": 30, "line": 97 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 21, "line": 97 },
+      "start": { "character": 19, "line": 97 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 62 },
+      "start": { "character": 17, "line": 62 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 14, "line": 62 },
+      "start": { "character": 12, "line": 62 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 8, "line": 52 },
+      "start": { "character": 6, "line": 52 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarations.res 107:32
+[
+  {
+    "range": {
+      "end": { "character": 9, "line": 102 },
+      "start": { "character": 7, "line": 102 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 34, "line": 107 },
+      "start": { "character": 32, "line": 107 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+

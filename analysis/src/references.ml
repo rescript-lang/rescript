@@ -288,16 +288,17 @@ let resolve_module_definition ~state ~(file : File.t) ~package stamp =
       in
       Some (file.uri, loc))
 
-let definition ~state ~file ~package stamp (tip : Tip.t) =
+let rec definition ~state ~(file : File.t) ~package stamp (tip : Tip.t) =
   match tip with
-  | Constructor name -> (
-    match get_constructor file stamp name with
-    | None -> None
-    | Some constructor -> Some (file.uri, constructor.cname.loc))
-  | Field name -> (
-    match get_field file stamp name with
-    | None -> None
-    | Some field -> Some (file.uri, field.fname.loc))
+  | Constructor name ->
+    get_constructor file stamp name
+    |> Option.map (fun (constructor : Constructor.t) ->
+        (file.uri, constructor.cname.loc))
+    |> label_definition ~state ~file ~package stamp tip
+  | Field name ->
+    get_field file stamp name
+    |> Option.map (fun field -> (file.uri, field.fname.loc))
+    |> label_definition ~state ~file ~package stamp tip
   | Module -> resolve_module_definition ~state ~file ~package stamp
   | _ -> (
     match declared_for_tip ~stamps:file.stamps stamp tip with
@@ -318,6 +319,28 @@ let definition ~state ~file ~package stamp (tip : Tip.t) =
       in
       maybe_log ("Inner uri " ^ Uri.to_string uri);
       Some (uri, loc))
+
+(* The constructors and fields of an included type have no location: use
+   those of the type it copies, and [own] for any other type. *)
+and label_definition ~state ~file ~package stamp tip own =
+  match Process_extra.include_origin ~file stamp tip with
+  | Origin origin when origin <> stamp ->
+    definition ~state ~file ~package origin tip
+  | Other_file (module_name, path) ->
+    global_definition ~state ~package module_name path tip
+  | Origin _ -> own
+
+and global_definition ~state ~package module_name path tip =
+  match Process_cmt.file_for_module ~state ~package module_name with
+  | None -> None
+  | Some file -> (
+    let env = Query_env.from_file file in
+    match exported_for_tip ~state ~env ~path ~package ~tip with
+    | None -> None
+    | Some (env, _name, stamp) ->
+      (* oooh wht do I do if the stamp is inside a pseudo-file? *)
+      maybe_log ("Got stamp " ^ string_of_int stamp);
+      definition ~state ~file:env.file ~package stamp tip)
 
 let definition_for_loc_item ~state ~full:{file; package} loc_item =
   match loc_item.loc_type with
@@ -354,20 +377,11 @@ let definition_for_loc_item ~state ~full:{file; package} loc_item =
     maybe_log ("Local defn " ^ Tip.to_string tip);
     definition ~state ~file ~package stamp tip
   | LModule (GlobalReference (module_name, path, tip))
-  | Typed (_, _, GlobalReference (module_name, path, tip)) -> (
+  | Typed (_, _, GlobalReference (module_name, path, tip)) ->
     maybe_log
       ("Typed GlobalReference module_name:" ^ module_name ^ " path:"
      ^ path_to_string path ^ " tip:" ^ Tip.to_string tip);
-    match Process_cmt.file_for_module ~state ~package module_name with
-    | None -> None
-    | Some file -> (
-      let env = Query_env.from_file file in
-      match exported_for_tip ~state ~env ~path ~package ~tip with
-      | None -> None
-      | Some (env, _name, stamp) ->
-        (* oooh wht do I do if the stamp is inside a pseudo-file? *)
-        maybe_log ("Got stamp " ^ string_of_int stamp);
-        definition ~state ~file:env.file ~package stamp tip))
+    global_definition ~state ~package module_name path tip
 
 let dig_constructor ~state ~env ~package path =
   match Resolve_path.resolve_from_compiler_path ~state ~env ~package path with
@@ -419,93 +433,139 @@ type references = {
   loc_opt: Location.t option; (* None: reference to a toplevel module *)
 }
 
-let for_local_stamp ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
-  let env = Query_env.from_file file in
-  match
-    match tip with
-    | Constructor name ->
-      get_constructor file stamp name
-      |> Option.map (fun x -> x.Constructor.stamp)
-    | Field name -> get_field file stamp name |> Option.map (fun x -> x.stamp)
-    | _ -> Some stamp
-  with
-  | None -> []
+(* The stamps that stand for the same declaration as [stamp]: the member it
+   was included from, when that is in this file, and all included copies of
+   that member. For a constructor or field, these are stamps of its type. *)
+let include_family ~(file : File.t) stamp (tip : Tip.t) =
+  let origin = Process_extra.include_origin ~file stamp tip in
+  let copies = ref [stamp] in
+  let add_copy copy (declared : _ Declared.t) =
+    match Module_path.included_path declared.module_path declared.name.txt with
+    | Some _ ->
+      if Process_extra.include_origin ~file copy tip = origin then
+        copies := copy :: !copies
+    | None -> ()
+  in
+  (match tip with
+  | Value -> Stamps.iter_values add_copy file.stamps
+  | Module -> Stamps.iter_modules add_copy file.stamps
+  | Type | Field _ | Constructor _ -> Stamps.iter_types add_copy file.stamps);
+  let copies = List.sort_uniq compare !copies in
+  let family =
+    match origin with
+    | Origin origin -> origin :: List.filter (( <> ) origin) copies
+    | Other_file _ -> copies
+  in
+  (origin, family)
+
+(* A module and path under which other files record their uses of a member,
+   and the module whose own file is not searched. *)
+type external_key = {owner: string; module_name: string; path: path; tip: Tip.t}
+
+(* The stamp under which [file] records the references to [tip]: for a
+   constructor or field, [stamp] is the stamp of its type. *)
+let tip_stamp ~(file : File.t) stamp (tip : Tip.t) =
+  match tip with
+  | Constructor name ->
+    get_constructor file stamp name |> Option.map (fun x -> x.Constructor.stamp)
+  | Field name -> get_field file stamp name |> Option.map (fun x -> x.stamp)
+  | Value | Type | Module -> Some stamp
+
+(* The references to [stamp] in its file and in the other file of the same
+   module (.res or .resi), and the key of its uses in other files. *)
+let references_in_file ~state ~full:{file; extra; package} stamp (tip : Tip.t) =
+  match tip_stamp ~file stamp tip with
+  | None -> ([], [])
   | Some local_stamp -> (
-    match Hashtbl.find_opt extra.internal_references local_stamp with
-    | None -> []
-    | Some locs ->
-      maybe_log ("Checking externals: " ^ string_of_int stamp);
-      let externals =
-        match declared_for_tip ~stamps:env.file.stamps stamp tip with
+    let references_of ~(file : File.t) ~extra local_stamp =
+      Hashtbl.find_opt extra.internal_references local_stamp
+      |> Option.value ~default:[]
+      |> List.map (fun loc -> {uri = file.uri; loc_opt = Some loc})
+    in
+    let locs = references_of ~file ~extra local_stamp in
+    match declared_for_tip ~stamps:file.stamps stamp tip with
+    | Some declared when is_visible declared ->
+      let alternative_references =
+        match alternate_declared ~state ~package ~file declared tip with
         | None -> []
-        | Some declared ->
-          if is_visible declared then (
-            let alternative_references =
-              match alternate_declared ~state ~package ~file declared tip with
-              | None -> []
-              | Some (file, extra, {stamp}) -> (
+        | Some (file, extra, {stamp}) -> (
+          match tip_stamp ~file stamp tip with
+          | None -> []
+          | Some local_stamp -> references_of ~file ~extra local_stamp)
+      in
+      let path = Module_path.to_path declared.module_path declared.name.txt in
+      maybe_log ("Now checking path " ^ path_to_string path);
+      let module_name, path =
+        normalize_external_reference_key ~namespace:package.namespace
+          ~module_name:file.module_name ~path
+      in
+      ( locs @ alternative_references,
+        [{owner = file.module_name; module_name; path; tip}] )
+    | Some _ | None ->
+      maybe_log "Not visible";
+      (locs, []))
+
+(* The uses that other files record under [keys], found in one pass over the
+   project. *)
+let external_references ~package keys =
+  package.project_files |> File_set.elements
+  |> List.concat_map (fun module_name ->
+      match List.filter (fun key -> key.owner <> module_name) keys with
+      | [] -> []
+      | keys ->
+        Cmt.fulls_from_module ~package ~module_name
+        |> List.concat_map (fun {file; extra} ->
+            keys
+            |> List.concat_map (fun key ->
                 match
-                  match tip with
-                  | Constructor name ->
-                    get_constructor file stamp name
-                    |> Option.map (fun x -> x.Constructor.stamp)
-                  | Field name ->
-                    get_field file stamp name |> Option.map (fun x -> x.stamp)
-                  | _ -> Some stamp
+                  Hashtbl.find_opt extra.external_references key.module_name
                 with
                 | None -> []
-                | Some local_stamp -> (
-                  match
-                    Hashtbl.find_opt extra.internal_references local_stamp
-                  with
-                  | None -> []
-                  | Some locs ->
-                    locs
-                    |> List.map (fun loc ->
-                        {uri = file.uri; loc_opt = Some loc})))
-              (* if this file has a corresponding interface or implementation file
-                 also find the references in that file *)
-            in
-            let path =
-              Module_path.to_path declared.module_path declared.name.txt
-            in
-            maybe_log ("Now checking path " ^ path_to_string path);
-            let this_module_name = file.module_name in
-            let normalized_module_name, normalized_path =
-              normalize_external_reference_key ~namespace:package.namespace
-                ~module_name:this_module_name ~path
-            in
-            let externals =
-              package.project_files |> File_set.elements
-              |> List.filter (fun name -> name <> file.module_name)
-              |> List.map (fun module_name ->
-                  Cmt.fulls_from_module ~package ~module_name
-                  |> List.map (fun {file; extra} ->
-                      match
-                        Hashtbl.find_opt extra.external_references
-                          normalized_module_name
-                      with
-                      | None -> []
-                      | Some refs ->
-                        let locs =
-                          refs
-                          |> List.filter_map (fun (p, t, locs) ->
-                              if p = normalized_path && t = tip then Some locs
-                              else None)
-                        in
-                        locs
-                        |> List.map (fun loc ->
-                            {uri = file.uri; loc_opt = Some loc})))
-              |> List.concat |> List.concat
-            in
-            alternative_references @ externals)
-          else (
-            maybe_log "Not visible";
-            [])
-      in
-      List.append
-        (locs |> List.map (fun loc -> {uri = file.uri; loc_opt = Some loc}))
-        externals)
+                | Some refs ->
+                  refs
+                  |> List.filter_map (fun (p, t, loc) ->
+                      if p = key.path && t = key.tip then Some loc else None)
+                  |> List.map (fun loc -> {uri = file.uri; loc_opt = Some loc}))))
+
+(* The references to [stamp], its included copies and the member they copy
+   that are found in their own files, and the keys of their uses in other
+   files. A member copied from another file is looked up there. *)
+let rec family_references ~state ~full stamp tip =
+  let origin, family = include_family ~file:full.file stamp tip in
+  let locs, keys =
+    family
+    |> List.map (fun stamp -> references_in_file ~state ~full stamp tip)
+    |> List.split
+  in
+  let locs = List.concat locs and keys = List.concat keys in
+  match origin with
+  | Origin _ -> (locs, keys)
+  | Other_file (module_name, path) ->
+    let source_locs, source_keys =
+      global_family_references ~state ~package:full.package module_name path tip
+    in
+    (locs @ source_locs, keys @ source_keys)
+
+and global_family_references ~state ~package module_name path tip =
+  match Process_cmt.file_for_module ~state ~package module_name with
+  | None -> ([], [])
+  | Some file -> (
+    let env = Query_env.from_file file in
+    match exported_for_tip ~state ~env ~path ~package ~tip with
+    | None -> ([], [])
+    | Some (env, _name, stamp) -> (
+      match Cmt.full_from_module ~package ~module_name:env.file.module_name with
+      | None -> ([], [])
+      | Some full ->
+        maybe_log
+          ("Finding references for (global) " ^ Uri.to_string env.file.uri
+         ^ " and stamp " ^ string_of_int stamp ^ " and tip " ^ Tip.to_string tip
+          );
+        family_references ~state ~full stamp tip))
+
+let for_local_stamp ~state ~full stamp tip =
+  let locs, keys = family_references ~state ~full stamp tip in
+  locs @ external_references ~package:full.package keys
 
 let all_references_for_loc_item ~state ~full:({file; package} as full) loc_item
     =
@@ -544,21 +604,8 @@ let all_references_for_loc_item ~state ~full:({file; package} as full) loc_item
      ^ string_of_int stamp ^ " and tip " ^ Tip.to_string tip);
     for_local_stamp ~state ~full stamp tip
   | LModule (GlobalReference (module_name, path, tip))
-  | Typed (_, _, GlobalReference (module_name, path, tip)) -> (
-    match Process_cmt.file_for_module ~state ~package module_name with
-    | None -> []
-    | Some file -> (
-      let env = Query_env.from_file file in
-      match exported_for_tip ~state ~env ~path ~package ~tip with
-      | None -> []
-      | Some (env, _name, stamp) -> (
-        match
-          Cmt.full_from_module ~package ~module_name:env.file.module_name
-        with
-        | None -> []
-        | Some full ->
-          maybe_log
-            ("Finding references for (global) " ^ Uri.to_string env.file.uri
-           ^ " and stamp " ^ string_of_int stamp ^ " and tip "
-           ^ Tip.to_string tip);
-          for_local_stamp ~state ~full stamp tip)))
+  | Typed (_, _, GlobalReference (module_name, path, tip)) ->
+    let locs, keys =
+      global_family_references ~state ~package module_name path tip
+    in
+    locs @ external_references ~package keys

@@ -25,6 +25,16 @@ module Module_path = struct
       | NotVisible -> current
     in
     loop module_path [tip_name]
+
+  (* For a member of an included module, the path of the member it copies,
+     inside the module the include names. *)
+  let rec included_path module_path name =
+    match module_path with
+    | IncludedModule (source, _) -> Some (Path.Pdot (source, name, 0))
+    | ExportedModule {name = parent; module_path} ->
+      included_path module_path parent
+      |> Option.map (fun path -> Path.Pdot (path, name, 0))
+    | File _ | NotVisible -> None
 end
 
 type field = {
