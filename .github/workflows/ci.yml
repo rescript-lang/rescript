@@ -64,7 +64,7 @@ jobs:
           # tests repeat the linux-x64 job's. OCaml 5.0 does not build with
           # GCC 15 (C23 by default), so this job stays on Ubuntu 24.04.
           - os: ubuntu-24.04
-            ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
+            ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             node-target: linux-x64
             dune-profile: static
             skip_rewatch_integration_tests: true
@@ -266,6 +266,9 @@ jobs:
           # dune otherwise buffers the test output until the action exits.
           opam exec -- ./_build/default/tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe -runner sequential
         shell: bash
+
+      - name: Run LSP tests
+        run: opam exec -- make test-lsp
 
       # The canonical suite works in rewatch/testrepo and the focused one in
       # directories of its own, so they run side by side; each takes one to
