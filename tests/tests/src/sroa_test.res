@@ -119,6 +119,39 @@ let writeOnlyFieldStillRaises = () => {
   cell.live
 }
 
+// [cell] only reaches [outer] through a write-only field, so [cell] still
+// becomes a scalar.
+let storedInWriteOnly = () => {
+  let cell = ref(1)
+  let outer = ref(cell)
+  outer := cell
+  cell.contents
+}
+
+// [first]'s only read is a value written to the write-only [second], so
+// [first] is write-only as well.
+let readByWriteOnly = () => {
+  let value = ref(1)
+  let first = ref(0)
+  let second = ref(0)
+  first := value.contents
+  second := first.contents
+  value.contents
+}
+
+// Several references updated in one loop are all replaced.
+let manyInLoop = n => {
+  let a = ref(0)
+  let b = ref(1)
+  let c = ref(2)
+  for i in 0 to n {
+    a := a.contents + i
+    b := b.contents + a.contents
+    c := c.contents + b.contents
+  }
+  a.contents + b.contents + c.contents
+}
+
 describe(__MODULE__, () => {
   test("scalarizes a local mutable record", () => eq(__LOC__, 42, localPair()))
   test("shares scalar fields with closures", () => eq(__LOC__, 32, capturedPair()))
@@ -142,4 +175,7 @@ describe(__MODULE__, () => {
   test("preserves exceptions from write-only field values", () =>
     throws(__LOC__, writeOnlyFieldStillRaises)
   )
+  test("scalarizes a block stored in a write-only field", () => eq(__LOC__, 1, storedInWriteOnly()))
+  test("drops reads that only feed write-only fields", () => eq(__LOC__, 1, readByWriteOnly()))
+  test("scalarizes several blocks updated together", () => eq(__LOC__, 38, manyInLoop(3)))
 })
