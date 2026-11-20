@@ -378,7 +378,7 @@ let complete_pipe_chain ~(in_jsx_context : bool) (exp : Parsetree.expression) =
   | _ -> None
 
 let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
-    ?find_this_expr_loc text =
+    ?find_this_expr_loc ?scope_at_cursor text =
   let offset_no_white = Utils.skip_white text (offset - 1) in
   let pos_no_white =
     let line, col = pos_cursor in
@@ -504,6 +504,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                    item_num = index;
                    source_arity = List.length patterns;
                    constructor_name = Longident.last txt;
+                   constructor_path = Longident.flatten txt;
                  }
               :: pattern_path)
             ?context_path)
@@ -744,6 +745,12 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     | Pstr_open {popen_lid} ->
       scope := !scope |> Scope.add_open ~lid:popen_lid.txt
     | Pstr_primitive vd -> scope_value_description vd
+    | Pstr_typext {ptyext_constructors} ->
+      ptyext_constructors
+      |> List.iter (fun (ext : Parsetree.extension_constructor) ->
+          scope :=
+            !scope
+            |> Scope.add_constructor ~name:ext.pext_name.txt ~loc:ext.pext_loc)
     | Pstr_value (rec_flag, bindings) ->
       if rec_flag = Recursive then bindings |> List.iter scope_value_binding;
       bindings |> List.iter (fun vb -> iterator.value_binding iterator vb);
@@ -1935,6 +1942,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     let parser = Res_driver.parsing_engine.parse_implementation_from_source in
     let {Res_driver.parsetree = str} = parser ~source:text in
     iterator.structure iterator str |> ignore;
+    Option.iter (fun r -> r := !last_scope_before_cursor) scope_at_cursor;
     if blank_after_cursor = Some ' ' || blank_after_cursor = Some '\n' then (
       scope := !last_scope_before_cursor;
       set_result
@@ -1946,6 +1954,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
     let parser = Res_driver.parsing_engine.parse_interface_from_source in
     let {Res_driver.parsetree = signature} = parser ~source:text in
     iterator.signature iterator signature |> ignore;
+    Option.iter (fun r -> r := !last_scope_before_cursor) scope_at_cursor;
     if blank_after_cursor = Some ' ' || blank_after_cursor = Some '\n' then (
       scope := !last_scope_before_cursor;
       set_result
@@ -1960,6 +1969,18 @@ let completion_with_parser ~debug ~source ~kind_file ~pos_cursor =
   | Some offset ->
     completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file source
   | None -> None
+
+(* The scope at [pos_cursor], whether or not there is something to complete
+   there. *)
+let scope_at ~source ~kind_file ~pos_cursor =
+  let scope = ref (Scope.create ()) in
+  (match Pos.position_to_offset source pos_cursor with
+  | Some offset ->
+    completion_with_parser1 ~debug:false ~offset ~pos_cursor ~kind_file
+      ~scope_at_cursor:scope source
+    |> ignore
+  | None -> ());
+  !scope
 
 let find_type_of_expression_at_loc ~debug ~pos_cursor ~source ~kind_file loc =
   match source with
