@@ -315,6 +315,23 @@ let scan_number scanner =
   if is_float then Token.Float {f = literal; suffix}
   else Token.Int {i = literal; suffix}
 
+(* The name of an exotic identifier [\"Name"], as the scanner reads it, without
+   the quotes. Keep in sync with [Ext_ident.unwrap_uppercase_exotic], which the
+   compiler uses; the parser does not depend on ext. *)
+let unwrap_uppercase_exotic name =
+  let len = String.length name in
+  if len >= 3 && name.[0] = '\\' && name.[1] = '"' && name.[len - 1] = '"' then
+    String.sub name 2 (len - 3)
+  else name
+
+(* Whether a name starts with an uppercase letter. *)
+let is_uident name =
+  String.length name > 0
+  &&
+  match name.[0] with
+  | 'A' .. 'Z' -> true
+  | _ -> false
+
 let scan_exotic_identifier scanner =
   let start_pos = position scanner in
   let start_off = scanner.offset in
@@ -344,7 +361,7 @@ let scan_exotic_identifier scanner =
     (String.sub [@doesNotThrow]) scanner.src start_off
       (scanner.offset - start_off)
   in
-  let name = Ext_ident.unwrap_uppercase_exotic ident in
+  let name = unwrap_uppercase_exotic ident in
   if name = String.empty then (
     let end_pos = position scanner in
     scanner.err ~start_pos ~end_pos
@@ -357,7 +374,7 @@ let scan_exotic_identifier scanner =
     scanner.err ~start_pos ~end_pos
       (Diagnostics.message "`_` can't be used as a quoted identifier.");
     Token.Lident name)
-  else if Ext_ident.is_uident name then Token.Lident ident
+  else if is_uident name then Token.Lident ident
     (* Exotic ident with uppercase letter should be encoded to avoid confusing in OCaml parsetree *)
   else Token.Lident name
 

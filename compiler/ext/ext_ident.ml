@@ -83,18 +83,12 @@ let[@inline] no_escape (c : char) =
   | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '$' -> true
   | _ -> false
 
-let is_uident name =
-  let len = String.length name in
-  if len > 0 then
-    match name.[0] with
-    | 'A' .. 'Z' -> true
-    | _ -> false
-  else false
-
 let is_uppercase_exotic name =
   let len = String.length name in
   len >= 3 && name.[0] = '\\' && name.[1] = '\"' && name.[len - 1] = '\"'
 
+(* Keep in sync with the copy in [Res_scanner], which the parser uses, since
+   the parser does not depend on ext. *)
 let unwrap_uppercase_exotic name =
   if is_uppercase_exotic name then
     let len = String.length name in

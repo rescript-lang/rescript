@@ -145,9 +145,9 @@ val is_rewritten_underscore_apply_sugar : Parsetree.expression -> bool
 
 val is_fun_expr : Parsetree.expression -> bool
 
-val get_jsx_prop_loc : Parsetree.jsx_prop -> Warnings.loc
+val get_jsx_prop_loc : Parsetree.jsx_prop -> Location.t
 
 val container_element_closing_tag_loc :
-  Parsetree.jsx_closing_container_tag -> Warnings.loc
+  Parsetree.jsx_closing_container_tag -> Location.t
 
-val unary_element_closing_token : Warnings.loc -> Warnings.loc
+val unary_element_closing_token : Location.t -> Location.t

@@ -35,8 +35,6 @@ val make_js_object : Ident.t -> unit
 
 val create_tmp : ?name:string -> unit -> Ident.t
 
-val is_uident : string -> bool
-
 val unwrap_uppercase_exotic : string -> string
 
 val convert : string -> string

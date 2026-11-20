@@ -621,7 +621,7 @@ let container_element_closing_tag_loc
   }
 
 (** returns the location of the /> token in a unary element *)
-let unary_element_closing_token (expression_loc : Warnings.loc) =
+let unary_element_closing_token (expression_loc : Location.t) =
   {
     expression_loc with
     loc_start =

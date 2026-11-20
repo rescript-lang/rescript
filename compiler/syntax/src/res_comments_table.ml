@@ -24,7 +24,7 @@ let copy tbl =
 
 let empty = make ()
 
-let print_location (k : Warnings.loc) =
+let print_location (k : Location.t) =
   Doc.concat
     [
       Doc.lbracket;
@@ -245,8 +245,8 @@ let partition_adjacent_trailing_through_question loc1 comments =
  * in constructs like JSX props, function arguments, and other multi-token expressions.
  *)
 let partition_adjacent_trailing_before_next_token_on_same_line
-    (loc : Warnings.loc) (next_token : Warnings.loc) (comments : Comment.t list)
-    : Comment.t list * Comment.t list =
+    (loc : Location.t) (next_token : Location.t) (comments : Comment.t list) :
+    Comment.t list * Comment.t list =
   let open Location in
   let open Lexing in
   let rec loop after_loc comments =
@@ -1071,8 +1071,10 @@ and walk_expression expr t comments =
     else walk_around ~loc:expr2.pexp_loc walk_expression expr2 t rest
   | Pexp_object_literal fields ->
     walk_list
-      (Ext_list.map fields (fun ((s : string Asttypes.loc), e) ->
-           ExprRecordRow (Location.mkloc (Longident.Lident s.txt) s.loc, e)))
+      (List.map
+         (fun ((s : string Asttypes.loc), e) ->
+           ExprRecordRow (Location.mkloc (Longident.Lident s.txt) s.loc, e))
+         fields)
       t comments
   | Pexp_extension extension -> walk_extension extension t comments
   | Pexp_raw {kind; name_loc; source} ->
@@ -1183,7 +1185,7 @@ and walk_expression expr t comments =
           rest
       in
       walk_list
-        (Ext_list.map rows (fun {lid; x = e} -> ExprRecordRow (lid, e)))
+        (List.map (fun {Parsetree.lid; x = e} -> ExprRecordRow (lid, e)) rows)
         t comments
   | Pexp_field (expr, longident) ->
     let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
@@ -1891,10 +1893,12 @@ and walk_pattern pat t comments =
     attach t.trailing ident.loc trailing
   | Ppat_dict [] -> attach t.inside pat.ppat_loc comments
   | Ppat_dict entries ->
-    walk_list (Ext_list.map entries (fun row -> PatternDictRow row)) t comments
+    walk_list (List.map (fun row -> PatternDictRow row) entries) t comments
   | Ppat_record (record_rows, _, rest) ->
     let nodes =
-      Ext_list.map record_rows (fun {lid; x = p} -> PatternRecordRow (lid, p))
+      List.map
+        (fun {Parsetree.lid; x = p} -> PatternRecordRow (lid, p))
+        record_rows
     in
     let nodes =
       match rest with
