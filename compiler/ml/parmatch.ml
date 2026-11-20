@@ -325,6 +325,29 @@ let const_compare x y =
     compare i1 i2
   | _, _ -> compare x y
 
+(* The head of a pattern when it is a constant or a polymorphic variant tag.
+   Two patterns with such heads are compatible, and one includes the other,
+   only when the heads are equal. *)
+type head_key = Head_constant of constant | Head_variant of label
+
+let rec head_key p =
+  match p.pat_desc with
+  | Tpat_alias (p, _, _) -> head_key p
+  | Tpat_constant (Const_char i) -> Some (Head_constant (Const_int i))
+  | Tpat_constant c -> Some (Head_constant c)
+  | Tpat_variant (l, _, _) -> Some (Head_variant l)
+  | _ -> None
+
+module Head_map = Map.Make (struct
+  type t = head_key
+  let compare k1 k2 =
+    match (k1, k2) with
+    | Head_constant c1, Head_constant c2 -> const_compare c1 c2
+    | Head_variant l1, Head_variant l2 -> String.compare l1 l2
+    | Head_constant _, Head_variant _ -> -1
+    | Head_variant _, Head_constant _ -> 1
+end)
+
 let records_args l1 l2 =
   (* Invariant: fields are already sorted by Typecore.type_record_elem_list *)
   let rec combine r1 r2 l1 l2 =
@@ -809,11 +832,20 @@ let filter_all pat0 pss =
   let add_row (q0, rows) q qs =
     rows := (simple_match_args q0 q @ qs) :: !rows
   in
+  (* The groups again, those with a [head_key] by key: a row with a key
+     can only belong to the group of the same key, or to a group without one
+     (the range [5 .. 5] has the head of the constant [5]). Looking through
+     all groups for each row is quadratic in a switch on many constants. *)
+  let keyed = ref Head_map.empty in
+  let unkeyed = ref !groups in
   let new_group q qs =
     let q0 = normalize_pat q in
     let group = (q0, ref []) in
     add_row group q qs;
     groups := group :: !groups;
+    (match head_key q0 with
+    | Some key -> keyed := Head_map.add key group !keyed
+    | None -> unkeyed := group :: !unkeyed);
     group
   in
   (* Int and char ranges are grouped by equal bounds, not by containment as
@@ -824,7 +856,15 @@ let filter_all pat0 pss =
     | _ -> simple_match q0 q
   in
   let insert q qs =
-    match List.find_opt (fun (q0, _) -> same_head q0 q) !groups with
+    let group =
+      match head_key q with
+      | Some key -> (
+        match Head_map.find_opt key !keyed with
+        | Some group -> Some group
+        | None -> List.find_opt (fun (q0, _) -> same_head q0 q) !unkeyed)
+      | None -> List.find_opt (fun (q0, _) -> same_head q0 q) !groups
+    in
+    match group with
     | Some group -> add_row group q qs
     | None -> ignore (new_group q qs)
   in
@@ -1781,6 +1821,50 @@ let get_mins le ps =
   in
   select_rec [] (select_rec [] ps)
 
+let row_head_key = function
+  | p :: _ -> head_key p
+  | [] -> None
+
+(* [get_mins le_pats pss], comparing a row with a [head_key] only with the
+   rows whose first pattern has the same key or none: comparing all pairs is
+   quadratic for a switch on many constants or tags. *)
+let get_mins_pats pss =
+  match pss with
+  | [] | [_] -> pss
+  | _ ->
+    (* The rows that no later row includes, in order. *)
+    let select pss =
+      let rec go keyed unkeyed kept = function
+        | [] -> kept
+        | ps :: rest ->
+          let includes ps0 = le_pats ps0 ps in
+          let key = row_head_key ps in
+          let included =
+            List.exists includes unkeyed
+            ||
+            match key with
+            | Some key -> (
+              match Head_map.find_opt key keyed with
+              | Some rows -> List.exists includes rows
+              | None -> false)
+            | None ->
+              Head_map.exists (fun _ rows -> List.exists includes rows) keyed
+          in
+          let keyed, unkeyed =
+            match key with
+            | Some key ->
+              ( Head_map.update key
+                  (fun rows -> Some (ps :: Option.value rows ~default:[]))
+                  keyed,
+                unkeyed )
+            | None -> (keyed, ps :: unkeyed)
+          in
+          go keyed unkeyed (if included then kept else ps :: kept) rest
+      in
+      go Head_map.empty [] [] (List.rev pss)
+    in
+    List.rev (select (List.rev (select pss)))
+
 (*
   lub p q is a pattern that matches all values matched by p and q
   may raise Empty, when p and q are not compatible
@@ -2414,15 +2498,54 @@ let check_unused pred casel =
   if unused_match || Warnings.is_active (Warnings.Unused_pat "") then
     let casel = lower_cases casel in
     let dead_cases, already_reported = check_shadowed_payloads casel in
-    let rec do_rec pref = function
+    (* The earlier rows, most recent first, numbered from 0, and grouped by
+       [head_key]: a case with a key is only compatible with the rows of the
+       same key and the rows without one. *)
+    let rec merge_rows acc rows1 rows2 =
+      match (rows1, rows2) with
+      | [], rows | rows, [] -> List.rev_append acc (List.map snd rows)
+      | (i1, ps1) :: rest1, (i2, _) :: _ when i1 > i2 ->
+        merge_rows (ps1 :: acc) rest1 rows2
+      | _, (_, ps2) :: rest2 -> merge_rows (ps2 :: acc) rows1 rest2
+    in
+    let compatible_rows qs (pref, keyed, unkeyed) =
+      match row_head_key qs with
+      | None -> Ext_list.filter (List.map snd pref) (compats qs)
+      | Some key ->
+        let keyed =
+          match Head_map.find_opt key keyed with
+          | Some rows -> rows
+          | None -> []
+        in
+        Ext_list.filter (merge_rows [] keyed unkeyed) (compats qs)
+    in
+    let add_row qs (pref, keyed, unkeyed) =
+      let index =
+        match pref with
+        | (index, _) :: _ -> index + 1
+        | [] -> 0
+      in
+      let row = (index, qs) in
+      let pref = row :: pref in
+      match row_head_key qs with
+      | Some key ->
+        ( pref,
+          Head_map.update key
+            (fun rows -> Some (row :: Option.value rows ~default:[]))
+            keyed,
+          unkeyed )
+      | None -> (pref, keyed, row :: unkeyed)
+    in
+    let rec do_rec rows = function
       | [] -> ()
       | case :: rem when List.memq case dead_cases ->
         (* A case that matches nothing cannot make later cases unused *)
-        do_rec pref rem
+        do_rec rows rem
       | {c_lhs = q; c_guard} :: rem ->
         let qs = [q] in
+        let pref, _, _ = rows in
         (try
-           let pss = get_mins le_pats (Ext_list.filter pref (compats qs)) in
+           let pss = get_mins_pats (compatible_rows qs rows) in
            (* First look for redundant or partially redundant patterns *)
            let r = every_satisfiables (make_rows pss) (make_row qs) in
            (* Do not warn for unused [pat -> .] *)
@@ -2462,11 +2585,22 @@ let check_unused pred casel =
                  (*Format.eprintf "%a@." pretty_val u;*)
                  let pattern, constrs, labels = Conv.conv u in
                  let pattern = {pattern with Parsetree.ppat_loc = q.pat_loc} in
-                 match pred constrs labels pattern with
-                 | None ->
-                   Location.prerr_warning q.pat_loc Warnings.Unreachable_case;
-                   Used
-                 | _ -> r
+                 (* Only a GADT constructor can make a pattern built from
+                    the case's own subpatterns fail to type. Typing it
+                    again costs as much as the type of the scrutinee, for
+                    every case. *)
+                 let has_gadt_constructor =
+                   Hashtbl.fold
+                     (fun _ cstr found -> found || cstr.cstr_generalized)
+                     constrs false
+                 in
+                 if not has_gadt_constructor then r
+                 else
+                   match pred constrs labels pattern with
+                   | None ->
+                     Location.prerr_warning q.pat_loc Warnings.Unreachable_case;
+                     Used
+                   | _ -> r
            in
            match r with
            | Unused ->
@@ -2482,10 +2616,11 @@ let check_unused pred casel =
            | Used -> ()
          with Empty | Not_found | NoGuard -> assert false);
 
-        if c_guard <> None then do_rec pref rem else do_rec ([q] :: pref) rem
+        if c_guard <> None || rem = [] then do_rec rows rem
+        else do_rec (add_row qs rows) rem
     in
 
-    if unused_match then do_rec [] casel
+    if unused_match then do_rec ([], Head_map.empty, []) casel
 
 (*********************************)
 (* Exported irrefutability tests *)
@@ -2504,7 +2639,7 @@ let irrefutable pat = le_pat (Dict_pattern.lowering [pat] pat) omega
 
 let check_partial_param do_check_partial do_check_fragile loc casel =
   let pss = initial_matrix casel in
-  let pss = get_mins le_pats pss in
+  let pss = get_mins_pats pss in
   let total = do_check_partial loc casel pss in
   if total = Total && Warnings.is_active (Warnings.Fragile_match "") then
     do_check_fragile loc casel pss;
