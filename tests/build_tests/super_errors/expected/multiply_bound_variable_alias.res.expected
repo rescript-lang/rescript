@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/multiply_bound_variable_alias.res[0m:[2m3:5-16[0m
+
+  1 [2m│[0m let f = x =>
+  2 [2m│[0m   switch x {
+  [1;31m3[0m [2m│[0m   | [1;31mSome(a) as a[0m => a
+  4 [2m│[0m   | None => None
+  5 [2m│[0m   }
+
+  Variable a is bound several times in this pattern

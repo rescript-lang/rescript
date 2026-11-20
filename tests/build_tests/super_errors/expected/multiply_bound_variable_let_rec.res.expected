@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/multiply_bound_variable_let_rec.res[0m:[2m3:5[0m
+
+  1 [2m│[0m let rec f = () => g()
+  2 [2m│[0m and g = () => 1
+  [1;31m3[0m [2m│[0m and [1;31mf[0m = () => 2
+  4 [2m│[0m 
+
+  Variable f is bound several times in this pattern
