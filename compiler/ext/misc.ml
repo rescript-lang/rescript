@@ -46,19 +46,6 @@ let protect_refs =
       set_refs backup;
       raise e
 
-(* List functions *)
-
-let rec map_end f l1 l2 =
-  match l1 with
-  | [] -> l2
-  | hd :: tl -> f hd :: map_end f tl l2
-
-let rec replicate_list elem n =
-  if n <= 0 then [] else elem :: replicate_list elem (n - 1)
-
-let may = Stdlib.Option.iter
-let may_map = Stdlib.Option.map
-
 (* File functions *)
 
 (* In each directory of [path], try [name] as written before its uncapitalized

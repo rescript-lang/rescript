@@ -646,7 +646,7 @@ let rec normalize_pat q =
     make_pat (Tpat_construct (lid, c, omega_list args)) q.pat_type q.pat_env
   | Tpat_variant (l, arg, row) ->
     make_pat
-      (Tpat_variant (l, may_map (fun _ -> omega) arg, row))
+      (Tpat_variant (l, Option.map (fun _ -> omega) arg, row))
       q.pat_type q.pat_env
   | Tpat_array args ->
     make_pat (Tpat_array (omega_list args)) q.pat_type q.pat_env

@@ -15,7 +15,6 @@
 
 (* Operations on core types *)
 
-open Misc
 open Asttypes
 open Types
 open Btype
@@ -995,7 +994,7 @@ let map_kind f = function
             {
               c with
               cd_args = map_type_expr_cstr_args f c.cd_args;
-              cd_res = may_map f c.cd_res;
+              cd_res = Option.map f c.cd_res;
             })
           cl,
         layout )
@@ -1007,7 +1006,7 @@ let instance_declaration decl =
       {
         decl with
         type_params = List.map simple_copy decl.type_params;
-        type_manifest = may_map simple_copy decl.type_manifest;
+        type_manifest = Option.map simple_copy decl.type_manifest;
         type_kind = map_kind simple_copy decl.type_kind;
       })
 
@@ -4535,7 +4534,7 @@ let nondep_extension_constructor env mid ext =
       let args =
         map_type_expr_cstr_args (nondep_type_rec env mid) ext.ext_args
       in
-      let ret_type = may_map (nondep_type_rec env mid) ext.ext_ret_type in
+      let ret_type = Option.map (nondep_type_rec env mid) ext.ext_ret_type in
       {
         ext_type_path = type_path;
         ext_type_params = type_params;
