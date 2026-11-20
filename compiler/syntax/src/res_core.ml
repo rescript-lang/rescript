@@ -988,6 +988,25 @@ let parse_string_constant (p : Parser.t) ~start_pos ~end_pos source =
             else "Invalid code point"));
     Parsetree.Pconst_string (String_literal.invalid_string_for_recovery source)
 
+(* A bigint literal may only be written in decimal, with an optional sign and
+   underscores. *)
+let is_valid_bigint s =
+  let len = String.length s in
+  if len = 0 then false
+  else
+    let is_digit c = (c >= '0' && c <= '9') || c = '_' in
+    let first_char = s.[0] in
+    if first_char <> '-' && first_char <> '+' && not (is_digit first_char) then
+      false
+    else
+      let rec check idx =
+        if idx >= len then true
+        else
+          let c = s.[idx] in
+          if is_digit c then check (idx + 1) else false
+      in
+      check 1
+
 let parse_constant p =
   let is_negative =
     match Parser.peek p with
@@ -1003,7 +1022,7 @@ let parse_constant p =
     match Parser.peek p with
     | Int {i; suffix} ->
       (* Only decimal literal is allowed for bigint *)
-      if suffix = Some 'n' && not (Bigint_utils.is_valid i) then
+      if suffix = Some 'n' && not (is_valid_bigint i) then
         Parser.err p
           (Diagnostics.message
              "Invalid bigint literal. Only decimal literal is allowed for \

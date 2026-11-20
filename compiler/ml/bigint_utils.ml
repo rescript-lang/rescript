@@ -57,23 +57,6 @@ let parse_bigint s =
   let sign, i = remove_leading_sign s in
   (sign, remove_leading_zeros i)
 
-let is_valid s =
-  let len = String.length s in
-  if len = 0 then false
-  else
-    let is_digit c = (c >= '0' && c <= '9') || c = '_' in
-    let first_char = s.[0] in
-    if first_char <> '-' && first_char <> '+' && not (is_digit first_char) then
-      false
-    else
-      let rec check idx =
-        if idx >= len then true
-        else
-          let c = s.[idx] in
-          if is_digit c then check (idx + 1) else false
-      in
-      check 1
-
 let compare (p0, s0) (p1, s1) =
   match (p0, p1) with
   | false, true -> -1 (* If only s1 is positive, s0 is smaller. *)

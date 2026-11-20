@@ -4955,7 +4955,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
           let loc = vb.pvb_loc in
           let poly =
             Ast_helper.Typ.poly ~loc pvc_newtypes
-              (Ast_helper.Typ.varify_constructors pvc_newtypes pvc_type)
+              (Ast_varify.varify_constructors pvc_newtypes pvc_type)
           in
           {vb with pvb_pat = Ast_helper.Pat.constraint_ ~loc vb.pvb_pat poly})
       spat_sexp_list

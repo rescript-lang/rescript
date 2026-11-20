@@ -1119,7 +1119,7 @@ let default_mapper =
           | Some {pvc_newtypes; pvc_type} ->
             let poly =
               Ast_helper.Typ.poly ~loc:pvb_loc pvc_newtypes
-                (Ast_helper.Typ.varify_constructors pvc_newtypes pvc_type)
+                (Ast_varify.varify_constructors pvc_newtypes pvc_type)
             in
             let pat =
               Ast_helper0.Pat.constraint_ ~loc (this.pat this pvb_pat)
