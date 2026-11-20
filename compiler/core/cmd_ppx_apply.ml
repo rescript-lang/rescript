@@ -110,9 +110,8 @@ let apply_rewriters_str ~tool_name ast =
   | ppxs ->
     Bs_ast_invariant.check_removed_ocaml_spellings_on_structure ast;
     ast
-    |> Ast_mapper.add_ppx_context_str ~tool_name
-    |> rewrite Ml ppxs |> Ml_binary.ast0_to_structure
-    |> Ast_mapper.drop_ppx_context_str
+    |> Ppx_context.add_str ~tool_name
+    |> rewrite Ml ppxs |> Ml_binary.ast0_to_structure |> Ppx_context.drop_str
 
 let apply_rewriters_sig ~tool_name ast =
   match !((Clflags.current ()).all_ppx) with
@@ -123,9 +122,8 @@ let apply_rewriters_sig ~tool_name ast =
   | ppxs ->
     Bs_ast_invariant.check_removed_ocaml_spellings_on_signature ast;
     ast
-    |> Ast_mapper.add_ppx_context_sig ~tool_name
-    |> rewrite Mli ppxs |> Ml_binary.ast0_to_signature
-    |> Ast_mapper.drop_ppx_context_sig
+    |> Ppx_context.add_sig ~tool_name
+    |> rewrite Mli ppxs |> Ml_binary.ast0_to_signature |> Ppx_context.drop_sig
 
 let apply_rewriters ~tool_name (type a) (kind : a Ml_binary.kind) (ast : a) : a
     =

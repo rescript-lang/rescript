@@ -198,7 +198,8 @@ let ident_or_record_as_config loc (x : t) :
       ] -> (
     match with_obj with
     | None ->
-      Ext_list.map label_exprs (fun u ->
+      label_exprs
+      |> List.map (fun (u : Parsetree.expression Parsetree.record_element) ->
           match u with
           | {
            lid = {txt = Lident name; loc};
@@ -242,7 +243,7 @@ let assert_strings loc (x : t) : string list =
           _;
         };
       ] -> (
-    try Ext_list.map strs semantic_string
+    try List.map semantic_string strs
     with Not_str -> Location.raise_errorf ~loc "expect string tuple list")
   | PStr [{pstr_desc = Pstr_eval (expression, _); _}] -> (
     try [semantic_string expression]
@@ -260,10 +261,3 @@ let assert_bool_lit (e : Parsetree.expression) =
       "expect `true` or `false` in this field"
 
 let empty : t = Parsetree.PStr []
-
-let table_dispatch table (action : action) =
-  match action with
-  | {txt = name; loc}, y -> (
-    match Map_string.find name table with
-    | fn -> fn y
-    | exception _ -> Location.raise_errorf ~loc "%s is not supported" name)

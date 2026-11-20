@@ -40,6 +40,12 @@ let signature_config_table : action_table ref = ref Map_string.empty
 let add_signature k v =
   signature_config_table := Map_string.add k v !signature_config_table
 
+let table_dispatch (table : action_table) ((name, value) : Ast_payload.action) =
+  match Map_string.find name.txt table with
+  | fn -> fn value
+  | exception _ ->
+    Location.raise_errorf ~loc:name.loc "%s is not supported" name.txt
+
 let process_directives str =
   (Js_config.current ()).directives := [];
   (* Reset: multiple calls possible e.g. with bsc from the command-line *)
@@ -62,7 +68,7 @@ let rec iter_on_config_str (x : Parsetree.structure) =
     Used_attributes.mark_used_attribute attr;
     Ext_list.iter
       (Ast_payload.ident_or_record_as_config loc payload)
-      (Ast_payload.table_dispatch !structural_config_table)
+      (table_dispatch !structural_config_table)
   | {pstr_desc = Pstr_attribute _} :: rest -> iter_on_config_str rest
   | _ :: _ -> ()
 
@@ -78,7 +84,7 @@ let rec iter_on_config_sig (x : Parsetree.signature) =
     Used_attributes.mark_used_attribute attr;
     Ext_list.iter
       (Ast_payload.ident_or_record_as_config loc payload)
-      (Ast_payload.table_dispatch !signature_config_table)
+      (table_dispatch !signature_config_table)
   | {psig_desc = Psig_attribute _} :: rest -> iter_on_config_sig rest
   | _ :: _ -> ()
 

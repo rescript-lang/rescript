@@ -80,6 +80,3 @@ val ident_or_record_as_config : Location.t -> t -> action list
 val assert_bool_lit : Parsetree.expression -> bool
 
 val empty : t
-
-val table_dispatch :
-  (Parsetree.expression option -> 'a) Map_string.t -> action -> 'a

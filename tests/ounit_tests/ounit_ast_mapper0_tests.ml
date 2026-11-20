@@ -50,7 +50,7 @@ let ppx_context_fields0 ast0 =
 
 let test_ppx_context_on_the_wire _ =
   let structure =
-    Ast_mapper.add_ppx_context_str ~tool_name:"rescript"
+    Ppx_context.add_str ~tool_name:"rescript"
       [
         Ast_helper.Str.eval
           (Ast_helper.Exp.constant (Pconst_integer ("1", None)));
@@ -74,7 +74,7 @@ let test_ppx_context_on_the_wire _ =
   (match List.assoc "cookies" fields with
   | {Parsetree0.pexp_desc = Pexp_construct ({txt = Lident "[]"}, None)} -> ()
   | _ -> assert_failure "the PPX gets no cookies");
-  OUnit.assert_equal 1 (List.length (Ast_mapper.drop_ppx_context_str structure))
+  OUnit.assert_equal 1 (List.length (Ppx_context.drop_str structure))
 
 let test_removed_open_pattern_is_rejected_from_ast0 _ =
   let pat =
