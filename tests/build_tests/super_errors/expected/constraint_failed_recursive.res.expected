@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/constraint_failed_recursive.res[0m:[2m2:11-19[0m
+
+  1 [2m│[0m type rec t<'a> = 'a constraint 'a = int
+  [1;31m2[0m [2m│[0m and bad = [1;31mt<string>[0m
+  3 [2m│[0m 
+
+  Constraints are not satisfied in this type.
+  Type t<string> should be an instance of t<int>
