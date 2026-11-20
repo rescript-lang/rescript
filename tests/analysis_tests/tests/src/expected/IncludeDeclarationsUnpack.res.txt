@@ -1,0 +1,47 @@
+References src/IncludeDeclarationsUnpack.res 7:4
+[
+  {
+    "range": {
+      "end": { "character": 6, "line": 7 },
+      "start": { "character": 4, "line": 7 }
+    },
+    "uri": "file:///IncludeDeclarationsUnpack.res"
+  }
+]
+
+References src/IncludeDeclarationsUnpack.res 14:8
+[
+  {
+    "range": {
+      "end": { "character": 39, "line": 11 },
+      "start": { "character": 37, "line": 11 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 10, "line": 14 },
+      "start": { "character": 8, "line": 14 }
+    },
+    "uri": "file:///IncludeDeclarationsUnpack.res"
+  }
+]
+
+References src/IncludeDeclarationsUnpack.res 16:11
+[
+  {
+    "range": {
+      "end": { "character": 52, "line": 13 },
+      "start": { "character": 50, "line": 13 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 13, "line": 16 },
+      "start": { "character": 11, "line": 16 }
+    },
+    "uri": "file:///IncludeDeclarationsUnpack.res"
+  }
+]
+

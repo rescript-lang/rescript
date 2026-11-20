@@ -1,0 +1,83 @@
+References src/IncludeDeclarationsParam.res 13:10
+[
+  {
+    "range": {
+      "end": { "character": 12, "line": 13 },
+      "start": { "character": 10, "line": 13 }
+    },
+    "uri": "file:///IncludeDeclarationsParam.res"
+  },
+  {
+    "range": {
+      "end": { "character": 12, "line": 15 },
+      "start": { "character": 10, "line": 15 }
+    },
+    "uri": "file:///IncludeDeclarationsParam.res"
+  },
+  {
+    "range": {
+      "end": { "character": 12, "line": 16 },
+      "start": { "character": 10, "line": 16 }
+    },
+    "uri": "file:///IncludeDeclarationsParam.res"
+  },
+  {
+    "range": {
+      "end": { "character": 12, "line": 17 },
+      "start": { "character": 10, "line": 17 }
+    },
+    "uri": "file:///IncludeDeclarationsParam.res"
+  }
+]
+
+Rename src/IncludeDeclarationsParam.res 17:10 Jx
+[
+  {
+    "edits": [
+      {
+        "newText": "Jx",
+        "range": {
+          "end": { "character": 12, "line": 13 },
+          "start": { "character": 10, "line": 13 }
+        }
+      },
+      {
+        "newText": "Jx",
+        "range": {
+          "end": { "character": 12, "line": 15 },
+          "start": { "character": 10, "line": 15 }
+        }
+      },
+      {
+        "newText": "Jx",
+        "range": {
+          "end": { "character": 12, "line": 16 },
+          "start": { "character": 10, "line": 16 }
+        }
+      },
+      {
+        "newText": "Jx",
+        "range": {
+          "end": { "character": 12, "line": 17 },
+          "start": { "character": 10, "line": 17 }
+        }
+      }
+    ],
+    "textDocument": {
+      "uri": "file:///IncludeDeclarationsParam.res",
+      "version": 0
+    }
+  }
+]
+
+References src/IncludeDeclarationsParam.res 21:13
+[
+  {
+    "range": {
+      "end": { "character": 15, "line": 21 },
+      "start": { "character": 13, "line": 21 }
+    },
+    "uri": "file:///IncludeDeclarationsParam.res"
+  }
+]
+

@@ -20,8 +20,22 @@ let attrs_to_docstring attrs =
   | None -> []
   | Some docstring -> [docstring]
 
+(* Constructors and record fields read from a signature get stamps of their
+   own. Their identifiers are those of the declarations they come from: an
+   include or a module type does not rename them, and a signature from another
+   file brings that compilation's stamps, which can equal stamps of this one.
+   The compiler's stamps are positive, 0 marks a persistent identifier and -1
+   a hidden one, so stamps from -2 down can't collide. [file_for_cmt_infos]
+   restarts the numbering for each file, so reading a file again gives the
+   same stamps. *)
+let signature_label_stamp = ref (-1)
+
+let fresh_signature_label_stamp () =
+  decr signature_label_stamp;
+  !signature_label_stamp
+
 let map_record_field {Types.ld_id; ld_type; ld_attributes; ld_optional} =
-  let astamp = Ident.binding_time ld_id in
+  let astamp = fresh_signature_label_stamp () in
   let name = Ident.name ld_id in
   {
     stamp = astamp;
@@ -98,7 +112,7 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
                          {Types.cd_loc; cd_id; cd_args; cd_res; cd_attributes}
                        ->
                          let name = Ident.name cd_id in
-                         let stamp = Ident.binding_time cd_id in
+                         let stamp = fresh_signature_label_stamp () in
                          let item =
                            {
                              Constructor.stamp;
@@ -757,6 +771,7 @@ and for_structure ~name ~env str_items =
 
 let file_for_cmt_infos ~module_name ~uri
     ({cmt_modname; cmt_annots} : Cmt_format.cmt_infos) =
+  signature_label_stamp := -1;
   let env =
     {Env.stamps = Stamps.init (); module_path = File (uri, module_name)}
   in

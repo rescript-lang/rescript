@@ -12,47 +12,101 @@ let add_reference ~extra stamp loc =
        Hashtbl.find extra.internal_references stamp
      else []))
 
+type include_origin =
+  | Origin of int
+  | Other_file of string * string list  (** module name and path *)
+
+(* An `include` copies the members of a module under fresh stamps, with module
+   path [IncludedModule (source, _)] (for a nested member, under its modules)
+   and the location of the member they copy. Follow a copy back to that
+   member. When the path leads into another file, the result is
+   [Other_file] with the member's path there, without loading that file: if
+   the member is missing, the copy still is no declaration of this file and
+   lookups in the other file find nothing. Otherwise the result is the
+   member's stamp, or the copy itself when the member can't be found. *)
+let rec include_origin ~(file : File.t) stamp (tip : Tip.t) =
+  let source_path (d : _ Declared.t) =
+    Module_path.included_path d.module_path d.name.txt
+  in
+  let source, kind =
+    match tip with
+    | Value ->
+      ( Option.bind (Stamps.find_value file.stamps stamp) source_path,
+        Exported.Value )
+    | Module ->
+      ( Option.bind (Stamps.find_module file.stamps stamp) source_path,
+        Exported.Module )
+    | Type | Field _ | Constructor _ ->
+      ( Option.bind (Stamps.find_type file.stamps stamp) source_path,
+        Exported.Type )
+  in
+  match source with
+  | Some source -> (
+    let env = Query_env.from_file file in
+    match Resolve_path.from_compiler_path ~env source with
+    | Exported (env, name) -> (
+      match Exported.find env.exported kind name with
+      | Some source_stamp when source_stamp <> stamp ->
+        include_origin ~file source_stamp tip
+      | Some _ | None -> Origin stamp)
+    | Global (module_name, path) -> Other_file (module_name, path)
+    | Stamp _ | GlobalMod _ | NotFound -> Origin stamp)
+  | None -> Origin stamp
+
+(* A copy whose member is found elsewhere is not a declaration of this file. *)
+let is_declaration ~file stamp tip =
+  include_origin ~file stamp tip = Origin stamp
+
 let extra_for_file ~(file : File.t) =
   let extra = init_extra () in
   file.stamps
   |> Stamps.iter_modules (fun stamp (d : Module.t Declared.t) ->
-      add_loc_item extra d.name.loc (LModule (Definition (stamp, Module)));
-      add_reference ~extra stamp d.name.loc);
+      if is_declaration ~file stamp Module then (
+        add_loc_item extra d.name.loc (LModule (Definition (stamp, Module)));
+        add_reference ~extra stamp d.name.loc));
   file.stamps
   |> Stamps.iter_values (fun stamp (d : Types.type_expr Declared.t) ->
-      add_loc_item extra d.name.loc
-        (Typed (d.name.txt, d.item, Definition (stamp, Value)));
-      add_reference ~extra stamp d.name.loc);
+      if is_declaration ~file stamp Value then (
+        add_loc_item extra d.name.loc
+          (Typed (d.name.txt, d.item, Definition (stamp, Value)));
+        add_reference ~extra stamp d.name.loc));
   file.stamps
   |> Stamps.iter_types (fun stamp (d : Type.t Declared.t) ->
-      add_loc_item extra d.name.loc
-        (TypeDefinition (d.name.txt, d.item.Type.decl, stamp));
-      add_reference ~extra stamp d.name.loc;
-      match d.item.Type.kind with
-      | Record labels ->
-        labels
-        |> List.iter (fun {stamp; fname; typ} ->
-            add_reference ~extra stamp fname.loc;
-            add_loc_item extra fname.loc
-              (Typed (d.name.txt, typ, Definition (d.stamp, Field fname.txt))))
-      | Variant constructors ->
-        constructors
-        |> List.iter (fun {Constructor.stamp; cname} ->
-            add_reference ~extra stamp cname.loc;
-            let t =
-              {
-                Types.id = 0;
-                level = 0;
-                desc =
-                  Tconstr
-                    ( Path.Pident {Ident.stamp; name = d.name.txt; flags = 0},
-                      [],
-                      ref Types.Mnil );
-              }
-            in
-            add_loc_item extra cname.loc
-              (Typed (d.name.txt, t, Definition (d.stamp, Constructor cname.txt))))
-      | _ -> ());
+      if is_declaration ~file stamp Type then (
+        add_loc_item extra d.name.loc
+          (TypeDefinition (d.name.txt, d.item.Type.decl, stamp));
+        (* Types, constructors and fields read from a signature have no
+           location. *)
+        let add_declaration_reference stamp (loc : Location.t) =
+          if not loc.loc_ghost then add_reference ~extra stamp loc
+        in
+        add_declaration_reference stamp d.name.loc;
+        match d.item.Type.kind with
+        | Record labels ->
+          labels
+          |> List.iter (fun {stamp; fname; typ} ->
+              add_declaration_reference stamp fname.loc;
+              add_loc_item extra fname.loc
+                (Typed (d.name.txt, typ, Definition (d.stamp, Field fname.txt))))
+        | Variant constructors ->
+          constructors
+          |> List.iter (fun {Constructor.stamp; cname} ->
+              add_declaration_reference stamp cname.loc;
+              let t =
+                {
+                  Types.id = 0;
+                  level = 0;
+                  desc =
+                    Tconstr
+                      ( Path.Pident {Ident.stamp; name = d.name.txt; flags = 0},
+                        [],
+                        ref Types.Mnil );
+                }
+              in
+              add_loc_item extra cname.loc
+                (Typed
+                   (d.name.txt, t, Definition (d.stamp, Constructor cname.txt))))
+        | _ -> ()));
   extra
 
 let add_external_reference ~extra module_name path tip loc =
