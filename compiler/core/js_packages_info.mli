@@ -49,6 +49,13 @@ val from_name : string -> t
 val is_empty : t -> bool
 
 val add_npm_package_path : t -> string -> t
+
+val package_info_of_string : string -> package_info
+(** Reads [module_system:path:suffix], as given to [-bs-package-output]. *)
+
+val string_of_package_info : package_info -> string
+
+val add_package_info : t -> package_info -> t
 (** used by command line option 
     e.g [-bs-package-output commonjs:xx/path]
 *)

@@ -133,26 +133,38 @@ let query_package_infos ({name; module_systems} : t)
       Package_found {rel_path; pkg_rel_path; suffix = k.suffix}
     | None -> Package_not_found)
 
+let package_info_of_string (s : string) : package_info =
+  let handle_module_system module_system =
+    match module_system_of_string module_system with
+    | Some x -> x
+    | None -> Bsc_args.bad_arg ("invalid module system " ^ module_system)
+  in
+  match Ext_string.split ~keep_empty:true s ':' with
+  | [path] -> {module_system = Esmodule; path; suffix = Literals.suffix_js}
+  | [module_system; path] ->
+    {
+      module_system = handle_module_system module_system;
+      path;
+      suffix = Literals.suffix_js;
+    }
+  | [module_system; path; suffix] ->
+    {module_system = handle_module_system module_system; path; suffix}
+  | _ -> Bsc_args.bad_arg ("invalid npm package path: " ^ s)
+
+let string_of_package_info {module_system; path; suffix} =
+  let module_system =
+    match module_system with
+    | Commonjs -> "commonjs"
+    | Esmodule -> "esmodule"
+  in
+  String.concat ":" [module_system; path; suffix]
+
+let add_package_info (packages_info : t) (m : package_info) : t =
+  if is_empty packages_info then
+    Bsc_args.bad_arg "Set package name first using -bs-package-name"
+  else {packages_info with module_systems = m :: packages_info.module_systems}
+
 let add_npm_package_path (packages_info : t) (s : string) : t =
   if is_empty packages_info then
     Bsc_args.bad_arg "Set package name first using -bs-package-name"
-  else
-    let handle_module_system module_system =
-      match module_system_of_string module_system with
-      | Some x -> x
-      | None -> Bsc_args.bad_arg ("invalid module system " ^ module_system)
-    in
-    let m =
-      match Ext_string.split ~keep_empty:true s ':' with
-      | [path] -> {module_system = Esmodule; path; suffix = Literals.suffix_js}
-      | [module_system; path] ->
-        {
-          module_system = handle_module_system module_system;
-          path;
-          suffix = Literals.suffix_js;
-        }
-      | [module_system; path; suffix] ->
-        {module_system = handle_module_system module_system; path; suffix}
-      | _ -> Bsc_args.bad_arg ("invalid npm package path: " ^ s)
-    in
-    {packages_info with module_systems = m :: packages_info.module_systems}
+  else add_package_info packages_info (package_info_of_string s)

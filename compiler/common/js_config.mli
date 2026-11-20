@@ -66,6 +66,4 @@ val int_of_jsx_version : jsx_version -> int
 
 val string_of_jsx_module : jsx_module -> string
 
-val jsx_version_of_int : int -> jsx_version option
-
 val jsx_module_of_string : string -> jsx_module

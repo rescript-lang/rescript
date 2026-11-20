@@ -31,3 +31,5 @@ val set_package_map : string -> unit
 val get_packages_info : unit -> Js_packages_info.t
 
 val update_npm_package_path : string -> unit
+
+val add_package_output : Js_packages_info.package_info -> unit

@@ -21,7 +21,10 @@
 (library
  (name rescript_compiler_driver)
  (wrapped false)
- (modules rescript_compiler_driver rescript_compiler_build_identity)
+ (modules
+  compile_request
+  rescript_compiler_driver
+  rescript_compiler_build_identity)
  (instrumentation
   (backend bisect_ppx))
  (libraries

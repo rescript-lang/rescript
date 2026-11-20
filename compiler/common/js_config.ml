@@ -97,10 +97,6 @@ let string_of_jsx_module = function
   | React -> "react"
   | Generic {module_name} -> module_name
 
-let jsx_version_of_int = function
-  | 4 -> Some Jsx_v4
-  | _ -> None
-
 let jsx_module_of_string = function
   | "react" -> React
   | module_name -> Generic {module_name}
