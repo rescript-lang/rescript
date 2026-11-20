@@ -17,6 +17,7 @@ let env =
           exported = Shared_types.Exported.init ();
           items = [];
           deprecated = None;
+          functor_params = [];
         };
     }
 
