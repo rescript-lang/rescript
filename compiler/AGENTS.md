@@ -11,7 +11,7 @@ commands below are relative to the repository root unless stated otherwise.
   - Add a source fixture exercising the new syntax to `tests/syntax_tests/data/ast-mapping/`. Every file there is run through `res_parser -test-ast-conversion` (which round-trips the parsetree through the frozen v0 AST before printing) as part of `make test-syntax`; the printed output must match the snapshot in its `expected/` directory.
   - For exact-identity invariants (locations, attributes) or the v0 wire shape itself, add cases to `tests/ounit_tests/ounit_ast_mapper0_tests.ml`, which tests `ast_mapper_to0`/`ast_mapper_from0` directly.
 
-- **Don't bump magic numbers** - Changing a serialized type (parsetree, typed tree, `.cmi` signature) needs no edit of the magic numbers in `compiler/ext/config.ml`. `yarn changelog:release` bumps them when `compiler/ml`, `compiler/ext` or `compiler/flow_parser` changed since the previous release, and the changelog check rejects pull requests that bump them.
+- **Don't bump magic numbers** - Changing a serialized type (parsetree, typed tree, `.cmi` signature) needs no edit of the magic numbers in `compiler/ext/config.ml`. `yarn changelog:release` bumps them when `compiler/ast`, `compiler/ml`, `compiler/ext` or `compiler/flow_parser` changed since the previous release, and the changelog check rejects pull requests that bump them.
 
 - **Missing test coverage** - Always add tests for syntax, lambda, and end-to-end behavior
 
@@ -57,6 +57,8 @@ Read the relevant area guide linked from the [root instructions](../AGENTS.md#ar
 
 1. **Understand which layer you're working on:**
    - **Syntax layer** (`compiler/syntax/`): Parsing and surface syntax
+   - **AST layer** (`compiler/ast/`): The parsetree and the helpers the parser
+     shares with the type checker. It must not depend on `ml` or `flow_parser`
    - **ML layer** (`compiler/ml/`): Type checking and AST transformations
    - **Lambda layer** (`compiler/core/lam_*`): Intermediate representation and optimizations
    - **JS layer** (`compiler/core/js_*`): JavaScript generation
@@ -124,7 +126,7 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 ### Adding New Language Features
 
 1. Update parser in `compiler/syntax/`
-2. Update AST definitions in `compiler/ml/`
+2. Update AST definitions in `compiler/ast/`
 3. Implement type checking in `compiler/ml/`
 4. Add Lambda IR handling in `compiler/core/lam_*`
 5. Implement JS generation in `compiler/core/js_*`

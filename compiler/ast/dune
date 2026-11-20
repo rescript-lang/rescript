@@ -1,0 +1,9 @@
+; The parsetree and the helpers the parser and printer need. Keep this library
+; free of the type checker and of flow_parser.
+
+(library
+ (name rescript_ast)
+ (wrapped false)
+ (instrumentation
+  (backend bisect_ppx))
+ (libraries ext))

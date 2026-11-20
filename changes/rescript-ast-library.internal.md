@@ -1,0 +1,1 @@
+- Move the parsetree and its helpers into a new `rescript_ast` library, so the parser no longer depends on the type checker.
