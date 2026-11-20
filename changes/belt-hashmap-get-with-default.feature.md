@@ -1,0 +1,1 @@
+- Add `getWithDefault` and `getOrThrow` to `Belt.HashMap`, `Belt.HashMap.Int` and `Belt.HashMap.String`.

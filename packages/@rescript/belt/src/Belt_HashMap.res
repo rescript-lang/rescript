@@ -170,6 +170,40 @@ let get = (h, key) => {
   }
 }
 
+let rec getWithDefaultAux = (~eq, key, buckets, default) =>
+  switch C.toOpt(buckets) {
+  | None => default
+  | Some(cell) =>
+    if eq(key, cell.N.key) {
+      cell.N.value
+    } else {
+      getWithDefaultAux(~eq, key, cell.N.next, default)
+    }
+  }
+
+let getWithDefault = (h, key, default) => {
+  let h_buckets = h.C.buckets
+  let nid = Int.bitwiseAnd(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
+  getWithDefaultAux(~eq=Belt_Id.getEqInternal(h.C.eq), key, A.getUnsafe(h_buckets, nid), default)
+}
+
+let rec getOrThrowAux = (~eq, key, buckets) =>
+  switch C.toOpt(buckets) {
+  | None => throw(Not_found)
+  | Some(cell) =>
+    if eq(key, cell.N.key) {
+      cell.N.value
+    } else {
+      getOrThrowAux(~eq, key, cell.N.next)
+    }
+  }
+
+let getOrThrow = (h, key) => {
+  let h_buckets = h.C.buckets
+  let nid = Int.bitwiseAnd(Belt_Id.getHashInternal(h.C.hash)(key), A.length(h_buckets) - 1)
+  getOrThrowAux(~eq=Belt_Id.getEqInternal(h.C.eq), key, A.getUnsafe(h_buckets, nid))
+}
+
 let rec memInBucket = (key, cell, ~eq) =>
   eq(cell.N.key, key) ||
   switch C.toOpt(cell.N.next) {

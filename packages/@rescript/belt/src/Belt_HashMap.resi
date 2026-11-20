@@ -204,6 +204,52 @@ Belt.HashMap.has(s0, 2) == false
 let has: (t<'key, 'value, 'id>, 'key) => bool
 
 /**
+`getWithDefault(tbl, k, default)` returns the value bound to `k`, or `default` if `k` is not bound.
+
+## Examples
+
+```rescript
+module IntHash = Belt.Id.MakeHashable({
+  type t = int
+  let hash = a => a
+  let eq = (a, b) => a == b
+})
+
+let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
+Belt.HashMap.set(s0, 1, "value1")
+
+Belt.HashMap.getWithDefault(s0, 1, "default") == "value1"
+Belt.HashMap.getWithDefault(s0, 2, "default") == "default"
+```
+*/
+let getWithDefault: (t<'key, 'value, 'id>, 'key, 'value) => 'value
+
+/**
+`getOrThrow(tbl, k)` returns the value bound to `k`. Throws `Not_found` if `k` is not bound.
+
+## Examples
+
+```rescript
+module IntHash = Belt.Id.MakeHashable({
+  type t = int
+  let hash = a => a
+  let eq = (a, b) => a == b
+})
+
+let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
+Belt.HashMap.set(s0, 1, "value1")
+
+Belt.HashMap.getOrThrow(s0, 1) == "value1"
+
+switch Belt.HashMap.getOrThrow(s0, 2) {
+| exception Not_found => assert(true)
+| _ => assert(false)
+}
+```
+*/
+let getOrThrow: (t<'key, 'value, 'id>, 'key) => 'value
+
+/**
 If bound exists, removes it from the hash map.
 
 ## Examples

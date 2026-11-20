@@ -9,6 +9,8 @@ import * as Belt_HashMap from "@rescript/belt/src/Belt_HashMap.mjs";
 import * as Primitive_int from "@rescript/runtime/lib/es6/Primitive_int.mjs";
 import * as Belt_SortArray from "@rescript/belt/src/Belt_SortArray.mjs";
 import * as Array_data_util from "./array_data_util.mjs";
+import * as Belt_HashMapInt from "@rescript/belt/src/Belt_HashMapInt.mjs";
+import * as Belt_HashMapString from "@rescript/belt/src/Belt_HashMapString.mjs";
 
 function intEq(x, y) {
   return x === y;
@@ -66,6 +68,71 @@ Mocha.describe("Belt_hashmap_test", () => {
     }
     Test_utils.eq("File \"belt_hashmap_test.res\", line 43, characters 7-14", Belt_HashMap.size(v), 98000);
     Test_utils.ok("File \"belt_hashmap_test.res\", line 44, characters 7-14", Belt_Array.every(Array_data_util.range(2001, 100000), x => Belt_HashMap.has(v, x)));
+  });
+  Mocha.test("getWithDefault and getOrThrow", () => {
+    let v = Belt_HashMap.fromArray([
+      [
+        1,
+        10
+      ],
+      [
+        2,
+        20
+      ]
+    ], Y);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 49, characters 7-14", Belt_HashMap.getWithDefault(v, 1, 0), 10);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 50, characters 7-14", Belt_HashMap.getWithDefault(v, 3, 0), 0);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 51, characters 7-14", Belt_HashMap.getOrThrow(v, 2), 20);
+    Test_utils.throws("File \"belt_hashmap_test.res\", line 52, characters 11-18", () => {
+      Belt_HashMap.getOrThrow(v, 3);
+    });
+  });
+  Mocha.test("getWithDefault and getOrThrow with colliding keys", () => {
+    let Collide = Belt_Id.hashable(param => 0, intEq);
+    let v = Belt_HashMap.make(4, Collide);
+    for (let i = 0; i <= 9; ++i) {
+      Belt_HashMap.set(v, i, i * 10 | 0);
+    }
+    Test_utils.ok("File \"belt_hashmap_test.res\", line 61, characters 7-14", Belt_Array.every(Array_data_util.range(0, 9), i => Belt_HashMap.getWithDefault(v, i, -1) === (i * 10 | 0)));
+    Test_utils.ok("File \"belt_hashmap_test.res\", line 62, characters 7-14", Belt_Array.every(Array_data_util.range(0, 9), i => Belt_HashMap.getOrThrow(v, i) === (i * 10 | 0)));
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 63, characters 7-14", Belt_HashMap.getWithDefault(v, 10, -1), -1);
+    Test_utils.throws("File \"belt_hashmap_test.res\", line 64, characters 11-18", () => {
+      Belt_HashMap.getOrThrow(v, 10);
+    });
+  });
+  Mocha.test("Int and String getWithDefault and getOrThrow", () => {
+    let i = Belt_HashMapInt.fromArray([
+      [
+        1,
+        "a"
+      ],
+      [
+        2,
+        "b"
+      ]
+    ]);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 69, characters 7-14", Belt_HashMapInt.getWithDefault(i, 2, "z"), "b");
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 70, characters 7-14", Belt_HashMapInt.getWithDefault(i, 3, "z"), "z");
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 71, characters 7-14", Belt_HashMapInt.getOrThrow(i, 1), "a");
+    Test_utils.throws("File \"belt_hashmap_test.res\", line 72, characters 11-18", () => {
+      Belt_HashMapInt.getOrThrow(i, 3);
+    });
+    let s = Belt_HashMapString.fromArray([
+      [
+        "a",
+        1
+      ],
+      [
+        "b",
+        2
+      ]
+    ]);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 74, characters 7-14", Belt_HashMapString.getWithDefault(s, "b", 0), 2);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 75, characters 7-14", Belt_HashMapString.getWithDefault(s, "c", 0), 0);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 76, characters 7-14", Belt_HashMapString.getOrThrow(s, "a"), 1);
+    Test_utils.throws("File \"belt_hashmap_test.res\", line 77, characters 11-18", () => {
+      Belt_HashMapString.getOrThrow(s, "c");
+    });
   });
 });
 

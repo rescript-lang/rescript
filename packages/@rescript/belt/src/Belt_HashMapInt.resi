@@ -19,6 +19,38 @@ let get: (t<'a>, key) => option<'a>
 
 let has: (t<'b>, key) => bool
 
+/**
+`getWithDefault(tbl, k, default)` returns the value bound to `k`, or `default` if `k` is not bound.
+
+## Examples
+
+```rescript
+let hMap = Belt.HashMap.Int.fromArray([(1, "value1")])
+
+Belt.HashMap.Int.getWithDefault(hMap, 1, "default") == "value1"
+Belt.HashMap.Int.getWithDefault(hMap, 2, "default") == "default"
+```
+*/
+let getWithDefault: (t<'a>, key, 'a) => 'a
+
+/**
+`getOrThrow(tbl, k)` returns the value bound to `k`. Throws `Not_found` if `k` is not bound.
+
+## Examples
+
+```rescript
+let hMap = Belt.HashMap.Int.fromArray([(1, "value1")])
+
+Belt.HashMap.Int.getOrThrow(hMap, 1) == "value1"
+
+switch Belt.HashMap.Int.getOrThrow(hMap, 2) {
+| exception Not_found => assert(true)
+| _ => assert(false)
+}
+```
+*/
+let getOrThrow: (t<'a>, key) => 'a
+
 let remove: (t<'a>, key) => unit
 
 @deprecated("Use `forEach` instead")
