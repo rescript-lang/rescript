@@ -659,7 +659,7 @@ module E = struct
   let dict_entries (e : expression) =
     let chunk (e : expression) =
       match e.pexp_attributes with
-      | [] -> dict_rows ~marker:Ast_dict.rows_marker e
+      | [] -> dict_rows ~marker:Ast_dict0.rows_marker e
       | _ -> None
     in
     let rows = List.map (fun row -> `Row row) in
@@ -675,7 +675,7 @@ module E = struct
             ( Asttypes.Noloc.Nolabel,
               {pexp_desc = Pexp_array sources; pexp_attributes = []} );
           ] )
-      when txt = Ast_dict.spread_marker -> (
+      when txt = Ast_dict0.spread_marker -> (
       match chunk target with
       | Some target_rows ->
         Some
@@ -687,7 +687,7 @@ module E = struct
                 | None -> [`Spread source])
               sources)
       | None -> None)
-    | _ -> Option.map rows (dict_rows ~marker:Ast_dict.literal_marker e)
+    | _ -> Option.map rows (dict_rows ~marker:Ast_dict0.literal_marker e)
 
   (* The kind and elements of an array or list literal with spreads encoded as
      a call, see [Ast_mapper_to0.spread_call] *)
@@ -1413,7 +1413,7 @@ module E = struct
       in
       let unsupported () =
         extension ~loc ~attrs
-          (Ast_mapper.extension_of_error
+          (Builtin_attributes.extension_of_error
              (Location.errorf ~loc
                 "A PPX returned a locally abstract type wrapper that does not \
                  enclose a ReScript function. This v0 AST form is not \

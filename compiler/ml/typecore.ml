@@ -3821,10 +3821,13 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     (* The built-in PPX lowers raw JavaScript before type checking. *)
     raise
       (Error_forward
-         (Ast_raw.uninterpreted ~loc:name_loc (Ast_raw.extension_name kind)))
+         (Builtin_attributes.uninterpreted_extension ~loc:name_loc
+            (Ast_raw.extension_name kind)))
   | Pexp_todo {name_loc} ->
     (* The built-in PPX lowers %todo before type checking. *)
-    raise (Error_forward (Ast_raw.uninterpreted ~loc:name_loc Ast_todo.name))
+    raise
+      (Error_forward
+         (Builtin_attributes.uninterpreted_extension ~loc:name_loc Ast_todo.name))
   | Pexp_await _ -> (* should be handled earlier *) assert false
   | Pexp_jsx_element _ ->
     raise (Error (sexp.pexp_loc, Env.empty, Jsx_not_enabled))

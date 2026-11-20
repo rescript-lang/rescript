@@ -2848,7 +2848,9 @@ let test_ocaml_prefixed_builtins_arrive_bare _ =
     (builtin_names_of (fun it -> it.signature it signature))
 
 let test_extension_of_error_is_bare _ =
-  let name, _ = Ast_mapper.extension_of_error (Location.error ~loc "boom") in
+  let name, _ =
+    Builtin_attributes.extension_of_error (Location.error ~loc "boom")
+  in
   OUnit.assert_equal ~printer:Fun.id "error" name.txt
 
 let suites =
