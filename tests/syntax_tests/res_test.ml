@@ -702,8 +702,7 @@ module Outcome_printer_tests = struct
     let result = Res_driver.parsing_engine.parse_implementation ~filename in
     let signature =
       if result.Res_driver.invalid then (
-        Res_driver.parsing_engine.string_of_diagnostics ~source:result.source
-          ~filename:result.filename result.diagnostics;
+        Syntax_driver.print_report result.diagnostics result.source;
         exit 1)
       else result.Res_driver.parsetree
     in

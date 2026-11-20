@@ -20,8 +20,6 @@ type 'diagnostics parsing_engine = {
     filename:string -> (Parsetree.signature, 'diagnostics) parse_result;
   parse_interface_from_source:
     source:string -> (Parsetree.signature, 'diagnostics) parse_result;
-  string_of_diagnostics:
-    source:string -> filename:string -> 'diagnostics -> unit;
 }
 
 val parse_implementation_from_source :
@@ -51,18 +49,9 @@ type print_engine = {
     unit;
 }
 
+val make_parsing_engine :
+  load_file:(string -> string) -> Res_diagnostics.t list parsing_engine
+(** A parsing engine that reads files with [load_file]. *)
+
 val parsing_engine : Res_diagnostics.t list parsing_engine
-
-(* Prints ReScript with line breaks written as [newline] *)
-val print_engine : newline:string -> print_engine
-
-exception Already_reported
-
-(* ReScript implementation parsing compatible with ocaml pparse driver. Used by the compiler. *)
-val parse_implementation :
-  ignore_parse_errors:bool -> string -> Parsetree.structure
-[@@live] [@@throws Location.Error Already_reported]
-
-(* ReScript interface parsing compatible with ocaml pparse driver. Used by the compiler *)
-val parse_interface : ignore_parse_errors:bool -> string -> Parsetree.signature
-[@@live] [@@throws Location.Error Already_reported]
+(** A parsing engine that reads files from disk. *)

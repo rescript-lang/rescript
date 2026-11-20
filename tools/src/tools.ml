@@ -677,7 +677,7 @@ let print_rescript_code_block ~display_filename ~add_error
   let report_parse_error diagnostics =
     let buf = Buffer.create 1000 in
     let formatter = Format.formatter_of_buffer buf in
-    Res_diagnostics.print_report ~formatter
+    Syntax_driver.print_report ~formatter
       ~custom_intro:(Some "Syntax error in code block in docstring") diagnostics
       code_with_offset;
     add_error (Buffer.contents buf)

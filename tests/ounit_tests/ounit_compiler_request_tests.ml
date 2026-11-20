@@ -787,7 +787,7 @@ let request_root_io_isolation_tests _context =
             Compiler_request_state.with_fresh ~cwd (fun () ->
                 wait_for_atomic start;
                 let rescript_source =
-                  (Res_driver.parsing_engine.parse_implementation
+                  (Syntax_driver.parsing_engine.parse_implementation
                      ~filename:"Input.res")
                     .source
                 in

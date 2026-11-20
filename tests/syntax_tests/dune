@@ -9,4 +9,4 @@
  (package rescript)
  (enabled_if
   (<> %{profile} browser))
- (libraries syntax core jsx outcome_printer))
+ (libraries common syntax core jsx outcome_printer))
