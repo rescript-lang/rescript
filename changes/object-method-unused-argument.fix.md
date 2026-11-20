@@ -1,0 +1,1 @@
+- Fix warning 20 ("this argument will not be used by the function") firing on calls of methods of open JS object types, such as `obj["getData"]("text/plain")`.
