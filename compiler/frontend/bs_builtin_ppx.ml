@@ -119,7 +119,7 @@ let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
   | Pexp_regexp {pattern; flags} ->
     let loc = e.pexp_loc in
     let source = "/" ^ pattern ^ "/" ^ flags in
-    Ast_payload.validate_raw_source ~kind:Raw_re ~loc ~offset:0 source;
+    Ast_raw_validate.validate_raw_source ~kind:Raw_re ~loc ~offset:0 source;
     let raw =
       Ast_external_mk.local_external_apply loc ~pval_prim:"#raw_expr"
         ~pval_type:

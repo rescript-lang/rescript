@@ -79,7 +79,7 @@ let raw_structure loc (exp : Parsetree.expression) =
 let handle_raw loc payload =
   let is_function = ref None in
   match
-    Ast_payload.raw_as_string_exp_exn ~kind:Raw_exp ~is_function payload
+    Ast_raw_validate.raw_as_string_exp_exn ~kind:Raw_exp ~is_function payload
   with
   | None ->
     Location.raise_errorf ~loc "%%raw extension can only be applied to a string"
@@ -88,13 +88,13 @@ let handle_raw loc payload =
 let handle_ffi ~loc ~payload =
   let is_function = ref None in
   match
-    Ast_payload.raw_as_string_exp_exn ~kind:Raw_exp ~is_function payload
+    Ast_raw_validate.raw_as_string_exp_exn ~kind:Raw_exp ~is_function payload
   with
   | None -> ffi_error loc
   | Some exp -> ffi_expression loc ~is_function exp
 
 let handle_raw_structure loc payload =
-  match Ast_payload.raw_as_string_exp_exn ~kind:Raw_program payload with
+  match Ast_raw_validate.raw_as_string_exp_exn ~kind:Raw_program payload with
   | Some exp -> raw_structure loc exp
   | None ->
     Location.raise_errorf ~loc
@@ -106,7 +106,7 @@ let raw_source_expression ~(kind : Js_raw_info.raw_kind) ?is_function
     (source : Parsetree.raw_source) =
   let str = Ast_raw.js_source source in
   let loc = Ast_raw.payload_loc source in
-  Ast_payload.validate_raw_source ~kind ?is_function ~loc
+  Ast_raw_validate.validate_raw_source ~kind ?is_function ~loc
     ~offset:(Bs_flow_ast_utils.flow_deli_offset (Some "js"))
     str;
   Ast_helper.Exp.constant ~loc (Ast_helper.Const.string str)
