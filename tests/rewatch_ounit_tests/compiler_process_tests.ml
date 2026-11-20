@@ -109,7 +109,12 @@ let publication_releases_files_tests _context =
       in
       Test_support.write_file (artifact "Same.cmi") "same interface";
       Unix.utimes (artifact "Same.cmi") 1_000_000_000. 1_000_000_000.;
+      Test_support.write_file (artifact "Same.cmj") "code";
       Test_support.write_file (artifact "Kept.cmi") "kept interface";
+      Test_support.write_file (artifact "Kept.cmj") "code";
+      Test_support.write_file (artifact "Inlined.cmi") "inlined interface";
+      Test_support.write_file (artifact "Inlined.cmj") "old body";
+      Unix.utimes (artifact "Inlined.cmi") 1_000_000_000. 1_000_000_000.;
       Test_support.write_file (artifact "Failed.cmi") "previous interface";
       in_build (fun () ->
           List.iter
@@ -163,6 +168,17 @@ let publication_releases_files_tests _context =
             ((publish "src/Kept.res").cmi_change
            = Compiler_scheduler.Cmi_unchanged)
             "an interface the compiler did not rewrite is no change";
+          (* Dependents inline what the .cmj exports. *)
+          Build_file_store.write (artifact "Inlined.cmj") "new body";
+          check
+            ((publish "src/Inlined.res").cmi_change
+           = Compiler_scheduler.Cmi_changed)
+            "a changed .cmj is a change even when the interface is not";
+          assert_equal "new body" (File_util.read_file (artifact "Inlined.cmj"));
+          check
+            ((Unix.stat (artifact "Inlined.cmi")).st_mtime > 1_000_000_000.)
+            "a changed .cmj dates the interface, which the next build compares \
+             with";
           Test_support.write_file (artifact "Failed.ast") "ast";
           Build_file_store.write (artifact "Failed.cmi") "failed interface";
           Build_file_store.write (artifact "Failed.cmt") "partial typed tree";

@@ -1,0 +1,1 @@
+- Allow selected functions to opt into cross-module inlining with `@inline(crossModule)` and inline common `Option` helpers in application code.

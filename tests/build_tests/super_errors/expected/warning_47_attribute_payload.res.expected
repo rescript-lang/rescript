@@ -7,4 +7,4 @@
   3 [2m│[0m 
 
   illegal payload for attribute @inline.
-It must be either empty, 'always' or 'never'
+It must be empty, 'always', 'never' or 'crossModule'
