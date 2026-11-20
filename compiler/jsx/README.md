@@ -7,14 +7,14 @@ and the [ReScript React documentation](https://rescript-lang.org/docs/react/beyo
 
 ## Entry points and configuration
 
-[`jsx_ppx.ml`](src/jsx_ppx.ml) applies the built-in transformation to
+[`jsx_ppx.ml`](jsx_ppx.ml) applies the built-in transformation to
 implementations and signatures. It receives the project JSX version and module
 from the compiler driver. A `@jsxConfig` structure or signature attribute can
 override `version` and `module_` for the following items in that scope; nested
 structures and signatures save and restore the enclosing configuration.
 
 The current transformation is version 4, implemented by
-[`jsx_v4.ml`](src/jsx_v4.ml). A non-React JSX module selects the same transform
+[`jsx_v4.ml`](jsx_v4.ml). A non-React JSX module selects the same transform
 and changes the module paths emitted by it. Configuration state is local to a
 mapper invocation and includes the current nested-module path and whether the
 scope already defines a component.

@@ -1,0 +1,9 @@
+; The built-in JSX transformation. It rewrites the parsetree before type
+; checking, so it is a compiler pass and not part of the parser.
+
+(library
+ (name jsx)
+ (wrapped false)
+ (instrumentation
+  (backend bisect_ppx))
+ (libraries ml))

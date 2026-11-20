@@ -15,7 +15,8 @@ Happy hacking!
 This document covers repository-wide setup and workflow. Start with the guide
 for the compiler area you are changing:
 
-- [parser, printer, and JSX transformation](compiler/syntax/README.md)
+- [parser and printer](compiler/syntax/README.md)
+- [JSX transformation](compiler/jsx/README.md)
 - [type checker and typed tree](compiler/ml/README.md)
 - [Lambda, Lam, and JavaScript generation](compiler/core/README.md)
 - [editor analysis](analysis/README.md)
