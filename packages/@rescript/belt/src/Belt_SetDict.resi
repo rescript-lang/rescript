@@ -542,11 +542,13 @@ let get: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => option<'value>
 /**
 Same as [get](#get) but throw when element does not exist.
 */
+@throws(Not_found)
 let getExn: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => 'value
 
 /**
 Same as [get](#get) but throw when element does not exist.
 */
+@throws(Not_found)
 let getOrThrow: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => 'value
 
 /**

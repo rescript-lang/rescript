@@ -60,6 +60,7 @@ switch Belt.List.headExn(list{}) {
 }
 ```
 */
+@throws(Not_found)
 let headExn: t<'a> => 'a
 
 /**
@@ -78,6 +79,7 @@ switch Belt.List.headOrThrow(list{}) {
 }
 ```
 */
+@throws(Not_found)
 let headOrThrow: t<'a> => 'a
 
 /**
@@ -110,6 +112,7 @@ switch Belt.List.tailExn(list{}) {
 }
 ```
 */
+@throws(Not_found)
 let tailExn: t<'a> => t<'a>
 
 /**
@@ -128,6 +131,7 @@ switch Belt.List.tailOrThrow(list{}) {
 }
 ```
 */
+@throws(Not_found)
 let tailOrThrow: t<'a> => t<'a>
 
 /**
@@ -177,6 +181,7 @@ switch abc->Belt.List.getExn(4) {
 }
 ```
 */
+@throws(Not_found)
 let getExn: (t<'a>, int) => 'a
 
 /**
@@ -197,6 +202,7 @@ switch abc->Belt.List.getOrThrow(4) {
 }
 ```
 */
+@throws(Not_found)
 let getOrThrow: (t<'a>, int) => 'a
 
 /**

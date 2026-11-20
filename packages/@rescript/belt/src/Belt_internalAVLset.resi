@@ -74,6 +74,8 @@ let cmp: (t<'a>, t<'a>, ~cmp: cmp<'a, 'b>) => int
 let eq: (t<'a>, t<'a>, ~cmp: cmp<'a, 'b>) => bool
 let subset: (t<'a>, t<'a>, ~cmp: cmp<'a, 'b>) => bool
 let get: (t<'a>, 'a, ~cmp: cmp<'a, 'b>) => option<'a>
+
+@throws(Not_found)
 let getOrThrow: (t<'a>, 'a, ~cmp: cmp<'a, 'b>) => 'a
 
 let fromArray: (array<'a>, ~cmp: cmp<'a, 'b>) => t<'a>

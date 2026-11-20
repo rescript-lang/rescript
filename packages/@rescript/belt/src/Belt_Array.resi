@@ -42,12 +42,14 @@ let get: (t<'a>, int) => option<'a>
 Throw an exception if `i` is out of range.
 Otherwise return the value at index `i` in `arr`.
 */
+@throws(Assert_failure)
 let getExn: (t<'a>, int) => 'a
 
 /**
 Throw an exception if `i` is out of range.
 Otherwise return the value at index `i` in `arr`.
 */
+@throws(Assert_failure)
 let getOrThrow: (t<'a>, int) => 'a
 
 /**
@@ -68,11 +70,13 @@ let set: (t<'a>, int, 'a) => bool
 /**
 `setExn(arr, i, x)` throw an exception if `i` is out of range.
 */
+@throws(Assert_failure)
 let setExn: (t<'a>, int, 'a) => unit
 
 /**
 `setOrThrow(arr, i, x)` throw an exception if `i` is out of range.
 */
+@throws(Assert_failure)
 let setOrThrow: (t<'a>, int, 'a) => unit
 
 external setUnsafe: (t<'a>, int, 'a) => unit = "%array_unsafe_set"

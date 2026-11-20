@@ -1,0 +1,2 @@
+- Exception analysis reads `@throws` from library and external declarations, including third-party ones, instead of a built-in list (which also covered bs-json and Yojson), and a `@throws` on a `let` now reaches other modules even without an interface.
+- The compiler resolves the exceptions a `@throws` names where it is written, so exception analysis matches them with catches through opens, aliases, includes and functors, and warns (warning 113) about a name that is not an exception in scope.

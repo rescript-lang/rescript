@@ -82,7 +82,11 @@ let minimum: t<'a> => option<(key, 'a)>
 let maximum: t<'a> => option<(key, 'a)>
 let get: (t<'a>, key) => option<'a>
 let getWithDefault: (t<'a>, key, 'a) => 'a
+
+@throws(Not_found)
 let getExn: (t<'a>, key) => 'a
+
+@throws(Not_found)
 let getOrThrow: (t<'a>, key) => 'a
 
 /**

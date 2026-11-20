@@ -142,6 +142,7 @@ let caught = try panic("Invariant violated") catch {
 caught == "Panic! Invariant violated"
 ```
 */
+@throws(JsExn)
 let panic = JsError.panic
 
 /**
@@ -153,6 +154,7 @@ let panic = JsError.panic
 list{1, 2}->List.tailOrThrow == list{2}
 ```
 */
+@throws(Assert_failure)
 let assertEqual = (a, b) => {
   if a != b {
     assert(false)
