@@ -1,8 +1,9 @@
-# Parser, printer, and JSX transformation
+# Parser and printer
 
-This directory owns ReScript source parsing, comment attachment, printing, and
-the built-in JSX transformation. The parser is hand-written and produces the
-parsetree consumed by `compiler/ml`.
+This directory owns ReScript source parsing, comment attachment, and printing.
+The parser is hand-written and produces the parsetree consumed by
+`compiler/ml`. The built-in JSX transformation, which rewrites that
+parsetree, lives in [`compiler/jsx`](../jsx/README.md).
 
 ## Code map
 
@@ -20,14 +21,10 @@ parsetree consumed by `compiler/ml`.
 - [`src/res_printer.ml`](src/res_printer.ml),
   [`src/res_doc.ml`](src/res_doc.ml), and
   [`src/res_parens.ml`](src/res_parens.ml) implement formatting.
-- [`src/jsx_ppx.ml`](src/jsx_ppx.ml) selects and applies the built-in JSX
-  transformation; [`src/jsx_v4.ml`](src/jsx_v4.ml) implements the current
-  transform.
 - [`cli/res_cli.ml`](cli/res_cli.ml) provides the repository-only `res_parser`
   diagnostic tool. Production compiler code calls the syntax library APIs.
 
-See [Formatter.md](Formatter.md) for formatter policy and [JSX.md](JSX.md) for
-the current JSX transformation contract.
+See [Formatter.md](Formatter.md) for formatter policy.
 
 [ParserCursor.md](ParserCursor.md) states the parser's token-cursor invariants (peek versus next, lookahead and try_parse rollback, pending comments and diagnostics); read it before changing `Res_parser` consumption or recovery.
 

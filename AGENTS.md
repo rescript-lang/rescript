@@ -37,8 +37,10 @@ system changes, read [rewatch-ocaml/AGENTS.md](rewatch-ocaml/AGENTS.md). These
 apply even when the task starts at the repository root. Changes spanning areas
 need the relevant guidance from each.
 
-- [`compiler/syntax/README.md`](compiler/syntax/README.md) for parsing,
-  printing, and JSX transformation
+- [`compiler/syntax/README.md`](compiler/syntax/README.md) for parsing and
+  printing
+- [`compiler/jsx/README.md`](compiler/jsx/README.md) for the JSX
+  transformation
 - [`compiler/ml/README.md`](compiler/ml/README.md) for the type checker and
   typed tree
 - [`compiler/core/README.md`](compiler/core/README.md) for Lambda

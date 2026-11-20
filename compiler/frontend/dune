@@ -3,4 +3,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (libraries common ml))
+ (libraries common jsx ml))

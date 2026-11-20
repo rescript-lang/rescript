@@ -9,4 +9,4 @@
  (package rescript)
  (enabled_if
   (<> %{profile} browser))
- (libraries syntax core))
+ (libraries syntax core jsx))

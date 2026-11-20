@@ -10,4 +10,4 @@ configuration material.
 - For migration from older ReScript releases, see the
   [version 12 migration guide](https://rescript-lang.org/docs/manual/migrate-to-v12/).
 - For compiler implementation details, see
-  [`compiler/syntax/JSX.md`](../compiler/syntax/JSX.md).
+  [`compiler/jsx/README.md`](../compiler/jsx/README.md).
