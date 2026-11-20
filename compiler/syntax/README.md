@@ -22,7 +22,8 @@ parsetree, lives in [`compiler/jsx`](../jsx/README.md).
   [`src/res_doc.ml`](src/res_doc.ml), and
   [`src/res_parens.ml`](src/res_parens.ml) implement formatting.
 - [`cli/res_cli.ml`](cli/res_cli.ml) provides the repository-only `res_parser`
-  diagnostic tool. Production compiler code calls the syntax library APIs.
+  diagnostic tool, with its AST, token and OCaml-syntax debug printers in
+  `cli/`. Production compiler code calls the syntax library APIs.
 
 See [Formatter.md](Formatter.md) for formatter policy.
 
