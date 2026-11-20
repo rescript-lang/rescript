@@ -15,7 +15,6 @@
 
 (* Basic operations on core types *)
 
-open Misc
 open Asttypes
 open Types
 
@@ -237,7 +236,7 @@ let rec iter_row f row =
   match (repr row.row_more).desc with
   | Tvariant row -> iter_row f row
   | Tvar _ | Tunivar _ | Tsubst _ | Tconstr _ | Tnil ->
-    Misc.may (fun (_, l) -> List.iter f l) row.row_name
+    Option.iter (fun (_, l) -> List.iter f l) row.row_name
   | _ -> assert false
 
 (* Not [List.iter] with a closure, which would be allocated at every arrow. *)
@@ -309,7 +308,7 @@ let iter_type_expr_kind f = function
     List.iter
       (fun cd ->
         iter_type_expr_cstr_args f cd.cd_args;
-        Misc.may f cd.cd_res)
+        Option.iter f cd.cd_res)
       cstrs
   | Type_record (lbls, _) -> List.iter (fun d -> f d.ld_type) lbls
   | Type_open -> ()
@@ -325,27 +324,29 @@ let type_iterators =
   and it_value_description it vd = it.it_type_expr it vd.val_type
   and it_type_declaration it td =
     List.iter (it.it_type_expr it) td.type_params;
-    may (it.it_type_expr it) td.type_manifest;
+    Option.iter (it.it_type_expr it) td.type_manifest;
     it.it_type_kind it td.type_kind
   and it_extension_constructor it td =
     it.it_path td.ext_type_path;
     List.iter (it.it_type_expr it) td.ext_type_params;
     iter_type_expr_cstr_args (it.it_type_expr it) td.ext_args;
-    may (it.it_type_expr it) td.ext_ret_type
+    Option.iter (it.it_type_expr it) td.ext_ret_type
   and it_module_declaration it md = it.it_module_type it md.md_type
-  and it_modtype_declaration it mtd = may (it.it_module_type it) mtd.mtd_type
+  and it_modtype_declaration it mtd =
+    Option.iter (it.it_module_type it) mtd.mtd_type
   and it_module_type it = function
     | Mty_ident p | Mty_alias (_, p) -> it.it_path p
     | Mty_signature sg -> it.it_signature it sg
     | Mty_functor (_, mto, mt) ->
-      may (it.it_module_type it) mto;
+      Option.iter (it.it_module_type it) mto;
       it.it_module_type it mt
   and it_type_kind it kind = iter_type_expr_kind (it.it_type_expr it) kind
   and it_do_type_expr it ty =
     iter_type_expr (it.it_type_expr it) ty;
     match ty.desc with
     | Tconstr (p, _, _) | Tpackage (p, _, _) -> it.it_path p
-    | Tvariant row -> may (fun (p, _) -> it.it_path p) (row_repr row).row_name
+    | Tvariant row ->
+      Option.iter (fun (p, _) -> it.it_path p) (row_repr row).row_name
     | _ -> ()
   and it_path _p = () in
   {
@@ -595,7 +596,7 @@ let unmark_type_decl decl =
 let unmark_extension_constructor ext =
   List.iter unmark_type ext.ext_type_params;
   iter_type_expr_cstr_args unmark_type ext.ext_args;
-  Misc.may unmark_type ext.ext_ret_type
+  Option.iter unmark_type ext.ext_ret_type
 
 (*******************************************)
 (*  Memorization of abbreviation expansion *)

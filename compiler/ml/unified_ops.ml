@@ -1,5 +1,3 @@
-open Misc
-
 (*
   Unified_ops is for specialization of some primitive operators.
 
@@ -275,7 +273,11 @@ let entries =
   |]
 
 let index_by_path =
-  entries |> Array.map (fun entry -> (entry.path, entry)) |> create_hashtable
+  entries
+  |> Array.map (fun entry -> (entry.path, entry))
+  |> Misc.create_hashtable
 
 let index_by_name =
-  entries |> Array.map (fun entry -> (entry.name, entry)) |> create_hashtable
+  entries
+  |> Array.map (fun entry -> (entry.name, entry))
+  |> Misc.create_hashtable

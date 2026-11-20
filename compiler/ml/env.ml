@@ -1036,7 +1036,7 @@ let find_type_expansion path env =
     when decl.type_private = Public
          || decl.type_kind <> Type_abstract
          || Btype.has_constr_row body ->
-    (decl.type_params, body, may_map snd decl.type_newtype_level)
+    (decl.type_params, body, Option.map snd decl.type_newtype_level)
   (* The manifest type of Private abstract data types without
      private row are still considered unknown to the type system.
      Hence, this case is caught by the following clause that also handles
@@ -1052,7 +1052,7 @@ let find_type_expansion_opt path env =
   match decl.type_manifest with
   (* The manifest type of Private abstract data types can still get
      an approximation using their manifest type. *)
-  | Some body -> (decl.type_params, body, may_map snd decl.type_newtype_level)
+  | Some body -> (decl.type_params, body, Option.map snd decl.type_newtype_level)
   | _ -> raise Not_found
 
 let find_modtype_expansion path env =
@@ -1475,7 +1475,8 @@ let add_gadt_instance_chain env lv t =
     if not (Type_set.mem t !r) then (
       set_typeset r (Type_set.add t !r);
       match t.desc with
-      | Tconstr (p, _, memo) -> may add_instance (find_expans Private p !memo)
+      | Tconstr (p, _, memo) ->
+        Option.iter add_instance (find_expans Private p !memo)
       | _ -> ())
   in
   (* Format.eprintf "Added chain"; *)
@@ -1795,7 +1796,9 @@ and check_value_name name loc =
 
 and store_value ?check id decl env =
   check_value_name (Ident.name id) decl.val_loc;
-  may (fun f -> check_usage decl.val_loc id f (value_declarations ())) check;
+  Option.iter
+    (fun f -> check_usage decl.val_loc id f (value_declarations ()))
+    check;
   {env with values = Id_tbl.add id decl env.values}
 
 and store_type ~check id info env =

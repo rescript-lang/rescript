@@ -125,7 +125,7 @@ let nondep_supertype env mid mty =
       in
       Mty_functor
         ( param,
-          Misc.may_map (nondep_mty env var_inv) arg,
+          Option.map (nondep_mty env var_inv) arg,
           nondep_mty
             (Env.add_module ~arg:true param (Btype.default_mty arg) env)
             va res )
@@ -157,7 +157,7 @@ let nondep_supertype env mid mty =
             :: rem'
           | _ -> raise Not_found)))
   and nondep_modtype_decl env mtd =
-    {mtd with mtd_type = Misc.may_map (nondep_mty env Strict) mtd.mtd_type}
+    {mtd with mtd_type = Option.map (nondep_mty env Strict) mtd.mtd_type}
   in
 
   nondep_mty env Co mty

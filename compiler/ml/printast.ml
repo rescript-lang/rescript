@@ -620,7 +620,7 @@ and module_type i ppf x =
     signature i ppf s
   | Pmty_functor (s, mt1, mt2) ->
     line i ppf "Pmty_functor %a\n" fmt_string_loc s;
-    Misc.may (module_type i ppf) mt1;
+    Option.iter (module_type i ppf) mt1;
     module_type i ppf mt2
   | Pmty_with (mt, l) ->
     line i ppf "Pmty_with\n";
@@ -708,7 +708,7 @@ and module_expr i ppf x =
     structure i ppf s
   | Pmod_functor (s, mt, me) ->
     line i ppf "Pmod_functor %a\n" fmt_string_loc s;
-    Misc.may (module_type i ppf) mt;
+    Option.iter (module_type i ppf) mt;
     module_expr i ppf me
   | Pmod_apply (me1, me2) ->
     line i ppf "Pmod_apply\n";

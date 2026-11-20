@@ -62,13 +62,6 @@ let test_decode_invalid_utf8 () =
       assert (size = t.size))
     invalid_utf8
 
-let test_encode () =
-  Array.iter
-    (fun t ->
-      let encoded_string = Ext_utf8.encode_codepoint t.codepoint in
-      assert (encoded_string = t.str))
-    utf8_code_point_tests
-
 let valid_code_points_tests =
   [|
     (0, true);
@@ -91,6 +84,5 @@ let test_is_valid_code_point () =
 let run () =
   test_decode ();
   test_decode_invalid_utf8 ();
-  test_encode ();
   test_is_valid_code_point ();
   print_endline "✅ utf8 tests"

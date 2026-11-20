@@ -970,14 +970,14 @@ let check_well_founded env loc path to_check ty =
       in
       match ty.desc with
       | Tconstr (p, _, _) when arg_exn <> None || to_check p -> (
-        if to_check p then may raise arg_exn
+        if to_check p then Option.iter raise arg_exn
         else Btype.iter_type_expr (check ty0 Type_set.empty) ty;
         try
           let ty' = Ctype.try_expand_once_opt env ty in
           let ty0 = if Type_set.is_empty parents then ty else ty0 in
           check ty0 (Type_set.add ty parents) ty'
-        with Ctype.Cannot_expand -> may raise arg_exn)
-      | _ -> may raise arg_exn
+        with Ctype.Cannot_expand -> Option.iter raise arg_exn)
+      | _ -> Option.iter raise arg_exn
   in
   let snap = Btype.snapshot () in
   try Ctype.wrap_trace_gadt_instances env (check ty Type_set.empty) ty
@@ -1054,7 +1054,7 @@ let check_recursion env loc path decl to_check =
         | _ -> Btype.iter_type_expr (check_regular cpath args prev_exp) ty)
     in
 
-    Misc.may
+    Option.iter
       (fun body ->
         let args, body =
           Ctype.instance_parameterized_type ~keep_names:true decl.type_params
@@ -1857,7 +1857,7 @@ let transl_type_extension extend env loc styext =
   List.iter
     (fun ext ->
       Btype.iter_type_expr_cstr_args Ctype.generalize ext.ext_type.ext_args;
-      may Ctype.generalize ext.ext_type.ext_ret_type)
+      Option.iter Ctype.generalize ext.ext_type.ext_ret_type)
     constructors;
   (* Check that all type variables are closed *)
   List.iter
@@ -1904,7 +1904,7 @@ let transl_exception env sext =
   Ctype.end_def ();
   (* Generalize types *)
   Btype.iter_type_expr_cstr_args Ctype.generalize ext.ext_type.ext_args;
-  may Ctype.generalize ext.ext_type.ext_ret_type;
+  Option.iter Ctype.generalize ext.ext_type.ext_ret_type;
   (* Check that all type variables are closed *)
   (match Ctype.closed_extension_constructor ext.ext_type with
   | Some ty ->
@@ -2119,7 +2119,7 @@ let abstract_type_decl arity =
       type_kind = Type_abstract;
       type_private = Public;
       type_manifest = None;
-      type_variance = replicate_list Variance.full arity;
+      type_variance = List.init arity (Fun.const Variance.full);
       type_newtype_level = None;
       type_loc = Location.none;
       type_attributes = [];

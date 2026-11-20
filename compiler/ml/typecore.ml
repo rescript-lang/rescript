@@ -214,7 +214,7 @@ let iter_expression f e =
     | Pexp_todo _ | Pexp_ident _ | Pexp_constant _ ->
       ()
     | Pexp_fun {params; body} ->
-      List.iter (fun {p_default} -> may expr p_default) params;
+      List.iter (fun {p_default} -> Option.iter expr p_default) params;
       expr body
     | Pexp_apply {funct = e; args = lel} ->
       expr e;
@@ -240,7 +240,7 @@ let iter_expression f e =
     | Pexp_variant (_, {txt = args}) ->
       List.iter expr args
     | Pexp_record (iel, eo) ->
-      may expr eo;
+      Option.iter expr eo;
       List.iter (fun {x = e} -> expr e) iel
     | Pexp_open (_, _, e)
     | Pexp_assert e
@@ -261,7 +261,7 @@ let iter_expression f e =
     | Pexp_ifthenelse (e1, e2, eo) ->
       expr e1;
       expr e2;
-      may expr eo
+      Option.iter expr eo
     | Pexp_ternary (e1, e2, e3) ->
       expr e1;
       expr e2;
@@ -292,7 +292,7 @@ let iter_expression f e =
     | Pexp_jsx_element _ ->
       raise (Error (e.pexp_loc, Env.empty, Jsx_not_enabled))
   and case {pc_lhs = _; pc_guard; pc_rhs} =
-    may expr pc_guard;
+    Option.iter expr pc_guard;
     expr pc_rhs
   and binding x = expr x.pvb_expr
   and module_expr me =
@@ -329,7 +329,7 @@ let all_idents_cases el =
   in
   List.iter
     (fun cp ->
-      may (iter_expression f) cp.pc_guard;
+      Option.iter (iter_expression f) cp.pc_guard;
       iter_expression f cp.pc_rhs)
     el;
   Hashtbl.fold (fun x () rest -> x :: rest) idents []
@@ -612,7 +612,7 @@ let rec build_as_type env p =
         (List.combine pl tyl) ty_args;
       ty_res
   | Tpat_variant (l, p', _) ->
-    let ty = may_map (build_as_type env) p' in
+    let ty = Option.map (build_as_type env) p' in
     newty
       (Tvariant
          {
@@ -1569,7 +1569,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         if constr.cstr_arity = 0 then
           Location.prerr_warning sp.ppat_loc
             Warnings.Wildcard_arg_to_constant_constr;
-        replicate_list sp constr.cstr_arity
+        List.init constr.cstr_arity (Fun.const sp)
       | sargs -> sargs
     in
     (match sargs with
@@ -2991,11 +2991,11 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
       | _ -> raise Not_found
     with Not_found ->
       let arg =
-        may_map
+        Option.map
           (fun sarg -> type_expect ~context:None env sarg (newvar ()))
           sarg
       in
-      let arg_type = may_map (fun arg -> arg.exp_type) arg in
+      let arg_type = Option.map (fun arg -> arg.exp_type) arg in
       rue
         {
           exp_desc = Texp_variant (l, arg);
@@ -4344,7 +4344,7 @@ and type_label_exp ~call_context create env loc ty_expected
     with exn when not (is_nonexpansive arg) -> (
       try
         (* Try to retype without propagating ty_arg, cf PR#4862 *)
-        may Btype.backtrack snap;
+        Option.iter Btype.backtrack snap;
         begin_def ();
         let arg = type_exp ~context:field_context env sarg in
         end_def ();

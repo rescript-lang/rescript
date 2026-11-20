@@ -363,7 +363,7 @@ module MT = struct
     | Pmty_signature sg -> signature ~loc ~attrs (sub.signature sub sg)
     | Pmty_functor (s, mt1, mt2) ->
       functor_ ~loc ~attrs (map_loc sub s)
-        (Misc.may_map (sub.module_type sub) mt1)
+        (Option.map (sub.module_type sub) mt1)
         (sub.module_type sub mt2)
     | Pmty_with (mt, l) ->
       with_ ~loc ~attrs (sub.module_type sub mt)
@@ -411,7 +411,7 @@ module M = struct
     | Pmod_structure str -> structure ~loc ~attrs (sub.structure sub str)
     | Pmod_functor (arg, arg_ty, body) ->
       functor_ ~loc ~attrs (map_loc sub arg)
-        (Misc.may_map (sub.module_type sub) arg_ty)
+        (Option.map (sub.module_type sub) arg_ty)
         (sub.module_expr sub body)
     | Pmod_apply (m1, m2) ->
       apply ~loc ~attrs (sub.module_expr sub m1) (sub.module_expr sub m2)

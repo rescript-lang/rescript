@@ -31,7 +31,7 @@ let save_cmt filename modname binary_annots sourcefile =
         cmt_annots = clear_env binary_annots;
         cmt_value_dependencies = value_dependencies ();
         cmt_source_digest =
-          Misc.may_map
+          Option.map
             (fun path -> Digest.string (read_source_file path))
             sourcefile;
         cmt_extra_info = {deprecated_used = deprecated_uses ()};

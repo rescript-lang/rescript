@@ -16,7 +16,6 @@
 (* Translation from typed abstract syntax to lambda terms,
    for the core language *)
 
-open Misc
 open Asttypes
 open Primitive
 open Types
@@ -100,7 +99,7 @@ type specialized = {
 }
 
 let comparisons_table =
-  create_hashtable
+  Misc.create_hashtable
     [|
       ( "%equal",
         {
@@ -391,7 +390,7 @@ let primitive_builtins : (string * Lambda.builtin) array =
     |]
 
 let builtins_table : (string, Lambda.builtin) Hashtbl.t =
-  create_hashtable (Array.append erased_builtins primitive_builtins)
+  Misc.create_hashtable (Array.append erased_builtins primitive_builtins)
 
 let find_builtin prim_name = Hashtbl.find builtins_table prim_name
 
@@ -1609,7 +1608,8 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
       in
       let lam = if args = [] then lam else lapply lam (List.rev_map fst args) in
       let handle = protect "func" lam
-      and l = List.map (fun (arg, opt) -> (may_map (protect "arg") arg, opt)) l
+      and l =
+        List.map (fun (arg, opt) -> (Option.map (protect "arg") arg, opt)) l
       and id_arg = Ident.create "param" in
       let body =
         match build_apply handle ((var id_arg, optional) :: args') l with
@@ -1650,7 +1650,7 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
   | _ ->
     (build_apply lam []
        (List.map
-          (fun (l, x) -> (may_map transl_exp x, Btype.is_optional l))
+          (fun (l, x) -> (Option.map transl_exp x, Btype.is_optional l))
           sargs)
       : Lambda.t)
 

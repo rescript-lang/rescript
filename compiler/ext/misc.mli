@@ -16,19 +16,12 @@
 (* Miscellaneous useful types and functions *)
 
 val fatal_error : string -> 'a
-exception Fatal_error
 
 val try_finally : (unit -> 'a) -> (unit -> unit) -> 'a
-
-val map_end : ('a -> 'b) -> 'a list -> 'b list -> 'b list
-(* [map_end f l t] is [map f l @ t], just more efficient. *)
-
-val replicate_list : 'a -> int -> 'a list
-(* [replicate_list elem n] is the list with [n] elements
-   all identical to [elem]. *)
-
-val may : ('a -> unit) -> 'a option -> unit
-val may_map : ('a -> 'b) -> 'a option -> 'b option
+(** [try_finally work cleanup] runs [work], then [cleanup], also when [work]
+    raises. Kept instead of [Fun.protect ~finally:cleanup work], which
+    allocates a closure on every call: the type checker calls this for many
+    expressions. *)
 
 type ref_and_value = R : 'a ref * 'a -> ref_and_value
 
@@ -58,8 +51,10 @@ val expand_directory : string -> string -> string
    beginning of file into [alt] (an alternate root directory) *)
 
 val create_hashtable : ('a * 'b) array -> ('a, 'b) Hashtbl.t
-(* Create a hashtable of the given size and fills it with the
-   given bindings. *)
+(** Create a hashtable sized for the given bindings and add them in order.
+    Kept instead of [Hashtbl.of_seq (Array.to_seq a)], which grows the table
+    step by step and allocates for each binding: the compiler builds its
+    primitive tables this way at every start. *)
 
 module Int_literal_converter : sig
   val int : string -> int

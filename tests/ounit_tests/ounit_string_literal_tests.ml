@@ -419,12 +419,11 @@ let suites =
            assert_decoded ~encoded:"a\\\rb" ~expected:"ab";
            assert_decoded ~encoded:"a\\\r\nb" ~expected:"ab";
            List.iter
-             (fun codepoint ->
-               let separator = Ext_utf8.encode_codepoint codepoint in
+             (fun separator ->
                let encoded = "a\\" ^ separator ^ "b" in
                assert_decoded ~encoded ~expected:"ab";
                assert_template_decoded ~encoded ~expected:"ab")
-             [0x2028; 0x2029] );
+             ["\u{2028}"; "\u{2029}"] );
          ( "template line endings use JavaScript normalization" >:: fun _ ->
            assert_decoded ~encoded:"a\r\nb" ~expected:"a\r\nb";
            assert_template_decoded ~encoded:"a\rb" ~expected:"a\nb";

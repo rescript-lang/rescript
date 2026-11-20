@@ -254,7 +254,7 @@ let constructor_declaration s c =
     cd_id = c.cd_id;
     cd_runtime_tag = c.cd_runtime_tag;
     cd_args = constructor_arguments s c.cd_args;
-    cd_res = may_map (typexp_rec s) c.cd_res;
+    cd_res = Option.map (typexp_rec s) c.cd_res;
     cd_loc = loc s c.cd_loc;
     cd_attributes = attrs s c.cd_attributes;
   }
@@ -301,7 +301,7 @@ let extension_constructor s ext =
         ext_type_path = type_path s ext.ext_type_path;
         ext_type_params = List.map (typexp_rec s) ext.ext_type_params;
         ext_args = constructor_arguments s ext.ext_args;
-        ext_ret_type = may_map (typexp_rec s) ext.ext_ret_type;
+        ext_ret_type = Option.map (typexp_rec s) ext.ext_ret_type;
         ext_private = ext.ext_private;
         ext_attributes = attrs s ext.ext_attributes;
         ext_loc = loc s ext.ext_loc;
@@ -334,7 +334,9 @@ let rec modtype s = function
   | Mty_functor (id, arg, res) ->
     let id' = Ident.rename id in
     Mty_functor
-      (id', may_map (modtype s) arg, modtype (add_module id (Pident id') s) res)
+      ( id',
+        Option.map (modtype s) arg,
+        modtype (add_module id (Pident id') s) res )
   | Mty_alias (pres, p) -> Mty_alias (pres, module_path s p)
 
 and signature s sg =
@@ -363,7 +365,7 @@ and module_declaration s decl =
 
 and modtype_declaration s decl =
   {
-    mtd_type = may_map (modtype s) decl.mtd_type;
+    mtd_type = Option.map (modtype s) decl.mtd_type;
     mtd_attributes = attrs s decl.mtd_attributes;
     mtd_loc = loc s decl.mtd_loc;
   }

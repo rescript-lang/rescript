@@ -192,7 +192,7 @@ let iterator_with_env env =
       Btype.it_module_type =
         (fun self -> function
           | Mty_functor (param, mty_arg, mty_body) ->
-            may (self.Btype.it_module_type self) mty_arg;
+            Option.iter (self.Btype.it_module_type self) mty_arg;
             let env_before = !env in
             env :=
               Env.add_module ~arg:true param (Btype.default_mty mty_arg) !env;
@@ -462,7 +462,7 @@ let merge_constraint initial_env loc sg constr =
 let map_rec fn decls rem =
   match decls with
   | [] -> rem
-  | d1 :: dl -> fn Trec_first d1 :: map_end (fn Trec_next) dl rem
+  | d1 :: dl -> fn Trec_first d1 :: (List.map (fn Trec_next) dl @ rem)
 
 let map_rec_type ~rec_flag fn decls rem =
   match decls with
@@ -473,7 +473,7 @@ let map_rec_type ~rec_flag fn decls rem =
       | Recursive -> Trec_first
       | Nonrecursive -> Trec_not
     in
-    fn first d1 :: map_end (fn Trec_next) dl rem
+    fn first d1 :: (List.map (fn Trec_next) dl @ rem)
 
 let rec map_rec_type_with_row_types ~rec_flag fn decls rem =
   match decls with
@@ -487,7 +487,7 @@ let rec map_rec_type_with_row_types ~rec_flag fn decls rem =
 let map_ext fn exts rem =
   match exts with
   | [] -> rem
-  | d1 :: dl -> fn Text_first d1 :: map_end (fn Text_next) dl rem
+  | d1 :: dl -> fn Text_first d1 :: (List.map (fn Text_next) dl @ rem)
 
 (* Auxiliary for translating recursively-defined module types.
    Return a module type that approximates the shape of the given module
@@ -505,7 +505,7 @@ let rec approx_modtype env smty =
     Mty_alias (Mta_absent, path)
   | Pmty_signature ssg -> Mty_signature (approx_sig env ssg)
   | Pmty_functor (param, sarg, sres) ->
-    let arg = may_map (approx_modtype env) sarg in
+    let arg = Option.map (approx_modtype env) sarg in
     let id, newenv =
       Env.enter_module ~arg:true param.txt (Btype.default_mty arg) env
     in
@@ -576,7 +576,7 @@ and approx_sig env ssg =
 
 and approx_modtype_info env sinfo =
   {
-    mtd_type = may_map (approx_modtype env) sinfo.pmtd_type;
+    mtd_type = Option.map (approx_modtype env) sinfo.pmtd_type;
     mtd_attributes = sinfo.pmtd_attributes;
     mtd_loc = sinfo.pmtd_loc;
   }
@@ -746,8 +746,8 @@ and transl_modtype_aux env smty =
     mkmty (Tmty_signature sg) (Mty_signature sg.sig_type) env loc
       smty.pmty_attributes
   | Pmty_functor (param, sarg, sres) ->
-    let arg = Misc.may_map (transl_modtype env) sarg in
-    let ty_arg = Misc.may_map (fun m -> m.mty_type) arg in
+    let arg = Option.map (transl_modtype env) sarg in
+    let ty_arg = Option.map (fun m -> m.mty_type) arg in
     let id, newenv =
       Env.enter_module ~arg:true param.txt (Btype.default_mty ty_arg) env
     in
@@ -927,10 +927,10 @@ and transl_modtype_decl names env pmtd =
 and transl_modtype_decl_aux names env
     {pmtd_name; pmtd_type; pmtd_attributes; pmtd_loc} =
   check_name check_modtype names pmtd_name;
-  let tmty = Misc.may_map (transl_modtype env) pmtd_type in
+  let tmty = Option.map (transl_modtype env) pmtd_type in
   let decl =
     {
-      Types.mtd_type = may_map (fun t -> t.mty_type) tmty;
+      Types.mtd_type = Option.map (fun t -> t.mty_type) tmty;
       mtd_attributes = pmtd_attributes;
       mtd_loc = pmtd_loc;
     }
@@ -1314,8 +1314,8 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
         (Env.implicit_coercion env)
         md (Mty_signature sg') Tmodtype_implicit
   | Pmod_functor (name, smty, sbody) ->
-    let mty = may_map (transl_modtype env) smty in
-    let ty_arg = may_map (fun m -> m.mty_type) mty in
+    let mty = Option.map (transl_modtype env) smty in
+    let ty_arg = Option.map (fun m -> m.mty_type) mty in
     let (id, newenv), funct_body =
       match ty_arg with
       | None -> ((Ident.create "*", env), false)

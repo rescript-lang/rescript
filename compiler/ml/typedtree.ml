@@ -15,7 +15,6 @@
 
 (* Abstract syntax tree after typing *)
 
-open Misc
 open Asttypes
 open Types
 
@@ -458,7 +457,7 @@ let iter_pattern_desc f = function
   | Tpat_alias (p, _, _) -> f p
   | Tpat_tuple patl -> List.iter f patl
   | Tpat_construct (_, _, patl) -> List.iter f patl
-  | Tpat_variant (_, pat, _) -> may f pat
+  | Tpat_variant (_, pat, _) -> Option.iter f pat
   | Tpat_record (lbl_pat_list, _, _rest) ->
     List.iter (fun (_, _, pat, _) -> f pat) lbl_pat_list
   | Tpat_dict entries -> List.iter (fun {tdp_pattern} -> f tdp_pattern) entries
