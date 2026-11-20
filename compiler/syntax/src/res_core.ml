@@ -269,13 +269,7 @@ end
    dot is no longer meaningful; we still accept it so dependencies on older
    libraries keep parsing. *)
 let warn_uncurried_dot_syntax p ~loc =
-  Parser.warn p loc
-    (Warnings.Deprecated
-       ( "The `(. ...)` uncurried syntax is deprecated. Uncurried is now the \
-          default in ReScript — remove the leading dot.",
-         loc,
-         loc,
-         false ))
+  Parser.warn p loc Res_warning.Deprecated_uncurried_dot
 
 type argument = {label: Asttypes.arg_label; expr: Parsetree.expression}
 

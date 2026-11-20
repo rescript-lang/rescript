@@ -39,7 +39,8 @@ diagnostics, and recovery progress checks all use this position. Consumption reu
 the token's immutable end position, so there is no separate previous-token position
 or byte offset to update and restore. Before the first consumption, the cursor is
 `Lexing.dummy_pos`, preserving existing location behavior. `finish` retains EOF
-trivia and publishes pending warnings without moving the cursor.
+trivia without moving the cursor. Warnings stay on the parser, and the driver
+returns them in `parse_result.warnings`.
 
 ## Contextual readers, without Diamond
 

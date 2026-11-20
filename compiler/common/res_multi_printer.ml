@@ -4,6 +4,7 @@ let print_res ~ignore_parse_errors ~is_interface ~filename source =
     let parse_result =
       Res_driver.parse_interface_from_source ~display_filename:filename ~source
     in
+    Syntax_driver.report_warnings parse_result.warnings;
     if parse_result.invalid then (
       Syntax_driver.print_report parse_result.diagnostics parse_result.source;
       if not ignore_parse_errors then
@@ -16,6 +17,7 @@ let print_res ~ignore_parse_errors ~is_interface ~filename source =
       Res_driver.parse_implementation_from_source ~display_filename:filename
         ~source
     in
+    Syntax_driver.report_warnings parse_result.warnings;
     if parse_result.invalid then (
       Syntax_driver.print_report parse_result.diagnostics parse_result.source;
       if not ignore_parse_errors then

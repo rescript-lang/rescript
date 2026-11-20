@@ -89,6 +89,25 @@ let suites =
            OUnit.assert_equal 1 (List.length p.comments);
            Res_parser.finish p;
            OUnit.assert_equal 1 (List.length p.comments) );
+         ( "parse results return the parser's warnings in source order"
+         >:: fun _ ->
+           let result =
+             Res_driver.parse_implementation_from_source
+               ~display_filename:"test.res"
+               ~source:"let f = (. x) => x\nlet y = f(. 1)\n"
+           in
+           let position ({loc} : Res_warning.t) =
+             ( loc.loc_start.pos_lnum,
+               loc.loc_start.pos_cnum - loc.loc_start.pos_bol )
+           in
+           OUnit.assert_equal
+             [(1, 9); (2, 10)]
+             (List.map position result.warnings);
+           OUnit.assert_bool "deprecated dot"
+             (List.for_all
+                (fun ({kind} : Res_warning.t) ->
+                  kind = Res_warning.Deprecated_uncurried_dot)
+                result.warnings) );
          ( "speculation restores recovery, warnings and exceptions" >:: fun _ ->
            let p = Res_parser.make "/* keep */ x y" "test.res" in
            let report p = Res_parser.err p (Res_diagnostics.message "probe") in
@@ -98,8 +117,7 @@ let suites =
              Res_parser.end_region p;
              report p;
              Res_parser.warn p Location.none
-               (Warnings.Deprecated
-                  ("probe", Location.none, Location.none, false));
+               Res_warning.Deprecated_uncurried_dot;
              ignore (Res_parser.peek2 p);
              Res_parser.next p;
              raise Exit

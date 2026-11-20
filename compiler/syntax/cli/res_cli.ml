@@ -107,11 +107,12 @@ module Cli_arg_processor = struct
     (* Special case for tokens - bypass parsing entirely *)
     if target = "tokens" then
       (print_engine "\n").print_implementation ~width ~filename ~comments:[] []
-    else if process_interface then
+    else if process_interface then (
       let parse_result =
         Res_driver.parse_interface_from_source ~display_filename:filename
           ~source:(load_source ())
       in
+      Syntax_driver.report_warnings parse_result.warnings;
       if parse_result.invalid then (
         Syntax_driver.print_report parse_result.diagnostics parse_result.source;
         if recover then
@@ -133,12 +134,13 @@ module Cli_arg_processor = struct
           Jsx_ppx.rewrite_signature ~jsx_version ~jsx_module parsetree
         in
         (print_engine parse_result.newline).print_interface ~width ~filename
-          ~comments:parse_result.comments parsetree
+          ~comments:parse_result.comments parsetree)
     else
       let parse_result =
         Res_driver.parse_implementation_from_source ~display_filename:filename
           ~source:(load_source ())
       in
+      Syntax_driver.report_warnings parse_result.warnings;
       if parse_result.invalid then (
         Syntax_driver.print_report parse_result.diagnostics parse_result.source;
         if recover then

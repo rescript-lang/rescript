@@ -3,6 +3,9 @@ type ('ast, 'diagnostics) parse_result = {
   source: string;
   parsetree: 'ast;
   diagnostics: 'diagnostics;
+  warnings: Res_warning.t list;
+      (* The parser's warnings, in source order. Nothing reports them
+         unless the caller does. *)
   invalid: bool;
   comments: Res_comment.t list;
   newline: string;

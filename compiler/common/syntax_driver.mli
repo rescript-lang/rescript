@@ -9,6 +9,9 @@ val print_report :
   unit
 (** Print syntax errors, in source order, with code frames from the source. *)
 
+val report_warnings : Res_warning.t list -> unit
+(** Report the parser's warnings as compiler warnings. *)
+
 val parsing_engine : Res_diagnostics.t list Res_driver.parsing_engine
 (** The parsing engine of the compiler, which reads through the build's file
     store. *)

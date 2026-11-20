@@ -276,11 +276,13 @@ module Res_driver = struct
         source = engine.source;
         parsetree = structure;
         diagnostics;
+        warnings = List.rev engine.warnings;
         invalid;
         comments = List.rev engine.comments;
         newline = Res_parser.newline engine;
       }
     in
+    Syntax_driver.report_warnings parse_result.warnings;
     let () =
       if parse_result.invalid then
         let errors =

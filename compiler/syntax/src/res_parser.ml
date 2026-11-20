@@ -38,7 +38,7 @@ type t = {
   mutable diagnostics: Diagnostics.t list;
   mutable comments: Comment.t list;
   mutable regions: region_status list;
-  mutable warnings: (Location.t * Warnings.t) list;
+  mutable warnings: Res_warning.t list;
   mutable line_break: int;
 }
 
@@ -197,16 +197,12 @@ let end_region p =
   | [] -> ()
   | _ :: rest -> p.regions <- rest
 
-let warn p loc warning = p.warnings <- (loc, warning) :: p.warnings
+let warn p loc kind = p.warnings <- {Res_warning.loc; kind} :: p.warnings
 
 let finish p =
   if peek p = Token.Eof then (
     commit_effects p p.current;
-    if p.line_break < 0 then p.line_break <- p.current.line_break);
-  List.iter
-    (fun (loc, warning) -> Location.prerr_warning loc warning)
-    (List.rev p.warnings);
-  p.warnings <- []
+    if p.line_break < 0 then p.line_break <- p.current.line_break)
 
 let[@inline] peek_binary_operator p =
   let start_pos, _, token = current p in
