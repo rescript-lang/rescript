@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/set_unit_arg.res[0m:[2m3:1-4:38[0m
+
+  1 [2m│[0m type t
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m [1;31m@set[0m
+  [1;31m4[0m [2m│[0m [1;31mexternal setX: (t, unit) => unit = "x"[0m
+  5 [2m│[0m 
+  6 [2m│[0m let f = (t: t) => setX(t, ())
+
+  Ill defined attribute @set (unit argument is not allowed)

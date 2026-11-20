@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/set_index_unit_arg.res[0m:[2m3:1-4:45[0m
+
+  1 [2m│[0m type t
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m [1;31m@set_index[0m
+  [1;31m4[0m [2m│[0m [1;31mexternal setI: (t, string, unit) => unit = ""[0m
+  5 [2m│[0m 
+  6 [2m│[0m let f = (t: t) => setI(t, "k", ())
+
+  Ill defined attribute @set_index (unit argument is not allowed)

@@ -1,0 +1,1 @@
+- `@set`, `@set_index` and `@get_index` externals with a `unit` argument are now rejected with an error instead of crashing the compiler.
