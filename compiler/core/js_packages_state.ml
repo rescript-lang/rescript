@@ -46,10 +46,15 @@ let make_runtime () : unit =
   state.making_runtime <- true;
   state.packages_info <- Js_packages_info.runtime_package_specs
 
+(* Opened in flag order, like [-open]. *)
+let open_alias_map module_name =
+  let flags = Clflags.current () in
+  flags.alias_maps := module_name :: !(flags.alias_maps);
+  flags.open_modules := module_name :: !(flags.open_modules)
+
 let set_package_map module_name =
-  (Clflags.current ()).dont_record_crc_unit := Some module_name;
-  (Clflags.current ()).open_modules :=
-    module_name :: !((Clflags.current ()).open_modules)
+  (Clflags.current ()).namespace := Some module_name;
+  open_alias_map module_name
 
 let update_npm_package_path s =
   let state = current () in

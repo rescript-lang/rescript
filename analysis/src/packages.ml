@@ -12,6 +12,11 @@ let make_paths_for_module ~project_files_and_paths ~dependencies_files_and_paths
       Hashtbl.replace paths_for_module mod_name paths);
   paths_for_module
 
+(* Without "." segments, so that "./test" and "test" compare equal. *)
+let path_components path =
+  Files.split Filename.dir_sep path
+  |> List.filter (fun component -> component <> "" && component <> ".")
+
 let new_bs_package ~root_path =
   let rescript_json = Filename.concat root_path "rescript.json" in
 
@@ -110,6 +115,30 @@ let new_bs_package ~root_path =
                let path = [Find_files.name_space_to_name namespace] in
                [path]
            in
+           (* The package's dev modules are aliased by its dev map, which the
+              compiler opens in dev modules only (get_package). *)
+           let dev_opens =
+             match namespace with
+             | None -> []
+             | Some namespace ->
+               let dev_namespace = namespace ^ "-dev" in
+               let cmt = Filename.concat artifact_dir dev_namespace ^ ".cmt" in
+               if Files.exists cmt then (
+                 Hashtbl.replace paths_for_module dev_namespace
+                   (Namespace {cmt});
+                 [[dev_namespace; "place holder"]])
+               else []
+           in
+           let dev_source_directories =
+             let directories ~include_dev =
+               Find_files.get_source_directories ~include_dev
+                 ~base_dir:root_path config
+               |> List.map path_components
+             in
+             let regular = directories ~include_dev:false in
+             directories ~include_dev:true
+             |> List.filter (fun directory -> not (List.mem directory regular))
+           in
            let bind f x = Option.bind x f in
            let compiler_flags =
              match
@@ -160,6 +189,8 @@ let new_bs_package ~root_path =
              dependencies_files;
              paths_for_module;
              opens;
+             dev_opens;
+             dev_source_directories;
              namespace;
              autocomplete;
            }))
@@ -185,7 +216,20 @@ let find_root ~uri packages_by_root =
   in
   loop (if Sys.is_directory path then path else Filename.dirname path)
 
+(* A dev module also opens its package's dev map. *)
+let for_file ~uri (package : Shared_types.package) =
+  if
+    package.dev_opens <> []
+    && List.mem
+         (Files.relpath package.root_path (Filename.dirname (Uri.to_path uri))
+         |> path_components)
+         package.dev_source_directories
+  then {package with opens = package.opens @ package.dev_opens}
+  else package
+
 let get_package ~state ~uri =
+  Option.map (for_file ~uri)
+  @@
   let open Shared_types in
   if Hashtbl.mem state.root_for_uri uri then
     Some

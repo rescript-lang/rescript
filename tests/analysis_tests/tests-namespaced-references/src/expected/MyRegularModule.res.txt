@@ -1,0 +1,9 @@
+Complete src/MyRegularModule.res 1:16
+pos_cursor:[1:16] pos_no_white:[1:15] Found expr:[1:3->1:16]
+Pexp_ident MyDevHelper.d:[1:3->1:16]
+Completable: Cpath Value[MyDevHelper, d]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder MyNamespace.place holder
+Resolved opens 2 MyNamespace Stdlib
+ContextPath Value[MyDevHelper, d]
+Path MyDevHelper.d
+[]

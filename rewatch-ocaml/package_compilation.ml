@@ -162,8 +162,9 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           Compiler_process.namespace_task
             ~runtime:prepared.compiler_context.runtime_path ~artifact_dir
             ~entry:(Config.namespace_entry config.namespace)
-            ~package_dirty ~force:namespace_state.compile_dirty compiler_name
-            modules
+            ~package_dirty ~force:namespace_state.compile_dirty
+            ~dev_namespace:(Source.dev_namespace_compiler_name config modules)
+            compiler_name modules
           |> Option.iter (fun namespace_task ->
               namespace_state.compile_dirty <- true;
               let cmi_path =
