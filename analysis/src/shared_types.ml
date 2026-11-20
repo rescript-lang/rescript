@@ -166,6 +166,11 @@ module Stamps : sig
 
   type t
 
+  val renamed_floor : int
+  (** Stamps from here on belong to the renamed copies that an applied
+      functor's members get (see [Process_cmt.for_module]). *)
+
+  val is_renamed : int -> bool
   val add_constructor : t -> int -> Constructor.t Declared.t -> unit
   val add_module : t -> int -> Module.t Declared.t -> unit
   val add_type : t -> int -> Type.t Declared.t -> unit
@@ -174,6 +179,10 @@ module Stamps : sig
   val find_type : t -> int -> Type.t Declared.t option
   val find_value : t -> int -> Types.type_expr Declared.t option
   val init : unit -> t
+
+  (** The iterators skip renamed copies, which have the locations of the
+      declarations they copy; their constructors are not registered. *)
+
   val iter_constructors : (int -> Constructor.t Declared.t -> unit) -> t -> unit
   val iter_modules : (int -> Module.t Declared.t -> unit) -> t -> unit
   val iter_types : (int -> Type.t Declared.t -> unit) -> t -> unit
@@ -193,6 +202,9 @@ end = struct
     | KConstructor declared -> declared.extent_loc
 
   type t = (int, kind) Hashtbl.t
+
+  let renamed_floor = 1 lsl 40
+  let is_renamed stamp = stamp >= renamed_floor
 
   let init () = Hashtbl.create 10
 
@@ -226,7 +238,7 @@ end = struct
     Hashtbl.iter
       (fun stamp d ->
         match d with
-        | KModule d -> f stamp d
+        | KModule d when not (is_renamed stamp) -> f stamp d
         | _ -> ())
       stamps
 
@@ -234,7 +246,7 @@ end = struct
     Hashtbl.iter
       (fun stamp d ->
         match d with
-        | KType d -> f stamp d
+        | KType d when not (is_renamed stamp) -> f stamp d
         | _ -> ())
       stamps
 
@@ -242,7 +254,7 @@ end = struct
     Hashtbl.iter
       (fun stamp d ->
         match d with
-        | KValue d -> f stamp d
+        | KValue d when not (is_renamed stamp) -> f stamp d
         | _ -> ())
       stamps
 

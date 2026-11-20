@@ -1,0 +1,26 @@
+Hover src/AppliedFunctorDocs.res 17:16
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n(array<IntOrd.t>, IntOrd.t) => array<IntOrd.t>\n```\n---\n Adds an element. \n\n---\n\n```\n \n```\n```rescript\ntype IntOrd.t = int\n```\nGo to: [Type definition](AppliedFunctorDocs.res#L8,3)\n"
+  }
+}
+
+Complete src/AppliedFunctorDocs.res 20:11
+pos_cursor:[20:11] pos_no_white:[20:10] Found expr:[20:3->20:11]
+Pexp_ident IntSet.a:[20:3->20:11]
+Completable: Cpath Value[IntSet, a]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[IntSet, a]
+Path IntSet.a
+[
+  {
+    "detail": "(array<IntOrd.t>, IntOrd.t) => array<IntOrd.t>",
+    "documentation": { "kind": "markdown", "value": " Adds an element. " },
+    "kind": 12,
+    "label": "add",
+    "tags": []
+  }
+]
+

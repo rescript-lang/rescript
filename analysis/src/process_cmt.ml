@@ -126,7 +126,12 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
                              ~stamp (* TODO maybe this needs another child *)
                              ~module_path:env.module_path true cd_attributes
                          in
-                         Stamps.add_constructor env.stamps stamp declared;
+                         (* [Subst] renames a type but not its constructors,
+                            whose stamps then come from the functor's own
+                            compilation and can be those of this file's
+                            declarations. *)
+                         if not (Stamps.is_renamed (Ident.binding_time ident))
+                         then Stamps.add_constructor env.stamps stamp declared;
                          item))
               | Type_record (fields, _) ->
                 Record (fields |> List.map map_record_field));
@@ -151,6 +156,32 @@ let rec for_type_signature_item ~(env : Shared_types.Env.t)
         ~item:(for_type_module ~name ~env:(env |> Env.add_module ~name) md_type)
         ~name:(Location.mkloc name md_loc)
         ~stamp:(Ident.binding_time ident) ~env md_attributes
+        (Exported.add exported Exported.Module)
+        Stamps.add_module
+    in
+    [
+      {
+        Module.kind =
+          Module
+            {type_ = declared.item; is_module_type = is_module_type declared};
+        name = declared.name.txt;
+        docstring = declared.docstring;
+        deprecated = declared.deprecated;
+        loc = declared.extent_loc;
+      };
+    ]
+  | Sig_modtype (ident, {mtd_type = Some mod_type; mtd_attributes; mtd_loc})
+    when Stamps.is_renamed (Ident.binding_time ident) ->
+    (* A module type of an applied functor's signature, for paths through
+       it to resolve. Other module types read from a signature, such as
+       those of an included module, are declared where they come from. *)
+    let name = Ident.name ident in
+    let env = env |> Env.add_module_type ~name in
+    let declared =
+      add_declared ~extent:mtd_loc
+        ~item:(for_type_module ~name ~env mod_type)
+        ~name:(Location.mkloc name mtd_loc)
+        ~stamp:(Ident.binding_time ident) ~env mtd_attributes
         (Exported.add exported Exported.Module)
         Stamps.add_module
     in
@@ -476,6 +507,37 @@ let rec get_module_path mod_desc =
   | Tmod_constraint (expr, _typ, _constraint, _coercion) ->
     get_module_path expr.mod_desc
 
+(* When the functor and its argument are paths, the compiler gives each type
+   of the application's signature a manifest naming the application, such as
+   [Make(IntOrd).t]. No source can name such a path, and the copied type
+   already has the argument's types, so the manifest is left out. *)
+let rec without_application_manifests (mty : Types.module_type) =
+  let rec is_application (path : Path.t) =
+    match path with
+    | Papply _ -> true
+    | Pdot (path, _, _) -> is_application path
+    | Pident _ -> false
+  in
+  let item (item : Types.signature_item) =
+    match item with
+    | Sig_type (id, ({type_manifest = Some manifest} as decl), rec_status) -> (
+      match (Btype.repr manifest).desc with
+      | Tconstr (path, _, _) when is_application path ->
+        Types.Sig_type (id, {decl with type_manifest = None}, rec_status)
+      | _ -> item)
+    | Sig_module (id, md, rec_status) ->
+      Sig_module
+        ( id,
+          {md with md_type = without_application_manifests md.md_type},
+          rec_status )
+    | Sig_type _ | Sig_value _ | Sig_typext _ | Sig_modtype _ -> item
+  in
+  match mty with
+  | Mty_signature items -> Mty_signature (List.map item items)
+  | Mty_functor (id, arg, result) ->
+    Mty_functor (id, arg, without_application_manifests result)
+  | Mty_ident _ | Mty_alias _ -> mty
+
 let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
     item =
   match item.Typedtree.str_desc with
@@ -594,13 +656,12 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
     bindings
     |> List.iter (fun {Typedtree.vb_expr} -> scan_let_modules ~env vb_expr);
     !items
-  | Tstr_module
-      {mb_id; mb_attributes; mb_loc; mb_name = name; mb_expr = {mod_desc}}
+  | Tstr_module {mb_id; mb_attributes; mb_loc; mb_name = name; mb_expr}
     when not
            (String.length name.txt >= 6
            && (String.sub name.txt 0 6 = "local_") [@doesNotThrow])
          (* %%private generates a dummy module called local_... *) ->
-    let item = for_module ~env mod_desc name.txt in
+    let item = for_module ~env mb_expr name.txt in
     let declared =
       add_declared ~item ~name ~extent:mb_loc ~stamp:(Ident.binding_time mb_id)
         ~env mb_attributes
@@ -669,8 +730,8 @@ let rec for_structure_item ~(env : Shared_types.Env.t) ~(exported : Exported.t)
         decl |> for_type_declaration ~env ~exported ~rec_status)
   | _ -> []
 
-and for_module ~env mod_desc module_name =
-  match mod_desc with
+and for_module ~env (mod_expr : Typedtree.module_expr) module_name =
+  match mod_expr.mod_desc with
   | Tmod_ident (path, _lident) -> Ident path
   | Tmod_structure structure ->
     let env = env |> Env.add_module ~name:module_name in
@@ -687,9 +748,29 @@ and for_module ~env mod_desc module_name =
           ~extent:arg_name.loc ~stamp ~module_path:NotVisible false []
       in
       Stamps.add_module env.stamps stamp declared);
-    for_module ~env result_expr.mod_desc module_name
+    for_module ~env result_expr module_name
   | Tmod_apply (functor_, _arg, _coercion) ->
-    for_module ~env functor_.mod_desc module_name
+    (* The application's signature has the argument's types, where the
+       functor's body has the parameter's. Its items keep the identifiers of
+       the body, so they are renamed, with stamps above any that a
+       compilation hands out, not to take the body's. Their module path
+       starts with the functor's, for references and definitions to find
+       the declaration each one copies by its path in the functor (see
+       [Resolve_path.applied_origin]). A functor without a path is written
+       inline, and is read for its parameters and declarations, which uses
+       inside its body resolve to. *)
+    let functor_path = get_module_path functor_.mod_desc in
+    if functor_path = None then ignore (for_module ~env functor_ module_name);
+    let env = env |> Env.add_module ~name:module_name in
+    let env =
+      match functor_path with
+      | Some path ->
+        {env with module_path = IncludedModule (path, env.module_path)}
+      | None -> env
+    in
+    for_type_module ~name:module_name ~env
+      (Subst.modtype Subst.identity mod_expr.mod_type
+      |> without_application_manifests)
   | Tmod_unpack (_expr, module_type) ->
     let env = env |> Env.add_module ~name:module_name in
     for_type_module ~name:module_name ~env module_type
@@ -700,10 +781,10 @@ and for_module ~env mod_desc module_name =
        e.g. `Make` in `Make(Arg)` after `module Make = Fn.MakeSet`, in an
        implicit constraint with the expanded signature. Keep the alias, so
        that paths through it resolve to the module it names. *)
-    for_module ~env expr.mod_desc module_name
+    for_module ~env expr module_name
   | Tmod_constraint (expr, typ, constraint_, _coercion) ->
     (* TODO do this better I think *)
-    let mod_kind = for_module ~env expr.mod_desc module_name in
+    let mod_kind = for_module ~env expr module_name in
     let env = env |> Env.add_module ~name:module_name in
     let mod_type_kind =
       match constraint_ with
@@ -725,7 +806,7 @@ and scan_let_modules ~env (e : Typedtree.expression) =
     (match expression.exp_desc with
     | Texp_letmodule (id, name, mexpr, _body) ->
       let stamp = Ident.binding_time id in
-      let item = for_module ~env mexpr.mod_desc name.txt in
+      let item = for_module ~env mexpr name.txt in
       let declared =
         Process_attributes.new_declared ~item ~extent:name.loc ~name ~stamp
           ~module_path:NotVisible false []
@@ -755,7 +836,7 @@ and for_structure ~name ~env str_items =
   let deprecated = Process_attributes.find_deprecated_attribute attributes in
   {Module.name; docstring; exported; items; deprecated}
 
-let file_for_cmt_infos ~module_name ~uri
+let read_file_for_cmt_infos ~module_name ~uri
     ({cmt_modname; cmt_annots} : Cmt_format.cmt_infos) =
   let env =
     {Env.stamps = Stamps.init (); module_path = File (uri, module_name)}
@@ -791,6 +872,15 @@ let file_for_cmt_infos ~module_name ~uri
   | Interface signature ->
     let structure = for_signature ~name:module_name ~env signature.sig_items in
     {uri; module_name = cmt_modname; stamps = env.stamps; structure}
+
+(* The renamed copies of applied functors' members take stamps from
+   [Stamps.renamed_floor] on in each file, so that every reading of a file
+   gives them the same stamps: references look a stamp up in one reading and
+   its uses in another. *)
+let file_for_cmt_infos ~module_name ~uri cmt_infos =
+  Ident.with_current_time Stamps.renamed_floor (fun () ->
+      read_file_for_cmt_infos ~module_name ~uri cmt_infos)
+  |> fst
 
 let file_for_cmt ~state ~module_name ~cmt ~uri =
   match Hashtbl.find_opt state.cmt_cache cmt with
