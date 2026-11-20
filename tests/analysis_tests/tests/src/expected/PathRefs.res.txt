@@ -1,0 +1,57 @@
+References src/PathRefs.res 8:6
+[
+  {
+    "range": {
+      "end": { "character": 13, "line": 1 },
+      "start": { "character": 10, "line": 1 }
+    },
+    "uri": "file:///PathRefsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 4 },
+      "start": { "character": 16, "line": 4 }
+    },
+    "uri": "file:///PathRefsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 25, "line": 0 },
+      "start": { "character": 22, "line": 0 }
+    },
+    "uri": "file:///PathRefsFar.res"
+  },
+  {
+    "range": {
+      "end": { "character": 25, "line": 8 },
+      "start": { "character": 22, "line": 8 }
+    },
+    "uri": "file:///PathRefsFar.res"
+  },
+  {
+    "range": {
+      "end": { "character": 9, "line": 8 },
+      "start": { "character": 6, "line": 8 }
+    },
+    "uri": "file:///PathRefs.res"
+  }
+]
+
+References src/PathRefs.res 12:6
+[
+  {
+    "range": {
+      "end": { "character": 16, "line": 6 },
+      "start": { "character": 12, "line": 6 }
+    },
+    "uri": "file:///PathRefsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 10, "line": 12 },
+      "start": { "character": 6, "line": 12 }
+    },
+    "uri": "file:///PathRefs.res"
+  }
+]
+
