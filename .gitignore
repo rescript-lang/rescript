@@ -91,3 +91,4 @@ package.tgz
 
 # AI Agents
 .claude/settings.local.json
+.claude/worktrees/
