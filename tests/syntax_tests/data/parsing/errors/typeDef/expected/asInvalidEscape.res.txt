@@ -1,0 +1,56 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/asInvalidEscape.res:2:20-23
+
+  1 │ // Invalid escapes in @as template strings are syntax errors.
+  2 │ type field = {@as(`\xZZ`) x: int}
+  3 │ type constructor = | @as(`\u{110000}`) A | B
+  4 │ type first = {@as(`\01`) @as("a") y: int}
+
+  Invalid string escape sequence
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/asInvalidEscape.res:3:27-36
+
+  1 │ // Invalid escapes in @as template strings are syntax errors.
+  2 │ type field = {@as(`\xZZ`) x: int}
+  3 │ type constructor = | @as(`\u{110000}`) A | B
+  4 │ type first = {@as(`\01`) @as("a") y: int}
+  5 │ type inline = C({@as(`\xZZ`) z: int})
+
+  Invalid string escape sequence
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/asInvalidEscape.res:4:20-22
+
+  2 │ type field = {@as(`\xZZ`) x: int}
+  3 │ type constructor = | @as(`\u{110000}`) A | B
+  4 │ type first = {@as(`\01`) @as("a") y: int}
+  5 │ type inline = C({@as(`\xZZ`) z: int})
+  6 │ 
+
+  Invalid string escape sequence
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/asInvalidEscape.res:5:23-26
+
+  3 │ type constructor = | @as(`\u{110000}`) A | B
+  4 │ type first = {@as(`\01`) @as("a") y: int}
+  5 │ type inline = C({@as(`\xZZ`) z: int})
+  6 │ 
+
+  Invalid string escape sequence
+
+type nonrec field = {
+  x: int [@as `\xZZ`]}
+type nonrec constructor =
+  | A [@as `\u{110000}`]
+  | B 
+type nonrec first = {
+  y: int [@as `\01`][@as {js|a|js}]}
+type nonrec inline =
+  | C of {
+  z: int [@as `\xZZ`]} 

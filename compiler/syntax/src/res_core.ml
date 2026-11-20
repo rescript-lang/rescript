@@ -2661,7 +2661,7 @@ and parse_let_bindings ~unwrap ~attrs ~start_pos p =
   let add_unwrap_attr ~unwrap ~start_pos ~end_pos attrs =
     if unwrap then
       ( {Asttypes.txt = "let.unwrap"; loc = mk_loc start_pos end_pos},
-        Ast_payload.empty )
+        Parsetree.PStr [] )
       :: attrs
     else attrs
   in

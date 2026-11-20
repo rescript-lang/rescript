@@ -26,6 +26,63 @@ type attrs = attribute list
 (** Default value for all optional location arguments. *)
 let default_loc = ref Location.none
 
+(* Payload readers for the attributes Ast_helper interprets while building
+   nodes, such as [@as]. They never raise: a payload they cannot read, for
+   example a template string with an invalid escape, gives [None], and the
+   attribute stays where it is for the parser or the type checker to report. *)
+module Payload = struct
+  let rec unwrap_braces (expression : expression) =
+    match expression.pexp_desc with
+    | Pexp_braces {expr} -> unwrap_braces expr
+    | _ -> expression
+
+  let unwrap_expression (payload : payload) =
+    match payload with
+    | PStr [({pstr_desc = Pstr_eval (expression, attrs); _} as item)] ->
+      PStr [{item with pstr_desc = Pstr_eval (unwrap_braces expression, attrs)}]
+    | payload -> payload
+
+  let single_expression (payload : payload) =
+    match unwrap_expression payload with
+    | PStr [{pstr_desc = Pstr_eval (expression, _); _}] -> Some expression
+    | _ -> None
+
+  let string_literal (payload : payload) =
+    match payload with
+    | PStr [{pstr_desc = Pstr_eval (expression, _); _}] -> (
+      match unwrap_braces expression with
+      | {pexp_desc = Pexp_constant (Pconst_string literal); _} -> Some literal
+      | {pexp_desc = Pexp_template {source_segments = [source]; values = []}} ->
+        Option.map String_literal.string_from_semantic
+          (String_literal.decode_js_template_escapes source.txt)
+      | _ -> None)
+    | _ -> None
+
+  let constructor_tag (payload : payload) =
+    match string_literal payload with
+    | Some s -> Some (Pct_string s)
+    | None -> (
+      match single_expression payload with
+      | Some {pexp_desc = Pexp_constant (Pconst_integer (i, suffix))} -> (
+        match suffix with
+        | Some 'n' -> Some (Pct_bigint i)
+        | _ -> Some (Pct_int i))
+      | Some {pexp_desc = Pexp_constant (Pconst_float (f, _))} ->
+        Some (Pct_float f)
+      | Some
+          {
+            pexp_desc =
+              Pexp_construct
+                ({txt = Longident.Lident (("true" | "false") as b)}, _);
+          } ->
+        Some (Pct_bool (b = "true"))
+      | Some {pexp_desc = Pexp_ident {txt = Longident.Lident "null"}} ->
+        Some Pct_null
+      | Some {pexp_desc = Pexp_ident {txt = Longident.Lident "undefined"}} ->
+        Some Pct_undefined
+      | _ -> None)
+end
+
 module Const = struct
   let integer i = Pconst_integer (i, None)
   let int i = integer (string_of_int i)
@@ -446,7 +503,7 @@ module Type = struct
         match attrs with
         | [] -> (None, [])
         | (({txt = "as"; loc}, payload) : Parsetree.attribute) :: rest -> (
-          match Ast_payload.constructor_tag_of_payload payload with
+          match Payload.constructor_tag payload with
           | Some txt -> (Some {Asttypes.txt; loc}, List.rev_append seen rest)
           | None -> (None, attrs))
         | attr :: rest -> take (attr :: seen) rest
@@ -510,7 +567,7 @@ module Type = struct
         | [] -> (None, [])
         | ((({txt = "as"; loc}, payload) : Parsetree.attribute) as attr) :: rest
           -> (
-          match Ast_payload.string_literal_of_payload payload with
+          match Payload.string_literal payload with
           | Some txt ->
             (* A second [@as] is left in the attributes for the type checker
                to reject, so that an invalid file can still be printed. *)

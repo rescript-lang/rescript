@@ -1,0 +1,1 @@
+- Report an invalid escape in an `@as` template string as a syntax error, so the editor's syntax diagnostics and outline no longer fail on such a file.
