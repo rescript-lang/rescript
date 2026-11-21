@@ -38,25 +38,12 @@
    3. an argument with side effects is not put in an operand that may not be
       evaluated, the right one of [&&] and [||] *)
 
-(* How the evaluation of an argument may move with respect to other code *)
-type motion =
-  | Anywhere  (** no side effects, and depends on no state that may change *)
-  | Reads  (** no side effects, but reads state that may change *)
-  | Effects
-
-let motion ~assignable lam : motion =
-  if Lam_analysis.delay_safe ~assignable lam then Anywhere
-  else if Lam_analysis.no_side_effects lam then Reads
-  else Effects
-
-(* Whether code of motions [a] and [b] can give other results when it runs in
-   the other order *)
-let conflict (a : motion) (b : motion) =
-  match (a, b) with
-  | Anywhere, _ | _, Anywhere | Reads, Reads -> false
-  | Effects, (Reads | Effects) | Reads, Effects -> true
-
-type value = {mutable used: bool; lambda: Lambda.t; rank: int; motion: motion}
+type value = {
+  mutable used: bool;
+  lambda: Lambda.t;
+  rank: int;
+  motion: Lam_analysis.motion;
+}
 
 (* Sequence the unused arguments before [body], in parameter order *)
 let seq_unused param_hash params body =
@@ -90,7 +77,7 @@ let simple_beta_reduce ~assignable params body args =
   (* The code the reduced body evaluates, latest first, with its rank in the
      call *)
   let evaluated = ref [] in
-  let evaluate ~conditional rank (motion : motion) =
+  let evaluate ~conditional rank (motion : Lam_analysis.motion) =
     match motion with
     | Effects when conditional -> raise_notrace Not_simple_apply
     | Anywhere | Reads | Effects -> evaluated := (rank, motion) :: !evaluated
@@ -102,7 +89,7 @@ let simple_beta_reduce ~assignable params body args =
       evaluate ~conditional exp.rank exp.motion;
       exp.lambda
     | None ->
-      evaluate ~conditional body_rank (motion ~assignable opt);
+      evaluate ~conditional body_rank (Lam_analysis.motion ~assignable opt);
       opt
   in
   (* Substitutes in the operands from left to right. The operands from
@@ -131,7 +118,7 @@ let simple_beta_reduce ~assignable params body args =
       | [] -> true
       | (rank, motion) :: later ->
         Ext_list.for_all later (fun (rank', motion') ->
-            rank <= rank' || not (conflict motion motion'))
+            rank <= rank' || not (Lam_analysis.conflict motion motion'))
         && in_order later
     in
     if not (in_order (unused @ List.rev !evaluated)) then
@@ -141,7 +128,12 @@ let simple_beta_reduce ~assignable params body args =
     List.iteri
       (fun rank (p, a) ->
         Hash_ident.add param_hash p
-          {lambda = a; used = false; rank; motion = motion ~assignable a})
+          {
+            lambda = a;
+            used = false;
+            rank;
+            motion = Lam_analysis.motion ~assignable a;
+          })
       (List.combine params args)
   in
   match (body : Lambda.t) with

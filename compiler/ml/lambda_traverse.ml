@@ -245,11 +245,16 @@ let free_variables l =
 
 let assigned_variables l =
   let assigned = ref Set_ident.empty in
+  (* [visit] is the one callback of the walk, where [iter] would allocate a
+     closure for each node *)
   let rec walk l =
     (match l with
     | Lassign (id, _) -> assigned := Set_ident.add id !assigned
     | _ -> ());
-    iter walk l
+    ignore (shallow_exists visit l)
+  and visit l =
+    walk l;
+    false
   in
   walk l;
   !assigned

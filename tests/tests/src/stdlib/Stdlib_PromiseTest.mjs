@@ -207,9 +207,8 @@ function thenAfterCatch() {
     RE_EXN_ID: TestError,
     _1: "some rejected value"
   })), e => {
-    let tmp;
-    tmp = e.RE_EXN_ID === TestError && e._1 === "some rejected value" ? "success" : "not a test error";
-    return Promise.resolve(tmp);
+    let s = e.RE_EXN_ID === TestError && e._1 === "some rejected value" ? "success" : "not a test error";
+    return Promise.resolve(s);
   }).then(msg => {
     Test.run([
       [

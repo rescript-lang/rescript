@@ -24,13 +24,25 @@ function bumpThenRead(x) {
   return s - a | 0;
 }
 
+function readThenCall() {
+  let s = 0;
+  let next = () => {
+    s = s + 1 | 0;
+    return y => y;
+  };
+  let x = s;
+  return next()(x);
+}
+
 Mocha.describe("Inline_arg_order_cross_module_test", () => {
-  Mocha.test("a read of a local ref before an argument that assigns it", () => Test_utils.eq("File \"inline_arg_order_cross_module_test.res\", line 30, characters 7-14", 1, readThenBump(0)));
-  Mocha.test("a read of a local ref after an argument that assigns it", () => Test_utils.eq("File \"inline_arg_order_cross_module_test.res\", line 34, characters 7-14", 9, bumpThenRead(0)));
+  Mocha.test("a read of a local ref before an argument that assigns it", () => Test_utils.eq("File \"inline_arg_order_cross_module_test.res\", line 38, characters 7-14", 1, readThenBump(0)));
+  Mocha.test("a read of a local ref after an argument that assigns it", () => Test_utils.eq("File \"inline_arg_order_cross_module_test.res\", line 42, characters 7-14", 9, bumpThenRead(0)));
+  Mocha.test("a read of a local ref before a callee that assigns it", () => Test_utils.eq("File \"inline_arg_order_cross_module_test.res\", line 46, characters 7-14", 0, readThenCall()));
 });
 
 export {
   readThenBump,
   bumpThenRead,
+  readThenCall,
 }
 /*  Not a pure module */

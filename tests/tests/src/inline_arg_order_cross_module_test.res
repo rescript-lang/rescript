@@ -25,6 +25,14 @@ let bumpThenRead = x => {
   Inline_arg_order_cross_module_lib.minus3(x, bumpS(), s.contents)
 }
 
+let readThenCall = () => {
+  let s = ref(0)
+  Inline_arg_order_cross_module_lib.callNext(() => {
+    s := s.contents + 1
+    y => y
+  }, s.contents)
+}
+
 describe(__MODULE__, () => {
   test("a read of a local ref before an argument that assigns it", () => {
     eq(__LOC__, 1, readThenBump(0))
@@ -32,5 +40,9 @@ describe(__MODULE__, () => {
 
   test("a read of a local ref after an argument that assigns it", () => {
     eq(__LOC__, 9, bumpThenRead(0))
+  })
+
+  test("a read of a local ref before a callee that assigns it", () => {
+    eq(__LOC__, 0, readThenCall())
   })
 })

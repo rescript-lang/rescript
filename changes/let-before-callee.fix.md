@@ -1,0 +1,1 @@
+- Fix `let x = e; f(x)` running `e` after it evaluates the callee `f`, as in `let x = c.n; next()(x)`.

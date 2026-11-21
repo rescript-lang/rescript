@@ -93,7 +93,9 @@ let lets_helper ~assignable (count_var : Ident.t -> Lam_pass_count.used_info)
           Hash_ident.add string_table v s;
           (* we need move [simplif lbody] later, since adding Hash does have side effect *)
           Lambda.let_ Alias v l1 (simplif lbody)
-        | _ -> Lam_util.refine_let ~original:lam ~kind v l1 (simplif lbody)
+        | _ ->
+          Lam_util.refine_let ~original:lam ~assignable ~kind v l1
+            (simplif lbody)
         (* TODO: check if it is correct rollback to [StrictOpt]? *))
     | Llet (((Strict | Variable) as kind), v, l1, l2) -> (
       if not (used v) then
@@ -107,7 +109,8 @@ let lets_helper ~assignable (count_var : Ident.t -> Lam_pass_count.used_info)
         | Strict, Lconst (Const_string s) ->
           Hash_ident.add string_table v s;
           Lambda.let_ Alias v l1 (simplif l2)
-        | _ -> Lam_util.refine_let ~original:lam ~kind v l1 (simplif l2))
+        | _ ->
+          Lam_util.refine_let ~original:lam ~assignable ~kind v l1 (simplif l2))
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when Ext_list.same_length params args

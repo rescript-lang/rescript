@@ -100,12 +100,13 @@ let rec eliminate_tuple (id : Ident.t) (lam : Lambda.t) acc =
                     - also for function compilation, flattening should be done first
                     - [compile_group] and [compile] become mutually recursive function
                 *)
-let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lambda.t) :
-    Lambda.t =
+let lambda_of_groups ~assignable ~(rev_bindings : Lam_group.t list)
+    (result : Lambda.t) : Lambda.t =
   Ext_list.fold_left rev_bindings result (fun acc x ->
       match x with
       | Nop l -> Lambda.seq l acc
-      | Single (kind, ident, lam) -> Lam_util.refine_let ~kind ident lam acc
+      | Single (kind, ident, lam) ->
+        Lam_util.refine_let ~assignable ~kind ident lam acc
       | Recursive bindings -> Lambda.letrec bindings acc)
 
 (* TODO:
@@ -155,6 +156,9 @@ let regroups_binding (str : Lambda.let_kind) (id : Ident.t) (arg : Lambda.t) =
     | _ -> false
 
 let deep_flatten (lam : Lambda.t) : Lambda.t =
+  (* See [Lam_pass_remove_alias.simplify_alias] *)
+  let assignable = Lambda_traverse.assigned_variables lam in
+  let lambda_of_groups = lambda_of_groups ~assignable in
   let rec flatten (acc : Lam_group.t list) (lam : Lambda.t) :
       Lambda.t * Lam_group.t list =
     match lam with
@@ -225,7 +229,8 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
   and aux (lam : Lambda.t) : Lambda.t =
     match lam with
     | Llet (str, id, arg, body) when not (regroups_binding str id arg) ->
-      Lam_util.refine_let ~original:lam ~kind:str id (aux arg) (aux body)
+      Lam_util.refine_let ~original:lam ~assignable ~kind:str id (aux arg)
+        (aux body)
     | Llet _ ->
       let res, groups = flatten [] lam in
       lambda_of_groups res ~rev_bindings:groups

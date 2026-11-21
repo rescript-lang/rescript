@@ -5,7 +5,12 @@ function minus3(_x, a, b) {
   return b - a | 0;
 }
 
+function callNext(next, x) {
+  return next()(x);
+}
+
 export {
   minus3,
+  callNext,
 }
 /* No side effect */
