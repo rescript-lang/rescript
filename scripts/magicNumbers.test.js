@@ -129,7 +129,7 @@ test("bumps the magic numbers once per release when format sources changed", asy
   git("tag", "v1.0.0");
 
   assert.equal(await releaseMagicNumbers(root, "1.1.0"), null);
-  await commit("compiler/syntax/printer.ml", "let print = ()\n");
+  await commit("syntax/printer/res_printer.ml", "let print = ()\n");
   assert.equal(await releaseMagicNumbers(root, "1.1.0"), null);
   // A merged maintenance branch brings a newer tag of an older line, with
   // other magic numbers.

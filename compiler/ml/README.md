@@ -11,7 +11,7 @@ contracts.
 For a surface-language expression, declaration, or module feature, follow the
 parsetree node through these modules:
 
-- [`parsetree.ml`](../ast/parsetree.ml) in `compiler/ast` defines the current
+- [`parsetree.ml`](../../syntax/ast/parsetree.ml) in `syntax/ast` defines the current
   untyped AST. `parsetree0.ml` is the frozen compatibility AST and must not be
   changed.
 - [`typecore.ml`](typecore.ml) checks expressions and patterns.

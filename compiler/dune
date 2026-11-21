@@ -1,5 +1,4 @@
 (dirs
- ast
  ast0
  bsc
  common
@@ -14,7 +13,7 @@
  ml
  outcome_printer
  sync
- syntax)
+ syntax_cli)
 
 (env
  (release

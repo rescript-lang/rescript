@@ -95,7 +95,8 @@ For discussions on ongoing development, see the [Development](https://forum.resc
 ReScript uses multiple licenses in this monorepo:
 
 - `compiler/`: LGPL-3.0-or-later
-- `compiler/syntax/`: MIT
+- `compiler/syntax_cli/`: MIT
+- `syntax/`: MIT, except `syntax/ast/`: LGPL-3.0-or-later
 - `packages/@rescript/runtime/`: MIT
 - `packages/@rescript/belt/`: MIT
 - `rewatch/`: MIT

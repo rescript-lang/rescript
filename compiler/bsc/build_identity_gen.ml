@@ -24,8 +24,9 @@ let () =
     "/ext/ext_platform_primitives_stubs.c";
     "/ext/platform/native/ext_platform_primitives.ml";
     "/core/platform/native/js_name_of_module_id.ml";
-    "/syntax/src/res_driver.ml";
-    "/syntax/src/dune";
+    "/syntax/parser/res_driver.ml";
+    "/syntax/parser/dune";
+    "/syntax/ast/parsetree.ml";
   ]
   |> List.iter (fun suffix ->
       if not (has_suffix suffix) then

@@ -9,10 +9,12 @@
 
 (rule
  (target rescript_compiler_build_identity.ml)
- ; Every compiler source, so code in a new directory is covered. Sources that
- ; are not linked into bsc only cause an extra clean rebuild after they change.
+ ; Every compiler and syntax source, so code in a new directory is covered.
+ ; Sources that are not linked into bsc only cause an extra clean rebuild after
+ ; they change.
  (deps
-  (source_tree ..))
+  (source_tree ..)
+  (source_tree ../../syntax))
  (action
   (with-stdout-to
    %{target}
@@ -31,7 +33,8 @@
   flow_parser
   gentype
   outcome_printer
-  syntax
+  rescript_printer
+  rescript_parser
   unix))
 
 (executable

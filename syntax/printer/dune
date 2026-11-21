@@ -1,0 +1,9 @@
+; Prints a parsetree as ReScript source, keeping comments. Res_token is here
+; because the printer needs the keyword table to escape identifiers.
+
+(library
+ (name rescript_printer)
+ (wrapped false)
+ (instrumentation
+  (backend bisect_ppx))
+ (libraries rescript_ast))
