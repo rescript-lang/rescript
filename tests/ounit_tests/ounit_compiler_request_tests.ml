@@ -1353,6 +1353,74 @@ let ctype_memo_reset_tests _context =
         (Ctype.For_test.previous_env_is_empty ())
         "the expansion environment does not outlive its request")
 
+(* Consecutive requests reuse identifier stamps, so the same path text with
+   the same stamps names different declarations in each request. Requests that
+   compile such units one after another give the output of cold compiles, and
+   a finished request leaves no type path memo entry behind to keep its
+   environments alive. The memo is also cleared when a request starts
+   ([Env.reset_cache], [Env.set_unit_name]), so this does not exercise the
+   memo's per-environment guards; Ounit_type_path_memo_tests does. *)
+let type_path_memo_isolation_tests _context =
+  with_temp_dir "rewatch-driver-type-path-memo-" (fun root ->
+      let js name = read_file (Filename.concat root (name ^ ".js")) in
+      let compile name =
+        let _, result = run root ~extra:["-I"; root] (name ^ ".res") in
+        assert_equal ~printer:string_of_int 0 result.exit_code
+          ~msg:(name ^ ": " ^ result.stderr)
+      in
+      let unit_source t literal =
+        String.concat "\n"
+          [
+            "type t = " ^ t;
+            "type box = {value: t, next: option<t>}";
+            "let make = (v: t) => {value: v, next: Some(v)}";
+            "let literal: t = " ^ literal;
+            "let boxed = make(literal)";
+            "let value = (b: box): option<t> => b.next";
+            "";
+          ]
+      in
+      write root "IntBox.res" (unit_source "int" "1");
+      write root "StringBox.res" (unit_source "string" "\"one\"");
+      compile "StringBox";
+      let cold_string = js "StringBox" in
+      compile "IntBox";
+      let cold_int = js "IntBox" in
+      assert_equal ~printer:string_of_int 0
+        (Env.For_test.type_path_memo_entries ())
+        ~msg:"the type path memo is empty after a request";
+      compile "StringBox";
+      assert_equal ~printer:Fun.id cold_string (js "StringBox")
+        ~msg:"a request after a same-shaped unit compiles as a cold one";
+      compile "IntBox";
+      assert_equal ~printer:Fun.id cold_int (js "IntBox");
+      (* A unit's types change between requests that look them up. *)
+      write root "Lib.res" "type t = int\nlet zero: t = 0\n";
+      compile "Lib";
+      write root "Use.res" "let one: Lib.t = 1\nlet zero: Lib.t = Lib.zero\n";
+      compile "Use";
+      write root "Lib.res" "type t = string\nlet zero: t = \"\"\n";
+      compile "Lib";
+      let _, stale = run root ~extra:["-I"; root] "Use.res" in
+      assert_equal ~printer:string_of_int 2 stale.exit_code ~msg:"Use";
+      check
+        (contains_text stale.stderr "string")
+        "a later request sees the recompiled unit's type";
+      (* A unit with an interface reads its own .cmi, then records the saved
+         signature for the same name, inside one request. *)
+      write root "Sealed.resi" "type t\nlet make: int => t\nlet get: t => int\n";
+      write root "Sealed.res"
+        "type t = int\nlet make = (n: int): t => n\nlet get = (x: t) => x\n";
+      expect_code 0 (snd (run root ~extra:["-I"; root] "Sealed.resi"));
+      expect_code 0
+        (snd (run root ~extra:["-I"; root; "-bs-read-cmi"] "Sealed.res"));
+      write root "UseSealed.res"
+        "let v = Sealed.get(Sealed.make(2))\nlet w: Sealed.t = Sealed.make(v)\n";
+      compile "UseSealed";
+      write root "Leak.res" "let bad: Sealed.t = 1\n";
+      let _, leaked = run root ~extra:["-I"; root] "Leak.res" in
+      assert_equal ~printer:string_of_int 2 leaked.exit_code ~msg:"Leak")
+
 let package_and_load_path_isolation_tests _context =
   with_temp_dir "rewatch-driver-load-roots-" (fun root ->
       let first = Filename.concat root "first" in
@@ -1717,6 +1785,7 @@ let suites =
          "ctype_level_isolation" >:: ctype_level_isolation_tests;
          "free_variable_isolation" >:: free_variable_isolation_tests;
          "ctype_memo_reset" >:: ctype_memo_reset_tests;
+         "type_path_memo_isolation" >:: type_path_memo_isolation_tests;
          "shared_type_graph_isolation" >:: shared_type_graph_isolation_tests;
          "dependency_extraction_isolation"
          >:: dependency_extraction_isolation_tests;

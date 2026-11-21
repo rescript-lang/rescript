@@ -1,0 +1,1 @@
+- Build: remember type path lookups within a compilation, which avoids looking up the same types such as `option` and `string` hundreds of thousands of times per build.

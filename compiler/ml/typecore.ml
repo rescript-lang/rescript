@@ -814,9 +814,10 @@ let rec expand_path env p =
     match repr ty with
     | {desc = Tconstr (p, _, _)} -> expand_path env p
     | _ -> p (* PR#6394: recursive module may introduce incoherent manifest *))
-  | _ ->
-    let p' = Env.normalize_path None env p in
-    if Path.same p p' then p else expand_path env p'
+  | _ -> (
+    match Env.normalize_type_path env p with
+    | None -> p
+    | Some p' -> expand_path env p')
 
 let compare_type_path env tpath1 tpath2 =
   Path.same (expand_path env tpath1) (expand_path env tpath2)
