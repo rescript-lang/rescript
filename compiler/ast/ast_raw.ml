@@ -78,6 +78,3 @@ let to_extension ~name ~name_loc source : extension =
     | Raw_template source -> Ast_helper.Exp.template ~loc [source] []
   in
   ({txt = name; loc = name_loc}, PStr [Ast_helper.Str.eval ~loc expression])
-
-let uninterpreted ~loc name =
-  Location.errorf ~loc "Uninterpreted extension '%s'." name

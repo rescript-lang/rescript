@@ -95,10 +95,3 @@ type mapper = {
 
 val default_mapper : mapper
 (** A default mapper, which implements a "deep identity" mapping. *)
-
-(** {1 Convenience functions to write mappers} *)
-
-val extension_of_error : Location.error -> extension
-(** Encode an error into an 'error' extension node which can be
-    inserted in a generated Parsetree.  The compiler will be
-    responsible for reporting the error. *)

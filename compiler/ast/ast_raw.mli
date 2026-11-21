@@ -25,6 +25,3 @@ val to_extension :
   Parsetree.extension
 (** The extension as parsed, for passes that treat raw JavaScript like the
     extension it is written as. *)
-
-val uninterpreted : loc:Location.t -> string -> Location.error
-(** The error for an extension that no compiler pass interpreted. *)

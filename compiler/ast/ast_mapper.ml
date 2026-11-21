@@ -652,12 +652,3 @@ let default_mapper =
         | PTyp x -> PTyp (this.typ this x)
         | PPat (x, g) -> PPat (this.pat this x, map_opt (this.expr this) g));
   }
-
-let rec extension_of_error {loc; msg; if_highlight; sub} =
-  ( {loc; txt = "error"},
-    PStr
-      ([
-         Str.eval (Exp.constant (Const.string msg));
-         Str.eval (Exp.constant (Const.string if_highlight));
-       ]
-      @ List.map (fun ext -> Str.extension (extension_of_error ext)) sub) )

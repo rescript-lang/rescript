@@ -723,7 +723,7 @@ module E = struct
       (* v0 has no dict literals: they're the calls they used to be parsed
          into *)
       sub.expr sub
-        (Ast_dict.to_calls ~loc:e.pexp_loc ~attrs:e.pexp_attributes entries)
+        (Ast_dict0.to_calls ~loc:e.pexp_loc ~attrs:e.pexp_attributes entries)
     | Pexp_spread (kind, elements) ->
       (* v0 has no spread literals: they're the calls they used to be parsed
          into *)
