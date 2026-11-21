@@ -71,7 +71,7 @@ $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 
 # Compiler
 
-COMPILER_SOURCE_DIRS := compiler tests analysis tools rewatch-ocaml
+COMPILER_SOURCE_DIRS := compiler syntax tests analysis tools rewatch-ocaml
 COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \))
 COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
@@ -231,7 +231,7 @@ semantic-diff:
 #   make clean-coverage   # remove coverage artifacts
 #
 # Suites covered: the `scripts/test.js -all` suites (mocha/build/ounit/
-# docstrings), the syntax tests (compiler/syntax, via the instrumented
+# docstrings), the syntax tests (syntax/, via the instrumented
 # res_parser), the gentype tests (compiler/gentype, via the instrumented
 # bsc) and the analysis + tools tests, including reanalyze (analysis/, via
 # the instrumented rescript-editor-analysis and rescript-tools).
@@ -288,7 +288,7 @@ coverage-lib: coverage-prepare
 # shells out to a binary that `coverage-build` instrumented:
 #   - `node scripts/test.js -all` drives bsc (mocha/build/ounit/docstrings).
 #   - the syntax tests drive the instrumented `res_parser` from
-#     _build/install/default/bin, adding coverage for compiler/syntax.
+#     _build/install/default/bin, adding coverage for syntax/.
 #     ROUNDTRIP_TEST=1 matches Linux CI and also exercises the printer paths.
 #   - gentype tests compile via `rescript build`, i.e. the instrumented bsc in
 #     BIN_DIR, so they add coverage for compiler/gentype.

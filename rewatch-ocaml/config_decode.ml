@@ -199,7 +199,7 @@ let is_upper_flat_case value =
   = value
 
 (* A module name as the ReScript scanner reads an upper-case identifier
-   (compiler/syntax/src/res_scanner.ml): an ASCII capital, then letters,
+   (syntax/parser/res_scanner.ml): an ASCII capital, then letters,
    digits, '_', '\'' and '$'. *)
 let is_module_name value =
   value <> ""

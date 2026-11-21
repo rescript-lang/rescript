@@ -1,7 +1,8 @@
 This repository contains code under multiple licenses.
 
 - compiler/: LGPL-3.0-or-later
-- compiler/syntax/: MIT
+- compiler/syntax_cli/: MIT
+- syntax/: MIT, except syntax/ast/: LGPL-3.0-or-later
 - packages/@rescript/runtime/: MIT
 - packages/@rescript/belt/: MIT
 - rewatch/: MIT

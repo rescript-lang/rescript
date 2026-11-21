@@ -3482,7 +3482,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
           } env ~check:(fun s -> Warnings.Unused_for_index s)
       | _ ->
         (* unreachable: the parser's normalize_for_of_pattern
-           (compiler/syntax/src/res_core.ml) catches every non-var,
+           (syntax/parser/res_core.ml) catches every non-var,
            non-`_` pattern, emits a syntax error, and replaces the pattern
            with Ppat_any before the typer runs *)
         assert false
@@ -3522,7 +3522,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
           } env ~check:(fun s -> Warnings.Unused_for_index s)
       | _ ->
         (* unreachable: the parser's normalize_for_of_pattern
-           (compiler/syntax/src/res_core.ml) catches every non-var,
+           (syntax/parser/res_core.ml) catches every non-var,
            non-`_` pattern, emits a syntax error, and replaces the pattern
            with Ppat_any before the typer runs *)
         assert false

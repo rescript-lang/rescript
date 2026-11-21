@@ -1,0 +1,9 @@
+; Parses ReScript source into a parsetree. Some error messages print the
+; parsed code, so the parser uses the printer.
+
+(library
+ (name rescript_parser)
+ (wrapped false)
+ (instrumentation
+  (backend bisect_ppx))
+ (libraries rescript_ast rescript_printer))

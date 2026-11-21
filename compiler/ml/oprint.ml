@@ -14,7 +14,7 @@
 (**************************************************************************)
 
 (* Printers for outcome trees, used by [Printtyp]. The ReScript printer lives in
-   compiler/syntax, which depends on this library, so it is installed into
+   syntax/printer, which depends on this library, so it is installed into
    these hooks by [Res_outcome_printer.setup]. *)
 
 open Outcometree

@@ -8,7 +8,7 @@ export const configPath = "compiler/ext/config.ml";
 // The libraries that define the serialized parsetree and typed tree types,
 // and everything those types refer to: `ml` and the libraries it depends on.
 export const formatSources = [
-  "compiler/ast",
+  "syntax/ast",
   "compiler/ml",
   "compiler/ext",
   "compiler/flow_parser",

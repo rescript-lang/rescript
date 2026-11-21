@@ -1,0 +1,18 @@
+; The ReScript syntax libraries: the parsetree (ast), the printer, and the
+; parser, which uses the printer for some error messages. They depend on the
+; standard library only.
+
+(dirs ast printer parser)
+
+; Same optimization flags as the compiler, which links these libraries.
+
+(env
+ (release
+  (ocamlopt_flags
+   (:standard -O3 -unbox-closures)))
+ (static
+  (ocamlopt_flags
+   (:standard -O3 -unbox-closures)))
+ (browser
+  (ocamlopt_flags
+   (:standard -O3 -unbox-closures))))

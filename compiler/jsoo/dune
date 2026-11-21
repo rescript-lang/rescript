@@ -5,4 +5,12 @@
  (modes js wasm)
  (enabled_if
   (= %{profile} browser))
- (libraries common core syntax ml gentype outcome_printer js_of_ocaml))
+ (libraries
+  common
+  core
+  rescript_printer
+  rescript_parser
+  ml
+  gentype
+  outcome_printer
+  js_of_ocaml))

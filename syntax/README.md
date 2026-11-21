@@ -1,29 +1,32 @@
 # Parser and printer
 
-This directory owns ReScript source parsing, comment attachment, and printing.
-The parser is hand-written and produces the parsetree consumed by
+This directory owns the parsetree, ReScript source parsing, comment
+attachment, and printing, as three libraries that depend on the standard
+library only: `ast/` (`rescript_ast`), `printer/` (`rescript_printer`) and
+`parser/` (`rescript_parser`), which uses the printer for some error
+messages. The parser is hand-written and produces the parsetree consumed by
 `compiler/ml`. The built-in JSX transformation, which rewrites that
-parsetree, lives in [`compiler/jsx`](../jsx/README.md).
+parsetree, lives in [`compiler/jsx`](../compiler/jsx/README.md).
 
 ## Code map
 
-- [`src/res_scanner.ml`](src/res_scanner.ml) tokenizes source text.
-- [`src/res_core.ml`](src/res_core.ml) implements the grammar: parsing and
+- [`parser/res_scanner.ml`](parser/res_scanner.ml) tokenizes source text.
+- [`parser/res_core.ml`](parser/res_core.ml) implements the grammar: parsing and
   error recovery.
-- [`src/res_parser.ml`](src/res_parser.ml) holds the parser state: the token
+- [`parser/res_parser.ml`](parser/res_parser.ml) holds the parser state: the token
   cursor, lookahead, breadcrumbs and diagnostics.
-- [`src/res_grammar.ml`](src/res_grammar.ml) defines the grammar contexts
+- [`parser/res_grammar.ml`](parser/res_grammar.ml) defines the grammar contexts
   (breadcrumbs) and the token classes that recovery uses to decide where a
   construct starts or ends.
-- [`src/res_comment.ml`](src/res_comment.ml) and
-  [`src/res_comments_table.ml`](src/res_comments_table.ml) retain and attach
+- [`printer/res_comment.ml`](printer/res_comment.ml) and
+  [`printer/res_comments_table.ml`](printer/res_comments_table.ml) retain and attach
   comments for printing.
-- [`src/res_printer.ml`](src/res_printer.ml),
-  [`src/res_doc.ml`](src/res_doc.ml), and
-  [`src/res_parens.ml`](src/res_parens.ml) implement formatting.
-- [`cli/res_cli.ml`](cli/res_cli.ml) provides the repository-only `res_parser`
-  diagnostic tool, with its AST, token and OCaml-syntax debug printers in
-  `cli/`. Production compiler code calls the syntax library APIs.
+- [`printer/res_printer.ml`](printer/res_printer.ml),
+  [`printer/res_doc.ml`](printer/res_doc.ml), and
+  [`printer/res_parens.ml`](printer/res_parens.ml) implement formatting.
+- [`compiler/syntax_cli/res_cli.ml`](../compiler/syntax_cli/res_cli.ml)
+  provides the repository-only `res_parser` diagnostic tool, with its AST,
+  token and OCaml-syntax debug printers in `compiler/syntax_cli/`. Production compiler code calls the syntax library APIs.
 
 See [Formatter.md](Formatter.md) for formatter policy.
 
@@ -60,7 +63,7 @@ parser interface.
 A syntax change can affect more than the grammar. Check each relevant layer:
 
 1. scanner tokens and parser recovery;
-2. the current parsetree in `compiler/ast/parsetree.ml`;
+2. the current parsetree in `syntax/ast/parsetree.ml`;
 3. printing, parentheses, and comment attachment;
 4. the v0 AST bridges in `compiler/ast0/ast_mapper_from0.ml` and
    `compiler/ast0/ast_mapper_to0.ml`;
