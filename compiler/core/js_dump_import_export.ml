@@ -79,6 +79,10 @@ let exports cxt f (idents : Ident.t list) =
 (** Print module in ESModule format, it is ESModule, trailing comma is valid ES code *)
 let esmodule_export cxt f (idents : Ident.t list) =
   P.at_least_two_lines f;
+  (* [-bs-emit-ts]: functions printed as [export function] leave the list *)
+  let idents =
+    Ext_list.filter idents (fun id -> not (Js_ts_annot.exported_inline id))
+  in
   match idents with
   | [] -> cxt
   | _ ->

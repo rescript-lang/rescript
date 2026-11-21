@@ -328,6 +328,21 @@ and record_rest_pattern cxt f fields rest =
 
 and formal_parameter_list cxt f l = iter_lst cxt f l Ext_pp_scope.ident comma_sp
 
+(* [-bs-emit-ts]: each parameter followed by its type, where the typed tree
+   gave one to this identifier. *)
+and annotated_parameter_list cxt f l =
+  iter_lst cxt f l
+    (fun cxt f id ->
+      let cxt = Ext_pp_scope.ident cxt f id in
+      (match Js_ts_annot.param_type id with
+      | Some {ty; optional} ->
+        P.string f (if optional then "?:" else ":");
+        P.space f;
+        P.string f ty
+      | None -> ());
+      cxt)
+    comma_sp
+
 (* IdentMap *)
 (*
 f/122 -->
@@ -455,12 +470,31 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
               in
               function_body ~return_unit cxt f b))
       else
+        let ts_top =
+          match fn_state with
+          | Name_top x when Js_ts_annot.enabled () ->
+            Js_ts_annot.report_function x l;
+            Some x
+          | _ -> None
+        in
         let cxt =
-          match l with
-          | [single] when arrow -> Ext_pp_scope.ident inner_cxt f single
-          | l ->
+          match (l, ts_top) with
+          | l, Some x ->
+            P.string f (Js_ts_annot.type_params x);
+            P.paren_group f 1 (fun _ -> annotated_parameter_list inner_cxt f l)
+          | [single], None when arrow -> Ext_pp_scope.ident inner_cxt f single
+          | l, None ->
             P.paren_group f 1 (fun _ -> formal_parameter_list inner_cxt f l)
         in
+        (match ts_top with
+        | Some x -> (
+          match Js_ts_annot.result_type x with
+          | Some ty ->
+            P.string f ":";
+            P.space f;
+            P.string f ty
+          | None -> ())
+        | None -> ());
         P.space f;
         if arrow then (
           P.string f L.arrow;
@@ -494,6 +528,9 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
           param_body ();
           semi f
         | Name_top x ->
+          if Js_ts_annot.export_inline x then (
+            P.string f L.export;
+            P.space f);
           P.string f (L.function_ ~async ~arrow);
           ignore (Ext_pp_scope.ident inner_cxt f x : cxt);
           param_body ()
@@ -1596,7 +1633,13 @@ and function_body ?directive (cxt : cxt) f ~return_unit (b : J.block) : unit =
       ignore
         (statement false cxt f {s with statement_desc = If (bool, then_, [])}
           : cxt)
-    | Return {expression_desc = Undefined _} -> ()
+    (* A function whose body is only [return;] prints an empty body, except
+       under [-bs-emit-ts]: TypeScript requires a [return] in a function
+       whose declared result type is other than [undefined], [void] or
+       [any]. *)
+    | Return {expression_desc = Undefined _} when not (Js_ts_annot.enabled ())
+      ->
+      ()
     | Return exp when return_unit ->
       ignore (statement false cxt f (S.exp exp) : cxt)
     | _ -> ignore (statement false cxt f s : cxt))
