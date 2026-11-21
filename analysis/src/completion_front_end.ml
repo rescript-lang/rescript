@@ -969,7 +969,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
              };
            ]
          when loc_has_cursor pexp_loc -> (
-         match Ast_payload.semantic_string_of_expression expression with
+         match Process_attributes.semantic_string_of_expression expression with
          | Some s ->
            if Debug.verbose () then
              print_endline "[completion_with_parser1:attribute] Found @module";
@@ -1002,7 +1002,7 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
              from_expr )
          with
          | true, _, _, from_expr -> (
-           match Ast_payload.semantic_string_of_expression from_expr with
+           match Process_attributes.semantic_string_of_expression from_expr with
            | Some s ->
              if Debug.verbose () then
                print_endline
