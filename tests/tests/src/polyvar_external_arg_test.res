@@ -5,12 +5,15 @@ open Test_utils
 external testAsync: (string, unit => promise<unit>) => unit = "test"
 
 // A polymorphic variant argument of an external is evaluated once, in its
-// place among the arguments, and not inside a function the compiler creates.
-// An event-style argument is passed as its tag and its payload, and an @as or
-// @int dispatch switches on the argument in a function, so an argument with
-// side effects is read from a temporary, as is a getter passed as an
-// event-style argument. In a while condition, the temporary is bound inside
-// the loop.
+// place among the arguments. An event-style argument is passed as its tag and
+// its payload, so an argument with side effects is read from a temporary, as
+// is a JS property read such as a @get getter or a @val with a dotted name,
+// while a JS global is read in place, like a value of a JS module. An @as or
+// @int dispatch is a function that switches on the argument and is called
+// with it, so the argument, an await in it included, is evaluated where it
+// is. Like any argument, it is read from a temporary only if an argument after
+// it has statements to run first. In a while condition, the temporary is
+// bound inside the loop.
 
 type target
 
@@ -23,7 +26,10 @@ let makeTarget: unit => target = %raw(`() => {
     record(...args)
     return args[0] === "click"
   }
-  return { calls, has, on: record, onAfter: record, onBefore: record, setMode: record, setLevel: record, setLevelOpt: record }
+  return {
+    calls, has, on: record, onAfter: record, onBefore: record,
+    setMode: record, setModeBetween: record, setLevel: record, setLevelBetween: record, setLevelOpt: record
+  }
 }`)
 
 @get external calls: target => array<string> = "calls"
@@ -44,7 +50,19 @@ external onAs: (
 external setMode: (target, @string [@as("light-mode") #light | @as("dark-mode") #dark]) => unit =
   "setMode"
 
+@send
+external setModeBetween: (
+  target,
+  string,
+  @string [@as("light-mode") #light | @as("dark-mode") #dark],
+  string,
+) => unit = "setModeBetween"
+
 @send external setLevel: (target, @int [#low | @as(10) #high]) => unit = "setLevel"
+
+@send
+external setLevelBetween: (target, string, @int [#low | @as(10) #high], string) => unit =
+  "setLevelBetween"
 
 @send
 external setLevelOpt: (target, ~level: @int [#low | @as(10) #high]=?, unit) => unit = "setLevelOpt"
@@ -63,10 +81,40 @@ external onBefore: (
   string,
 ) => unit = "onBefore"
 
+@send
+external onThen: (target, @string [#click(int => string) | #keydown(int => string)], unit) => unit =
+  "on"
+
+@send
+external setModeThen: (
+  target,
+  @string [@as("light-mode") #light | @as("dark-mode") #dark],
+  unit,
+) => unit = "setMode"
+
+@send
+external setLevelThen: (target, @int [#low | @as(10) #high], unit) => unit = "setLevel"
+
+@send
+external setLevelIgnoring: (target, @int [#low | @as(10) #high], @ignore int) => unit = "setLevel"
+
+@send
+external setLevelLabelled: (target, ~level: @int [#low | @as(10) #high], unit) => unit = "setLevel"
+
+@send
+external setLevelOptThen: (target, ~level: @int [#low | @as(10) #high]=?, unit) => unit = "setLevel"
+
 @obj
 external makeOptions: (
   ~level: @int [#low | @as(10) #high],
   ~mode: @string [@as("light-mode") #light | @as("dark-mode") #dark]=?,
+  unit,
+) => _ = ""
+
+@obj
+external makeModeFirst: (
+  ~mode: @string [@as("light-mode") #light | @as("dark-mode") #dark]=?,
+  ~level: @int [#low | @as(10) #high],
   unit,
 ) => _ = ""
 
@@ -98,6 +146,32 @@ let defineGlobalEvent: unit => unit => int = %raw(`() => {
   return () => reads
 }`)
 
+@val
+external currentEvent: [#click(int => string) | #keydown(int => string)] =
+  "polyvarExternalArgCurrentEvent"
+
+let setCurrentEvent: [#click(int => string) | #keydown(int => string)] => unit = %raw(`e => {
+  globalThis.polyvarExternalArgCurrentEvent = e
+}`)
+
+@val
+external dottedEvent: [#click(int => string) | #keydown(int => string)] =
+  "polyvarExternalArgScope.event"
+
+@val @scope("polyvarExternalArgScope")
+external scopedEvent: [#click(int => string) | #keydown(int => string)] = "event"
+
+let defineScopedEvent: unit => unit => int = %raw(`() => {
+  let reads = 0
+  globalThis.polyvarExternalArgScope = {
+    get event() {
+      reads++
+      return { NAME: "keydown", VAL: x => "keydown " + x }
+    }
+  }
+  return () => reads
+}`)
+
 // Opaque, so that the optimizer cannot tell the argument is a literal.
 let opaque: 'a => 'a = %raw(`x => x`)
 
@@ -107,6 +181,28 @@ let click = x => "click " ++ Int.toString(x)
 let keydown = x => "keydown " ++ Int.toString(x)
 
 let lastEvent = ref(opaque(#keydown(keydown)))
+
+type weakRef<'a>
+@new external makeWeakRef: 'a => weakRef<'a> = "WeakRef"
+@send external deref: weakRef<'a> => option<'a> = "deref"
+@module("node:v8") external setV8Flags: string => unit = "setFlagsFromString"
+@module("node:vm") external runInNewContext: string => unit => unit = "runInNewContext"
+
+type levels = {level: [#low | #high], data: array<int>}
+
+// The function that switches on the argument is called with it and captures
+// no variable, so the closure returned does not keep [levels] alive.
+let setLevelAndKeep = (t, levels) => {
+  setLevel(t, levels.level)
+  () => t
+}
+
+let keepClosure = t => {
+  let levels = {level: opaque(#high), data: [1, 2, 3]}
+  (makeWeakRef(levels), setLevelAndKeep(t, levels))
+}
+
+let nextTask = () => Promise.make((resolve, _) => setTimeout(() => resolve(), 0)->ignore)
 
 describe(__MODULE__, () => {
   test("an event-style argument with side effects", () => {
@@ -134,7 +230,7 @@ describe(__MODULE__, () => {
     eq(__LOC__, ["click click 1"], calls(t))
   })
 
-  test("@string and @int arguments with side effects in temporaries", () => {
+  test("@string and @int arguments with side effects", () => {
     let t = makeTarget()
     let log = []
     let mark = (s, v) => {
@@ -146,6 +242,129 @@ describe(__MODULE__, () => {
     setLevelOpt(t, ~level=?mark("optional", opaque(Some(#low))), ())
     eq(__LOC__, ["mode", "level", "optional"], log)
     eq(__LOC__, ["dark-mode", "10", "0"], calls(t))
+  })
+
+  test("optional @string and @int arguments whose presence is not known", () => {
+    let t = makeTarget()
+    let log = []
+    let mark = (s, v) => {
+      log->Array.push(s)
+      v
+    }
+    setLevelOpt(t, ~level=?mark("some", opaque(Some(#high))), ())
+    setLevelOpt(t, ~level=?mark("none", opaque(None)), ())
+    let options = makeModeFirst(
+      ~mode=?mark("mode field", opaque(Some(#dark))),
+      ~level=mark("level field", opaque(#high)),
+      (),
+    )
+    let noMode = makeModeFirst(
+      ~mode=?mark("no mode field", opaque(None)),
+      ~level=mark("low field", opaque(#low)),
+      (),
+    )
+    eq(__LOC__, ["some", "none", "mode field", "level field", "no mode field", "low field"], log)
+    eq(__LOC__, ["10", "undefined"], calls(t))
+    eq(__LOC__, (10, Some("dark-mode")), (options["level"], options["mode"]->toOption))
+    eq(__LOC__, (0, None), (noMode["level"], noMode["mode"]->toOption))
+  })
+
+  test("an @int argument that holds an async function", () => {
+    let t = makeTarget()
+    let pending = []
+    let defer = (f, v) => {
+      pending->Array.push(f)
+      v
+    }
+    // An await in a function of the argument stays there
+    setLevel(t, defer(async () => await Promise.resolve(), opaque(#high)))
+    eq(__LOC__, 1, Array.length(pending))
+    eq(__LOC__, ["10"], calls(t))
+  })
+
+  testAsync("a closure created next to an @int argument does not keep it alive", async () => {
+    setV8Flags("--expose-gc")
+    let gc = runInNewContext("gc")
+    let t = makeTarget()
+    let (levels, keep) = keepClosure(t)
+    // A WeakRef keeps its target until the end of the current task
+    await nextTask()
+    gc()
+    ok(__LOC__, levels->deref == None)
+    ok(__LOC__, keep() === t)
+    eq(__LOC__, ["10"], calls(t))
+  })
+
+  test("the effects of unit and @ignore arguments after @string and @int arguments", () => {
+    let t = makeTarget()
+    let log = []
+    let mark = (s, v) => {
+      log->Array.push(s)
+      v
+    }
+    setModeThen(t, mark("mode", opaque(#dark)), mark("unit", ()))
+    setLevelThen(t, mark("level", opaque(#high)), mark("unit", ()))
+    setLevelIgnoring(t, mark("level", opaque(#low)), mark("ignored", 1))
+    setLevelLabelled(t, ~level=mark("labelled", opaque(#high)), mark("unit", ()))
+    setLevelOptThen(t, ~level=mark("optional", opaque(#low)), mark("unit", ()))
+    let options = makeModeFirst(
+      ~mode=mark("mode field", opaque(#dark)),
+      ~level=mark("level field", opaque(#high)),
+      mark("unit", ()),
+    )
+    eq(
+      __LOC__,
+      [
+        "mode",
+        "unit",
+        "level",
+        "unit",
+        "level",
+        "ignored",
+        "labelled",
+        "unit",
+        "optional",
+        "unit",
+        "mode field",
+        "level field",
+        "unit",
+      ],
+      log,
+    )
+    eq(__LOC__, ["dark-mode", "10", "0", "10", "0"], calls(t))
+    // The optional field is known to be present, so it stays in the literal
+    eq(__LOC__, ["mode", "level"], Object.keysToArray(Obj.magic(options)))
+    eq(__LOC__, (10, Some("dark-mode")), (options["level"], options["mode"]->toOption))
+  })
+
+  test("a later argument that changes an event-style JS global", () => {
+    let t = makeTarget()
+    setCurrentEvent(#click(click))
+    onThen(t, currentEvent, setCurrentEvent(#keydown(keydown)))
+    eq(__LOC__, ["click click 1"], calls(t))
+  })
+
+  test("the arguments around @string and @int arguments run in order", () => {
+    let t = makeTarget()
+    let log = []
+    let mark = (s, v) => {
+      log->Array.push(s)
+      v
+    }
+    setModeBetween(t, mark("first", "a"), mark("mode", opaque(#light)), mark("second", "b"))
+    setLevelBetween(t, mark("third", "c"), mark("level", opaque(#high)), mark("fourth", "d"))
+    let options = makeOptions(
+      ~level=mark("level field", opaque(#low)),
+      ~mode=mark("mode field", opaque(#dark)),
+      (),
+    )
+    eq(
+      __LOC__,
+      ["first", "mode", "second", "third", "level", "fourth", "level field", "mode field"],
+      log,
+    )
+    eq(__LOC__, ["a light-mode b", "c 10 d"], calls(t))
+    eq(__LOC__, (0, Some("dark-mode")), (options["level"], options["mode"]->toOption))
   })
 
   test("the arguments around an event-style argument run in order", () => {
@@ -165,11 +384,30 @@ describe(__MODULE__, () => {
     let t = makeTarget()
     let s = makeSource()
     on(t, current(s))
-    eq(__LOC__, 1, reads(s))
+    onAs(t, current(s))
+    eq(__LOC__, 2, reads(s))
+    // A JS global is read in place, for the tag and for the payload
     let globalReads = defineGlobalEvent()
     on(t, globalEvent)
-    eq(__LOC__, 1, globalReads())
-    eq(__LOC__, ["keydown keydown 1", "click click 1"], calls(t))
+    onAs(t, globalEvent)
+    eq(__LOC__, 4, globalReads())
+    // A @val with a dotted name is a property read, like one with @scope
+    let scopedReads = defineScopedEvent()
+    on(t, dottedEvent)
+    on(t, scopedEvent)
+    eq(__LOC__, 2, scopedReads())
+    eq(
+      __LOC__,
+      [
+        "keydown keydown 1",
+        "keydown! keydown 1",
+        "click click 1",
+        "click! click 1",
+        "keydown keydown 1",
+        "keydown keydown 1",
+      ],
+      calls(t),
+    )
   })
 
   test("refs read as event-style arguments", () => {
@@ -199,8 +437,34 @@ describe(__MODULE__, () => {
     onAs(t, await mark("dispatch", Promise.resolve(opaque(#click(click)))))
     setMode(t, await mark("mode", Promise.resolve(opaque(#light))))
     setLevel(t, await mark("level", Promise.resolve(opaque(#high))))
-    eq(__LOC__, ["event", "dispatch", "mode", "level"], log)
-    eq(__LOC__, ["keydown keydown 1", "click! click 1", "light-mode", "10"], calls(t))
+    setLevelOpt(t, ~level=?await mark("optional", Promise.resolve(opaque(Some(#high)))), ())
+    eq(__LOC__, ["event", "dispatch", "mode", "level", "optional"], log)
+    eq(__LOC__, ["keydown keydown 1", "click! click 1", "light-mode", "10", "10"], calls(t))
+  })
+
+  testAsync("awaits in @string and @int arguments between others", async () => {
+    let t = makeTarget()
+    let log = []
+    let mark = (s, v) => {
+      log->Array.push(s)
+      v
+    }
+    setModeBetween(
+      t,
+      mark("first", "a"),
+      mark("mode", await Promise.resolve(opaque(#dark))),
+      mark("second", "b"),
+    )
+    setLevelBetween(
+      t,
+      mark("third", "c"),
+      await mark("level", Promise.resolve(opaque(#low))),
+      mark("fourth", "d"),
+    )
+    // Raw JS code that awaits is evaluated in its place as well
+    setLevel(t, %raw(`await Promise.resolve("high")`))
+    eq(__LOC__, ["first", "mode", "second", "third", "level", "fourth"], log)
+    eq(__LOC__, ["a dark-mode b", "c 0 d", "10"], calls(t))
   })
 
   test("a while condition with a temporary, and break and continue", () => {

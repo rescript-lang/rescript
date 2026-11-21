@@ -275,8 +275,6 @@ val make_block :
 
 val seq : ?comment:string -> t -> t -> t
 
-val fuse_to_seq : t -> t list -> t
-
 val object_entries : ?dup:J.expression -> J.property_map -> J.object_entry list
 
 val obj : ?dup:J.expression -> J.property_map -> t
@@ -312,9 +310,6 @@ val in_ : t -> t -> t
 (** we don't expose a general interface, since a general interface is generally not safe *)
 
 val dummy_obj : Lambda.tag_info -> t
-
-val of_block : J.statement list -> t
-(** convert a block to expresion by using IIFE *)
 
 val raw_js_code : Js_raw_info.code_info -> string -> t
 
