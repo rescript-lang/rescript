@@ -74,14 +74,14 @@ let process_file sourcefile ppf =
       let sourcefile = set_abs_input_name sourcefile in
       Js_implementation.implementation
         ~parser:
-          (Res_driver.parse_implementation
+          (Syntax_driver.parse_implementation
              ~ignore_parse_errors:!((Clflags.current ()).ignore_parse_errors))
         ppf sourcefile
     | Resi ->
       let sourcefile = set_abs_input_name sourcefile in
       Js_implementation.interface
         ~parser:
-          (Res_driver.parse_interface
+          (Syntax_driver.parse_interface
              ~ignore_parse_errors:!((Clflags.current ()).ignore_parse_errors))
         ppf sourcefile
     | Intf_ast -> Js_implementation.interface_mliast ppf sourcefile
@@ -111,11 +111,10 @@ let reprint_source_file sourcefile =
     match kind with
     | Res ->
       let parse_result =
-        Res_driver.parsing_engine.parse_implementation ~filename:sourcefile
+        Syntax_driver.parsing_engine.parse_implementation ~filename:sourcefile
       in
       if parse_result.invalid then (
-        Res_diagnostics.print_report parse_result.diagnostics
-          parse_result.source;
+        Syntax_driver.print_report parse_result.diagnostics parse_result.source;
         raise_notrace (Request_exit 1));
       Res_compmisc.init_path ();
       parse_result.parsetree
@@ -126,11 +125,10 @@ let reprint_source_file sourcefile =
       |> Compiler_request_output.print_stdout
     | Resi ->
       let parse_result =
-        Res_driver.parsing_engine.parse_interface ~filename:sourcefile
+        Syntax_driver.parsing_engine.parse_interface ~filename:sourcefile
       in
       if parse_result.invalid then (
-        Res_diagnostics.print_report parse_result.diagnostics
-          parse_result.source;
+        Syntax_driver.print_report parse_result.diagnostics parse_result.source;
         raise_notrace (Request_exit 1));
       Res_compmisc.init_path ();
       parse_result.parsetree
@@ -601,7 +599,7 @@ let run_argv ?run_external ~capture ~cwd argv =
         | Bsc_args.Help message ->
           Compiler_request_output.write_stdout message;
           0
-        | Res_driver.Already_reported -> 1
+        | Syntax_driver.Already_reported -> 1
         | Bsc_args.Bad msg ->
           Format.fprintf (ppf ()) "%s@." msg;
           2

@@ -17,8 +17,6 @@ type 'diagnostics parsing_engine = {
     filename:string -> (Parsetree.signature, 'diagnostics) parse_result;
   parse_interface_from_source:
     source:string -> (Parsetree.signature, 'diagnostics) parse_result;
-  string_of_diagnostics:
-    source:string -> filename:string -> 'diagnostics -> unit;
 }
 
 type print_engine = {
@@ -36,18 +34,18 @@ type print_engine = {
     unit;
 }
 
-let setup ~filename =
-  let src = Ext_io.load_file filename in
+let setup ~load_file ~filename =
+  let src = load_file filename in
   Res_parser.make src filename
 
 let setup_from_source ~display_filename ~source =
   Res_parser.make source display_filename
 
-let parsing_engine =
+let make_parsing_engine ~load_file =
   {
     parse_implementation =
       (fun ~filename ->
-        let engine = setup ~filename in
+        let engine = setup ~load_file ~filename in
         let structure = Res_core.parse_implementation engine in
         let invalid, diagnostics =
           match engine.diagnostics with
@@ -83,7 +81,7 @@ let parsing_engine =
         });
     parse_interface =
       (fun ~filename ->
-        let engine = setup ~filename in
+        let engine = setup ~load_file ~filename in
         let signature = Res_core.parse_specification engine in
         let invalid, diagnostics =
           match engine.diagnostics with
@@ -117,10 +115,11 @@ let parsing_engine =
           comments = List.rev engine.comments;
           newline = Res_parser.newline engine;
         });
-    string_of_diagnostics =
-      (fun ~source ~filename:_ diagnostics ->
-        Res_diagnostics.print_report diagnostics source);
   }
+
+let parsing_engine =
+  make_parsing_engine ~load_file:(fun filename ->
+      In_channel.with_open_bin filename In_channel.input_all)
 
 let parse_implementation_from_source ~display_filename ~source =
   let engine = setup_from_source ~display_filename ~source in
@@ -157,42 +156,3 @@ let parse_interface_from_source ~display_filename ~source =
     comments = List.rev engine.comments;
     newline = Res_parser.newline engine;
   }
-
-let print_engine ~newline =
-  {
-    print_implementation =
-      (fun ~width ~filename:_ ~comments structure ->
-        Compiler_request_output.write_stdout_binary
-          (Res_printer.print_implementation ~width ~newline structure ~comments));
-    print_interface =
-      (fun ~width ~filename:_ ~comments signature ->
-        Compiler_request_output.write_stdout_binary
-          (Res_printer.print_interface ~width ~newline signature ~comments));
-  }
-
-exception Already_reported
-
-let parse_implementation ~ignore_parse_errors sourcefile =
-  Location.set_input_name sourcefile;
-  let parse_result = parsing_engine.parse_implementation ~filename:sourcefile in
-  if parse_result.invalid then (
-    Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
-    if not ignore_parse_errors then raise_notrace Already_reported);
-  parse_result.parsetree
-[@@throws Already_reported]
-
-let parse_interface ~ignore_parse_errors sourcefile =
-  Location.set_input_name sourcefile;
-  let parse_result = parsing_engine.parse_interface ~filename:sourcefile in
-  if parse_result.invalid then (
-    Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
-    if not ignore_parse_errors then raise_notrace Already_reported);
-  parse_result.parsetree
-[@@throws Already_reported]
-
-(* suppress unused optional arg *)
-let _ =
- fun s ->
-  ( parse_implementation ~ignore_parse_errors:false s,
-    parse_interface ~ignore_parse_errors:false s )
-[@@throws Already_reported]

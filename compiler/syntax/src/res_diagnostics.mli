@@ -23,9 +23,6 @@ val lazy_message : string Lazy.t -> category
 
 val make : start_pos:Lexing.position -> end_pos:Lexing.position -> category -> t
 
-val print_report :
-  ?custom_intro:string option ->
-  ?formatter:Format.formatter ->
-  t list ->
-  string ->
-  unit
+val explain_in_source : src:string -> t -> string
+(** The message of a diagnostic, with hints for constructs of the old syntax
+    that [src], the parsed source, shows around it. *)

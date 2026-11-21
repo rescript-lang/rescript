@@ -3,6 +3,19 @@
   itself is used by ReScript's compiler programmatically through various other apis.
 *)
 
+(* Prints ReScript with line breaks written as [newline] *)
+let res_print_engine ~newline : Res_driver.print_engine =
+  {
+    print_implementation =
+      (fun ~width ~filename:_ ~comments structure ->
+        Compiler_request_output.write_stdout_binary
+          (Res_printer.print_implementation ~width ~newline structure ~comments));
+    print_interface =
+      (fun ~width ~filename:_ ~comments signature ->
+        Compiler_request_output.write_stdout_binary
+          (Res_printer.print_interface ~width ~newline signature ~comments));
+  }
+
 (* command line flags *)
 module Res_clflags : sig
   val recover : bool ref
@@ -79,7 +92,7 @@ module Cli_arg_processor = struct
       | "tokens" -> Fun.const Res_token_debugger.token_print_engine
       | "res" ->
         (* Keep the line endings of a CRLF file, like bsc -format *)
-        fun newline -> Res_driver.print_engine ~newline
+        fun newline -> res_print_engine ~newline
       | "doc" -> Fun.const Res_ast_debugger.doc_print_engine
       | target ->
         print_endline
@@ -100,8 +113,7 @@ module Cli_arg_processor = struct
           ~source:(load_source ())
       in
       if parse_result.invalid then (
-        Res_diagnostics.print_report parse_result.diagnostics
-          parse_result.source;
+        Syntax_driver.print_report parse_result.diagnostics parse_result.source;
         if recover then
           (print_engine parse_result.newline).print_interface ~width ~filename
             ~comments:parse_result.comments parse_result.parsetree
@@ -128,8 +140,7 @@ module Cli_arg_processor = struct
           ~source:(load_source ())
       in
       if parse_result.invalid then (
-        Res_diagnostics.print_report parse_result.diagnostics
-          parse_result.source;
+        Syntax_driver.print_report parse_result.diagnostics parse_result.source;
         if recover then
           (print_engine parse_result.newline).print_implementation ~width
             ~filename ~comments:parse_result.comments parse_result.parsetree
