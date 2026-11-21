@@ -16,6 +16,8 @@
 
 (library
  (name core)
+ (flags
+  (:standard -open Rescript_ast -open Rescript_printer))
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))

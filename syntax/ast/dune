@@ -3,6 +3,6 @@
 
 (library
  (name rescript_ast)
- (wrapped false)
+ (public_name rescript-syntax.ast)
  (instrumentation
   (backend bisect_ppx)))

@@ -9,6 +9,7 @@ bug-reports: "https://github.com/rescript-lang/rescript-compiler/issues"
 depends: [
   "dune" {>= "3.17"}
   "ocaml" {>= "5.0.0"}
+  "rescript-syntax"
   "odoc" {with-doc}
   "lsp" {= "1.28.1"}
   "jsonrpc" {= "1.28.1"}

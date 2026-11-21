@@ -1,5 +1,7 @@
 (library
  (name reanalyze)
+ (flags
+  (:standard -open Rescript_ast))
  (instrumentation
   (backend bisect_ppx))
  (libraries reactive yojson ml str unix))

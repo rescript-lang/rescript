@@ -1,5 +1,7 @@
 (library
  (name tools)
+ (flags
+  (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
  (instrumentation
   (backend bisect_ppx))
  (libraries analysis common cmarkit yojson))

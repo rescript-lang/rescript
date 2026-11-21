@@ -3,6 +3,8 @@
 
 (library
  (name jsx)
+ (flags
+  (:standard -open Rescript_ast))
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))

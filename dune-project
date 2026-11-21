@@ -15,12 +15,28 @@
 (bug_reports "https://github.com/rescript-lang/rescript-compiler/issues")
 
 (package
+ (name rescript-syntax)
+ (synopsis "ReScript syntax: parsetree, printer and parser")
+ (description
+  "The ReScript parsetree (rescript-syntax.ast), a printer from parsetree to ReScript source (rescript-syntax.printer), and the ReScript parser (rescript-syntax.parser). They depend only on the OCaml standard library.")
+ ; The parsetree is derived from OCaml's and stays LGPL; printer and parser
+ ; are MIT.
+ (license "LGPL-3.0-or-later AND MIT")
+ (depends
+  (ocaml
+   (>= 4.14.0))
+  (dune
+   (>= 3.17))
+  (odoc :with-doc)))
+
+(package
  (name rescript)
  (synopsis "ReScript compiler")
  (depends
   (ocaml
    (>= 5.0.0))
   dune
+  rescript-syntax
   (ppxlib
    (>= 0.38.0))
   (ppx_deriving
@@ -75,6 +91,7 @@
  (depends
   (ocaml
    (>= 5.0.0))
+  rescript-syntax
   (odoc :with-doc)
   (lsp
    (= 1.28.1))

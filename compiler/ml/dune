@@ -18,6 +18,8 @@
 
 (library
  (name ml)
+ (flags
+  (:standard -open Rescript_ast))
  (wrapped false)
  (private_modules cmt_format_common cmt_format_persistence)
  (instrumentation
