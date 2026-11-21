@@ -98,7 +98,7 @@ let addmodule bv lid = add_path bv lid.txt
 let handle_extension ext =
   match (fst ext).txt with
   | "error" ->
-    raise (Location.Error (Builtin_attributes.error_of_extension ext))
+    raise (Loc_report.Error (Builtin_attributes.error_of_extension ext))
   | _ -> ()
 
 let rec add_type bv ty =

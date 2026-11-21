@@ -26,7 +26,7 @@ open Location
 
 (* Encode an error into an [error] extension node, which
    [Builtin_attributes.error_of_extension] decodes and the compiler reports. *)
-let rec extension_of_error ({loc; msg; if_highlight; sub} : Location.error) :
+let rec extension_of_error ({loc; msg; if_highlight; sub} : Loc_report.error) :
     Parsetree.extension =
   ( {loc; txt = "error"},
     Parsetree.PStr
@@ -136,7 +136,7 @@ let semantic_string semantic =
 let source_string ~loc source =
   match String_literal.string_from_source source with
   | Some payload -> Pt.Pconst_string payload
-  | None -> Location.raise_errorf ~loc "Invalid string escape sequence"
+  | None -> Loc_report.raise_errorf ~loc "Invalid string escape sequence"
 
 let template_source_from0 = function
   | source, Some ("js" | "*j") -> source
@@ -160,7 +160,7 @@ let map_constant ~loc = function
 
 let map_pattern_constant ~loc = function
   | Pconst_string (_, Some tag) when tag <> "js" && tag <> "*j" ->
-    Location.raise_errorf ~loc
+    Loc_report.raise_errorf ~loc
       "Tagged template literals are not supported in patterns"
   | constant -> map_constant ~loc constant
 
@@ -1098,7 +1098,7 @@ module E = struct
       in
       let parts = flatten [] {e with pexp_desc = application} in
       let reject_json_interpolation () =
-        Location.raise_errorf ~loc
+        Loc_report.raise_errorf ~loc
           "`json` literals do not support interpolation"
       in
       let rec collect sources values = function
@@ -1431,7 +1431,7 @@ module E = struct
       let unsupported () =
         extension ~loc ~attrs
           (extension_of_error
-             (Location.errorf ~loc
+             (Loc_report.errorf ~loc
                 "A PPX returned a locally abstract type wrapper that does not \
                  enclose a ReScript function. This v0 AST form is not \
                  supported."))
@@ -1453,7 +1453,7 @@ module E = struct
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension ({txt = "re"}, payload) -> (
       let malformed ~loc =
-        Location.raise_errorf ~loc
+        Loc_report.raise_errorf ~loc
           "A PPX returned a malformed regexp payload. Expected a string \
            containing one regexp literal."
       in
@@ -1647,7 +1647,7 @@ let default_mapper =
           | [] -> None
           | [s] -> Some s
           | _ :: _ :: _ ->
-            Location.raise_errorf ~loc:pval_loc
+            Loc_report.raise_errorf ~loc:pval_loc
               "An external declaration can carry only a single primitive string"
         in
         let typ = this.typ this pval_type in
@@ -1781,7 +1781,7 @@ let default_mapper =
     extension =
       (fun this (s, payload) ->
         if s.txt = "re" then
-          Location.raise_errorf ~loc:(this.location this s.loc)
+          Loc_report.raise_errorf ~loc:(this.location this s.loc)
             "A PPX returned a regexp extension outside an expression.";
         let payload =
           if is_raw_source_extension s.txt then

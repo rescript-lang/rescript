@@ -30,5 +30,5 @@ let core_type_of_type_declaration (tdcl : Parsetree.type_declaration) =
     Typ.constr ~attrs {txt = Lident txt; loc} (Ext_list.map ptype_params fst)
 
 let not_applicable loc deriving_name =
-  Location.prerr_warning loc
+  Loc_report.prerr_warning loc
     (Warnings.Bs_derive_warning (deriving_name ^ " not applicable to this type"))

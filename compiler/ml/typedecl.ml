@@ -473,7 +473,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
          match cstrs with
          | [] -> ()
          | (_, _, loc) :: _ ->
-           Location.prerr_warning loc Warnings.Constraint_on_gadt);
+           Loc_report.prerr_warning loc Warnings.Constraint_on_gadt);
       let scstrs =
         Ext_list.map scstrs (fun ({pcd_args} as cstr) ->
             {
@@ -1448,7 +1448,7 @@ let check_duplicates sdecl_list =
           (fun pcd ->
             try
               let name' = Hashtbl.find constrs pcd.pcd_name.txt in
-              Location.prerr_warning pcd.pcd_loc
+              Loc_report.prerr_warning pcd.pcd_loc
                 (Warnings.Duplicate_definitions
                    ("constructor", pcd.pcd_name.txt, name', sdecl.ptype_name.txt))
             with Not_found ->
@@ -1460,7 +1460,7 @@ let check_duplicates sdecl_list =
             try
               let name' = Hashtbl.find labels cname.txt in
               if cname.txt <> "..." then
-                Location.prerr_warning loc
+                Loc_report.prerr_warning loc
                   (Warnings.Duplicate_definitions
                      ("label", cname.txt, name', sdecl.ptype_name.txt))
             with Not_found ->
@@ -2050,7 +2050,7 @@ let transl_with_constraint env id row_path orig_decl sdecl =
     arity_ok
     && orig_decl.type_kind <> Type_abstract
     && sdecl.ptype_private = Private
-  then Location.deprecated sdecl.ptype_loc "spurious use of private";
+  then Loc_report.deprecated sdecl.ptype_loc "spurious use of private";
   let type_kind, type_representation =
     if arity_ok && man <> None then
       (orig_decl.type_kind, orig_decl.type_representation)
@@ -2405,6 +2405,7 @@ let report_error ppf = function
       overlapping_constructor_name
 
 let () =
-  Location.register_error_of_exn (function
-    | Error (loc, err) -> Some (Location.error_of_printer loc report_error err)
+  Loc_report.register_error_of_exn (function
+    | Error (loc, err) ->
+      Some (Loc_report.error_of_printer loc report_error err)
     | _ -> None)

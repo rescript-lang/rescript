@@ -53,7 +53,7 @@ module Color = struct
     Format.pp_set_formatter_stag_functions Format.std_formatter color_functions;
     if not (get_color_enabled ()) then Misc.Color.setup (Some Never);
     (* Print a dummy thing once in the beginning, as otherwise flushing does not work. *)
-    Location.print_loc Format.str_formatter Location.none
+    Loc_report.print_loc Format.str_formatter Location.none
 
   let error ppf s = Format.fprintf ppf "@{<error>%s@}" s
   let info ppf s = Format.fprintf ppf "@{<info>%s@}" s
@@ -79,7 +79,7 @@ module Loc = struct
            | false -> pos.pos_fname);
       }
     in
-    Location.print_loc ppf
+    Loc_report.print_loc ppf
       {
         loc with
         loc_start = loc.loc_start |> process_pos start_char;

@@ -455,7 +455,7 @@ let warn_polymorphic_comparison loc (builtin : Lambda.builtin) args =
     when is_null_undefined_constant arg1 || is_null_undefined_constant arg2 ->
     ()
   | Primitive (Pobjcomp _ | Pobjorder | Pobjmin | Pobjmax), _ ->
-    Location.prerr_warning loc Warnings.Bs_polymorphic_comparison
+    Loc_report.prerr_warning loc Warnings.Bs_polymorphic_comparison
   | _ -> ()
 
 (* Expansion of an external declaration: the final FFI form is produced
@@ -477,7 +477,7 @@ let lambda_of_inline_const (c : External_ffi_types.inline_const) :
    the resolved source. *)
 let import_source_of_arg (arg : Typedtree.expression) : Lambda.import_source =
   let unsupported loc =
-    Location.raise_errorf ~loc
+    Loc_report.raise_errorf ~loc
       "Invalid argument: unsupported argument to dynamic import. If you \
        believe this should be supported, please open an issue."
   in
@@ -499,7 +499,7 @@ let import_source_of_arg (arg : Typedtree.expression) : Lambda.import_source =
     match segments path [] with
     | Some (module_, path) -> Import_module {module_; path}
     | None ->
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "Invalid argument: Dynamic import requires a module or module value \
          that is a file as argument. Passing a value or local module is not \
          allowed."
@@ -702,7 +702,7 @@ let transl_external_application loc env (p : Primitive.description)
          ~primitive:(Pjs_call {prim_name = p.prim_name; arg_types; ffi = decl})
          ~args:argl loc)
   | Kind_intrinsic ->
-    Location.raise_errorf ~loc
+    Loc_report.raise_errorf ~loc
       "@{<error>Error:@} internal error, using unrecognized primitive %s"
       p.prim_name
 
@@ -766,7 +766,7 @@ let transl_primitive loc p env ty ~val_type =
     in
     match prim with
     | None when p.prim_name = "%import" || p.prim_name = "#import" ->
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "Dynamic import must be applied directly to a module or a value from \
          another module; it cannot be used as a first-class value."
     | None ->
@@ -1974,6 +1974,7 @@ let report_error ppf = function
     fprintf ppf "Unknown builtin primitive \"%s\"" prim_name
 
 let () =
-  Location.register_error_of_exn (function
-    | Error (loc, err) -> Some (Location.error_of_printer loc report_error err)
+  Loc_report.register_error_of_exn (function
+    | Error (loc, err) ->
+      Some (Loc_report.error_of_printer loc report_error err)
     | _ -> None)

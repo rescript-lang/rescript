@@ -784,24 +784,24 @@ let check_pers_struct name =
   try ignore (find_pers_struct false name) with
   | Not_found ->
     let warn = Warnings.No_cmi_file (name, None) in
-    Location.prerr_warning Location.none warn
+    Loc_report.prerr_warning Location.none warn
   | Cmi_format.Error err ->
     let msg = Format.asprintf "%a" Cmi_format.report_error err in
     let warn = Warnings.No_cmi_file (name, Some msg) in
-    Location.prerr_warning Location.none warn
+    Loc_report.prerr_warning Location.none warn
   | Error err ->
     let msg =
       match err with
       | Illegal_renaming (name, ps_name, filename) ->
         Format.asprintf
           " %a@ contains the compiled interface for @ %s when %s was expected"
-          Location.print_filename filename ps_name name
+          Loc_report.print_filename filename ps_name name
       | Inconsistent_import _ -> assert false
       | Missing_module _ -> assert false
       | Illegal_value_name _ -> assert false
     in
     let warn = Warnings.No_cmi_file (name, Some msg) in
-    Location.prerr_warning Location.none warn
+    Loc_report.prerr_warning Location.none warn
 
 let read_pers_struct modname filename = read_pers_struct true modname filename
 
@@ -1078,7 +1078,7 @@ let report_deprecated ?loc p deprecated =
   match (loc, deprecated) with
   | Some loc, Some txt ->
     let txt = if txt = "" then "" else "\n" ^ txt in
-    Location.deprecated loc (Printf.sprintf "module %s%s" (Path.name p) txt)
+    Loc_report.deprecated loc (Printf.sprintf "module %s%s" (Path.name p) txt)
   | _ -> ()
 
 let mark_module_used env name loc =
@@ -1493,7 +1493,7 @@ let rec scrape_alias env ?path mty =
   | Mty_alias (_, path), _ -> (
     try scrape_alias env (find_module path env).md_type ~path
     with Not_found ->
-      (*Location.prerr_warning Location.none
+      (*Loc_report.prerr_warning Location.none
         (Warnings.No_cmi_file (Path.name path));*)
       mty)
   | mty, Some path -> !strengthen ~aliasable:true env mty path
@@ -1782,7 +1782,7 @@ and check_usage loc id warn tbl =
       Hashtbl.add tbl key (fun () -> used := true);
       if not (name = "" || name.[0] = '_' || name.[0] = '#') then
         Delayed_checks.add_delayed_check (fun () ->
-            if not !used then Location.prerr_warning loc (warn name)))
+            if not !used then Loc_report.prerr_warning loc (warn name)))
 
 and check_value_name name loc =
   (* Note: we could also check here general validity of the
@@ -1827,7 +1827,7 @@ and store_type ~check id info env =
            if not (ty = "" || ty.[0] = '_') then
              Delayed_checks.add_delayed_check (fun () ->
                  if (not (is_in_signature env)) && not used.cu_positive then
-                   Location.prerr_warning loc
+                   Loc_report.prerr_warning loc
                      (Warnings.Unused_constructor
                         (c, used.cu_pattern, used.cu_privatize)))))
        constructors);
@@ -1867,7 +1867,7 @@ and store_extension ~check id ext env =
        Hashtbl.add (used_constructors ()) k (add_constructor_usage used);
        Delayed_checks.add_delayed_check (fun () ->
            if (not (is_in_signature env)) && not used.cu_positive then
-             Location.prerr_warning loc
+             Loc_report.prerr_warning loc
                (Warnings.Unused_extension
                   (n, ext.ext_is_exception, used.cu_pattern, used.cu_privatize)))));
   {
@@ -2031,7 +2031,7 @@ let open_signature ?(used_slot = ref false) ?(loc = Location.none) ovf root env
     Delayed_checks.add_delayed_check (fun () ->
         if not !used then (
           used := true;
-          Location.prerr_warning loc (Warnings.Unused_open (Path.name root))));
+          Loc_report.prerr_warning loc (Warnings.Unused_open (Path.name root))));
     let shadowed = ref [] in
     let slot s b =
       (match check_shadowing env b with
@@ -2043,7 +2043,7 @@ let open_signature ?(used_slot = ref false) ?(loc = Location.none) ovf root env
             Warnings.Open_shadow_label_constructor (kind, s)
           | _ -> Warnings.Open_shadow_identifier (kind, s)
         in
-        Location.prerr_warning loc w
+        Loc_report.prerr_warning loc w
       | _ -> ());
       used := true
     in
@@ -2256,7 +2256,7 @@ let report_error ppf = function
     fprintf ppf
       "@[<hov>The files %a@ and %a@ make inconsistent assumptions@ over \
        interface %s@]"
-      Location.print_filename source1 Location.print_filename source2 name
+      Loc_report.print_filename source1 Loc_report.print_filename source2 name
   | Missing_module (_, path1, path2) ->
     fprintf ppf "@[@[<hov>";
     if Path.same path1 path2 then
@@ -2271,9 +2271,9 @@ let report_error ppf = function
     fprintf ppf "'%s' is not a valid value identifier." name
 
 let () =
-  Location.register_error_of_exn (function
+  Loc_report.register_error_of_exn (function
     | Error ((Missing_module (loc, _, _) | Illegal_value_name (loc, _)) as err)
       when loc <> Location.none ->
-      Some (Location.error_of_printer loc report_error err)
-    | Error err -> Some (Location.error_of_printer_file report_error err)
+      Some (Loc_report.error_of_printer loc report_error err)
+    | Error err -> Some (Loc_report.error_of_printer_file report_error err)
     | _ -> None)

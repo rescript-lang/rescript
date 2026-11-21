@@ -54,7 +54,7 @@ let set_abs_input_name sourcefile =
       Ext_path.absolute_cwd_path sourcefile
     else sourcefile
   in
-  Location.set_input_name sourcefile;
+  Loc_report.set_input_name sourcefile;
   sourcefile
 let setup_outcome_printer () = Lazy.force Res_outcome_printer.setup
 
@@ -90,7 +90,7 @@ let process_file sourcefile ppf =
     *)
     | Impl_ast -> Js_implementation.implementation_mlast ppf sourcefile
     | Mlmap ->
-      Location.set_input_name sourcefile;
+      Loc_report.set_input_name sourcefile;
       Js_implementation.implementation_map ppf sourcefile
     | Cmi ->
       let cmi_sign = (Cmi_format.read_cmi sourcefile).cmi_sign in
@@ -531,15 +531,15 @@ let file_level_flags_handler (e : Parsetree.expression option) =
              match Ast_payload.semantic_string_of_expression e with
              | Some name -> name
              | _ ->
-               Location.raise_errorf ~loc:e.pexp_loc "string literal expected"))
+               Loc_report.raise_errorf ~loc:e.pexp_loc "string literal expected"))
     in
     try
       Bsc_args.parse_exn ~start:0 ~argv:args (command_line_flags ())
         (fun ~rev_args:_ -> ())
         ~usage
     with _ ->
-      Location.prerr_warning pexp_loc (Preprocessor "invalid flags for bsc"))
-  | Some e -> Location.raise_errorf ~loc:e.pexp_loc "string array expected"
+      Loc_report.prerr_warning pexp_loc (Preprocessor "invalid flags for bsc"))
+  | Some e -> Loc_report.raise_errorf ~loc:e.pexp_loc "string array expected"
 
 (* These shared hooks are installed when the driver module loads, before any
    request can start on another domain. Concurrent Lazy.force calls would race
@@ -606,7 +606,7 @@ let run_argv ?run_external ~capture ~cwd argv =
           Format.fprintf (ppf ()) "%s@." msg;
           2
         | x ->
-          Location.report_exception (ppf ()) x;
+          Loc_report.report_exception (ppf ()) x;
           2
       in
       let run_with_external_owner action =

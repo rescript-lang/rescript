@@ -569,7 +569,7 @@ let suites =
                (template_payload {|\uD800|})
            with
            | _ -> OUnit.assert_failure "expected an invalid string escape"
-           | exception Location.Error _ -> () );
+           | exception Loc_report.Error _ -> () );
          ( "error extensions accept backquoted messages" >:: fun _ ->
            let extension =
              ( Location.mknoloc "error",

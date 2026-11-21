@@ -129,7 +129,7 @@ let load_content filename =
 let add_source builder filename =
   let filename =
     match filename with
-    | "" | "_none_" -> Location.get_input_name ()
+    | "" | "_none_" -> Loc_report.get_input_name ()
     | filename -> filename
   in
   let filename = absolute_path filename in

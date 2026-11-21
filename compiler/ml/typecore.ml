@@ -104,7 +104,7 @@ type error =
   | Record_rest of Typecore_record_rest.error
 
 exception Error of Location.t * Env.t * error
-exception Error_forward of Location.error
+exception Error_forward of Loc_report.error
 
 (* Typemod fills these forward declarations during module initialization.
    The driver completes that initialization before requests run on domains;
@@ -1009,8 +1009,9 @@ struct
     in
     List.find check_type lbls
 
-  let disambiguate ?(warn = Location.prerr_warning) ?(check_lk = fun _ _ -> ())
-      ?(from_type : Types.type_expr option) ?scope lid env opath lbls =
+  let disambiguate ?(warn = Loc_report.prerr_warning)
+      ?(check_lk = fun _ _ -> ()) ?(from_type : Types.type_expr option) ?scope
+      lid env opath lbls =
     let scope =
       match scope with
       | None -> lbls
@@ -1137,7 +1138,7 @@ let disambiguate_record_elem_list loc closed env opath record_elem_list =
     let open Warnings in
     match msg with
     | Ambiguous_name ([s], l, _) -> w_amb := (s, l) :: !w_amb
-    | _ -> Location.prerr_warning loc msg
+    | _ -> Loc_report.prerr_warning loc msg
   in
   let process_label lid =
     (* Strategy for each field:
@@ -1173,12 +1174,12 @@ let disambiguate_record_elem_list loc closed env opath record_elem_list =
     in
     let path = List.hd paths in
     if List.for_all (compare_type_path env path) (List.tl paths) then
-      Location.prerr_warning loc
+      Loc_report.prerr_warning loc
         (Warnings.Ambiguous_name (List.map fst amb, types, true))
     else
       List.iter
         (fun (s, l) ->
-          Location.prerr_warning loc (Warnings.Ambiguous_name ([s], l, false)))
+          Loc_report.prerr_warning loc (Warnings.Ambiguous_name ([s], l, false)))
         amb
   | _ -> ());
   lbl_a_list
@@ -1266,7 +1267,7 @@ let check_recordpat_labels ~get_jsx_component_error_info loc lbl_pat_list closed
       done;
       if !undefined <> [] then
         let u = String.concat ", " (List.rev !undefined) in
-        Location.prerr_warning loc (Warnings.Non_closed_record_pattern u))
+        Loc_report.prerr_warning loc (Warnings.Non_closed_record_pattern u))
 
 (* Constructors *)
 
@@ -1567,7 +1568,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       match normalize_constructor_pat_args ~arity:constr.cstr_arity sargs with
       | [({ppat_desc = Ppat_any} as sp)] when constr.cstr_arity <> 1 ->
         if constr.cstr_arity = 0 then
-          Location.prerr_warning sp.ppat_loc
+          Loc_report.prerr_warning sp.ppat_loc
             Warnings.Wildcard_arg_to_constant_constr;
         List.init constr.cstr_arity (Fun.const sp)
       | sargs -> sargs
@@ -1575,7 +1576,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     (match sargs with
     | [({ppat_desc = Ppat_constant _} as sp)]
       when Builtin_attributes.warn_on_literal_pattern constr.cstr_attributes ->
-      Location.prerr_warning sp.ppat_loc Warnings.Fragile_literal_pattern
+      Loc_report.prerr_warning sp.ppat_loc Warnings.Fragile_literal_pattern
     | _ -> ());
     if List.length sargs <> constr.cstr_arity then
       raise
@@ -2276,7 +2277,8 @@ let check_univars env expans kind exp ty_expected vars =
 (* Check that a type is not a function *)
 let check_application_result env exp =
   match (expand_head env exp.exp_type).desc with
-  | Tarrow _ -> Location.prerr_warning exp.exp_loc Warnings.Partial_application
+  | Tarrow _ ->
+    Loc_report.prerr_warning exp.exp_loc Warnings.Partial_application
   | Tvar _ -> ()
   | Tconstr (p, _, _) when Path.same p Predef.path_unit -> ()
   | _ -> ()
@@ -3171,7 +3173,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     in
     let opt_exp =
       if List.length lid_sexp_list = num_fields then (
-        Location.prerr_warning loc Warnings.Useless_record_with;
+        Loc_report.prerr_warning loc Warnings.Useless_record_with;
         None)
       else opt_exp
     in
@@ -3214,7 +3216,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     if label.lbl_mut = Immutable then
       raise (Error (loc, env, Label_not_mutable lid.txt));
     if label.lbl_private = Private && is_private_record_field env label then
-      Location.prerr_warning lid.loc
+      Loc_report.prerr_warning lid.loc
         (Warnings.Bs_private_record_mutation (Longident.last lid.txt));
     rue
       {
@@ -3335,7 +3337,7 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
     | Texp_break | Texp_continue ->
       (* Loop control should only reuse the nonreturning-statement warning when
          there is a following statement in the same block/sequence. *)
-      Location.prerr_warning (final_subexpression sexp1).pexp_loc
+      Loc_report.prerr_warning (final_subexpression sexp1).pexp_loc
         Warnings.Nonreturning_statement
     | _ -> ());
     let exp2 = type_expect ~context:None env sexp2 ty_expected in
@@ -4502,7 +4504,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
     let exp = type_expect ~context env sarg ty_arg in
     (match (expand_head env exp.exp_type).desc with
     | Tarrow _ when not total_app ->
-      Location.prerr_warning exp.exp_loc Warnings.Partial_application
+      Loc_report.prerr_warning exp.exp_loc Warnings.Partial_application
     | Tvar _ ->
       Delayed_checks.add_delayed_check (fun () ->
           check_application_result env exp)
@@ -4526,7 +4528,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
       then
         List.iter
           (fun (_, sarg1) ->
-            Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument)
+            Loc_report.prerr_warning sarg1.pexp_loc Warnings.Unused_argument)
           sargs;
       unify env ty_fun (newty (Tarrow (params, ty_ret)))
     | _ -> ());
@@ -4562,7 +4564,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
           | Some (l', sarg0, rest) ->
             remaining := rest;
             if (not optional) && is_optional l' then
-              Location.prerr_warning sarg0.pexp_loc
+              Loc_report.prerr_warning sarg0.pexp_loc
                 (Warnings.Nonoptional_label (Printtyp.string_of_label l));
             let argument_context =
               match (context, !rev_args) with
@@ -4786,7 +4788,7 @@ and type_statement ?(nonreturning_warning = true) ~context env sexp =
   end_def ();
   let ty = expand_head env exp.exp_type and tv = newvar () in
   if nonreturning_warning && is_Tvar ty && ty.level > tv.level then
-    Location.prerr_warning loc Warnings.Nonreturning_statement;
+    Loc_report.prerr_warning loc Warnings.Nonreturning_statement;
   let expected_ty = instance_def (Predef.type_unit ()) in
   let context = type_clash_context_in_statement sexp in
   unify_exp ~context env exp expected_ty;
@@ -5048,7 +5050,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
                   if not (name = "" || name.[0] = '_' || name.[0] = '#') then
                     Delayed_checks.add_delayed_check (fun () ->
                         if not !used then
-                          Location.prerr_warning vd.Types.val_loc
+                          Loc_report.prerr_warning vd.Types.val_loc
                             ((if !some_used then check_strict else check) name));
                   Env.set_value_used_callback name vd (fun () ->
                       match !current_slot with
@@ -5114,7 +5116,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
      let {pvb_pat; pvb_attributes} = List.hd spat_sexp_list in
      (* See PR#6677 *)
      Builtin_attributes.warning_scope ~ppwarning:false pvb_attributes (fun () ->
-         Location.prerr_warning pvb_pat.ppat_loc Warnings.Unused_rec_flag));
+         Loc_report.prerr_warning pvb_pat.ppat_loc Warnings.Unused_rec_flag));
   List.iter2
     (fun pat (attrs, exp) ->
       Builtin_attributes.warning_scope ~ppwarning:false attrs (fun () ->
@@ -5196,7 +5198,7 @@ let type_expression ~context env sexp =
       Printtyp.type_expr formatter exp.exp_type;
       Format.pp_print_flush formatter ();
       let return_type = Buffer.contents buffer in
-      Location.prerr_warning sexp.pexp_loc
+      Loc_report.prerr_warning sexp.pexp_loc
         (Bs_toplevel_expression_unit
            (match sexp.pexp_desc with
            | Pexp_apply _ -> Some (return_type, FunctionCall)
@@ -5738,9 +5740,9 @@ let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)
 
 let () =
-  Location.register_error_of_exn (function
+  Loc_report.register_error_of_exn (function
     | Error (loc, env, err) ->
-      Some (Location.error_of_printer loc (report_error env loc) err)
+      Some (Loc_report.error_of_printer loc (report_error env loc) err)
     | Error_forward err -> Some err
     | _ -> None)
 

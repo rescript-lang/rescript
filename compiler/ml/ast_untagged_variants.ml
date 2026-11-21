@@ -310,8 +310,9 @@ let process_constructor_tag (cstr : Parsetree.constructor_declaration) =
     Some (runtime_tag_of_parsetree ~loc txt)
 
 let () =
-  Location.register_error_of_exn (function
-    | Error (loc, err) -> Some (Location.error_of_printer loc report_error err)
+  Loc_report.register_error_of_exn (function
+    | Error (loc, err) ->
+      Some (Loc_report.error_of_printer loc report_error err)
     | _ -> None)
 
 let report_constructor_more_than_one_arg ~loc ~name =

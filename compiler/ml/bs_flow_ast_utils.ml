@@ -40,7 +40,7 @@ let check_flow_errors ~(loc : Location.t) ~offset
   | [] -> ()
   | ({start; _end}, first_error) :: _ ->
     let loc_start = loc.loc_start in
-    Location.prerr_warning
+    Loc_report.prerr_warning
       {
         loc with
         loc_start = offset_pos loc_start start offset;

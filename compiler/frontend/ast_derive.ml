@@ -56,9 +56,10 @@ let dispatch (({txt = name; loc}, config) : Ast_payload.action) =
   | _ -> (
     match removed_deriver_hint name with
     | Some hint ->
-      Location.raise_errorf ~loc "@deriving(%s) has been removed. %s" name hint
+      Loc_report.raise_errorf ~loc "@deriving(%s) has been removed. %s" name
+        hint
     | None ->
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "@deriving(%s) is not supported. The only deriver is \
          @deriving(accessors)."
         name)

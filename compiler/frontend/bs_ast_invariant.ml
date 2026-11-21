@@ -50,12 +50,12 @@ let removed_ocaml_attribute txt =
 let check_removed_ocaml_attribute (({txt; loc}, _) : Parsetree.attribute) =
   match removed_ocaml_attribute txt with
   | Some hint ->
-    Location.raise_errorf ~loc "`@%s` is no longer supported, %s" txt hint
+    Loc_report.raise_errorf ~loc "`@%s` is no longer supported, %s" txt hint
   | None -> ()
 
 let check_removed_ocaml_extension (({txt; loc}, _) : Parsetree.extension) =
   if txt = "ocaml.error" then
-    Location.raise_errorf ~loc
+    Loc_report.raise_errorf ~loc
       "`%%ocaml.error` is no longer supported, use `%%error` instead."
 
 let warn_unused_attribute
@@ -64,7 +64,7 @@ let warn_unused_attribute
   if
     is_checked_attribute txt && (not loc.loc_ghost)
     && not (Used_attributes.is_used_attribute sloc)
-  then Location.prerr_warning loc (Bs_unused_attribute txt)
+  then Loc_report.prerr_warning loc (Bs_unused_attribute txt)
 
 let warn_discarded_unused_attributes (attrs : Parsetree.attributes) =
   if attrs <> [] then Ext_list.iter attrs warn_unused_attribute
@@ -94,7 +94,7 @@ let emit_external_warnings : iterator =
       (fun self ptyp ->
         let txt = ptyp.ptype_name.txt in
         if Ast_core_type.is_builtin_rank0_type txt then
-          Location.raise_errorf ~loc:ptyp.ptype_loc
+          Loc_report.raise_errorf ~loc:ptyp.ptype_loc
             "built-in type `%s` can not be redefined " txt;
         super.type_declaration self ptyp);
     attribute = (fun _ attr -> warn_unused_attribute attr);
@@ -128,7 +128,7 @@ let emit_external_warnings : iterator =
         ignore (Ast_untagged_variants.process_constructor_tag ctr);
         (match txt with
         | "false" | "true" | "()" ->
-          Location.raise_errorf ~loc "%s can not be redefined " txt
+          Loc_report.raise_errorf ~loc "%s can not be redefined " txt
         | _ -> ());
         super.constructor_declaration self ctr);
     value_description =
@@ -145,7 +145,7 @@ let emit_external_warnings : iterator =
          pval_type;
         }
           when not (Ast_core_type.is_arity_one pval_type) ->
-          Location.raise_errorf ~loc:pval_loc
+          Loc_report.raise_errorf ~loc:pval_loc
             "%s expects a function type of the form 'a => 'b (arity 1)"
             byte_name
         | _ -> super.value_description self v);

@@ -44,7 +44,7 @@ let table_dispatch (table : action_table) ((name, value) : Ast_payload.action) =
   match Map_string.find name.txt table with
   | fn -> fn value
   | exception _ ->
-    Location.raise_errorf ~loc:name.loc "%s is not supported" name.txt
+    Loc_report.raise_errorf ~loc:name.loc "%s is not supported" name.txt
 
 let process_directives str =
   (Js_config.current ()).directives := [];

@@ -53,7 +53,7 @@ let inline_int_of_literal ~loc s =
   match Int32.of_string_opt s with
   | Some i -> i
   | None ->
-    Location.raise_errorf ~loc
+    Loc_report.raise_errorf ~loc
       "This @inline integer constant is outside the int range (-2147483648 to \
        2147483647)."
 

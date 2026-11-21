@@ -3,12 +3,12 @@ open Ast_helper
 let check_config (config : Parsetree.expression option) =
   Option.iter
     (fun (config : Parsetree.expression) ->
-      Location.raise_errorf ~loc:config.pexp_loc
+      Loc_report.raise_errorf ~loc:config.pexp_loc
         "@deriving(accessors) takes no configuration.")
     config
 
 let raise_unsupported_vaiant_record_arg loc =
-  Location.raise_errorf ~loc
+  Loc_report.raise_errorf ~loc
     "@deriving(accessors) from a variant record argument is unsupported. \
      Either define the record type separately from the variant type or use a \
      positional argument."
@@ -94,7 +94,7 @@ let structure_gen (tdcls : tdcls) _explict_nonrec =
     | Ptype_abstract | Ptype_open ->
       Ast_derive_util.not_applicable tdcl.ptype_loc deriving_name;
       []
-    (* Location.raise_errorf "projector only works with record" *)
+    (* Loc_report.raise_errorf "projector only works with record" *)
   in
   Ext_list.flat_map tdcls handle_tdcl
 

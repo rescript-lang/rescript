@@ -120,7 +120,7 @@ type error =
   | Record_rest of Typecore_record_rest.error
 
 exception Error of Location.t * Env.t * error
-exception Error_forward of Location.error
+exception Error_forward of Loc_report.error
 
 (* Deprecated.  Use Location.{error_of_exn, report_error}. *)
 

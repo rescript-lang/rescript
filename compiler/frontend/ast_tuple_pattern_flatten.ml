@@ -101,7 +101,7 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
       }
       :: acc)
   | None, Ppat_record (_, _, Some rest), Pexp_pack {pmod_desc = Pmod_ident _} ->
-    Location.raise_errorf ~loc:rest.rest_loc
+    Loc_report.raise_errorf ~loc:rest.rest_loc
       "Record rest patterns are not supported when destructuring modules. Bind \
        the module fields explicitly."
   | None, Ppat_record (lid_pats, _, None), Pexp_pack {pmod_desc = Pmod_ident id}
@@ -120,7 +120,7 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
             pvb_loc = pat.ppat_loc;
           }
         | _ ->
-          Location.raise_errorf ~loc:lid.loc
+          Loc_report.raise_errorf ~loc:lid.loc
             "Not supported pattern match on modules")
   | _ ->
     {

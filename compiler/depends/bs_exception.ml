@@ -48,6 +48,6 @@ let report_error ppf = function
     Format.fprintf ppf "%s not found, needed in script mode " s
 
 let () =
-  Location.register_error_of_exn (function
-    | Error err -> Some (Location.error_of_printer_file report_error err)
+  Loc_report.register_error_of_exn (function
+    | Error err -> Some (Loc_report.error_of_printer_file report_error err)
     | _ -> None)

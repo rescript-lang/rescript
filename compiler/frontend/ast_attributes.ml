@@ -196,7 +196,8 @@ let as_const (attrs : t) =
             with
             | Js_literal _ -> Json s
             | _ ->
-              Location.raise_errorf ~loc:pexp_loc "an object literal expected")
+              Loc_report.raise_errorf ~loc:pexp_loc "an object literal expected"
+            )
           | _ -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)))
 
 let locg = Location.none

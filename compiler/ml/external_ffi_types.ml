@@ -131,18 +131,18 @@ let valid_global_name ?loc txt =
     let v = Ext_string.split_by ~keep_empty:true (fun x -> x = '.') txt in
     Ext_list.iter v (fun s ->
         if not (valid_ident s) then
-          Location.raise_errorf ?loc "Not a valid global name %s" txt)
+          Loc_report.raise_errorf ?loc "Not a valid global name %s" txt)
 
 (* We loose such check (see #2583) *)
 
 let valid_method_name ?loc:_ _txt = ()
 (* if not (valid_ident txt) then
-   Location.raise_errorf ?loc "Not a valid method name %s"  txt *)
+   Loc_report.raise_errorf ?loc "Not a valid method name %s"  txt *)
 
 let check_external_module_name ?loc x =
   match x with
   | {bundle = ""; _} | {module_bind_name = Phint_name ""; bundle = _; _} ->
-    Location.raise_errorf ?loc "empty name encountered"
+    Loc_report.raise_errorf ?loc "empty name encountered"
   | _ -> ()
 
 (* Validation of a declaration. The checks mirror the historical
@@ -151,7 +151,7 @@ let check_external_module_name ?loc x =
 let check_decl ?loc (decl : external_decl) ~prim_name =
   match decl.module_ with
   | Some Module_itself ->
-    if prim_name = "" then Location.raise_errorf ?loc "empty name encountered"
+    if prim_name = "" then Loc_report.raise_errorf ?loc "empty name encountered"
   | (None | Some (Module_named _)) as module_ -> (
     let emn =
       match module_ with

@@ -180,7 +180,7 @@ let flat_make_aliases (export_ids : Ident.t list)
       Ext_list.fold_left export_ids Set_string.empty (fun occupied id ->
           Set_string.add (Ext_ident.convert id.Ident.name) occupied)
     in
-    let loc = Location.in_file (Location.get_input_name ()) in
+    let loc = Location.in_file (Loc_report.get_input_name ()) in
     List.rev @@ fst
     @@ Ext_list.fold_left paths ([], occupied_names)
          (fun (aliases, occupied_names) path ->
@@ -188,7 +188,7 @@ let flat_make_aliases (export_ids : Ident.t list)
            let name = Translmod.flat_export_name names in
            let js_name = Ext_ident.convert name in
            if Set_string.mem js_name occupied_names then
-             Location.raise_errorf ~loc
+             Loc_report.raise_errorf ~loc
                "Cannot export `%s` as `%s` because that name is already \
                 exported."
                (String.concat "." names) name;
@@ -202,7 +202,7 @@ let flat_make_aliases (export_ids : Ident.t list)
                ( (Ident.create name, alias) :: aliases,
                  Set_string.add js_name occupied_names )
              | None ->
-               Location.raise_errorf ~loc
+               Loc_report.raise_errorf ~loc
                  "Internal error: no export for module `%s` of `%s`." top
                  (String.concat "." names))
            | [] -> assert false)
@@ -280,7 +280,7 @@ let compile ?on_optimized_lambda (output_prefix : string)
       Ext_log.dwarn ~__POS__ "START CHECKING PASS %s@." pass
     | None -> ());
     if !((Js_config.current ()).check_lam) || debug_ir then (
-      ignore @@ Lam_check.check ~file:(Location.get_input_name ()) ~pass lam;
+      ignore @@ Lam_check.check ~file:(Loc_report.get_input_name ()) ~pass lam;
       if debug_ir then Ext_log.dwarn ~__POS__ "FINISH CHECKING PASS %s@." pass);
     lam
   in

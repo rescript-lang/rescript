@@ -232,7 +232,7 @@ let () =
   Lazy.force Res_outcome_printer.setup
 
 let error_of_exn e =
-  match Location.error_of_exn e with
+  match Loc_report.error_of_exn e with
   | Some (`Ok e) -> Some e
   | Some `Already_displayed | None -> None
 
@@ -257,12 +257,12 @@ module Res_driver = struct
     let loc =
       {loc_start = start_pos; Location.loc_end = end_pos; loc_ghost = false}
     in
-    let err = {Location.loc; msg; sub = []; if_highlight = ""} in
-    Location.default_error_reporter ~src:(Some src) Format.str_formatter err;
+    let err = {Loc_report.loc; msg; sub = []; if_highlight = ""} in
+    Loc_report.default_error_reporter ~src:(Some src) Format.str_formatter err;
     Format.flush_str_formatter ()
 
   let parse_implementation ~sourcefile ~src =
-    Location.set_input_name sourcefile;
+    Loc_report.set_input_name sourcefile;
     let parse_result =
       let engine = setup ~filename:sourcefile ~src in
       let structure = Res_core.parse_implementation engine in
@@ -330,7 +330,7 @@ end
 
 module Compile = struct
   (* Apparently it's not possible to retrieve the loc info from
-   * Location.error_of_exn properly, so we need to do some extra
+   * Loc_report.error_of_exn properly, so we need to do some extra
    * overloading action
    *)
   let warning_infos : Loc_warn_info.t array ref = ref [||]
@@ -349,7 +349,7 @@ module Compile = struct
     match Warnings.report w with
     | `Inactive -> ()
     | `Active {Warnings.number; is_error} ->
-      Location.default_warning_printer loc ppf w;
+      Loc_report.default_warning_printer loc ppf w;
       let open Loc_warn_info in
       let full_msg = flush_warning_buffer () in
       let short_msg = Warnings.message w in
@@ -357,8 +357,8 @@ module Compile = struct
       warning_infos := Array.append !warning_infos [|info|]
 
   let () =
-    Location.formatter_for_warnings := warning_ppf;
-    Location.warning_printer := playground_warning_printer
+    Loc_report.formatter_for_warnings := warning_ppf;
+    Loc_report.warning_printer := playground_warning_printer
 
   let handle_err e =
     match error_of_exn e with
@@ -375,7 +375,7 @@ module Compile = struct
         | _ -> "other_error"
       in
       let full_msg =
-        Location.report_error Format.str_formatter error;
+        Loc_report.report_error Format.str_formatter error;
         Format.flush_str_formatter ()
       in
       let err = {full_msg; short_msg = error.msg; loc = error.loc} in

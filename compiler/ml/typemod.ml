@@ -47,7 +47,7 @@ type error =
   | Cannot_scrape_alias of Path.t
 
 exception Error of Location.t * Env.t * error
-exception Error_forward of Location.error
+exception Error_forward of Loc_report.error
 
 let rescript_hide_attributes (x : Typedtree.attributes) =
   match x with
@@ -1948,12 +1948,12 @@ let report_error ppf = function
     fprintf ppf
       "@[Multiple definition of the %s name %s @ at @{<loc>%a@}@ @ Names must \
        be unique in a given structure or signature.@]"
-      kind name Location.print_loc repeated_loc
+      kind name Loc_report.print_loc repeated_loc
   | Js_name_clash (kind, other_kind, js_name, other_loc) ->
     fprintf ppf
       "@[This %s has the same JavaScript name %s@ as the %s at @{<loc>%a@}.@ \
        Rename one of them.@]"
-      kind js_name other_kind Location.print_loc other_loc
+      kind js_name other_kind Loc_report.print_loc other_loc
   | Non_generalizable typ ->
     (* modified *)
     fprintf ppf "@[<v>";
@@ -1976,7 +1976,7 @@ let report_error ppf = function
     fprintf ppf "@]"
   | Interface_not_compiled intf_name ->
     fprintf ppf "@[Could not find the .cmi file for interface@ %a.@]"
-      Location.print_filename intf_name
+      Loc_report.print_filename intf_name
   | Not_allowed_in_functor_body ->
     fprintf ppf "@[This expression creates fresh types.@ %s@]"
       "It is not allowed inside applicative functors."
@@ -2001,8 +2001,8 @@ let report_error env ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error ppf err)
 
 let () =
-  Location.register_error_of_exn (function
+  Loc_report.register_error_of_exn (function
     | Error (loc, env, err) ->
-      Some (Location.error_of_printer loc (report_error env) err)
+      Some (Loc_report.error_of_printer loc (report_error env) err)
     | Error_forward err -> Some err
     | _ -> None)

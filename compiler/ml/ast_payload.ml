@@ -38,7 +38,7 @@ let semantic_string_of_expression (expression : Parsetree.expression) =
     match String_literal.decode_js_template_escapes source.txt with
     | Some semantic -> Some semantic
     | None ->
-      Location.raise_errorf ~loc:pexp_loc "Invalid string escape sequence")
+      Loc_report.raise_errorf ~loc:pexp_loc "Invalid string escape sequence")
   | _ -> None
 
 let string_literal_of_expression (expression : Parsetree.expression) =
@@ -51,7 +51,7 @@ let string_literal_of_expression (expression : Parsetree.expression) =
     match String_literal.decode_js_template_escapes source.txt with
     | Some semantic -> Some (String_literal.string_from_semantic semantic)
     | None ->
-      Location.raise_errorf ~loc:pexp_loc "Invalid string escape sequence")
+      Loc_report.raise_errorf ~loc:pexp_loc "Invalid string escape sequence")
   | _ -> None
 
 let string_literal_of_payload (x : t) =
@@ -90,7 +90,7 @@ type action = lid * Parsetree.expression option
 (** Report to the user, as a warning, that the bs-attribute parser is bailing out. (This is to allow
     external ppx, like ppx_deriving, to pick up where the builtin ppx leave off.) *)
 let unrecognized_config_record loc text =
-  Location.prerr_warning loc (Warnings.Bs_derive_warning text)
+  Loc_report.prerr_warning loc (Warnings.Bs_derive_warning text)
 
 let ident_or_record_as_config loc (x : t) :
     (string Location.loc * Parsetree.expression option) list =
@@ -118,7 +118,7 @@ let ident_or_record_as_config loc (x : t) :
             ({Asttypes.txt = name; loc}, None)
           | {lid = {txt = Lident name; loc}; x = y} ->
             ({Asttypes.txt = name; loc}, Some y)
-          | _ -> Location.raise_errorf ~loc "Qualified label is not allowed")
+          | _ -> Loc_report.raise_errorf ~loc "Qualified label is not allowed")
     | Some _ ->
       unrecognized_config_record loc "`with` is not supported, discarding";
       [])
@@ -153,20 +153,20 @@ let assert_strings loc (x : t) : string list =
         };
       ] -> (
     try List.map semantic_string strs
-    with Not_str -> Location.raise_errorf ~loc "expect string tuple list")
+    with Not_str -> Loc_report.raise_errorf ~loc "expect string tuple list")
   | PStr [{pstr_desc = Pstr_eval (expression, _); _}] -> (
     try [semantic_string expression]
-    with Not_str -> Location.raise_errorf ~loc "expect string tuple list")
+    with Not_str -> Loc_report.raise_errorf ~loc "expect string tuple list")
   | PStr [] -> []
   | PSig _ | PStr _ | PTyp _ | PPat _ ->
-    Location.raise_errorf ~loc "expect string tuple list"
+    Loc_report.raise_errorf ~loc "expect string tuple list"
 
 let assert_bool_lit (e : Parsetree.expression) =
   match (unwrap_braces e).pexp_desc with
   | Pexp_construct ({txt = Lident "true"}, {txt = []}) -> true
   | Pexp_construct ({txt = Lident "false"}, {txt = []}) -> false
   | _ ->
-    Location.raise_errorf ~loc:e.pexp_loc
+    Loc_report.raise_errorf ~loc:e.pexp_loc
       "expect `true` or `false` in this field"
 
 let empty : t = Parsetree.PStr []

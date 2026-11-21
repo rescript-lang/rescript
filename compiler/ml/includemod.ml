@@ -492,7 +492,7 @@ open Printtyp
 
 (* A declaration under a label naming its side and its location *)
 let show_declaration label loc pp ppf x =
-  fprintf ppf "@[<v 2>%s (%a):@,%a@]" label Location.print_loc loc pp x
+  fprintf ppf "@[<v 2>%s (%a):@,%a@]" label Loc_report.print_loc loc pp x
 
 (* [x1] is included in [x2]. In a functor's parameter, where inclusion goes
    the other way, [swapped] is true and [x2] is the actual declaration. *)
@@ -741,9 +741,9 @@ let better_candidate_loc (x : error list) =
 (* We could do a better job to split the individual error items
    as sub-messages of the main interface mismatch on the whole unit. *)
 let () =
-  Location.register_error_of_exn (function
+  Loc_report.register_error_of_exn (function
     | Error err -> (
       match better_candidate_loc err with
-      | None -> Some (Location.error_of_printer_file report_error err)
-      | Some loc -> Some (Location.error_of_printer loc report_error err))
+      | None -> Some (Loc_report.error_of_printer_file report_error err)
+      | Some loc -> Some (Loc_report.error_of_printer loc report_error err))
     | _ -> None)
