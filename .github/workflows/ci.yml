@@ -470,6 +470,28 @@ jobs:
           path: tmp/website-build
           key: ${{ steps.website-build-key.outputs.value }}
 
+  # The rescript-syntax package (syntax/: parsetree, printer and parser)
+  # supports OCaml 4.14, older than the compiler's minimum. Build only that
+  # package with 4.14, in the dev profile so that warnings fail the job.
+  build-syntax-ocaml-4-14:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup OCaml 4.14
+        uses: ./.github/actions/setup-ocaml
+        with:
+          compiler: "4.14"
+          os: ubuntu-26.04
+          cache-prefix: opam-env-v9
+          packages: ./rescript-syntax.opam
+          dependency-flags: --deps-only
+          binaryen: "false"
+
+      - name: Build rescript-syntax
+        run: opam exec -- dune build --only-packages rescript-syntax @install
+
   # Compares the words the compiler allocates on fixed inputs, and the
   # instructions it executes on some of them, with the base branch
   # (scripts/compilerBenchmarks.js). Neither count depends on the runner's
@@ -865,6 +887,7 @@ jobs:
     if: ${{ always() }}
     needs:
       - build-compiler
+      - build-syntax-ocaml-4-14
       - pkg-pr-new
       - test-devcontainer
       - test-installation
