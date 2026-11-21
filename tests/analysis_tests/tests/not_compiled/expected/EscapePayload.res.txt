@@ -1,0 +1,25 @@
+Xform not_compiled/EscapePayload.res 2:4
+Hit: Add Documentation template
+
+TextDocumentEdit: EscapePayload.res
+{
+  "end": { "character": 9, "line": 2 },
+  "start": { "character": 0, "line": 1 }
+}
+newText:
+<--here
+/**
+
+*/
+@res.doc(`\xZZ`)
+let a = 1
+
+Complete not_compiled/EscapePayload.res 5:11
+pos_cursor:[5:11] pos_no_white:[5:10] Found expr:[5:8->5:14]
+[]
+
+Complete not_compiled/EscapePayload.res 8:18
+pos_cursor:[8:18] pos_no_white:[8:17] Found expr:[8:8->8:22]
+pos_cursor:[8:18] pos_no_white:[8:17] Found expr:[8:15->8:21]
+[]
+

@@ -36,6 +36,12 @@ module Payload : sig
   val unwrap_expression : payload -> payload
   (** Unwrap the single expression in a payload while retaining its metadata. *)
 
+  val string_literal_of_expression :
+    expression -> String_literal.string_literal option
+  (** The string a string or plain template literal denotes, ignoring braces.
+      [None] for other expressions and for a template with an invalid escape;
+      unlike [Ast_payload], it does not raise. *)
+
   val constructor_tag : payload -> constructor_tag option
   (** The literal a variant-constructor [@as] payload denotes. *)
 end

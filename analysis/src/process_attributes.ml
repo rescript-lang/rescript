@@ -1,11 +1,20 @@
 open Shared_types
 
+(* The string an attribute payload expression denotes. Analysis reads
+   unsaved, possibly invalid source, so an invalid escape gives [None]
+   instead of the compiler's error. *)
+let semantic_string_of_expression expression =
+  Ast_helper.Payload.string_literal_of_expression expression
+  |> Option.map String_literal.string_semantic
+
 (* TODO should I hang on to location? *)
 let rec find_doc_attribute attributes =
   match attributes with
   | [] -> None
-  | ({Asttypes.txt = "res.doc"}, payload) :: rest -> (
-    match Ast_payload.semantic_string_of_payload payload with
+  | ( {Asttypes.txt = "res.doc"},
+      Parsetree.PStr [{pstr_desc = Pstr_eval (expression, _)}] )
+    :: rest -> (
+    match semantic_string_of_expression expression with
     | Some doc -> Some doc
     | None -> find_doc_attribute rest)
   | _ :: rest -> find_doc_attribute rest
