@@ -54,11 +54,6 @@ val deprecated_of_str : Parsetree.structure -> string option
 
 val error_of_extension : Parsetree.extension -> Location.error
 
-val extension_of_error : Location.error -> Parsetree.extension
-(** Encode an error into an 'error' extension node which can be inserted in
-    a generated Parsetree. [error_of_extension] decodes it, and the compiler
-    reports the error. *)
-
 val uninterpreted_extension : loc:Location.t -> string -> Location.error
 (** The error for an extension that nothing interpreted. *)
 

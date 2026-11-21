@@ -3,4 +3,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (libraries ml syntax))
+ (libraries ast0 ml syntax))

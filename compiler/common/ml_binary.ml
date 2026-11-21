@@ -27,8 +27,8 @@ type _ kind = Ml : Parsetree.structure kind | Mli : Parsetree.signature kind
 type ast0 = Impl of Parsetree0.structure | Intf of Parsetree0.signature
 
 let magic_of_kind : type a. a kind -> string = function
-  | Ml -> Config.ast0_impl_magic_number
-  | Mli -> Config.ast0_intf_magic_number
+  | Ml -> Ast0_magic.impl
+  | Mli -> Ast0_magic.intf
 
 let magic_of_ast0 : ast0 -> string = function
   | Impl _ -> magic_of_kind Ml
