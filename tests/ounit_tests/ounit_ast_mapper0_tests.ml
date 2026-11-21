@@ -2849,7 +2849,7 @@ let test_ocaml_prefixed_builtins_arrive_bare _ =
 
 let test_extension_of_error_is_bare _ =
   let name, _ =
-    Builtin_attributes.extension_of_error (Location.error ~loc "boom")
+    Ast_mapper_from0.extension_of_error (Location.error ~loc "boom")
   in
   OUnit.assert_equal ~printer:Fun.id "error" name.txt
 

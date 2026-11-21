@@ -62,13 +62,13 @@ A syntax change can affect more than the grammar. Check each relevant layer:
 1. scanner tokens and parser recovery;
 2. the current parsetree in `compiler/ast/parsetree.ml`;
 3. printing, parentheses, and comment attachment;
-4. the v0 AST bridges in `compiler/ml/ast_mapper_from0.ml` and
-   `compiler/ml/ast_mapper_to0.ml`;
+4. the v0 AST bridges in `compiler/ast0/ast_mapper_from0.ml` and
+   `compiler/ast0/ast_mapper_to0.ml`;
 5. type checking and every later compiler representation that carries the
    construct;
 6. parser, round-trip, type-error, and end-to-end tests.
 
-Do not modify `compiler/ml/parsetree0.ml`. It is the frozen input/output shape
+Do not modify `compiler/ast0/parsetree0.ml`. It is the frozen input/output shape
 for existing PPX integrations. When the current parsetree changes, define an
 explicit compatibility mapping in both directions; do not use a wildcard to
 discard a new construct.

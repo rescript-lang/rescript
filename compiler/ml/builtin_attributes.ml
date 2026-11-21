@@ -55,19 +55,6 @@ let rec error_of_extension ext =
     | _ -> Location.errorf ~loc "Invalid syntax for extension '%s'." txt)
   | {txt; loc}, _ -> uninterpreted_extension ~loc txt
 
-let rec extension_of_error ({loc; msg; if_highlight; sub} : Location.error) =
-  ( {loc; txt = "error"},
-    PStr
-      ([
-         Ast_helper.Str.eval
-           (Ast_helper.Exp.constant (Ast_helper.Const.string msg));
-         Ast_helper.Str.eval
-           (Ast_helper.Exp.constant (Ast_helper.Const.string if_highlight));
-       ]
-      @ List.map
-          (fun ext -> Ast_helper.Str.extension (extension_of_error ext))
-          sub) )
-
 let cat s1 s2 =
   if s2 = "" then s1
   else (* 2 spaces indentation for the next line *)

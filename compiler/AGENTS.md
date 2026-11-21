@@ -60,6 +60,8 @@ Read the relevant area guide linked from the [root instructions](../AGENTS.md#ar
    - **AST layer** (`compiler/ast/`): The parsetree and the helpers the parser
      shares with the type checker. It must not depend on `ml` or `flow_parser`
    - **ML layer** (`compiler/ml/`): Type checking and AST transformations
+   - **v0 AST** (`compiler/ast0/`): The frozen `Parsetree0` that external PPXes
+     read and write, and the bridge between it and the current parsetree
    - **Lambda layer** (`compiler/core/lam_*`): Intermediate representation and optimizations
    - **JS layer** (`compiler/core/js_*`): JavaScript generation
 

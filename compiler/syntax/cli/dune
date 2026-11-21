@@ -11,4 +11,4 @@
   (<> %{profile} browser))
  (instrumentation
   (backend bisect_ppx))
- (libraries common jsx ml syntax))
+ (libraries ast0 common jsx ml syntax))

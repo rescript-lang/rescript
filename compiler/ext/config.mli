@@ -30,13 +30,5 @@ val ast_impl_magic_number : string
 (* Magic number for a marshaled current-parsetree structure (layout changes
    across compiler versions; distinct from the frozen Parsetree0 wire format) *)
 
-val ast0_intf_magic_number : string
-(* Magic number for a frozen Parsetree0 (OCaml 4.06) interface syntax tree, as
-   used on the external-PPX wire *)
-
-val ast0_impl_magic_number : string
-(* Magic number for a frozen Parsetree0 (OCaml 4.06) implementation syntax
-   tree, as used on the external-PPX wire *)
-
 val cmt_magic_number : string
 (* Magic number for typed-tree files (.cmt, .cmti) *)

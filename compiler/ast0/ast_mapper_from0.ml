@@ -23,6 +23,23 @@
 open Parsetree0
 open Ast_helper
 open Location
+
+(* Encode an error into an [error] extension node, which
+   [Builtin_attributes.error_of_extension] decodes and the compiler reports. *)
+let rec extension_of_error ({loc; msg; if_highlight; sub} : Location.error) :
+    Parsetree.extension =
+  ( {loc; txt = "error"},
+    Parsetree.PStr
+      ([
+         Ast_helper.Str.eval
+           (Ast_helper.Exp.constant (Ast_helper.Const.string msg));
+         Ast_helper.Str.eval
+           (Ast_helper.Exp.constant (Ast_helper.Const.string if_highlight));
+       ]
+      @ List.map
+          (fun ext -> Ast_helper.Str.extension (extension_of_error ext))
+          sub) )
+
 module Pt = Parsetree
 
 let jsx_prop_loc_attr = "res.jsxPropLoc"
@@ -1413,7 +1430,7 @@ module E = struct
       in
       let unsupported () =
         extension ~loc ~attrs
-          (Builtin_attributes.extension_of_error
+          (extension_of_error
              (Location.errorf ~loc
                 "A PPX returned a locally abstract type wrapper that does not \
                  enclose a ReScript function. This v0 AST form is not \

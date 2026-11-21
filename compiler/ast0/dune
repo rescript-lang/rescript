@@ -1,0 +1,9 @@
+; The frozen v0 AST that external PPXes read and write, and the bridge between
+; it and the current parsetree. Never change Parsetree0: PPXes depend on it.
+
+(library
+ (name ast0)
+ (wrapped false)
+ (instrumentation
+  (backend bisect_ppx))
+ (libraries ml flow_parser))
