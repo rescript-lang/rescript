@@ -590,14 +590,7 @@ let obj ?comment ?dup properties : t =
   {expression_desc = Object (dup, properties); comment}
 
 let str_equal (txt0 : string) (delim0 : External_arg_spec.delim) txt1 delim1 =
-  if delim0 = delim1 then
-    if Ext_string.equal txt0 txt1 then Some true
-    else if
-      Ast_utf8_string.simple_comparison txt0
-      && Ast_utf8_string.simple_comparison txt1
-    then Some false
-    else None
-  else None
+  if delim0 = delim1 then Ast_utf8_string.literals_equal txt0 txt1 else None
 
 let rec triple_equal ?comment (e0 : t) (e1 : t) : t =
   match (e0.expression_desc, e1.expression_desc) with

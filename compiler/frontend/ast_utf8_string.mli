@@ -38,3 +38,10 @@ val transform : Location.t -> string -> string
 
 (* Check if the string is only == to itself (no unicode or escape tricks) *)
 val simple_comparison : string -> bool
+
+val literals_equal : string -> string -> bool option
+(** Whether two string literals, as written in the source, are the same
+    JavaScript string, if that can be known: the same spelling is the same
+    string, and different spellings without escapes or unicode are different
+    strings. [None] when either has escapes or unicode, since ["\u0041"] and
+    ["A"] are the same string. *)

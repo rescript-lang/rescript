@@ -54,6 +54,21 @@ type t =
   *)
   | Const_module_alias
 
+(** The JavaScript value a [Const_int] is compiled to (see
+    [Lam_compile_const.translate]). A constructor's [i] is its position in its
+    type unless it has [@as(int)], so only the value, not [i], tells whether two
+    constructors are the same at runtime. An [@as] string is kept as written,
+    so two [String]s with different spellings, such as [@as("\u0041")] and
+    [@as("A")], may still be the same string (see
+    [Ast_utf8_string.literals_equal]); so may two [Literal]s, such as [@as(1.)]
+    and [@as(1.0)]. *)
+type int_value =
+  | Number of int32
+  | String of string
+  | Literal of Ast_untagged_variants.tag_type
+
+val int_value : int32 -> pointer_info -> int_value
+
 val eq_approx : t -> t -> bool
 
 val lam_none : t
