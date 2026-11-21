@@ -113,6 +113,7 @@ let reprint_source_file sourcefile =
       let parse_result =
         Syntax_driver.parsing_engine.parse_implementation ~filename:sourcefile
       in
+      Syntax_driver.report_warnings parse_result.warnings;
       if parse_result.invalid then (
         Syntax_driver.print_report parse_result.diagnostics parse_result.source;
         raise_notrace (Request_exit 1));
@@ -127,6 +128,7 @@ let reprint_source_file sourcefile =
       let parse_result =
         Syntax_driver.parsing_engine.parse_interface ~filename:sourcefile
       in
+      Syntax_driver.report_warnings parse_result.warnings;
       if parse_result.invalid then (
         Syntax_driver.print_report parse_result.diagnostics parse_result.source;
         raise_notrace (Request_exit 1));

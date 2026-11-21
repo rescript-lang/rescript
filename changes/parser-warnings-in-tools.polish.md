@@ -1,0 +1,1 @@
+- Editor analysis and `rescript-tools` no longer print the deprecation warning for the `(. ...)` syntax to stderr. The build still reports it.

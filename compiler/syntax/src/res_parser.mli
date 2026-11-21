@@ -19,7 +19,7 @@ type t = {
   mutable diagnostics: Diagnostics.t list;
   mutable comments: Comment.t list;
   mutable regions: region_status list;
-  mutable warnings: (Location.t * Warnings.t) list;
+  mutable warnings: Res_warning.t list;
   mutable line_break: int;
       (* The offset of the first LF between two consumed tokens, outside
          literals and comments, or -1 *)
@@ -60,7 +60,7 @@ val err :
   Diagnostics.category ->
   unit
 val has_diagnostic : t -> (Diagnostics.t -> bool) -> bool
-val warn : t -> Location.t -> Warnings.t -> unit
+val warn : t -> Location.t -> Res_warning.kind -> unit
 val leave_breadcrumb : t -> Grammar.t -> unit
 val eat_breadcrumb : t -> unit
 val begin_region : t -> unit

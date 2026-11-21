@@ -28,6 +28,13 @@ let print_report ?(custom_intro = None)
   print (List.rev diagnostics);
   Format.fprintf formatter "@]@."
 
+let report_warnings warnings =
+  List.iter
+    (fun ({loc; kind} : Res_warning.t) ->
+      Location.prerr_warning loc
+        (Warnings.Deprecated (Res_warning.message kind, loc, loc, false)))
+    warnings
+
 let parsing_engine = Res_driver.make_parsing_engine ~load_file:Ext_io.load_file
 
 exception Already_reported
@@ -35,6 +42,7 @@ exception Already_reported
 let parse_implementation ~ignore_parse_errors sourcefile =
   Location.set_input_name sourcefile;
   let parse_result = parsing_engine.parse_implementation ~filename:sourcefile in
+  report_warnings parse_result.warnings;
   if parse_result.invalid then (
     print_report parse_result.diagnostics parse_result.source;
     if not ignore_parse_errors then raise_notrace Already_reported);
@@ -44,6 +52,7 @@ let parse_implementation ~ignore_parse_errors sourcefile =
 let parse_interface ~ignore_parse_errors sourcefile =
   Location.set_input_name sourcefile;
   let parse_result = parsing_engine.parse_interface ~filename:sourcefile in
+  report_warnings parse_result.warnings;
   if parse_result.invalid then (
     print_report parse_result.diagnostics parse_result.source;
     if not ignore_parse_errors then raise_notrace Already_reported);

@@ -3,6 +3,7 @@ type ('ast, 'diagnostics) parse_result = {
   source: string;
   parsetree: 'ast;
   diagnostics: 'diagnostics;
+  warnings: Res_warning.t list;
   invalid: bool;
   comments: Res_comment.t list;
   newline: string;
@@ -57,6 +58,7 @@ let make_parsing_engine ~load_file =
           source = engine.source;
           parsetree = structure;
           diagnostics;
+          warnings = List.rev engine.warnings;
           invalid;
           comments = List.rev engine.comments;
           newline = Res_parser.newline engine;
@@ -75,6 +77,7 @@ let make_parsing_engine ~load_file =
           source = engine.source;
           parsetree = structure;
           diagnostics;
+          warnings = List.rev engine.warnings;
           invalid;
           comments = List.rev engine.comments;
           newline = Res_parser.newline engine;
@@ -93,6 +96,7 @@ let make_parsing_engine ~load_file =
           source = engine.source;
           parsetree = signature;
           diagnostics;
+          warnings = List.rev engine.warnings;
           invalid;
           comments = List.rev engine.comments;
           newline = Res_parser.newline engine;
@@ -111,6 +115,7 @@ let make_parsing_engine ~load_file =
           source = engine.source;
           parsetree = signature;
           diagnostics;
+          warnings = List.rev engine.warnings;
           invalid;
           comments = List.rev engine.comments;
           newline = Res_parser.newline engine;
@@ -134,6 +139,7 @@ let parse_implementation_from_source ~display_filename ~source =
     source = engine.source;
     parsetree = structure;
     diagnostics;
+    warnings = List.rev engine.warnings;
     invalid;
     comments = List.rev engine.comments;
     newline = Res_parser.newline engine;
@@ -152,6 +158,7 @@ let parse_interface_from_source ~display_filename ~source =
     source = engine.source;
     parsetree = signature;
     diagnostics;
+    warnings = List.rev engine.warnings;
     invalid;
     comments = List.rev engine.comments;
     newline = Res_parser.newline engine;
