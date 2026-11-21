@@ -6,8 +6,11 @@
 
    Within a build, a file is read only after the request that writes it has
    finished, because the build system orders requests by their dependencies.
-   So an entry changes only when it is written through the store, and the
-   store is emptied before each build. *)
+   A request it starts before then gets the interfaces not yet written from
+   the build system instead (see [Compiler_request_state.redirect_cmi]): the
+   same strings that are then written through the store, held or not. So an
+   entry changes only when it is written through the store, and the store is
+   emptied before each build. *)
 
 (* What the disk holds for a path, as far as the build has read it. *)
 type on_disk = Read of string | Missing | Unknown

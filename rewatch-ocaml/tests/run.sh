@@ -2416,3 +2416,5 @@ if ! test "${worker_words:-0}" -gt 0; then
   cat "$worker_allocations/build.log" >&2
   exit 1
 fi
+
+sh "$root/rewatch-ocaml/tests/check_pipelining.sh" "$port"

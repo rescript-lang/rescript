@@ -27,7 +27,22 @@ val run_parses :
     it, and discarding every failed one. The caller publishes the parses that
     printed warnings. *)
 
-val task : request -> Process.task
+val task : ?hooks:Compiler_scheduler.compile_hooks -> request -> Process.task
+
+val cmi_redirect :
+  cwd:string ->
+  cmi_directories:string list ->
+  wait_for_adoption:(unit -> unit) ->
+  (string * string) list ->
+  string ->
+  string option
+(** [cmi_redirect ~cwd ~cmi_directories ~wait_for_adoption redirects] maps a
+    resolved .cmi candidate path to the contents redirected for it, matching
+    paths as {!Build_file_store} does. [cmi_directories] are the directories in
+    which the build publishes interfaces. A candidate that may name a
+    redirected file under another spelling, because it differs from one only
+    in case or lies in another directory under the same name, calls
+    [wait_for_adoption] and is then read as usual. *)
 
 val namespace_task :
   runtime:string ->

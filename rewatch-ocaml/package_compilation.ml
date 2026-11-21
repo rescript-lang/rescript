@@ -73,7 +73,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
           File_util.ensure_dir (Filename.dirname output))
         config.package_specs
     in
-    let compile_process module_ ~source_kind path =
+    let compile_process ~hooks module_ ~source_kind path =
       let task =
         Compiler_process.compile_request ~artifact_dir ~config
           ~common_args:
@@ -81,7 +81,7 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
                prepared_package.development_common_args
              else prepared_package.regular_common_args)
           module_ ~source_kind path
-        |> Compiler_process.task
+        |> Compiler_process.task ~hooks
       in
       Process.map_result task (fun result ->
           if not (Process.succeeded result) then
@@ -123,8 +123,8 @@ let prepare ~(package : Package_plan.t) ~(prepared : Build_session.prepared)
               Compiler_scheduler.create ~key ~dependencies:state.dependencies
                 ~source:module_ ~state ~cmi_path
                 ~prepare:(fun () -> prepare_outputs module_)
-                ~compile:(fun ~source_kind path ->
-                  compile_process module_ ~source_kind path)
+                ~compile:(fun ~hooks ~source_kind path ->
+                  compile_process ~hooks module_ ~source_kind path)
                 ~publish:(fun ~source_kind path result ->
                   Compiler_process.publish ~artifact_dir ~is_local ~config
                     ~has_interface:(Option.is_some module_.Source.interface)

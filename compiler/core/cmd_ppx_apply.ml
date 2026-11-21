@@ -78,6 +78,8 @@ let read_ast (type a) (kind : a Ml_binary.kind) fn : Ml_binary.ast0 =
     are stored as [-ppx3; -ppx2; -ppx1]
     [fold_right] happens to process the first one *)
 let rewrite kind ppxs ast =
+  (* A request started early waits before it writes the AST for the PPXs. *)
+  Compiler_request_state.before_effect ();
   (* Remove the temporary files also when a PPX fails or the build is
      interrupted, since the compiler can run inside a long-lived process. *)
   let temp_files = ref [] in

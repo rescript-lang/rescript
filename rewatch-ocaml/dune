@@ -47,6 +47,7 @@
   traversal_coverage
   process_child
   process
+  speculation_gate
   source
   package_plan
   graph

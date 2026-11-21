@@ -110,6 +110,24 @@ going to the process's stdout and stderr. The compiler build identity is
 derived from the compiler sources, so compiler changes clean the build while
 rewatch-only changes don't.
 
+When no ready module can take a free job slot, a module can start before its
+dependencies have finished: as soon as each unfinished dependency's interface
+is final. That is when the implementation of a module without an interface
+file has computed the `.cmi` it is about to write, or when an interface file
+has compiled. The early request reads those not yet published `.cmi` files
+from memory. It keeps its job slot while it waits, before it writes any file,
+held or not, runs any command or reports any result, until the scheduler
+would have started it anyway: its dependencies have completed and it still needs
+compiling. Otherwise it is abandoned without effects, as are early requests
+that depend on it. Code generation therefore always sees the `.cmj` of
+completed dependencies, and artifacts, diagnostics and `compiler.log` are
+those of a build without pipelining. A module with `js-post-build` commands
+does not release its dependents early. Held writes alone would not keep an
+early request without effects: the build file store is shared by the
+build's requests, and an abandoned request may still run beside the request
+that replaces it. `REWATCH_SPECULATION_LOG` names a file to which tests append
+each early start, adoption and abandonment.
+
 External PPXs, `js-post-build` hooks, and `--after-build` remain subprocesses
 under the process owners described below.
 
