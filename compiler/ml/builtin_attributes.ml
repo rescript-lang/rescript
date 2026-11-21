@@ -24,7 +24,7 @@ let string_of_opt_payload p =
   | None -> ""
 
 let uninterpreted_extension ~loc name =
-  Location.errorf ~loc "Uninterpreted extension '%s'." name
+  Loc_report.errorf ~loc "Uninterpreted extension '%s'." name
 
 let rec error_of_extension ext =
   match ext with
@@ -34,13 +34,13 @@ let rec error_of_extension ext =
       | {pstr_desc = Pstr_extension (ext, _)} :: rest ->
         error_of_extension ext :: sub_from rest
       | _ :: rest ->
-        Location.errorf ~loc "Invalid syntax for sub-error of extension '%s'."
+        Loc_report.errorf ~loc "Invalid syntax for sub-error of extension '%s'."
           txt
         :: sub_from rest
       | [] -> []
     in
     match p with
-    | PStr [] -> raise Location.Already_displayed_error
+    | PStr [] -> raise Loc_report.Already_displayed_error
     | PStr ({pstr_desc = Pstr_eval (message, _)} :: inner) -> (
       match Ast_payload.semantic_string_of_expression message with
       | Some msg -> (
@@ -48,11 +48,11 @@ let rec error_of_extension ext =
         | {pstr_desc = Pstr_eval (highlight, _)} :: rest -> (
           match Ast_payload.semantic_string_of_expression highlight with
           | Some if_highlight ->
-            Location.error ~loc ~if_highlight ~sub:(sub_from rest) msg
-          | None -> Location.error ~loc ~sub:(sub_from inner) msg)
-        | _ -> Location.error ~loc ~sub:(sub_from inner) msg)
-      | None -> Location.errorf ~loc "Invalid syntax for extension '%s'." txt)
-    | _ -> Location.errorf ~loc "Invalid syntax for extension '%s'." txt)
+            Loc_report.error ~loc ~if_highlight ~sub:(sub_from rest) msg
+          | None -> Loc_report.error ~loc ~sub:(sub_from inner) msg)
+        | _ -> Loc_report.error ~loc ~sub:(sub_from inner) msg)
+      | None -> Loc_report.errorf ~loc "Invalid syntax for extension '%s'." txt)
+    | _ -> Loc_report.errorf ~loc "Invalid syntax for extension '%s'." txt)
   | {txt; loc}, _ -> uninterpreted_extension ~loc txt
 
 let cat s1 s2 =
@@ -116,7 +116,7 @@ let check_deprecated ?deprecated_context loc attrs s =
     !Cmt_utils.record_deprecated_used
       ?deprecated_context ?migration_template ?migration_in_pipe_chain_template
       loc;
-    Location.deprecated
+    Loc_report.deprecated
       ~can_be_automigrated:
         (Option.is_some migration_template
         || Option.is_some migration_in_pipe_chain_template)
@@ -125,7 +125,7 @@ let check_deprecated ?deprecated_context loc attrs s =
 let check_deprecated_inclusion ~def ~use loc attrs1 attrs2 s =
   match (deprecated_of_attrs attrs1, deprecated_of_attrs attrs2) with
   | None, _ | Some _, Some _ -> ()
-  | Some txt, None -> Location.deprecated ~def ~use loc (cat s txt)
+  | Some txt, None -> Loc_report.deprecated ~def ~use loc (cat s txt)
 
 let rec deprecated_of_sig = function
   | {psig_desc = Psig_attribute a} :: tl -> (
@@ -147,10 +147,10 @@ let warning_attribute ?(ppwarning = true) =
     | Some s -> (
       try Warnings.parse_options errflag s
       with Arg.Bad _ ->
-        Location.prerr_warning loc
+        Loc_report.prerr_warning loc
           (Warnings.Attribute_payload (txt, "Ill-formed list of warnings")))
     | None ->
-      Location.prerr_warning loc
+      Loc_report.prerr_warning loc
         (Warnings.Attribute_payload (txt, "A single string literal is expected"))
   in
   function
@@ -158,7 +158,7 @@ let warning_attribute ?(ppwarning = true) =
   | {txt = "warnerror" as txt; loc}, payload -> process loc txt true payload
   | {txt = "ppwarning"}, (PStr [{pstr_loc; _}] as payload) when ppwarning -> (
     match string_of_payload payload with
-    | Some s -> Location.prerr_warning pstr_loc (Warnings.Preprocessor s)
+    | Some s -> Loc_report.prerr_warning pstr_loc (Warnings.Preprocessor s)
     | None -> ())
   | _ -> ()
 

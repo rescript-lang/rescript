@@ -38,7 +38,7 @@ let resolve (value_desc : Parsetree.value_description) (prim_name : string) :
         resolved_kind = Kind_inline_const c;
       }
     | None ->
-      Location.raise_errorf ~loc:value_desc.pval_loc
+      Loc_report.raise_errorf ~loc:value_desc.pval_loc
         "\"%s\" is reserved for %@inline constants" prim_name
   else if Ast_attributes.is_ffi_external value_desc.pval_attributes prim_name
   then (

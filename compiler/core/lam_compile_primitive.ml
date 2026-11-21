@@ -127,7 +127,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
         match Translmod.flat_make_name path with
         | Some name -> wrap_then import (ml_export_name name)
         | None ->
-          Location.raise_errorf ~loc
+          Loc_report.raise_errorf ~loc
             "Invalid argument: Dynamic import requires a module or module \
              value that is a file as argument. Passing a value or local module \
              is not allowed."))
@@ -601,7 +601,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [obj; prop] -> E.in_ prop obj
     | _ ->
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "Invalid external \"%%dict_has\" type signature. Expected to have two \
          arguments.")
   | Parraysetu -> (

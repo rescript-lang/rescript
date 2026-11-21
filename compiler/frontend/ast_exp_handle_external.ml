@@ -41,7 +41,7 @@ let raw_expression loc ~is_function (exp : Parsetree.expression) =
   }
 
 let ffi_error loc =
-  Location.raise_errorf ~loc
+  Loc_report.raise_errorf ~loc
     "%%ffi extension can only be applied to a string containing a JavaScript \
      function such as \"(x) => ...\""
 
@@ -82,7 +82,8 @@ let handle_raw loc payload =
     Ast_raw_validate.raw_as_string_exp_exn ~kind:Raw_exp ~is_function payload
   with
   | None ->
-    Location.raise_errorf ~loc "%%raw extension can only be applied to a string"
+    Loc_report.raise_errorf ~loc
+      "%%raw extension can only be applied to a string"
   | Some exp -> raw_expression loc ~is_function exp
 
 let handle_ffi ~loc ~payload =
@@ -97,7 +98,7 @@ let handle_raw_structure loc payload =
   match Ast_raw_validate.raw_as_string_exp_exn ~kind:Raw_program payload with
   | Some exp -> raw_structure loc exp
   | None ->
-    Location.raise_errorf ~loc
+    Loc_report.raise_errorf ~loc
       "%%%%raw extension can only be applied to a string"
 
 (* The string constant holding the JavaScript source of a raw node, validated

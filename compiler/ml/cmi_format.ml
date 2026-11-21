@@ -124,18 +124,18 @@ open Format
 
 let report_error ppf = function
   | Not_an_interface filename ->
-    fprintf ppf "%a@ is not a compiled interface" Location.print_filename
+    fprintf ppf "%a@ is not a compiled interface" Loc_report.print_filename
       filename
   | Wrong_version_interface (filename, older_newer) ->
     fprintf ppf
       "%a@ is not a compiled interface for this version of ReScript.@.It seems \
        to be for %s version of ReScript."
-      Location.print_filename filename older_newer
+      Loc_report.print_filename filename older_newer
   | Corrupted_interface filename ->
-    fprintf ppf "Corrupted compiled interface@ %a" Location.print_filename
+    fprintf ppf "Corrupted compiled interface@ %a" Loc_report.print_filename
       filename
 
 let () =
-  Location.register_error_of_exn (function
-    | Error err -> Some (Location.error_of_printer_file report_error err)
+  Loc_report.register_error_of_exn (function
+    | Error err -> Some (Loc_report.error_of_printer_file report_error err)
     | _ -> None)

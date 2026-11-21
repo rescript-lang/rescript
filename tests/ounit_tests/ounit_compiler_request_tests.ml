@@ -336,7 +336,7 @@ let ast_header_tests _context =
             let ast : Parsetree.structure =
               Binary_ast.read_ast_exn ~fname:path Binary_ast.Ml
             in
-            (ast, Location.get_input_name ()))
+            (ast, Loc_report.get_input_name ()))
       in
       let ast = Filename.concat root "A.ast" in
       write_file ast contents;
@@ -751,18 +751,20 @@ let input_name_isolation_tests _context =
   let left =
     Domain.spawn (fun () ->
         Compiler_request_state.with_fresh ~cwd:first_root (fun () ->
-            Location.set_input_name "First.res";
+            Loc_report.set_input_name "First.res";
             Atomic.set left_ready true;
             wait_for_atomic right_ready;
-            (Location.get_input_name (), Ext_path.absolute_cwd_path "First.res")))
+            ( Loc_report.get_input_name (),
+              Ext_path.absolute_cwd_path "First.res" )))
   in
   let right =
     Domain.spawn (fun () ->
         Compiler_request_state.with_fresh ~cwd:second_root (fun () ->
             wait_for_atomic left_ready;
-            Location.set_input_name "Second.res";
+            Loc_report.set_input_name "Second.res";
             Atomic.set right_ready true;
-            (Location.get_input_name (), Ext_path.absolute_cwd_path "Second.res")))
+            ( Loc_report.get_input_name (),
+              Ext_path.absolute_cwd_path "Second.res" )))
   in
   assert_equal
     ("First.res", Filename.concat first_root "First.res")
@@ -770,7 +772,7 @@ let input_name_isolation_tests _context =
   assert_equal
     ("Second.res", Filename.concat second_root "Second.res")
     (Domain.join right);
-  assert_equal "_none_" (Location.get_input_name ());
+  assert_equal "_none_" (Loc_report.get_input_name ());
   assert_equal process_cwd (Sys.getcwd ())
 
 let request_root_io_isolation_tests _context =

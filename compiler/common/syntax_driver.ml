@@ -7,7 +7,7 @@ let print_report ?(custom_intro = None)
     match diagnostics with
     | [] -> ()
     | d :: rest ->
-      Location.report_error ~custom_intro ~src:(Some src) formatter
+      Loc_report.report_error ~custom_intro ~src:(Some src) formatter
         {
           loc =
             {
@@ -31,7 +31,7 @@ let print_report ?(custom_intro = None)
 let report_warnings warnings =
   List.iter
     (fun ({loc; kind} : Res_warning.t) ->
-      Location.prerr_warning loc
+      Loc_report.prerr_warning loc
         (Warnings.Deprecated (Res_warning.message kind, loc, loc, false)))
     warnings
 
@@ -40,7 +40,7 @@ let parsing_engine = Res_driver.make_parsing_engine ~load_file:Ext_io.load_file
 exception Already_reported
 
 let parse_implementation ~ignore_parse_errors sourcefile =
-  Location.set_input_name sourcefile;
+  Loc_report.set_input_name sourcefile;
   let parse_result = parsing_engine.parse_implementation ~filename:sourcefile in
   report_warnings parse_result.warnings;
   if parse_result.invalid then (
@@ -50,7 +50,7 @@ let parse_implementation ~ignore_parse_errors sourcefile =
 [@@throws Already_reported]
 
 let parse_interface ~ignore_parse_errors sourcefile =
-  Location.set_input_name sourcefile;
+  Loc_report.set_input_name sourcefile;
   let parse_result = parsing_engine.parse_interface ~filename:sourcefile in
   report_warnings parse_result.warnings;
   if parse_result.invalid then (

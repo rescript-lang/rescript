@@ -205,7 +205,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
     | _ -> (
       match Ast_payload.semantic_string_of_payload payload with
       | Some val_name -> {name = val_name; source = Payload}
-      | None -> Location.raise_errorf ~loc "Invalid payload")
+      | None -> Loc_report.raise_errorf ~loc "Invalid payload")
   in
 
   Ext_list.fold_left prim_attributes ([], init_st)
@@ -214,7 +214,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
         let bundle =
           "./"
           ^ Ext_filename.new_extension
-              (Filename.basename (Location.get_input_name ()))
+              (Filename.basename (Loc_report.get_input_name ()))
               ".gen"
         in
         ( attr :: attrs,
@@ -265,13 +265,13 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                   | _ -> ());
               match (!from_name, !with_) with
               | None, _ ->
-                Location.raise_errorf ~loc:pexp_loc
+                Loc_report.raise_errorf ~loc:pexp_loc
                   "@module annotations with import attributes must have a \
                    \"from\" field. This \"from\" field should point to the JS \
                    module to import, just like the string payload to @module \
                    normally does."
               | Some _, None ->
-                Location.raise_errorf ~loc:pexp_loc
+                Loc_report.raise_errorf ~loc:pexp_loc
                   "@module annotations with import attributes must have a \
                    \"with\" field. This \"with\" field should hold a record of \
                    the import attributes you want applied to the import."
@@ -284,10 +284,10 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                         | Longident.Lident "type_" -> Some ("type", s)
                         | Longident.Lident txt -> Some (txt, s)
                         | _ ->
-                          Location.raise_errorf ~loc:exp.pexp_loc
+                          Loc_report.raise_errorf ~loc:exp.pexp_loc
                             "Field must be a regular key.")
                       | _ ->
-                        Location.raise_errorf ~loc:exp.pexp_loc
+                        Loc_report.raise_errorf ~loc:exp.pexp_loc
                           "Only string values are allowed here.")
                 in
                 {
@@ -344,7 +344,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
             *)
             | scopes -> {st with scopes})
           | "taggedTemplate" ->
-            Location.raise_errorf ~loc
+            Loc_report.raise_errorf ~loc
               "The @@taggedTemplate decorator has been removed. Bind the \
                external with the builtin taggedTemplate<'param, 'output> type \
                instead, e.g. `@@module(\"x\") external sql: taggedTemplate<'a, \
@@ -361,13 +361,13 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
             {st with new_name = Some (name_from_payload_or_prim ~loc payload)}
           | "set_index" ->
             if String.length prim_name_check <> 0 then
-              Location.raise_errorf ~loc
+              Loc_report.raise_errorf ~loc
                 "%@set_index this particular external's name needs to be a \
                  placeholder empty string";
             {st with set_index = true}
           | "get_index" ->
             if String.length prim_name_check <> 0 then
-              Location.raise_errorf ~loc
+              Loc_report.raise_errorf ~loc
                 "%@get_index this particular external's name needs to be a \
                  placeholder empty string";
             {st with get_index = true}
@@ -434,7 +434,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
         TODO: better error message *);
   } ->
     if String.length prim_name <> 0 then
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "%@obj expect external names to be empty string";
     let arg_kinds, args, (result_types : Parsetree.object_field list) =
       Ext_list.fold_right arg_types_ty ([], [], [])
@@ -452,7 +452,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   param_type :: arg_types,
                   result_types )
               | _ ->
-                Location.raise_errorf ~loc
+                Loc_report.raise_errorf ~loc
                   "expect label, optional, or unit here")
             | Labelled {txt = label} -> (
               let field_name =
@@ -510,10 +510,10 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   :: result_types )
               | Extern_unit -> assert false
               | Poly_var _ ->
-                Location.raise_errorf ~loc
+                Loc_report.raise_errorf ~loc
                   "%@obj label %s does not support such arg type" label
               | Unwrap ->
-                Location.raise_errorf ~loc
+                Loc_report.raise_errorf ~loc
                   "%@obj label %s does not support %@unwrap arguments" label)
             | Optional {txt = label} -> (
               let field_name =
@@ -570,14 +570,14 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                       @@ Ast_literal.type_string ~loc () )
                   :: result_types )
               | Arg_cst _ ->
-                Location.raise_errorf ~loc
+                Loc_report.raise_errorf ~loc
                   "%@as is not supported with optional yet"
               | Extern_unit -> assert false
               | Poly_var _ ->
-                Location.raise_errorf ~loc
+                Loc_report.raise_errorf ~loc
                   "%@obj label %s does not support such arg type" label
               | Unwrap ->
-                Location.raise_errorf ~loc
+                Loc_report.raise_errorf ~loc
                   "%@obj label %s does not support %@unwrap arguments" label)
           in
           (new_arg_label :: arg_labels, new_arg_types, output_tys))
@@ -596,7 +596,8 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
       | [] -> result
       | _ -> Ast_helper.Typ.arrow ~loc args result),
       External_ffi_types.ffi_obj_create arg_kinds )
-  | _ -> Location.raise_errorf ~loc "Attribute found that conflicts with %@obj"
+  | _ ->
+    Loc_report.raise_errorf ~loc "Attribute found that conflicts with %@obj"
 
 (* A [unit] argument is left out of the JS code, so property and index
    accesses would be missing their object, index or value. *)
@@ -608,7 +609,7 @@ let reject_unit_arg ~loc attr (arg_type_specs : External_arg_spec.params) =
         | _ -> false)
       arg_type_specs
   then
-    Location.raise_errorf ~loc
+    Loc_report.raise_errorf ~loc
       "Ill defined attribute %@%s (unit argument is not allowed)" attr
 
 let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
@@ -640,7 +641,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
       reject_unit_arg ~loc "set_index" arg_type_specs;
       mk ~scopes Decl_set_index)
     else
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "Ill defined attribute %@set_index (arity of 3)"
   | {set_index = true} ->
     Bs_syntaxerr.err loc
@@ -665,7 +666,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
       reject_unit_arg ~loc "get_index" arg_type_specs;
       mk ~scopes Decl_get_index)
     else
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "Ill defined attribute %@get_index (arity expected 2 : while %d)"
         arg_type_specs_length
   | {get_index = true} ->
@@ -700,7 +701,7 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
       mk ~module_ ~variadic:splice
         (Decl_new {name = prim_name_or_pval_prim.name})
     | Some {source = Payload; name = _}, None ->
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "Incorrect FFI attribute found: (%@new should not carry a payload here)"
     )
   | {module_as_val = Some _; get_index; val_send} ->
@@ -829,15 +830,15 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
     *)
     match arg_type_specs with
     | [] ->
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "Ill defined attribute %@send(the external needs to be a regular \
          function call with at least one argument)"
     | {arg_type = Arg_cst _; arg_label = _} :: _ ->
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "Ill defined attribute %@send(first argument can't be const)"
     | _ :: _ -> mk ~scopes ~variadic:splice (Decl_send {name}))
   | {val_send = Some _} ->
-    Location.raise_errorf ~loc
+    Loc_report.raise_errorf ~loc
       "You used a FFI attribute that can't be used with %@send"
   | {
    new_name = Some {name; source = _};
@@ -885,10 +886,10 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
       reject_unit_arg ~loc "set" arg_type_specs;
       mk ~scopes (Decl_set {name}))
     else
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "Ill defined attribute %@set (two args required)"
   | {set_name = Some _} ->
-    Location.raise_errorf ~loc "conflict attributes found with %@set"
+    Loc_report.raise_errorf ~loc "conflict attributes found with %@set"
   | {
    get_name = Some {name; source = _};
    val_name = None;
@@ -909,10 +910,10 @@ let external_decl_of_non_obj (loc : Location.t) (st : external_desc)
       reject_unit_arg ~loc "get" arg_type_specs;
       mk ~scopes (Decl_get {name}))
     else
-      Location.raise_errorf ~loc
+      Loc_report.raise_errorf ~loc
         "Ill defined attribute %@get (only one argument)"
   | {get_name = Some _} ->
-    Location.raise_errorf ~loc "Attribute found that conflicts with %@get"
+    Loc_report.raise_errorf ~loc "Attribute found that conflicts with %@get"
 
 type resolution = {
   pval_type: Parsetree.core_type;
@@ -949,19 +950,19 @@ let resolve (loc : Location.t) (type_annotation : Parsetree.core_type)
           (if i = 0 && splice then
              match arg_label with
              | Optional _ ->
-               Location.raise_errorf ~loc
+               Loc_report.raise_errorf ~loc
                  "%@variadic expect the last type to be a non optional"
              | Labelled _ | Nolabel -> (
                if ty.ptyp_desc = Ptyp_any then
-                 Location.raise_errorf ~loc
+                 Loc_report.raise_errorf ~loc
                    "%@variadic expect the last type to be an array";
                if spec_of_ptyp true ty <> Nothing then
-                 Location.raise_errorf ~loc
+                 Loc_report.raise_errorf ~loc
                    "%@variadic expect the last type to be an array";
                match ty.ptyp_desc with
                | Ptyp_constr ({txt = Lident "array"}, [_]) -> ()
                | _ ->
-                 Location.raise_errorf ~loc
+                 Loc_report.raise_errorf ~loc
                    "%@variadic expect the last type to be an array"));
           let ( (arg_label : External_arg_spec.label_noname),
                 arg_type,
@@ -972,7 +973,7 @@ let resolve (loc : Location.t) (type_annotation : Parsetree.core_type)
               match arg_type with
               | Poly_var _ ->
                 (* ?x:([`x of int ] [@string]) does not make sense *)
-                Location.raise_errorf ~loc
+                Loc_report.raise_errorf ~loc
                   "%@string does not work with optional when it has arities in \
                    label %s"
                   s

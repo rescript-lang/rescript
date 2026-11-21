@@ -194,8 +194,8 @@ let app_exp_mapper (e : exp) (self : Ast_mapper.mapper) : exp =
           rewrite_pipe_rhs ~loc ~attrs:e.pexp_attributes a f)
     | _ -> rewrite_pipe_rhs ~loc ~attrs:e.pexp_attributes a f)
   | Some {op = "->"; loc} ->
-    Location.raise_errorf ~loc
+    Loc_report.raise_errorf ~loc
       "Invalid pipe syntax. The pipe symbol (->) can only be used as a binary \
        operator."
-  | Some {op} -> Location.raise_errorf "invalid %s syntax" op
+  | Some {op} -> Loc_report.raise_errorf "invalid %s syntax" op
   | None -> default_expr_mapper self e

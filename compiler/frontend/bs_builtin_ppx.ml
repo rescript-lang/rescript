@@ -433,7 +433,7 @@ let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
 
 let check_await ~async_context ~loc =
   if !async_context = false then
-    Location.raise_errorf ~loc "Await on expression not in an async context"
+    Loc_report.raise_errorf ~loc "Await on expression not in an async context"
 
 let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
   let async_saved = !async_context in
@@ -658,14 +658,14 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
           match payload with
           | PStr work ->
             if List.length work = 0 then
-              Location.raise_errorf ~loc
+              Loc_report.raise_errorf ~loc
                 {|%%%%private extension expects a definition as its argument. Example: %%%%private(let a = "Hello")|};
             aux
               (Ext_list.rev_map_append work acc (fun x ->
                    self.structure_item self x))
               next
           | PSig _ | PTyp _ | PPat _ ->
-            Location.raise_errorf ~loc "private extension is not support")
+            Loc_report.raise_errorf ~loc "private extension is not support")
         | _ -> expand_reverse acc (structure_mapper ~await_context self rest)
       in
       aux [] stru

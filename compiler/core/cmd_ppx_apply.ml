@@ -27,7 +27,7 @@
 let write_ast fn (ast0 : Ml_binary.ast0) =
   let oc = open_out_bin fn in
   output_string oc (Ml_binary.magic_of_ast0 ast0);
-  output_value oc (Location.get_input_name () : string);
+  output_value oc (Loc_report.get_input_name () : string);
   (match ast0 with
   | Ml_binary.Impl ast -> output_value oc (ast : Parsetree0.structure)
   | Ml_binary.Intf ast -> output_value oc (ast : Parsetree0.signature));
@@ -37,7 +37,7 @@ let write_ast fn (ast0 : Ml_binary.ast0) =
    temporary directory names one below the process's. *)
 let temp_ppx_file () =
   let path =
-    Filename.temp_file "ppx" (Filename.basename (Location.get_input_name ()))
+    Filename.temp_file "ppx" (Filename.basename (Loc_report.get_input_name ()))
   in
   if Filename.is_relative path then Filename.concat (Sys.getcwd ()) path
   else path
@@ -68,7 +68,7 @@ let read_ast (type a) (kind : a Ml_binary.kind) fn : Ml_binary.ast0 =
       let buffer = really_input_string ic (String.length magic) in
       assert (buffer = magic);
       (* already checked by apply_rewriter *)
-      Location.set_input_name @@ (input_value ic : string);
+      Loc_report.set_input_name @@ (input_value ic : string);
       match kind with
       | Ml_binary.Ml -> Ml_binary.Impl (input_value ic : Parsetree0.structure)
       | Ml_binary.Mli -> Ml_binary.Intf (input_value ic : Parsetree0.signature))

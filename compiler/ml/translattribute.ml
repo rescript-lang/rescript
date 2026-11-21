@@ -25,7 +25,7 @@ let find_attribute p (attributes : t list) =
   | [] -> None
   | [attr] -> Some attr
   | _ :: ({txt; loc}, _) :: _ ->
-    Location.prerr_warning loc (Warnings.Duplicated_attribute txt);
+    Loc_report.prerr_warning loc (Warnings.Duplicated_attribute txt);
     None
 
 let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
@@ -47,10 +47,10 @@ let parse_inline_attribute (attr : t option) : Lambda.inline_attribute =
       | Pexp_ident {txt = Longident.Lident "never"} -> Never_inline
       | Pexp_ident {txt = Longident.Lident "always"} -> Always_inline
       | _ ->
-        Location.prerr_warning loc (warning txt);
+        Loc_report.prerr_warning loc (warning txt);
         Default_inline)
     | _ ->
-      Location.prerr_warning loc (warning txt);
+      Loc_report.prerr_warning loc (warning txt);
       Default_inline)
 
 let get_inline_attribute l =
@@ -63,14 +63,14 @@ let add_inline_attribute (expr : Lambda.t) loc attributes =
     (match attr.inline with
     | Default_inline -> ()
     | Always_inline | Never_inline ->
-      Location.prerr_warning loc (Warnings.Duplicated_attribute "inline"));
+      Loc_report.prerr_warning loc (Warnings.Duplicated_attribute "inline"));
     let attr = {attr with inline} in
     Lambda.function_ ~loc:funct.loc ~attr ~params:funct.params ~body:funct.body
   | expr, Always_inline ->
-    Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
+    Loc_report.prerr_warning loc (Warnings.Misplaced_attribute "inline");
     expr
   | expr, Never_inline ->
-    Location.prerr_warning loc (Warnings.Misplaced_attribute "inline");
+    Loc_report.prerr_warning loc (Warnings.Misplaced_attribute "inline");
     expr
 
 let check_attribute (e : Typedtree.expression) (({txt; loc}, _) : t) =
@@ -78,10 +78,10 @@ let check_attribute (e : Typedtree.expression) (({txt; loc}, _) : t) =
   | "inline" -> (
     match e.exp_desc with
     | Texp_function _ -> ()
-    | _ -> Location.prerr_warning loc (Warnings.Misplaced_attribute txt))
+    | _ -> Loc_report.prerr_warning loc (Warnings.Misplaced_attribute txt))
   | "inlined" ->
     (* Call-site inlining hints are not supported *)
-    Location.prerr_warning loc (Warnings.Misplaced_attribute txt)
+    Loc_report.prerr_warning loc (Warnings.Misplaced_attribute txt)
   | _ -> ()
 
 let check_attribute_on_module (e : Typedtree.module_expr) (({txt; loc}, _) : t)
@@ -90,8 +90,8 @@ let check_attribute_on_module (e : Typedtree.module_expr) (({txt; loc}, _) : t)
   | "inline" -> (
     match e.mod_desc with
     | Tmod_functor _ -> ()
-    | _ -> Location.prerr_warning loc (Warnings.Misplaced_attribute txt))
+    | _ -> Loc_report.prerr_warning loc (Warnings.Misplaced_attribute txt))
   | "inlined" ->
     (* Call-site inlining hints are not supported *)
-    Location.prerr_warning loc (Warnings.Misplaced_attribute txt)
+    Loc_report.prerr_warning loc (Warnings.Misplaced_attribute txt)
   | _ -> ()

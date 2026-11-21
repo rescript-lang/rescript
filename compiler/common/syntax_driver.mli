@@ -20,9 +20,9 @@ exception Already_reported
 
 val parse_implementation :
   ignore_parse_errors:bool -> string -> Parsetree.structure
-[@@live] [@@throws Location.Error Already_reported]
+[@@live] [@@throws Loc_report.Error Already_reported]
 (** Parse an implementation for the compiler, reporting syntax errors. *)
 
 val parse_interface : ignore_parse_errors:bool -> string -> Parsetree.signature
-[@@live] [@@throws Location.Error Already_reported]
+[@@live] [@@throws Loc_report.Error Already_reported]
 (** Parse an interface for the compiler, reporting syntax errors. *)

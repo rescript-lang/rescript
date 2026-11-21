@@ -195,7 +195,7 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
     raise_error rest.rest_loc env
       (Field_not_optional (non_optional_overlapping_fields, rest_type_lid.txt))
   else if overlapping_fields <> [] then
-    Location.prerr_warning rest.rest_loc
+    Loc_report.prerr_warning rest.rest_loc
       (Warnings.Bs_record_rest_optional_overlap overlapping_fields);
   let missing =
     List.filter_map

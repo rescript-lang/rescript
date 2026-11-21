@@ -28,7 +28,7 @@ let after_parsing_sig ppf outputprefix ast =
   if !((Clflags.current ()).only_parse) = false then (
     Ast_config.process_sig ast;
     (if !((Js_config.current ()).binary_ast) then
-       let sourcefile = Location.get_input_name () in
+       let sourcefile = Loc_report.get_input_name () in
        Binary_ast.write_ast Mli ~sourcefile
          ~output:(outputprefix ^ Literals.suffix_iast)
          (* to support relocate to another directory *)
@@ -36,7 +36,7 @@ let after_parsing_sig ppf outputprefix ast =
     if !((Js_config.current ()).as_pp) then (
       let output = Compiler_request_output.stdout_channel () in
       output_string output Config.ast_intf_magic_number;
-      output_value output (Location.get_input_name () : string);
+      output_value output (Loc_report.get_input_name () : string);
       output_value output ast);
     if !((Js_config.current ()).syntax_only) then Warnings.check_fatal ()
     else
@@ -56,7 +56,7 @@ let after_parsing_sig ppf outputprefix ast =
       ignore
         (Env.save_signature ~deprecated sg modulename (outputprefix ^ ".cmi"));
       Typemod.save_signature modulename tsg outputprefix
-        (Location.get_input_name ());
+        (Loc_report.get_input_name ());
       process_with_gentype (outputprefix ^ ".cmti"))
 
 let interface ~parser ppf fname =
@@ -110,14 +110,14 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
       if !((Js_config.current ()).no_export) then no_export ast else ast
     in
     (if !((Js_config.current ()).binary_ast) then
-       let sourcefile = Location.get_input_name () in
+       let sourcefile = Loc_report.get_input_name () in
        Binary_ast.write_ast ~sourcefile Ml
          ~output:(outputprefix ^ Literals.suffix_ast)
          ast);
     if !((Js_config.current ()).as_pp) then (
       let output = Compiler_request_output.stdout_channel () in
       output_string output Config.ast_impl_magic_number;
-      output_value output (Location.get_input_name () : string);
+      output_value output (Loc_report.get_input_name () : string);
       output_value output ast);
     if !((Js_config.current ()).syntax_only) then Warnings.check_fatal ()
     else
@@ -129,7 +129,7 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
         Typemod.type_implementation_more
           ?check_exists:
             (if !((Js_config.current ()).force_cmi) then None else Some ())
-          (Location.get_input_name ())
+          (Loc_report.get_input_name ())
           outputprefix modulename env ast
       in
       let typedtree_coercion = (typedtree, coercion) in

@@ -36,7 +36,7 @@ let validate_raw_source ~(kind : Js_raw_info.raw_kind) ?is_function ~loc ~offset
          match expression with
          | RegExpLiteral _ -> ()
          | _ ->
-           Location.raise_errorf ~loc
+           Loc_report.raise_errorf ~loc
              "Syntax error: a valid JS regex literal expected");
       (match is_function with
       | Some is_function -> (

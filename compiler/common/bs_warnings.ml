@@ -23,4 +23,4 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let warn_literal_overflow loc =
-  Location.prerr_warning loc Bs_integer_literal_overflow
+  Loc_report.prerr_warning loc Bs_integer_literal_overflow

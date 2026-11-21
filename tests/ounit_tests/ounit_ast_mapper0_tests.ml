@@ -1774,7 +1774,7 @@ let test_ast0_strings_convert_to_internal_representation _ =
       in
       match map_pat0 tagged_pattern0 with
       | _ -> assert_failure "Expected the ast0 tagged pattern to be rejected"
-      | exception Location.Error _ -> ())
+      | exception Loc_report.Error _ -> ())
     ["custom"; "json"];
   let invalid_expr0 =
     Ast_helper0.Exp.constant ~loc
@@ -1782,7 +1782,7 @@ let test_ast0_strings_convert_to_internal_representation _ =
   in
   match map_expr0 invalid_expr0 with
   | _ -> assert_failure "Expected an invalid ast0 string escape"
-  | exception Location.Error _ -> ()
+  | exception Loc_report.Error _ -> ()
 
 let test_ppx_byte_strings_convert_to_valid_utf8 _ =
   let byte_string = "a\xff\xc3\xa9" in
@@ -2465,7 +2465,7 @@ let test_malformed_ppx_regexp_payloads _ =
     | _ ->
       assert_failure
         "Expected malformed PPX regexp to be rejected at the bridge"
-    | exception Location.Error error ->
+    | exception Loc_report.Error error ->
       OUnit.assert_equal expected_loc error.loc;
       OUnit.assert_equal
         "A PPX returned a malformed regexp payload. Expected a string \
@@ -2494,7 +2494,7 @@ let test_malformed_ppx_regexp_payloads _ =
   with
   | _ ->
     assert_failure "Expected non-expression regexp extension to be rejected"
-  | exception Location.Error error ->
+  | exception Loc_report.Error error ->
     OUnit.assert_equal (source_loc 1 3) error.loc;
     OUnit.assert_equal
       "A PPX returned a regexp extension outside an expression." error.msg
@@ -2669,7 +2669,7 @@ let test_ast0_json_interpolation_is_rejected _ =
   let expression = concat (concat (segment "head") value) (segment "tail") in
   match map_expr0 expression with
   | _ -> assert_failure "Expected ast0 JSON interpolation to be rejected"
-  | exception Location.Error _ -> ()
+  | exception Loc_report.Error _ -> ()
 
 let test_string_source_reprints_after_ast0_roundtrip _ =
   let source =
@@ -2849,7 +2849,7 @@ let test_ocaml_prefixed_builtins_arrive_bare _ =
 
 let test_extension_of_error_is_bare _ =
   let name, _ =
-    Ast_mapper_from0.extension_of_error (Location.error ~loc "boom")
+    Ast_mapper_from0.extension_of_error (Loc_report.error ~loc "boom")
   in
   OUnit.assert_equal ~printer:Fun.id "error" name.txt
 

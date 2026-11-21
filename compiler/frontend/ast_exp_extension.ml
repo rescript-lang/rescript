@@ -26,7 +26,7 @@ open Ast_helper
 (* [%todo]: warns, and throws at runtime with the location and message. [loc]
    is the location of [%todo], [expr_loc] that of the whole expression. *)
 let todo ~loc ~expr_loc (message : string option) =
-  Location.prerr_warning expr_loc (Bs_todo message);
+  Loc_report.prerr_warning expr_loc (Bs_todo message);
   (* Like [__LOC__]: the file's base name, so the generated code does not
      depend on where it was built, and columns rather than offsets. *)
   let file, line, start_col = Location.get_pos_info loc.Location.loc_start in

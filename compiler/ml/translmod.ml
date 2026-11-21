@@ -535,6 +535,7 @@ let report_error ppf = function
        `let` binding.@]"
 
 let () =
-  Location.register_error_of_exn (function
-    | Error (loc, err) -> Some (Location.error_of_printer loc report_error err)
+  Loc_report.register_error_of_exn (function
+    | Error (loc, err) ->
+      Some (Loc_report.error_of_printer loc report_error err)
     | _ -> None)

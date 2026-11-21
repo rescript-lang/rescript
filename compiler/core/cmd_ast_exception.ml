@@ -35,8 +35,8 @@ let report_error ppf = function
       cmd
 
 let () =
-  Location.register_error_of_exn (function
-    | Error err -> Some (Location.error_of_printer_file report_error err)
+  Loc_report.register_error_of_exn (function
+    | Error err -> Some (Loc_report.error_of_printer_file report_error err)
     | _ -> None)
 
 let cannot_run comm = raise (Error (CannotRun comm))

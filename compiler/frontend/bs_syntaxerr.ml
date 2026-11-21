@@ -100,8 +100,8 @@ let pp_error fmt err =
 type exn += Error of Location.t * error
 
 let () =
-  Location.register_error_of_exn (function
-    | Error (loc, err) -> Some (Location.error_of_printer loc pp_error err)
+  Loc_report.register_error_of_exn (function
+    | Error (loc, err) -> Some (Loc_report.error_of_printer loc pp_error err)
     | _ -> None)
 
 let err loc error = raise (Error (loc, error))

@@ -52,7 +52,7 @@ type error =
   | Not_an_object of type_expr
 
 exception Error of Location.t * Env.t * error
-exception Error_forward of Location.error
+exception Error_forward of Loc_report.error
 
 type variable_context = int * (string, type_expr) Tbl.t
 
@@ -332,7 +332,7 @@ and transl_type_aux env policy styp =
             (attrs, lbl, cty, ty)
           | Parsetree.Parg_fixed {loc} ->
             (* External processing removes fixed arguments before typing. *)
-            Location.raise_errorf ~loc
+            Loc_report.raise_errorf ~loc
               "Fixed arguments are only allowed in external declarations")
         params
     in
@@ -1016,8 +1016,8 @@ let report_error env ppf = function
     fprintf ppf "@[The type %a@ is not an object type@]" Printtyp.type_expr ty
 
 let () =
-  Location.register_error_of_exn (function
+  Loc_report.register_error_of_exn (function
     | Error (loc, env, err) ->
-      Some (Location.error_of_printer loc (report_error env) err)
+      Some (Loc_report.error_of_printer loc (report_error env) err)
     | Error_forward err -> Some err
     | _ -> None)

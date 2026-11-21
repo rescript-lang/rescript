@@ -17,7 +17,7 @@ let attribute_names attrs =
 let assert_invalid_escape_error f =
   match f () with
   | _ -> OUnit.assert_failure "expected an invalid escape error"
-  | exception Location.Error {msg} ->
+  | exception Loc_report.Error {msg} ->
     OUnit.assert_equal ~printer:Fun.id "Invalid string escape sequence" msg
 
 let suites =

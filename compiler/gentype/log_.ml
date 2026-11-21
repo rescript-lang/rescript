@@ -50,7 +50,7 @@ module Loc = struct
     match file with
     (* modified *)
     | "_none_" | "" -> Format.fprintf ppf "(No file name)"
-    | real_file -> Format.fprintf ppf "%s" (Location.show_filename real_file)
+    | real_file -> Format.fprintf ppf "%s" (Loc_report.show_filename real_file)
 
   let print_loc ~normalized_range ppf (loc : Location.t) =
     let file, _, _ = Location.get_pos_info loc.loc_start in

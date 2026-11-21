@@ -73,6 +73,6 @@ type error =
   | Cannot_scrape_alias of Path.t
 
 exception Error of Location.t * Env.t * error
-exception Error_forward of Location.error
+exception Error_forward of Loc_report.error
 
 val report_error : Env.t -> formatter -> error -> unit

@@ -60,7 +60,7 @@ let read_ast_exn (type t) ~fname (_ : t kind) : t =
   let contents = Ext_io.load_file fname in
   match read_header contents with
   | Some header ->
-    Location.set_input_name (header_source contents header);
+    Loc_report.set_input_name (header_source contents header);
     Ext_io.unmarshal contents (header.source_end + 1)
   | None -> raise End_of_file
 

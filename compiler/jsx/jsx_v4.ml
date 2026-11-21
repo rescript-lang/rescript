@@ -68,7 +68,7 @@ let rec get_fn_name binding =
 let filename_from_loc (pstr_loc : Location.t) =
   let file_name =
     match pstr_loc.loc_start.pos_fname with
-    | "" -> Location.get_input_name ()
+    | "" -> Loc_report.get_input_name ()
     | file_name -> file_name
   in
   let file_name =
@@ -269,7 +269,7 @@ and transform_params_for_make ~expr ~body params args newtypes core_type =
               String.concat "." (Longident.flatten txt) ^ "(...)"
             | _ -> "..."
           in
-          Location.prerr_warning pattern.ppat_loc
+          Loc_report.prerr_warning pattern.ppat_loc
             (Preprocessor
                (Printf.sprintf
                   "React: optional argument annotations must have explicit \
@@ -332,7 +332,7 @@ and transform_params_for_make ~expr ~body params args newtypes core_type =
         core_type )
     else (args, newtypes, core_type)
   | {p_lbl = Nolabel; p_pat = pattern} :: _ ->
-    Location.raise_errorf ~loc:pattern.ppat_loc
+    Loc_report.raise_errorf ~loc:pattern.ppat_loc
       "React: react.component refs only support plain arguments and type \
        annotations."
   | _ :: _ -> (args, newtypes, core_type)
@@ -446,7 +446,7 @@ let modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding =
     | {pexp_desc = Pexp_fun {params = {p_pat = pattern} :: _}} ->
       if !has_application then ((fun a -> a), false, expression)
       else
-        Location.raise_errorf ~loc:pattern.ppat_loc
+        Loc_report.raise_errorf ~loc:pattern.ppat_loc
           "React: props need to be labelled arguments.\n\
           \  If you are working with refs be sure to wrap with React.forwardRef.\n\
           \  If your component doesn't have any props use () or _ instead of a \
@@ -846,7 +846,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name binding =
                     | Nolabel -> false)
                   params
               then
-                Location.raise_errorf ~loc:expr.pexp_loc
+                Loc_report.raise_errorf ~loc:expr.pexp_loc
                   "Components using React.forwardRef cannot use \
                    @react.componentWithProps. Use @react.component instead."
               else check_invalid_forward_ref body

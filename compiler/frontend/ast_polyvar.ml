@@ -74,7 +74,7 @@ let map_row_fields_into_strings ptyp_loc (row_fields : Parsetree.row_field list)
     let descr = if !has_bs_as then Some result else None in
     match (has_payload, descr) with
     | false, None ->
-      Location.prerr_warning ptyp_loc
+      Loc_report.prerr_warning ptyp_loc
         (Bs_ffi_warning "@string is redundant here, you can safely remove it");
       Nothing
     | false, Some descr -> External_arg_spec.Poly_var_string {descr}

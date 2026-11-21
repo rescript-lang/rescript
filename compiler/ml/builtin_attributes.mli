@@ -52,9 +52,9 @@ val deprecated_attributes : Parsetree.attributes -> Parsetree.attributes
 val deprecated_of_sig : Parsetree.signature -> string option
 val deprecated_of_str : Parsetree.structure -> string option
 
-val error_of_extension : Parsetree.extension -> Location.error
+val error_of_extension : Parsetree.extension -> Loc_report.error
 
-val uninterpreted_extension : loc:Location.t -> string -> Location.error
+val uninterpreted_extension : loc:Location.t -> string -> Loc_report.error
 (** The error for an extension that nothing interpreted. *)
 
 val warning_attribute : ?ppwarning:bool -> Parsetree.attribute -> unit

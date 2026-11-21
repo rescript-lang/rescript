@@ -2092,7 +2092,7 @@ let do_check_partial ?partial_match_warning_hint ~pred exhaust loc casel pss =
     | [] -> ()
     | _ ->
       if Warnings.is_active Warnings.All_clauses_guarded then
-        Location.prerr_warning loc Warnings.All_clauses_guarded);
+        Loc_report.prerr_warning loc Warnings.All_clauses_guarded);
     Partial
   | ps :: _ -> (
     match exhaust None pss (List.length ps) with
@@ -2134,7 +2134,7 @@ let do_check_partial ?partial_match_warning_hint ~pred exhaust loc casel pss =
                Buffer.contents buf
              with _ -> ""
            in
-           Location.prerr_warning loc (Warnings.Partial_match errmsg));
+           Loc_report.prerr_warning loc (Warnings.Partial_match errmsg));
         Partial)
     | _ -> fatal_error "Parmatch.check_partial")
 
@@ -2205,7 +2205,8 @@ let do_check_fragile_param exhaust loc casel pss =
         (fun ext ->
           match exhaust (Some ext) pss (List.length ps) with
           | Rnone ->
-            Location.prerr_warning loc (Warnings.Fragile_match (Path.name ext))
+            Loc_report.prerr_warning loc
+              (Warnings.Fragile_match (Path.name ext))
           | Rsome _ -> ())
         exts)
 
@@ -2392,14 +2393,14 @@ let check_shadowed_payloads casel =
       (fun {c_lhs = q} ->
         match payload_liveness q with
         | Never_matches shadowed ->
-          Location.prerr_warning q.pat_loc
+          Loc_report.prerr_warning q.pat_loc
             (Warnings.Unused_match (shadowed_payload_reason shadowed));
           true
         | Matches dead_alternatives ->
           List.iter
             (fun (p, shadowed) ->
               reported := p.pat_loc :: !reported;
-              Location.prerr_warning p.pat_loc
+              Loc_report.prerr_warning p.pat_loc
                 (Warnings.Unused_pat (shadowed_payload_reason shadowed)))
             dead_alternatives;
           false)
@@ -2464,13 +2465,13 @@ let check_unused pred casel =
                  let pattern = {pattern with Parsetree.ppat_loc = q.pat_loc} in
                  match pred constrs labels pattern with
                  | None ->
-                   Location.prerr_warning q.pat_loc Warnings.Unreachable_case;
+                   Loc_report.prerr_warning q.pat_loc Warnings.Unreachable_case;
                    Used
                  | _ -> r
            in
            match r with
            | Unused ->
-             Location.prerr_warning q.pat_loc (Warnings.Unused_match "")
+             Loc_report.prerr_warning q.pat_loc (Warnings.Unused_match "")
            | Upartial ps ->
              ps
              |> List.filter (fun p ->
@@ -2478,7 +2479,7 @@ let check_unused pred casel =
                    (Variant_type_spread.is_pat_from_variant_spread_attr p
                    || already_reported p))
              |> List.iter (fun p ->
-                 Location.prerr_warning p.pat_loc (Warnings.Unused_pat ""))
+                 Loc_report.prerr_warning p.pat_loc (Warnings.Unused_pat ""))
            | Used -> ()
          with Empty | Not_found | NoGuard -> assert false);
 
@@ -2839,5 +2840,5 @@ let check_ambiguous_bindings =
               if not (Set_ident.is_empty ambiguous) then
                 let pps = Set_ident.elements ambiguous |> List.map Ident.name in
                 let warn = Ambiguous_pattern pps in
-                Location.prerr_warning p.pat_loc warn)
+                Loc_report.prerr_warning p.pat_loc warn)
         cases
