@@ -290,15 +290,20 @@ let parsetree_tag_of_runtime = function
   | Undefined -> Pct_undefined
 
 (* An [@as] left in the attributes did not name the constructor: either its
-   payload is not a tag, or an earlier [@as] already named it. *)
-let reject_leftover_as (attrs : Parsetree.attributes) err =
-  Ext_list.iter attrs (fun (({txt; loc}, _) : Parsetree.attribute) ->
-      if txt = "as" then raise (Error (loc, err)))
+   payload is not a tag, or an earlier [@as] already named it. With [~decode],
+   the payload is read first, so an invalid escape in it is reported as such:
+   Ast_helper leaves such an [@as] in the attributes without reporting it. *)
+let reject_leftover_as ?(decode = false) (attrs : Parsetree.attributes) err =
+  Ext_list.iter attrs (fun (({txt; loc}, payload) : Parsetree.attribute) ->
+      if txt = "as" then (
+        if decode then ignore (Ast_payload.constructor_tag_of_payload payload);
+        raise (Error (loc, err))))
 
 let process_constructor_tag (cstr : Parsetree.constructor_declaration) =
   match cstr.pcd_runtime_tag with
   | None ->
-    reject_leftover_as cstr.pcd_attributes InvalidVariantAsAnnotation;
+    reject_leftover_as ~decode:true cstr.pcd_attributes
+      InvalidVariantAsAnnotation;
     None
   | Some {txt; loc} ->
     reject_leftover_as cstr.pcd_attributes Duplicated_bs_as;

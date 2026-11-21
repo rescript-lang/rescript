@@ -24,17 +24,8 @@
 
 type t = Parsetree.payload
 
-let rec unwrap_braces (expression : Parsetree.expression) =
-  match expression.pexp_desc with
-  | Pexp_braces {expr} -> unwrap_braces expr
-  | _ -> expression
-
-let unwrap_payload_expression (payload : t) =
-  match payload with
-  | PStr [({pstr_desc = Pstr_eval (expression, attrs); _} as item)] ->
-    Parsetree.PStr
-      [{item with pstr_desc = Pstr_eval (unwrap_braces expression, attrs)}]
-  | payload -> payload
+let unwrap_braces = Ast_helper.Payload.unwrap_braces
+let unwrap_payload_expression = Ast_helper.Payload.unwrap_expression
 
 let semantic_string_of_expression (expression : Parsetree.expression) =
   match unwrap_braces expression with
@@ -75,99 +66,17 @@ let semantic_string_of_payload (x : t) =
     semantic_string_of_expression expression
   | _ -> None
 
-let single_int_source (x : t) =
-  match unwrap_payload_expression x with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ({pexp_desc = Pexp_constant (Pconst_integer (name, char)); _}, _);
-          _;
-        };
-      ]
-    when match char with
-         | Some n when n = 'n' -> false
-         | _ -> true ->
-    Some name
-  | _ -> None
-
-let is_single_int x = Option.map int_of_string (single_int_source x)
-
-let is_single_float (x : t) : string option =
-  match unwrap_payload_expression x with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ({pexp_desc = Pexp_constant (Pconst_float (name, _)); _}, _);
-          _;
-        };
-      ] ->
-    Some name
-  | _ -> None
-
-let is_single_bigint (x : t) : string option =
-  match unwrap_payload_expression x with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ( {pexp_desc = Pexp_constant (Pconst_integer (name, Some 'n')); _},
-                _ );
-          _;
-        };
-      ] ->
-    Some name
-  | _ -> None
-
-let is_single_bool (x : t) : bool option =
-  match unwrap_payload_expression x with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ( {
-                  pexp_desc =
-                    Pexp_construct ({txt = Lident (("true" | "false") as b)}, _);
-                  _;
-                },
-                _ );
-          _;
-        };
-      ] ->
-    Some (b = "true")
-  | _ -> None
-
-let is_single_ident (x : t) =
-  match unwrap_payload_expression x with
-  | PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_ident lid}, _); _}] ->
-    Some lid.txt
-  | _ -> None
-
+(* The string case reports an invalid escape; the other literals come from
+   the non-raising reader that Ast_helper uses. *)
 let constructor_tag_of_payload payload =
   match string_literal_of_payload payload with
   | Some s -> Some (Parsetree.Pct_string s)
-  | None -> (
-    match single_int_source payload with
-    | Some i -> Some (Pct_int i)
-    | None -> (
-      match is_single_float payload with
-      | Some f -> Some (Pct_float f)
-      | None -> (
-        match is_single_bigint payload with
-        | Some i -> Some (Pct_bigint i)
-        | None -> (
-          match is_single_bool payload with
-          | Some b -> Some (Pct_bool b)
-          | None -> (
-            match is_single_ident payload with
-            | Some (Lident "null") -> Some Pct_null
-            | Some (Lident "undefined") -> Some Pct_undefined
-            | Some _ | None -> None)))))
+  | None -> Ast_helper.Payload.constructor_tag payload
+
+let is_single_int payload =
+  match Ast_helper.Payload.constructor_tag payload with
+  | Some (Pct_int i) -> Some (int_of_string i)
+  | _ -> None
 
 type lid = string Asttypes.loc
 

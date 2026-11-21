@@ -25,6 +25,21 @@ type attrs = attribute list
 
 (** {1 Default locations} *)
 
+(** {1 Attribute payloads} *)
+
+(** Readers for attribute payloads. They never raise: a payload they cannot
+    read, such as a template string with an invalid escape, gives [None]. *)
+module Payload : sig
+  val unwrap_braces : expression -> expression
+  (** Ignore explicit brace wrappers around an expression. *)
+
+  val unwrap_expression : payload -> payload
+  (** Unwrap the single expression in a payload while retaining its metadata. *)
+
+  val constructor_tag : payload -> constructor_tag option
+  (** The literal a variant-constructor [@as] payload denotes. *)
+end
+
 (** {1 Constants} *)
 
 module Const : sig
