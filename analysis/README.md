@@ -18,7 +18,7 @@ inspects must be built with compatible compiler representations.
 - [`src/cmt.ml`](src/cmt.ml), [`src/process_cmt.ml`](src/process_cmt.ml), and
   [`src/process_extra.ml`](src/process_extra.ml) are the main typed-artifact
   boundary. Shared typed-tree definitions and traversal utilities live under
-  `compiler/ml`.
+  `compiler/typing`.
 - [`reactive/README.md`](reactive/README.md) documents the reactive analysis
   library. [`reanalyze/README.md`](reanalyze/README.md) covers Reanalyze, which
   is a separate analysis pipeline in this directory.

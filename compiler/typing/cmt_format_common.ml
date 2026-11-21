@@ -14,7 +14,7 @@
 (**************************************************************************)
 
 (* Shared CMT reading and collection logic. Persistence is supplied by
-   Cmt_format_persistence, which compiler/ml/dune copies from platform/native
+   Cmt_format_persistence, which compiler/typing/dune copies from platform/native
    or platform/playground according to the profile, so the playground does
    not retain the native writer and its transitive dependencies. *)
 

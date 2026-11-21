@@ -13,4 +13,11 @@
   (<> %{profile} browser))
  (instrumentation
   (backend bisect_ppx))
- (libraries ast0 core gentype ounit2 analysis rescript_compiler_driver unix))
+ (libraries
+  ast0
+  backend
+  gentype
+  ounit2
+  analysis
+  rescript_compiler_driver
+  unix))

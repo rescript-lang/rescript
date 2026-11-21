@@ -165,7 +165,12 @@ test("an AST block's parse trees are drawn as aligned Before and After rows", as
   const html = await render(
     async (git, dir) => {
       await commit(git, dir, { "a.txt": "a\n" }, "base");
-      await commit(git, dir, { "compiler/ml/parsetree.ml": "x\n" }, AST_RECORD);
+      await commit(
+        git,
+        dir,
+        { "compiler/typing/parsetree.ml": "x\n" },
+        AST_RECORD,
+      );
     },
     ["HEAD"],
   );

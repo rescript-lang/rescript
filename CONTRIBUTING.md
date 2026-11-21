@@ -17,8 +17,8 @@ for the compiler area you are changing:
 
 - [parser and printer](syntax/README.md)
 - [JSX transformation](compiler/jsx/README.md)
-- [type checker and typed tree](compiler/ml/README.md)
-- [Lambda, Lam, and JavaScript generation](compiler/core/README.md)
+- [type checker and typed tree](compiler/typing/README.md)
+- [Lambda, Lam, and JavaScript generation](compiler/backend/README.md)
 - [editor analysis](analysis/README.md)
 - [build system](rewatch-ocaml/README.md)
 - [`rescript-tools`](tools/README.md)

@@ -30,7 +30,7 @@
   (backend bisect_ppx))
  (libraries
   common
-  core
+  backend
   depends
   flow_parser
   gentype

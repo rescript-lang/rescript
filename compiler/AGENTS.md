@@ -11,7 +11,7 @@ commands below are relative to the repository root unless stated otherwise.
   - Add a source fixture exercising the new syntax to `tests/syntax_tests/data/ast-mapping/`. Every file there is run through `res_parser -test-ast-conversion` (which round-trips the parsetree through the frozen v0 AST before printing) as part of `make test-syntax`; the printed output must match the snapshot in its `expected/` directory.
   - For exact-identity invariants (locations, attributes) or the v0 wire shape itself, add cases to `tests/ounit_tests/ounit_ast_mapper0_tests.ml`, which tests `ast_mapper_to0`/`ast_mapper_from0` directly.
 
-- **Don't bump magic numbers** - Changing a serialized type (parsetree, typed tree, `.cmi` signature) needs no edit of the magic numbers in `compiler/ext/config.ml`. `yarn changelog:release` bumps them when `syntax/ast`, `compiler/ml`, `compiler/ext` or `compiler/flow_parser` changed since the previous release, and the changelog check rejects pull requests that bump them.
+- **Don't bump magic numbers** - Changing a serialized type (parsetree, typed tree, `.cmi` signature) needs no edit of the magic numbers in `compiler/ext/config.ml`. `yarn changelog:release` bumps them when `syntax/ast`, `compiler/typing`, `compiler/ext` or `compiler/flow_parser` changed since the previous release, and the changelog check rejects pull requests that bump them.
 
 - **Missing test coverage** - Always add tests for syntax, lambda, and end-to-end behavior
 
@@ -29,13 +29,13 @@ ReScript Source (.res)
 Surface Syntax Tree
   ↓ (Frontend transformations - compiler/frontend/)
 Surface Syntax Tree
-  ↓ (OCaml Type Checker - compiler/ml/)
+  ↓ (OCaml Type Checker - compiler/typing/)
 Typedtree
-  ↓ (Lambda compilation - compiler/core/lam_*)
+  ↓ (Lambda compilation - compiler/backend/lam_*)
 Lambda IR
-  ↓ (JS compilation - compiler/core/js_*)
+  ↓ (JS compilation - compiler/backend/js_*)
 JS IR
-  ↓ (JS output - compiler/core/js_dump*)
+  ↓ (JS output - compiler/backend/js_dump*)
 JavaScript Code
 ```
 
@@ -61,11 +61,11 @@ Read the relevant area guide linked from the [root instructions](../AGENTS.md#ar
    - **AST layer** (`syntax/ast/`): The parsetree and the helpers the parser
      shares with the type checker. It depends on the standard library only, not
      on `ext`, `ml` or `flow_parser`
-   - **ML layer** (`compiler/ml/`): Type checking and AST transformations
+   - **Typing layer** (`compiler/typing/`): Type checking and the translation to Lambda
    - **v0 AST** (`compiler/ast0/`): The frozen `Parsetree0` that external PPXes
      read and write, and the bridge between it and the current parsetree
-   - **Lambda layer** (`compiler/core/lam_*`): Intermediate representation and optimizations
-   - **JS layer** (`compiler/core/js_*`): JavaScript generation
+   - **Lambda layer** (`compiler/backend/lam_*`): Intermediate representation and optimizations
+   - **JS layer** (`compiler/backend/js_*`): JavaScript generation
 
 2. **Always run appropriate tests:**
 
@@ -105,15 +105,15 @@ Read the relevant area guide linked from the [root instructions](../AGENTS.md#ar
 # Raw lambda (unoptimized intermediate representation)
 ./cli/bsc.js -drawlambda myfile.res
 
-# Use lambda printing for debugging (Printlambda in compiler/ml/printlambda.ml)
+# Use lambda printing for debugging (Printlambda in compiler/typing/printlambda.ml)
 ```
 
 #### Common Debug Scenarios
 
-- **JavaScript formatting issues**: Check `compiler/ml/pprintast.ml`
-- **Type checking issues**: Look in `compiler/ml/` type checker modules
-- **Optimization bugs**: Check `compiler/core/lam_*.ml` analysis passes
-- **Code generation bugs**: Look in `compiler/core/js_*.ml` modules
+- **JavaScript formatting issues**: Check `compiler/typing/pprintast.ml`
+- **Type checking issues**: Look in `compiler/typing/` type checker modules
+- **Optimization bugs**: Check `compiler/backend/lam_*.ml` analysis passes
+- **Code generation bugs**: Look in `compiler/backend/js_*.ml` modules
 
 ## Performance Considerations
 
@@ -131,9 +131,9 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 
 1. Update parser in `syntax/parser/`
 2. Update AST definitions in `syntax/ast/`
-3. Implement type checking in `compiler/ml/`
-4. Add Lambda IR handling in `compiler/core/lam_*`
-5. Implement JS generation in `compiler/core/js_*`
+3. Implement type checking in `compiler/typing/`
+4. Add Lambda IR handling in `compiler/backend/lam_*`
+5. Implement JS generation in `compiler/backend/js_*`
 6. Add comprehensive tests
 
 ### Debugging Compilation Issues
@@ -148,5 +148,5 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 
 - Remember Lambda IR is the core optimization layer
 - All `lam_*.ml` files process this representation
-- Use `compiler/ml/printlambda.ml` for debugging lambda expressions
+- Use `compiler/typing/printlambda.ml` for debugging lambda expressions
 - Test both with and without optimization passes

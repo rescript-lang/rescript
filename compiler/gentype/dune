@@ -5,4 +5,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (libraries depends ml))
+ (libraries depends typing))

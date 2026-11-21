@@ -9,7 +9,7 @@ or later: `ast/` (`rescript-syntax.ast`, module `Rescript_ast`), `printer/`
 for some error messages. The compiler opens these modules with `-open` flags
 in its dune files, so its code uses the inner modules (`Parsetree`,
 `Res_printer`, ...) directly. The parser is hand-written and produces the parsetree consumed by
-`compiler/ml`. The built-in JSX transformation, which rewrites that
+`compiler/typing`. The built-in JSX transformation, which rewrites that
 parsetree, lives in [`compiler/jsx`](../compiler/jsx/README.md).
 
 ## Code map

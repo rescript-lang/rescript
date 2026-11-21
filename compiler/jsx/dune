@@ -8,4 +8,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (libraries ml))
+ (libraries typing))

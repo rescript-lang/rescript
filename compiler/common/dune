@@ -5,4 +5,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (libraries ast0 ml rescript_printer rescript_parser))
+ (libraries ast0 typing rescript_printer rescript_parser))

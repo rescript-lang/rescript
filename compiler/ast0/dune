@@ -8,4 +8,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (libraries ml flow_parser))
+ (libraries typing flow_parser))

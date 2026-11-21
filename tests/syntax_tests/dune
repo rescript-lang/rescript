@@ -11,4 +11,10 @@
  (package rescript)
  (enabled_if
   (<> %{profile} browser))
- (libraries common rescript_printer rescript_parser core jsx outcome_printer))
+ (libraries
+  common
+  rescript_printer
+  rescript_parser
+  backend
+  jsx
+  outcome_printer))

@@ -125,7 +125,7 @@ test("bumps the magic numbers once per release when format sources changed", asy
   git("init", "-q");
   await commit(configPath, config("040", "048", "01317"));
   assert.throws(() => previousReleaseTag(root, "1.1.0"), /git fetch --tags/);
-  await commit("compiler/ml/types.ml", "type t = A\n");
+  await commit("compiler/typing/types.ml", "type t = A\n");
   git("tag", "v1.0.0");
 
   assert.equal(await releaseMagicNumbers(root, "1.1.0"), null);
@@ -140,9 +140,9 @@ test("bumps the magic numbers once per release when format sources changed", asy
   git("merge", "-q", "-s", "ours", "-m", "Merge maintenance", "maintenance");
   assert.equal(previousReleaseTag(root, "1.1.0"), "v1.0.0");
   // Only committed changes count.
-  await write("compiler/ml/types.ml", "type t = A | B\n");
+  await write("compiler/typing/types.ml", "type t = A | B\n");
   assert.equal(await releaseMagicNumbers(root, "1.1.0"), null);
-  await commit("compiler/ml/types.ml", "type t = A | B\n");
+  await commit("compiler/typing/types.ml", "type t = A | B\n");
   const bumped = await releaseMagicNumbers(root, "1.1.0");
   assert.equal(bumped, config("041", "049", "01318"));
 

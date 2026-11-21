@@ -1,8 +1,8 @@
 (dirs
  ast0
+ backend
  bsc
  common
- core
  depends
  ext
  flow_parser
@@ -10,10 +10,10 @@
  gentype
  jsoo
  jsx
- ml
  outcome_printer
  sync
- syntax_cli)
+ syntax_cli
+ typing)
 
 (env
  (release
