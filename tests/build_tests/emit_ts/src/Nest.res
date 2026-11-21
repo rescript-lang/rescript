@@ -27,3 +27,14 @@ let rewrap = (o: option<'a>) =>
 let boxed = (x: int) => {v: Some(x)}
 
 let call = (f: callback) => f()
+
+// A record owning the marker key at run time: Some(Some(r)) is the marker of
+// depth r.depth + 1, so its options print a marker of any depth. No
+// declaration of Primitive_option.some states such a payload, so wrapping
+// one fails tsc.
+type keyed = {
+  @as("BS_PRIVATE_NESTED_SOME_NONE") depth: int,
+  tag: string,
+}
+
+let keepKeyed = (x: option<option<keyed>>) => x

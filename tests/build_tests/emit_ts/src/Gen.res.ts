@@ -25,7 +25,13 @@ export function applyTwice<T1>(f: (_1:T1) => T1, x: T1): T1 {
   return f(f(x));
 }
 
-export function getOr<T1 extends string | number | boolean | bigint>(o: (undefined | T1), d: T1): T1 {
+export function getOr<T1 extends string | number | boolean | bigint>(o: (undefined | T1), d: T1): T1;
+export function getOr<T1 extends string | number | boolean | bigint>(o: (undefined | (
+    (undefined | T1)
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 })), d: (undefined | T1)): (undefined | T1);
+export function getOr<T1 extends string | number | boolean | bigint>(o: (undefined | (
+    (undefined | T1)
+  | { readonly BS_PRIVATE_NESTED_SOME_NONE: 0 })), d: (undefined | T1)): (undefined | T1) {
   if (o !== undefined) {
     return Primitive_option.valFromOption(o);
   } else {
