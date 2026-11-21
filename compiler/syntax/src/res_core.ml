@@ -19,7 +19,7 @@ let rec skip_doc_comments p =
 
 type inline_type_definition = {
   name: string;
-  loc: Warnings.loc;
+  loc: Location.t;
   kind: Parsetree.type_kind;
   params: (Parsetree.core_type * Asttypes.variance) list;
 }
@@ -2457,7 +2457,7 @@ and parse_template_expr ?prefix p =
   in
   let parts = parse_parts p in
   let sources = List.map (fun (txt, loc, _) -> {Location.txt; loc}) parts in
-  let values = Ext_list.filter_map parts (fun (_, _, value) -> value) in
+  let values = List.filter_map (fun (_, _, value) -> value) parts in
   let template_loc = mk_loc template_start (Parser.position p) in
   let gen_tagged_template (lident_loc : Longident.t Location.loc) =
     let ident = Ast_helper.Exp.ident ~attrs:[] ~loc:lident_loc.loc lident_loc in
@@ -3411,13 +3411,15 @@ and parse_record_expr_with_string_keys ~start_pos first_row p =
   in
   let loc = mk_loc start_pos (Parser.end_pos p) in
   let fields =
-    Ext_list.map rows (fun {Parsetree.lid; x} ->
+    List.map
+      (fun {Parsetree.lid; x} ->
         let name =
           match lid.txt with
           | Longident.Lident name -> Location.mkloc name lid.loc
           | _ -> assert false
         in
         (name, x))
+      rows
   in
   Ast_helper.Exp.object_literal ~loc fields
 
@@ -4103,10 +4105,12 @@ and parse_call_expr p fun_expr =
     | [] -> []
   in
   let apply =
-    Ext_list.fold_left args fun_expr (fun call_body args ->
+    List.fold_left
+      (fun call_body args ->
         let args, wrap = process_underscore_application args in
         let exp = Ast_helper.Exp.apply ~loc ~partial call_body args in
         wrap exp)
+      fun_expr args
   in
 
   Parser.eat_breadcrumb p;
@@ -5711,12 +5715,14 @@ and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p
       Parser.expect Rbrace p;
       if !found_object_field then
         let fields =
-          Ext_list.map fields (fun ld ->
+          List.map
+            (fun (ld : Parsetree.label_declaration) ->
               match ld.pld_name.txt with
               | "..." -> Parsetree.Oinherit ld.pld_type
               | _ ->
                 Otag
                   (ld.pld_name, Ast_helper.Type.field_attributes ld, ld.pld_type))
+            fields
         in
         let dot_field = Parsetree.Oinherit typ in
         let typ_obj = Ast_helper.Typ.object_ (dot_field :: fields) Closed in

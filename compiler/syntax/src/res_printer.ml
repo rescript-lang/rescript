@@ -2870,8 +2870,9 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
                     Doc.soft_line;
                     Doc.join
                       ~sep:(Doc.concat [Doc.text ","; Doc.line])
-                      (Ext_list.map rows (fun row ->
-                           print_pattern_dict_row ~state row cmt_tbl));
+                      (List.map
+                         (fun row -> print_pattern_dict_row ~state row cmt_tbl)
+                         rows);
                   ]);
              Doc.if_breaks (Doc.text ",") Doc.nil;
              Doc.soft_line;
@@ -3549,11 +3550,12 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
                     Doc.soft_line;
                     Doc.join
                       ~sep:(Doc.concat [Doc.text ","; Doc.line])
-                      (Ext_list.map fields
+                      (List.map
                          (fun ((s : string Asttypes.loc), e) ->
                            print_bs_object_row ~state
                              (Location.mkloc (Longident.Lident s.txt) s.loc, e)
-                             cmt_tbl));
+                             cmt_tbl)
+                         fields);
                   ]);
              Doc.trailing_comma;
              Doc.soft_line;
@@ -4675,7 +4677,7 @@ and print_jsx_container_tag ~state tag_name
   let name = print_jsx_name tag_name.txt in
   let opening_greater_than_loc =
     {
-      Warnings.loc_start = opening_greater_than;
+      Location.loc_start = opening_greater_than;
       loc_end = opening_greater_than;
       loc_ghost = false;
     }
@@ -4762,7 +4764,7 @@ and print_jsx_container_tag ~state tag_name
 
 and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
     (children : Parsetree.jsx_children) (closing_lesser_than : Lexing.position)
-    (fragment_loc : Warnings.loc) cmt_tbl =
+    (fragment_loc : Location.t) cmt_tbl =
   let opening =
     let loc : Location.t = {fragment_loc with loc_end = opening_greater_than} in
     print_comments (Doc.text "<>") cmt_tbl loc
