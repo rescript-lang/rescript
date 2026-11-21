@@ -2,6 +2,8 @@
 
 (executables
  (names jsoo_playground_main)
+ (flags
+  (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
  (modes js wasm)
  (enabled_if
   (= %{profile} browser))

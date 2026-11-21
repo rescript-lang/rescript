@@ -3,7 +3,9 @@
 
 (library
  (name rescript_printer)
- (wrapped false)
+ (public_name rescript-syntax.printer)
+ (flags
+  (:standard -open Rescript_ast))
  (instrumentation
   (backend bisect_ppx))
  (libraries rescript_ast))

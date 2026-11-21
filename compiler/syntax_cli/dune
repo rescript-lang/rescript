@@ -5,6 +5,8 @@
 
 (executable
  (name res_cli)
+ (flags
+  (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
  (public_name res_parser)
  (package rescript)
  (enabled_if

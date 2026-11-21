@@ -5,6 +5,8 @@
 
 (executable
  (name ounit_tests_main)
+ (flags
+  (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
  (public_name ounit_tests)
  (package rescript)
  (enabled_if

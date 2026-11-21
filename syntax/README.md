@@ -1,10 +1,14 @@
 # Parser and printer
 
 This directory owns the parsetree, ReScript source parsing, comment
-attachment, and printing, as three libraries that depend on the standard
-library only: `ast/` (`rescript_ast`), `printer/` (`rescript_printer`) and
-`parser/` (`rescript_parser`), which uses the printer for some error
-messages. The parser is hand-written and produces the parsetree consumed by
+attachment, and printing, as three libraries of the `rescript-syntax` opam
+package that depend on the standard library only and build with OCaml 4.14
+or later: `ast/` (`rescript-syntax.ast`, module `Rescript_ast`), `printer/`
+(`rescript-syntax.printer`, module `Rescript_printer`) and `parser/`
+(`rescript-syntax.parser`, module `Rescript_parser`), which uses the printer
+for some error messages. The compiler opens these modules with `-open` flags
+in its dune files, so its code uses the inner modules (`Parsetree`,
+`Res_printer`, ...) directly. The parser is hand-written and produces the parsetree consumed by
 `compiler/ml`. The built-in JSX transformation, which rewrites that
 parsetree, lives in [`compiler/jsx`](../compiler/jsx/README.md).
 

@@ -22,6 +22,8 @@
 
 (library
  (name rescript_compiler_driver)
+ (flags
+  (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
  (wrapped false)
  (modules rescript_compiler_driver rescript_compiler_build_identity)
  (instrumentation
