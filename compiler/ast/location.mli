@@ -16,11 +16,7 @@
 (** Source code locations (ranges of positions), used in parsetree. Reporting
     errors and warnings at a location is in {!Loc_report}. *)
 
-type t = Warnings.loc = {
-  loc_start: Lexing.position;
-  loc_end: Lexing.position;
-  loc_ghost: bool;
-}
+type t = {loc_start: Lexing.position; loc_end: Lexing.position; loc_ghost: bool}
 
 (** Note on the use of Lexing.position in this module.
    If [pos_fname = ""], then use [Loc_report.get_input_name ()] instead.

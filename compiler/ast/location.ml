@@ -15,11 +15,7 @@
 
 open Lexing
 
-type t = Warnings.loc = {
-  loc_start: position;
-  loc_end: position;
-  loc_ghost: bool;
-}
+type t = {loc_start: position; loc_end: position; loc_ghost: bool}
 
 let in_file name =
   let loc = {pos_fname = name; pos_lnum = 1; pos_bol = 0; pos_cnum = -1} in
