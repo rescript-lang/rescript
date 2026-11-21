@@ -480,17 +480,14 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup OCaml 4.14
-        uses: ocaml/setup-ocaml@v3.9.0
+        uses: ./.github/actions/setup-ocaml
         with:
-          ocaml-compiler: "4.14"
-          # The HTTP repository avoids intermittent setup failures, as in
-          # .github/actions/setup-ocaml.
-          opam-repositories: |
-            default: https://opam.ocaml.org
-          opam-pin: false
-
-      - name: Install dependencies
-        run: opam install ./rescript-syntax.opam --deps-only --yes
+          compiler: "4.14"
+          os: ubuntu-26.04
+          cache-prefix: opam-env-v9
+          packages: ./rescript-syntax.opam
+          dependency-flags: --deps-only
+          binaryen: "false"
 
       - name: Build rescript-syntax
         run: opam exec -- dune build --only-packages rescript-syntax @install

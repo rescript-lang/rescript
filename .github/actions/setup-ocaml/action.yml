@@ -22,6 +22,16 @@ inputs:
     description: Flags passed to opam install after the package path.
     required: false
     default: --deps-only --with-test
+  packages:
+    description: >-
+      Package path passed to opam install, such as ./rescript-syntax.opam to
+      install the dependencies of one package only.
+    required: false
+    default: .
+  binaryen:
+    description: Whether to install Binaryen, which wasm_of_ocaml needs.
+    required: false
+    default: "true"
 outputs:
   setup_version:
     description: Version of ocaml/setup-ocaml used by this action.
@@ -34,7 +44,7 @@ runs:
     # Hosted runners do not consistently provide a suitable complete version,
     # so use the same pinned official release on Linux and macOS.
     - name: Install Binaryen
-      if: runner.os != 'Windows'
+      if: runner.os != 'Windows' && inputs.binaryen == 'true'
       shell: bash
       env:
         BINARYEN_VERSION: "133"
@@ -82,11 +92,18 @@ runs:
         COMPILER: ${{ inputs.compiler }}
         DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
         OS: ${{ inputs.os }}
+        PACKAGES: ${{ inputs.packages }}
       # 3.9.0 is the ocaml/setup-ocaml version below. Update both together:
       # Dependabot bumps only the `uses:` line, and a cache hit skips that step.
       run: |
         dependency_flags_key="${DEPENDENCY_FLAGS//--/}"
         dependency_flags_key="${dependency_flags_key// /_}"
+        # Only a package path other than the default goes into the key, so
+        # that the keys of the jobs that install everything stay the same.
+        if [[ "$PACKAGES" != "." ]]; then
+          packages_key="${PACKAGES//\//}"
+          dependency_flags_key="$dependency_flags_key-${packages_key#.}"
+        fi
         dependency_hash="${{ hashFiles('*.opam') }}"
         prefix="$CACHE_PREFIX-$OS-3.9.0-$COMPILER-$dependency_flags_key-"
         echo "prefix=${prefix//,/-}" >> "$GITHUB_OUTPUT"
@@ -136,6 +153,7 @@ runs:
       shell: bash
       env:
         DEPENDENCY_FLAGS: ${{ inputs.dependency-flags }}
+        PACKAGES: ${{ inputs.packages }}
       run: |
         read -ra dependency_flags <<< "$DEPENDENCY_FLAGS"
         if [[ "$RUNNER_OS" == "Windows" ]]; then
@@ -146,7 +164,7 @@ runs:
           export DLLTOOL=x86_64-w64-mingw32-dlltool
           export OBJDUMP=x86_64-w64-mingw32-objdump
         fi
-        opam install . "${dependency_flags[@]}"
+        opam install "$PACKAGES" "${dependency_flags[@]}"
 
     # A pull request that changes the dependencies saves its environment, so
     # that its next pushes find it. Caches saved by pull_request runs are
