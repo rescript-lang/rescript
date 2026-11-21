@@ -20,7 +20,7 @@
    - manual/manual/cmds/native.etex
 *)
 
-type loc = {
+type loc = Location.t = {
   loc_start: Lexing.position;
   loc_end: Lexing.position;
   loc_ghost: bool;

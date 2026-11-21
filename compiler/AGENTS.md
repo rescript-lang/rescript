@@ -58,7 +58,8 @@ Read the relevant area guide linked from the [root instructions](../AGENTS.md#ar
 1. **Understand which layer you're working on:**
    - **Syntax layer** (`compiler/syntax/`): Parsing and surface syntax
    - **AST layer** (`compiler/ast/`): The parsetree and the helpers the parser
-     shares with the type checker. It must not depend on `ml` or `flow_parser`
+     shares with the type checker. It depends on the standard library only, not
+     on `ext`, `ml` or `flow_parser`
    - **ML layer** (`compiler/ml/`): Type checking and AST transformations
    - **v0 AST** (`compiler/ast0/`): The frozen `Parsetree0` that external PPXes
      read and write, and the bridge between it and the current parsetree

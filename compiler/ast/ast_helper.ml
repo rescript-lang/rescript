@@ -24,7 +24,7 @@ type loc = Location.t
 type attrs = attribute list
 
 (** Default value for all optional location arguments. *)
-let default_loc = ref Location.none
+let default_loc = Location.none
 
 (* Payload readers for the attributes Ast_helper interprets while building
    nodes, such as [@as]. They never raise: a payload they cannot read, for
@@ -91,7 +91,7 @@ module Const = struct
 end
 
 module Typ = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) d =
+  let mk ?(loc = default_loc) ?(attrs = []) d =
     {ptyp_desc = d; ptyp_loc = loc; ptyp_attributes = attrs}
 
   let any ?loc ?attrs () = mk ?loc ?attrs Ptyp_any
@@ -115,7 +115,7 @@ module Typ = struct
 end
 
 module Pat = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) d =
+  let mk ?(loc = default_loc) ?(attrs = []) d =
     {ppat_desc = d; ppat_loc = loc; ppat_attributes = attrs}
 
   let any ?loc ?attrs () = mk ?loc ?attrs Ppat_any
@@ -139,7 +139,7 @@ module Pat = struct
 end
 
 module Exp = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) d =
+  let mk ?(loc = default_loc) ?(attrs = []) d =
     {pexp_desc = d; pexp_loc = loc; pexp_attributes = attrs}
 
   let braces ?(attrs = []) ~braces_loc e =
@@ -258,7 +258,7 @@ module Exp = struct
 end
 
 module Mty = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) d =
+  let mk ?(loc = default_loc) ?(attrs = []) d =
     {pmty_desc = d; pmty_loc = loc; pmty_attributes = attrs}
 
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pmty_ident a)
@@ -271,7 +271,7 @@ module Mty = struct
 end
 
 module Mod = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) d =
+  let mk ?(loc = default_loc) ?(attrs = []) d =
     {pmod_desc = d; pmod_loc = loc; pmod_attributes = attrs}
 
   let ident ?loc ?attrs x = mk ?loc ?attrs (Pmod_ident x)
@@ -286,7 +286,7 @@ module Mod = struct
 end
 
 module Sig = struct
-  let mk ?(loc = !default_loc) d = {psig_desc = d; psig_loc = loc}
+  let mk ?(loc = default_loc) d = {psig_desc = d; psig_loc = loc}
 
   let value ?loc a = mk ?loc (Psig_value a)
   let type_ ?loc rec_flag a = mk ?loc (Psig_type (rec_flag, a))
@@ -303,7 +303,7 @@ module Sig = struct
 end
 
 module Str = struct
-  let mk ?(loc = !default_loc) d = {pstr_desc = d; pstr_loc = loc}
+  let mk ?(loc = default_loc) d = {pstr_desc = d; pstr_loc = loc}
 
   let eval ?loc ?(attrs = []) a = mk ?loc (Pstr_eval (a, attrs))
   let value ?loc a b = mk ?loc (Pstr_value (a, b))
@@ -400,7 +400,7 @@ module Jsx_component = struct
 end
 
 module Val = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) ?prim name typ =
+  let mk ?(loc = default_loc) ?(attrs = []) ?prim name typ =
     let jsx_component, attrs = Jsx_component.take attrs in
     {
       pval_name = name;
@@ -416,22 +416,22 @@ module Val = struct
 end
 
 module Md = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) name typ =
+  let mk ?(loc = default_loc) ?(attrs = []) name typ =
     {pmd_name = name; pmd_type = typ; pmd_attributes = attrs; pmd_loc = loc}
 end
 
 module Mtd = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) ?typ name =
+  let mk ?(loc = default_loc) ?(attrs = []) ?typ name =
     {pmtd_name = name; pmtd_type = typ; pmtd_attributes = attrs; pmtd_loc = loc}
 end
 
 module Mb = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) name expr =
+  let mk ?(loc = default_loc) ?(attrs = []) name expr =
     {pmb_name = name; pmb_expr = expr; pmb_attributes = attrs; pmb_loc = loc}
 end
 
 module Opn = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) ?(override = Fresh) lid =
+  let mk ?(loc = default_loc) ?(attrs = []) ?(override = Fresh) lid =
     {
       popen_lid = lid;
       popen_override = override;
@@ -441,12 +441,12 @@ module Opn = struct
 end
 
 module Incl = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) mexpr =
+  let mk ?(loc = default_loc) ?(attrs = []) mexpr =
     {pincl_mod = mexpr; pincl_loc = loc; pincl_attributes = attrs}
 end
 
 module Vb = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) ?constraint_ pat expr =
+  let mk ?(loc = default_loc) ?(attrs = []) ?constraint_ pat expr =
     let jsx_component, attrs = Jsx_component.take attrs in
     {
       pvb_pat = pat;
@@ -462,7 +462,7 @@ module Vb = struct
 end
 
 module Type = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) ?(params = []) ?(cstrs = [])
+  let mk ?(loc = default_loc) ?(attrs = []) ?(params = []) ?(cstrs = [])
       ?(kind = Ptype_abstract) ?(priv = Public) ?manifest ?(origin = Declared)
       name =
     let origin, attrs =
@@ -493,7 +493,7 @@ module Type = struct
       (Location.mknoloc "res.inlineRecordDefinition", PStr [])
       :: decl.ptype_attributes
 
-  let constructor ?(loc = !default_loc) ?(attrs = []) ?(args = Pcstr_tuple [])
+  let constructor ?(loc = default_loc) ?(attrs = []) ?(args = Pcstr_tuple [])
       ?res name =
     let runtime_tag, attrs =
       (* Only the first [@as] can name the constructor. Leave an invalid
@@ -556,7 +556,7 @@ module Type = struct
      the attributes here, so every producer - the parser, a ppx, the frozen
      AST bridge - agrees on what the field is called without re-reading the
      payload. *)
-  let field ?(loc = !default_loc) ?(attrs = []) ?(mut = Immutable)
+  let field ?(loc = default_loc) ?(attrs = []) ?(mut = Immutable)
       ?(optional = false) name typ =
     let runtime_name, attrs =
       (* Take out the first [@as] that denotes a name. One whose payload is
@@ -623,7 +623,7 @@ module Te = struct
       ptyext_attributes = attrs;
     }
 
-  let constructor ?(loc = !default_loc) ?(attrs = []) name kind =
+  let constructor ?(loc = default_loc) ?(attrs = []) name kind =
     {
       pext_name = name;
       pext_kind = kind;
