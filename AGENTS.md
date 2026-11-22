@@ -39,7 +39,7 @@ need the relevant guidance from each.
 
 - [`syntax/README.md`](syntax/README.md) for parsing and
   printing
-- [`compiler/jsx/README.md`](compiler/jsx/README.md) for the JSX
+- [`compiler/frontend/JSX.md`](compiler/frontend/JSX.md) for the JSX
   transformation
 - [`compiler/typing/README.md`](compiler/typing/README.md) for the type checker and
   typed tree

@@ -8,7 +8,7 @@
  (enabled_if
   (= %{profile} browser))
  (libraries
-  common
+  frontend
   backend
   rescript_printer
   rescript_parser

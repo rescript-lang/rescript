@@ -13,4 +13,4 @@
   (<> %{profile} browser))
  (instrumentation
   (backend bisect_ppx))
- (libraries ast0 common jsx typing rescript_printer rescript_parser))
+ (libraries ast0 frontend typing rescript_printer rescript_parser))

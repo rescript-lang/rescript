@@ -657,8 +657,9 @@ let () =
 
 module Outcome_printer_tests = struct
   let signature_to_outcome structure =
-    (* The type checker resolves externals through this hook, which the
-       compiler's drivers register in [Ppx_entry]. This test doesn't link it. *)
+    (* The type checker resolves externals through this hook, which
+       [Ppx_entry] registers when it is initialized. This test never
+       references [Ppx_entry], so the linker leaves it out. *)
     Primitive.resolve_external := Ast_external.resolve;
 
     Res_compmisc.init_path ();

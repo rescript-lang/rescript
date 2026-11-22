@@ -21,4 +21,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (libraries ast0 depends ext flow_parser frontend gentype yojson unix))
+ (libraries ast0 ext flow_parser frontend gentype yojson unix))

@@ -10,7 +10,7 @@ for some error messages. The compiler opens these modules with `-open` flags
 in its dune files, so its code uses the inner modules (`Parsetree`,
 `Res_printer`, ...) directly. The parser is hand-written and produces the parsetree consumed by
 `compiler/typing`. The built-in JSX transformation, which rewrites that
-parsetree, lives in [`compiler/jsx`](../compiler/jsx/README.md).
+parsetree, lives in [`compiler/frontend`](../compiler/frontend/JSX.md).
 
 ## Code map
 

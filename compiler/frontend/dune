@@ -1,8 +1,8 @@
 (library
  (name frontend)
  (flags
-  (:standard -open Rescript_ast))
+  (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (libraries common jsx typing flow_parser))
+ (libraries ast0 typing flow_parser rescript_printer rescript_parser))
