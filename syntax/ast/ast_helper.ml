@@ -47,15 +47,18 @@ module Payload = struct
     | PStr [{pstr_desc = Pstr_eval (expression, _); _}] -> Some expression
     | _ -> None
 
+  let string_literal_of_expression (expression : expression) =
+    match unwrap_braces expression with
+    | {pexp_desc = Pexp_constant (Pconst_string literal); _} -> Some literal
+    | {pexp_desc = Pexp_template {source_segments = [source]; values = []}} ->
+      Option.map String_literal.string_from_semantic
+        (String_literal.decode_js_template_escapes source.txt)
+    | _ -> None
+
   let string_literal (payload : payload) =
     match payload with
-    | PStr [{pstr_desc = Pstr_eval (expression, _); _}] -> (
-      match unwrap_braces expression with
-      | {pexp_desc = Pexp_constant (Pconst_string literal); _} -> Some literal
-      | {pexp_desc = Pexp_template {source_segments = [source]; values = []}} ->
-        Option.map String_literal.string_from_semantic
-          (String_literal.decode_js_template_escapes source.txt)
-      | _ -> None)
+    | PStr [{pstr_desc = Pstr_eval (expression, _); _}] ->
+      string_literal_of_expression expression
     | _ -> None
 
   let constructor_tag (payload : payload) =
