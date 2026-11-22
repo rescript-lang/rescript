@@ -19,9 +19,9 @@
 (library
  (name typing)
  (flags
-  (:standard -open Rescript_ast))
+  (:standard -open Rescript_ast -open Rescript_printer))
  (wrapped false)
  (private_modules cmt_format_common cmt_format_persistence)
  (instrumentation
   (backend bisect_ppx))
- (libraries ext rescript_ast flow_parser))
+ (libraries ext rescript_ast rescript_printer flow_parser unix))

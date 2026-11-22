@@ -23,7 +23,7 @@ type str = string loc
 type loc = Location.t
 type attrs = attribute list
 
-let default_loc = ref Location.none
+let default_loc = Location.none
 
 module Const = struct
   let string s = Pconst_string (s, None)
@@ -118,7 +118,7 @@ module Pat = struct
 end
 
 module Exp = struct
-  let mk ?(loc = !default_loc) ?(attrs = []) d =
+  let mk ?(loc = default_loc) ?(attrs = []) d =
     {pexp_desc = d; pexp_loc = loc; pexp_attributes = attrs}
 
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pexp_ident a)
@@ -197,7 +197,7 @@ module Sig = struct
 end
 
 module Str = struct
-  let mk ?(loc = !default_loc) d = {pstr_desc = d; pstr_loc = loc}
+  let mk ?(loc = default_loc) d = {pstr_desc = d; pstr_loc = loc}
 
   let eval ?loc ?(attrs = []) a = mk ?loc (Pstr_eval (a, attrs))
   let value ~loc a b = mk ~loc (Pstr_value (a, b))
