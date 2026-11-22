@@ -4,47 +4,9 @@
    (:standard -ccopt -static))))
 
 (executable
- (name build_identity_gen)
- (modules build_identity_gen))
-
-(rule
- (target rescript_compiler_build_identity.ml)
- ; Every compiler and syntax source, so code in a new directory is covered.
- ; Sources that are not linked into bsc only cause an extra clean rebuild after
- ; they change.
- (deps
-  (source_tree ..)
-  (source_tree ../../syntax))
- (action
-  (with-stdout-to
-   %{target}
-   (run ./build_identity_gen.exe %{deps}))))
-
-(library
- (name rescript_compiler_driver)
- (flags
-  (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
- (wrapped false)
- (modules
-  rescript_compiler_driver
-  rescript_compiler_build_identity
-  ext_file_extensions)
- (instrumentation
-  (backend bisect_ppx))
- (libraries
-  frontend
-  backend
-  flow_parser
-  gentype
-  rescript_printer
-  rescript_parser
-  unix))
-
-(executable
  (name rescript_compiler_main)
- (modules rescript_compiler_main)
  (public_name bsc)
  (package rescript)
  (instrumentation
   (backend bisect_ppx))
- (libraries rescript_compiler_driver))
+ (libraries driver))
