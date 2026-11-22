@@ -64,13 +64,15 @@ module Client = struct
   type t = {
     process_stdout: in_channel;
     process_stdin: out_channel;
+    process_stderr: in_channel;
+    stderr: string ref;
+    stderr_reader: Thread.t;
     mutable next_id: int;
-    mutable stopped: bool;
+    mutable status: Unix.process_status option;
     mutable notifications: Jsonrpc.Notification.t list;
   }
 
-  let frame (json : Yojson.Safe.t) : string =
-    let body = Yojson.Safe.to_string json in
+  let frame body : string =
     Printf.sprintf "Content-Length: %d\r\n\r\n%s" (String.length body) body
 
   let read_headers t =
@@ -103,23 +105,39 @@ module Client = struct
       | exception End_of_file -> None)
 
   let start () =
-    let process_stdout, process_stdin =
-      Unix.open_process_args executable [|executable; "lsp"; "--stdio"|]
+    let process_stdout, process_stdin, process_stderr =
+      Unix.open_process_args_full executable
+        [|executable; "lsp"; "--stdio"|]
+        (Unix.environment ())
     in
     set_binary_mode_in process_stdout true;
     set_binary_mode_out process_stdin true;
+    set_binary_mode_in process_stderr true;
+    (* Drain stderr concurrently: a rejected notification must not block the
+       server when the pipe fills, including on Windows. Join before reading. *)
+    let stderr = ref "" in
+    let stderr_reader =
+      Thread.create (fun () -> stderr := In_channel.input_all process_stderr) ()
+    in
     {
       process_stdout;
       process_stdin;
+      process_stderr;
+      stderr;
+      stderr_reader;
       next_id = 0;
-      stopped = false;
+      status = None;
       notifications = [];
     }
 
-  let send_packet t (packet : Jsonrpc.Packet.t) =
-    let json = Jsonrpc.Packet.yojson_of_t packet in
-    output_string t.process_stdin (frame json);
+  let send_body t body =
+    output_string t.process_stdin (frame body);
     flush t.process_stdin
+
+  let send_json t json = send_body t (Yojson.Safe.to_string json)
+
+  let send_packet t (packet : Jsonrpc.Packet.t) =
+    send_json t (Jsonrpc.Packet.yojson_of_t packet)
 
   let next_id t =
     t.next_id <- t.next_id + 1;
@@ -198,12 +216,22 @@ module Client = struct
     | Some json -> Jsonrpc.Packet.t_of_yojson json *)
 
   let stop t =
-    if t.stopped then Unix.WEXITED 0
-    else (
-      t.stopped <- true;
-      (try close_out_noerr t.process_stdin with _ -> ());
-      try Unix.close_process (t.process_stdout, t.process_stdin)
-      with _ -> Unix.WEXITED 0)
+    match t.status with
+    | Some status -> status
+    | None ->
+      close_out_noerr t.process_stdin;
+      close_in_noerr t.process_stdout;
+      Thread.join t.stderr_reader;
+      let status =
+        Unix.close_process_full
+          (t.process_stdout, t.process_stdin, t.process_stderr)
+      in
+      t.status <- Some status;
+      status
+
+  let stderr t =
+    ignore (stop t);
+    !(t.stderr)
 end
 
 open Lsp

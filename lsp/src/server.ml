@@ -203,8 +203,16 @@ let rec input_loop ~input ~state with_ =
   | Some packet ->
     let state = with_ state packet in
     input_loop ~input ~state with_
-  | exception _ -> failwith "Server.input_loop"
+  | exception _ -> input_loop ~input ~state with_
   | None -> ()
+
+let response_error_of_exn = function
+  | Jsonrpc.Response.Error.E error -> error
+  | exn ->
+    Jsonrpc.Response.Error.make ~code:InternalError
+      ~message:"uncaught exception"
+      ~data:(`String (Printexc.to_string exn))
+      ()
 
 let listen ~input ~output ~on_request ~on_notification ~on_response ~state =
   let lifecycle = ref Awaiting_initialize in
@@ -229,16 +237,20 @@ let listen ~input ~output ~on_request ~on_notification ~on_response ~state =
            ~message:"Server has already received a shutdown request");
       server.state
     | Awaiting_initialize | Running ->
-      let response, state =
-        match Lsp.Client_request.of_jsonrpc request with
-        | Error message ->
-          let code = Jsonrpc.Response.Error.Code.InvalidParams in
-          let err = Jsonrpc.Response.Error.make ~code ~message () in
-          (Jsonrpc.Response.{id = request.id; result = Error err}, state)
-        | Ok packed ->
-          let result, state = on_request packed server in
-          (Jsonrpc.Response.{id = request.id; result}, state)
+      let result, state =
+        try
+          match Lsp.Client_request.of_jsonrpc request with
+          | Error message ->
+            let err =
+              Jsonrpc.Response.Error.make ~code:InternalError ~message ()
+            in
+            (Error err, server.state)
+          | Ok packed -> on_request packed server
+        with
+        | Eio.Cancel.Cancelled _ as exn -> raise exn
+        | exn -> (Error (response_error_of_exn exn), server.state)
       in
+      let response = Jsonrpc.Response.{id = request.id; result} in
       respond server response;
       (match response.result with
       | Ok _ when is_initialize_request request -> lifecycle := Running
@@ -251,7 +263,15 @@ let listen ~input ~output ~on_request ~on_notification ~on_response ~state =
     else
       match !lifecycle with
       | Awaiting_initialize | Shutdown_requested -> server.state
-      | Running -> on_notification (notification_of_jsonrpc notification) server
+      | Running -> (
+        try on_notification (notification_of_jsonrpc notification) server with
+        | Eio.Cancel.Cancelled _ as exn -> raise exn
+        | exn ->
+          (* A notification has no response ID. Report its failure on stderr,
+             keep the current state, and continue with the next message. *)
+          Format.eprintf "Uncaught error when handling notification %s: %s@."
+            notification.method_ (Printexc.to_string exn);
+          server.state)
   in
   let input = Chan.of_source input in
   Chan.with_sink output (fun channel ->
