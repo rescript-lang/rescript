@@ -183,7 +183,7 @@ let%expect_test "invalid request parameters preserve the initialized state" =
            {meth = "textDocument/hover"; params = Some (`Assoc [])});
       check_document client doc);
   [%expect {|
-    InternalError
+    InvalidParams
     original
     |}]
 

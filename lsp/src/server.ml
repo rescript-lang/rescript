@@ -242,7 +242,7 @@ let listen ~input ~output ~on_request ~on_notification ~on_response ~state =
           match Lsp.Client_request.of_jsonrpc request with
           | Error message ->
             let err =
-              Jsonrpc.Response.Error.make ~code:InternalError ~message ()
+              Jsonrpc.Response.Error.make ~code:InvalidParams ~message ()
             in
             (Error err, server.state)
           | Ok packed -> on_request packed server
