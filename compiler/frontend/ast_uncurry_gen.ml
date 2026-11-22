@@ -37,9 +37,11 @@ let to_method_callback ~async ~newtypes ~fun_attrs loc
     | Some self -> Stack.push self (Js_config.current ()).self_stack);
     Bs_syntaxerr.optional_err loc label;
     let rest =
-      Ext_list.map rest (fun (p : Parsetree.fun_param) ->
+      List.map
+        (fun (p : Parsetree.fun_param) ->
           Bs_syntaxerr.optional_err loc p.p_lbl;
           {p with p_pat = self.pat self p.p_pat})
+        rest
     in
     let mapped_params =
       {

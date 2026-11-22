@@ -266,7 +266,10 @@ let literal_tag_to_user_visible_string = function
 let untagged = "unboxed"
 
 let has_untagged (attrs : Parsetree.attributes) =
-  Ext_list.exists attrs (function {txt}, _ -> txt = untagged)
+  List.exists
+    (function
+      | {Location.txt}, _ -> txt = untagged)
+    attrs
 
 let runtime_tag_of_parsetree ~loc = function
   | Parsetree.Pct_string s -> String (String_literal.string_semantic s)
@@ -294,10 +297,12 @@ let parsetree_tag_of_runtime = function
    the payload is read first, so an invalid escape in it is reported as such:
    Ast_helper leaves such an [@as] in the attributes without reporting it. *)
 let reject_leftover_as ?(decode = false) (attrs : Parsetree.attributes) err =
-  Ext_list.iter attrs (fun (({txt; loc}, payload) : Parsetree.attribute) ->
+  List.iter
+    (fun (({txt; loc}, payload) : Parsetree.attribute) ->
       if txt = "as" then (
         if decode then ignore (Ast_payload.constructor_tag_of_payload payload);
         raise (Error (loc, err))))
+    attrs
 
 let process_constructor_tag (cstr : Parsetree.constructor_declaration) =
   match cstr.pcd_runtime_tag with
@@ -439,9 +444,7 @@ let attribute_loc ~loc (attr_loc : Location.t) =
    [@instanceOf] is not a string. *)
 let class_of_attributes ~loc (attrs : Parsetree.attributes) name =
   let attribute txt =
-    match
-      Ext_list.filter attrs (fun ({Location.txt = txt'}, _) -> txt' = txt)
-    with
+    match List.filter (fun ({Location.txt = txt'}, _) -> txt' = txt) attrs with
     | [] -> None
     | [({loc = attr_loc}, payload)] ->
       Some (attribute_loc ~loc attr_loc, payload)
@@ -511,7 +514,7 @@ let process_runtime_annotation ?(loc = Location.none)
       | None -> raise (Error (loc, InvalidTypeOf ""))
     else None
   in
-  match Ext_list.filter_map attrs annotation_of with
+  match List.filter_map annotation_of attrs with
   | [] -> None
   | [annotation] -> Some annotation
   | first :: second :: _ ->
@@ -550,16 +553,19 @@ let check_runtime_annotation ~loc ~is_abstract_or_abbreviation
   match missing with
   | None -> ()
   | Some missing ->
-    Ext_list.iter attrs (fun ({Location.txt; loc = attr_loc}, _) ->
+    List.iter
+      (fun ({Location.txt; loc = attr_loc}, _) ->
         if txt = class_module || txt = class_scope then
           raise
             (Error
                ( attribute_loc ~loc attr_loc,
                  ClassLocationWithoutClass (txt, missing) )))
+      attrs
 
 let process_tag_name (attrs : Parsetree.attributes) =
   let st = ref None in
-  Ext_list.iter attrs (fun ({txt; loc}, payload) ->
+  List.iter
+    (fun ({Location.txt; loc}, payload) ->
       match txt with
       | "tag" ->
         if !st = None then (
@@ -568,7 +574,8 @@ let process_tag_name (attrs : Parsetree.attributes) =
           | Some s -> st := Some s);
           if !st = None then raise (Error (loc, InvalidVariantTagAnnotation)))
         else raise (Error (loc, Duplicated_bs_as))
-      | _ -> ());
+      | _ -> ())
+    attrs;
   !st
 
 (* A constructor the compiler generates itself carries no annotations. *)

@@ -87,7 +87,7 @@ let rewrite kind ppxs ast =
     fn
   in
   Fun.protect
-    ~finally:(fun () -> Ext_list.iter !temp_files Misc.remove_file)
+    ~finally:(fun () -> List.iter Misc.remove_file !temp_files)
     (fun () ->
       let fn_in = new_temp_file () in
       write_ast fn_in (Ml_binary.to_ast0 kind ast);

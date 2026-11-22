@@ -53,7 +53,7 @@ let rescript_hide_attributes (x : Typedtree.attributes) =
   match x with
   | [] -> false
   | ({txt = "internal.local"; _}, _) :: _ -> true
-  | _ :: rest -> Ext_list.exists rest (fun (x, _) -> x.txt = "internal.local")
+  | _ :: rest -> List.exists (fun (x, _) -> x.txt = "internal.local") rest
 
 let rescript_hide (x : Typedtree.structure_item_desc) =
   match x with
@@ -1224,8 +1224,9 @@ let modtype_of_package env loc p nl tl =
 let package_subtype env p1 nl1 tl1 p2 nl2 tl2 =
   let mkmty p nl tl =
     let ntl =
-      Ext_list.filter (List.combine nl tl) (fun (_n, t) ->
-          Ctype.free_variables t = [])
+      List.filter
+        (fun (_n, t) -> Ctype.free_variables t = [])
+        (List.combine nl tl)
     in
     let nl, tl = List.split ntl in
     modtype_of_package env Location.none p nl tl

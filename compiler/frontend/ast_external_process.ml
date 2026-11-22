@@ -208,8 +208,8 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
       | None -> Loc_report.raise_errorf ~loc "Invalid payload")
   in
 
-  Ext_list.fold_left prim_attributes ([], init_st)
-    (fun (attrs, st) (({txt; loc}, payload) as attr) ->
+  List.fold_left
+    (fun (attrs, st) (({Location.txt; loc}, payload) as attr) ->
       if txt = Literals.gentype_import1 || txt = Literals.gentype_import2 then
         let bundle =
           "./"
@@ -252,7 +252,8 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                 ] -> (
               let from_name = ref None in
               let with_ = ref None in
-              Ext_list.iter fields (fun {lid = l; x = exp} ->
+              List.iter
+                (fun {Parsetree.lid = l; x = exp} ->
                   match l with
                   | {txt = Lident "from"} -> (
                     match Ast_payload.semantic_string_of_expression exp with
@@ -262,7 +263,8 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                     match (Ast_payload.unwrap_braces exp).pexp_desc with
                     | Pexp_record (fields, _) -> with_ := Some fields
                     | _ -> ())
-                  | _ -> ());
+                  | _ -> ())
+                fields;
               match (!from_name, !with_) with
               | None, _ ->
                 Loc_report.raise_errorf ~loc:pexp_loc
@@ -277,7 +279,8 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                    the import attributes you want applied to the import."
               | Some from_name, Some with_fields ->
                 let import_attributes_from_record =
-                  Ext_list.filter_map with_fields (fun {lid = l; x = exp} ->
+                  List.filter_map
+                    (fun {Parsetree.lid = l; x = exp} ->
                       match Ast_payload.semantic_string_of_expression exp with
                       | Some s -> (
                         match l.txt with
@@ -289,6 +292,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                       | _ ->
                         Loc_report.raise_errorf ~loc:exp.pexp_loc
                           "Only string values are allowed here.")
+                    with_fields
                 in
                 {
                   st with
@@ -382,6 +386,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
         in
         try (attrs, action ())
         with Not_handled_external_attribute -> (attr :: attrs, st))
+    ([], init_st) prim_attributes
 
 let check_return_wrapper loc (wrapper : External_ffi_types.return_wrapper)
     result_type =
@@ -437,11 +442,9 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
       Loc_report.raise_errorf ~loc
         "%@obj expect external names to be empty string";
     let arg_kinds, args, (result_types : Parsetree.object_field list) =
-      Ext_list.fold_right arg_types_ty ([], [], [])
-        (fun
-          param_type
-          (arg_labels, (arg_types : Parsetree.arg list), result_types)
-        ->
+      List.fold_right
+        (fun param_type
+             (arg_labels, (arg_types : Parsetree.arg list), result_types) ->
           let arg_label, param_attrs, ty, fixed = arg_parts param_type in
           let new_arg_label, new_arg_types, output_tys =
             match arg_label with
@@ -581,6 +584,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
                   "%@obj label %s does not support %@unwrap arguments" label)
           in
           (new_arg_label :: arg_labels, new_arg_types, output_tys))
+        arg_types_ty ([], [], [])
     in
 
     let result =
@@ -943,8 +947,7 @@ let resolve (loc : Location.t) (type_annotation : Parsetree.core_type)
   else
     let splice = external_desc.splice in
     let arg_type_specs, args, arg_type_specs_length =
-      Ext_list.fold_right arg_types_ty
-        (([], [], 0) : External_arg_spec.params * Parsetree.arg list * int)
+      List.fold_right
         (fun param_type (arg_type_specs, arg_types, i) ->
           let arg_label, _, ty, fixed = arg_parts param_type in
           (if i = 0 && splice then
@@ -1001,9 +1004,11 @@ let resolve (loc : Location.t) (type_annotation : Parsetree.core_type)
                 | Arg_cst _ -> arg_types
                 | _ -> param_type :: arg_types ))
           in
-          ( {arg_label; arg_type} :: arg_type_specs,
+          ( {External_arg_spec.arg_label; arg_type} :: arg_type_specs,
             new_arg_types,
             if arg_type = Ignore then i else i + 1 ))
+        arg_types_ty
+        (([], [], 0) : External_arg_spec.params * Parsetree.arg list * int)
     in
     (* The checks of [external_decl_of_non_obj] are about the declared
        arguments, not the [unit] parameter added below. *)

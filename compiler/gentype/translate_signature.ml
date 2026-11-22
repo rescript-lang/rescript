@@ -67,9 +67,11 @@ and translate_module_type_declaration ~config ~output_file_relative ~resolver
         {
           signature with
           sig_items =
-            Ext_list.filter signature.sig_items (function
-              | {sig_desc = Tsig_value _} -> false
-              | _ -> true);
+            List.filter
+              (function
+                | {Typedtree.sig_desc = Tsig_value _} -> false
+                | _ -> true)
+              signature.sig_items;
         }
       in
       let translation =

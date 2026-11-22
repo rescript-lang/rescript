@@ -240,11 +240,12 @@ let layout_from_type_variant ~(configuration : configuration) ~env
       cstrs
   in
   let consts, blocks =
-    Ext_list.fold_left located_constructors ([], [])
+    List.fold_left
       (fun (consts, blocks) (loc, constructor) ->
         match constructor with
         | Constant tag -> ((loc, tag) :: consts, blocks)
         | Block block -> (consts, (loc, block) :: blocks))
+      ([], []) located_constructors
   in
   check_invariant ~consts ~blocks;
   let constructors =

@@ -113,21 +113,23 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
   | Array_index (a, b) -> no_side_effect a && no_side_effect b
   | Is_null_or_undefined b -> no_side_effect b
   | Str _ | Template_literal _ -> true
-  | Interpolated_template {values} -> Ext_list.for_all values no_side_effect
+  | Interpolated_template {values} -> List.for_all no_side_effect values
   | Array xs | Caml_block (xs, _, _) ->
     (* create [immutable] block,
         does not really mean that this opreation itself is [pure].
 
         the block is mutable does not mean this operation is non-pure
     *)
-    Ext_list.for_all xs no_side_effect
+    List.for_all no_side_effect xs
   | Optional_block (x, _) -> no_side_effect x
   | Object entries ->
-    Ext_list.for_all entries (function
-      | Object_property (_, e) | Record_spread e -> no_side_effect e
-      (* A spread reads the source's properties, which may run getters or
+    List.for_all
+      (function
+        | J.Object_property (_, e) | Record_spread e -> no_side_effect e
+        (* A spread reads the source's properties, which may run getters or
          proxy traps *)
-      | Object_spread _ -> false)
+        | Object_spread _ -> false)
+      entries
   | String_append (a, b) | Seq (a, b) -> no_side_effect a && no_side_effect b
   | Length e | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
   | Bin (Eq, _, _) -> false
@@ -146,7 +148,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     safe_literal && no_side_effect a
   | Bin (_, a, b) -> no_side_effect a && no_side_effect b
   | Tagged_template (call_expr, _, values) ->
-    no_side_effect call_expr && Ext_list.for_all values no_side_effect
+    no_side_effect call_expr && List.for_all no_side_effect values
   | Js_not e | Js_bnot e -> no_side_effect e
   | In (prop, obj) -> no_side_effect prop && no_side_effect obj
   | Cond (a, b, c) -> no_side_effect a && no_side_effect b && no_side_effect c

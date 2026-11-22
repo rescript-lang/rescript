@@ -84,13 +84,8 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
   let (original_exports : Ident.t list) = meta.exports in
   let (original_export_set : Set_ident.t) = meta.export_idents in
   let ({export_list; export_set} as result) =
-    Ext_list.fold_right2 original_exports lambda_exports
-      {
-        export_list = [];
-        export_set = original_export_set;
-        export_map = Map_ident.empty;
-        groups = [];
-      } (fun (original_export_id : Ident.t) (lam : Lambda.t) (acc : t) ->
+    List.fold_right2
+      (fun (original_export_id : Ident.t) (lam : Lambda.t) (acc : t) ->
         let original_name = original_export_id.name in
         match lam with
         | Lvar id ->
@@ -150,11 +145,18 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
             export_map = Map_ident.add newid lam acc.export_map;
             groups = Single (Strict, newid, lam) :: acc.groups;
           })
+      original_exports lambda_exports
+      {
+        export_list = [];
+        export_set = original_export_set;
+        export_map = Map_ident.empty;
+        groups = [];
+      }
   in
 
   let export_map, coerced_input =
-    Ext_list.fold_left reverse_input (result.export_map, result.groups)
-      (fun (export_map, acc) x ->
+    List.fold_left
+      (fun (export_map, acc) (x : Lam_group.t) ->
         ( (match x with
           | Single (_, id, lam) when Set_ident.mem id export_set ->
             Map_ident.add id lam export_map
@@ -163,6 +165,8 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
           *)
           | _ -> export_map),
           x :: acc ))
+      (result.export_map, result.groups)
+      reverse_input
   in
   {result with export_map; groups = Lam_dce.remove export_list coerced_input}
 

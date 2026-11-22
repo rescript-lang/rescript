@@ -34,7 +34,7 @@ let transitive_closure (initial_idents : Ident.t list)
           id.stamp
       | Some e -> Set_ident.iter dfs e)
   in
-  Ext_list.iter initial_idents dfs;
+  List.iter dfs initial_idents;
   visited
 
 let remove export_idents (rest : Lam_group.t list) : Lam_group.t list =
@@ -43,7 +43,8 @@ let remove export_idents (rest : Lam_group.t list) : Lam_group.t list =
      at the same time, populate dependency set [ident_free_vars]
   *)
   let initial_idents =
-    Ext_list.fold_left rest export_idents (fun acc x ->
+    List.fold_left
+      (fun acc (x : Lam_group.t) ->
         match x with
         | Single (kind, id, lam) -> (
           Hash_ident.add ident_free_vars id (Lambda_traverse.free_variables lam);
@@ -51,12 +52,14 @@ let remove export_idents (rest : Lam_group.t list) : Lam_group.t list =
           | Alias | StrictOpt -> acc
           | Strict | Variable -> id :: acc)
         | Recursive bindings ->
-          Ext_list.fold_left bindings acc (fun acc (id, lam) ->
+          List.fold_left
+            (fun acc (id, lam) ->
               Hash_ident.add ident_free_vars id
                 (Lambda_traverse.free_variables lam);
               match lam with
               | Lfunction _ -> acc
               | _ -> id :: acc)
+            acc bindings
         | Nop lam ->
           if Lam_analysis.no_side_effects lam then acc
           else
@@ -65,18 +68,23 @@ let remove export_idents (rest : Lam_group.t list) : Lam_group.t list =
               (fun x acc -> x :: acc)
               (Lambda_traverse.free_variables lam)
               acc)
+      export_idents rest
   in
   let visited = transitive_closure initial_idents ident_free_vars in
-  Ext_list.fold_left rest [] (fun acc x ->
+  List.fold_left
+    (fun acc (x : Lam_group.t) ->
       match x with
       | Single (_, id, _) -> if Hash_ident.mem visited id then x :: acc else acc
       | Nop _ -> x :: acc
       | Recursive bindings -> (
         let b =
-          Ext_list.fold_right bindings [] (fun ((id, _) as v) acc ->
+          List.fold_right
+            (fun ((id, _) as v) acc ->
               if Hash_ident.mem visited id then v :: acc else acc)
+            bindings []
         in
         match b with
         | [] -> acc
         | _ -> Recursive b :: acc))
+    [] rest
   |> List.rev

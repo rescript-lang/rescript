@@ -66,8 +66,9 @@ let dispatch (({txt = name; loc}, config) : Ast_payload.action) =
 
 let gen_signature tdcls (actions : Ast_payload.action list)
     (explict_nonrec : Asttypes.rec_flag) : Ast_signature.t =
-  Ext_list.flat_map actions (fun action ->
-      (dispatch action).signature_gen tdcls explict_nonrec)
+  List.concat_map
+    (fun action -> (dispatch action).signature_gen tdcls explict_nonrec)
+    actions
 
 open Ast_helper
 

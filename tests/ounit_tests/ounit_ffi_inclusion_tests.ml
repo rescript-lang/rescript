@@ -2,7 +2,8 @@ let ( >:: ), ( >::: ) = OUnit.(( >:: ), ( >::: ))
 
 let obj_params (fields : (string * bool option) list) :
     External_arg_spec.obj_params =
-  Ext_list.map fields (fun (name, opt) ->
+  List.map
+    (fun (name, opt) ->
       {
         External_arg_spec.obj_arg_type = Nothing;
         obj_arg_label =
@@ -10,6 +11,7 @@ let obj_params (fields : (string * bool option) list) :
           | None -> External_arg_spec.obj_label name
           | Some for_sure -> External_arg_spec.optional for_sure name);
       })
+    fields
 
 let obj fields = External_ffi_types.ffi_obj_create (obj_params fields)
 

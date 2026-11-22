@@ -153,14 +153,16 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
        persistent_closed_lambda = Some (Lfunction ({params; body} as lfunction));
       }
       (* be more cautious when do cross module inlining *)
-        when Ext_list.same_length params args
-             && Ext_list.for_all args (fun arg ->
-                 match arg with
-                 | Lvar p -> (
-                   match Hash_ident.find_opt meta.ident_tbl p with
-                   | Some v -> v <> Parameter
-                   | None -> true)
-                 | _ -> true)
+        when List.compare_lengths params args = 0
+             && List.for_all
+                  (fun (arg : Lambda.t) ->
+                    match arg with
+                    | Lvar p -> (
+                      match Hash_ident.find_opt meta.ident_tbl p with
+                      | Some v -> v <> Parameter
+                      | None -> true)
+                    | _ -> true)
+                  args
              && Lambda.lfunction_can_be_inlined lfunction ->
         simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
       | _ ->
@@ -191,7 +193,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
                      rec_flag );
              })
         when Lambda.lfunction_can_be_inlined m ->
-        if Ext_list.same_length ap_args params then
+        if List.compare_lengths ap_args params = 0 then
           if is_a_functor (* && (Set_ident.mem meta.export_idents v) && false *)
           then
             (* TODO: check l1 if it is exported,
@@ -216,8 +218,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
               | Lam_self_rec -> normal ()
               | Lam_non_rec ->
                 if
-                  Ext_list.exists ap_args (fun lam ->
-                      Lam_hit.hit_variable v lam)
+                  List.exists (fun lam -> Lam_hit.hit_variable v lam) ap_args
                   (*avoid nontermination, e.g, `g(g)`*)
                 then normal ()
                 else if
@@ -239,7 +240,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
       | Some _ | None -> normal ())
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
-      when Ext_list.same_length params args
+      when List.compare_lengths params args = 0
            && Lambda.lfunction_can_be_inlined lfunction ->
       simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
     | Lstringswitch (l, sw, d) -> (

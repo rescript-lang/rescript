@@ -522,13 +522,16 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
               :: pattern_path)
             ?context_path)
     | Ppat_dict entries ->
-      Ext_list.iter entries (fun {pdp_pattern; pdp_optional} ->
+      List.iter
+        (fun {Parsetree.pdp_pattern; pdp_optional} ->
           scope_pattern
             ~pattern_path:
               (Completable.NDictValue {optional = pdp_optional} :: pattern_path)
             ?context_path pdp_pattern)
+        entries
     | Ppat_record (fields, _, rest) -> (
-      Ext_list.iter fields (fun {lid = fname; x = p} ->
+      List.iter
+        (fun {Parsetree.lid = fname; x = p} ->
           match fname with
           | {Location.txt = Longident.Lident fname} ->
             scope_pattern
@@ -536,7 +539,8 @@ let completion_with_parser1 ~debug ~offset ~pos_cursor ~kind_file
                 (Completable.NFollowRecordField {field_name = fname}
                 :: pattern_path)
               ?context_path p
-          | _ -> ());
+          | _ -> ())
+        fields;
       match rest with
       | None -> ()
       | Some {rest_name = {txt; loc}; rest_type; _} ->

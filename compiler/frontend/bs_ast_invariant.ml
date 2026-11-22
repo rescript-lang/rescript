@@ -67,7 +67,7 @@ let warn_unused_attribute
   then Loc_report.prerr_warning loc (Bs_unused_attribute txt)
 
 let warn_discarded_unused_attributes (attrs : Parsetree.attributes) =
-  if attrs <> [] then Ext_list.iter attrs warn_unused_attribute
+  if attrs <> [] then List.iter warn_unused_attribute attrs
 
 type iterator = Ast_iterator.iterator
 
@@ -116,12 +116,13 @@ let emit_external_warnings : iterator =
            checker rejects, or a payload that is not a name. The first is
            reported already; the second is reported by nothing else, so let it
            warn as the unused attribute it is. *)
-        Ext_list.iter lbl.pld_attributes
+        List.iter
           (fun (({txt}, payload) as attr : Parsetree.attribute) ->
             if
               txt = "as"
               && Ast_payload.string_literal_of_payload payload <> None
-            then Used_attributes.mark_used_attribute attr);
+            then Used_attributes.mark_used_attribute attr)
+          lbl.pld_attributes;
         super.label_declaration self lbl);
     constructor_declaration =
       (fun self ({pcd_name = {txt; loc}} as ctr) ->

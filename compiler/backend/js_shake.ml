@@ -36,7 +36,8 @@ let live_idents (export_set : Set_ident.t) (block : J.block) : Set_ident.t =
       live := Set_ident.add id !live;
       worklist := id :: !worklist)
   in
-  Ext_list.iter block (fun (st : J.statement) ->
+  List.iter
+    (fun (st : J.statement) ->
       match st.statement_desc with
       | Variable {ident; value = Some x; _} ->
         let fv = Js_analyzer.free_variables_of_expression x in
@@ -50,7 +51,8 @@ let live_idents (export_set : Set_ident.t) (block : J.block) : Set_ident.t =
       | Variable {value = None; _} -> ()
       | _ ->
         if not (Js_analyzer.no_side_effect_statement st) then
-          Set_ident.iter mark (Js_analyzer.free_variables_of_statement st));
+          Set_ident.iter mark (Js_analyzer.free_variables_of_statement st))
+    block;
   Set_ident.iter mark export_set;
   let rec drain () =
     match !worklist with
@@ -69,7 +71,8 @@ let shake_program (program : J.program) =
   let shake_block block export_set =
     let block = List.rev @@ Js_analyzer.rev_toplevel_flatten block in
     let really_set = live_idents export_set block in
-    Ext_list.fold_right block [] (fun (st : J.statement) acc ->
+    List.fold_right
+      (fun (st : J.statement) acc ->
         match st.statement_desc with
         | Variable {ident; value; _} -> (
           if Set_ident.mem ident really_set then st :: acc
@@ -81,6 +84,7 @@ let shake_program (program : J.program) =
           )
         | _ ->
           if Js_analyzer.no_side_effect_statement st then acc else st :: acc)
+      block []
   in
 
   {program with block = shake_block program.block program.export_set}

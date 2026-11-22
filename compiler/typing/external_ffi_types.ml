@@ -129,9 +129,11 @@ let is_package_relative_path (x : string) =
 let valid_global_name ?loc txt =
   if not (valid_ident txt) then
     let v = Ext_string.split_by ~keep_empty:true (fun x -> x = '.') txt in
-    Ext_list.iter v (fun s ->
+    List.iter
+      (fun s ->
         if not (valid_ident s) then
           Loc_report.raise_errorf ?loc "Not a valid global name %s" txt)
+      v
 
 (* We loose such check (see #2583) *)
 

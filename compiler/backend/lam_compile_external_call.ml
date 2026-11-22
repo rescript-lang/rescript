@@ -134,7 +134,7 @@ let hold_arg ~(arg_label : External_arg_spec.label_noname)
   in
   let hold (e : E.t) =
     let tmp = Ext_ident.create_tmp () in
-    (Ext_list.append_one block (S.define_variable ~kind:Strict tmp e), E.var tmp)
+    (block @ [S.define_variable ~kind:Strict tmp e], E.var tmp)
   in
   match (arg_label, arg.expression_desc) with
   | Arg_optional, Optional_block (x, identity) ->
@@ -214,7 +214,7 @@ let assemble_args_no_splice (arg_types : specs) (args : exprs) :
     | {arg_label; arg_type} :: labels, arg :: args ->
       let accs, eff = aux labels args in
       let acc, new_eff = ocaml_to_js_eff ~arg_label ~arg_type arg in
-      (append_list acc accs, Ext_list.append new_eff eff)
+      (append_list acc accs, List.append new_eff eff)
     | _ :: _, [] -> assert false
   in
   let args, eff = aux arg_types args in
@@ -239,11 +239,11 @@ let assemble_args_has_splice (arg_types : specs) (args : exprs) :
     | {arg_label; arg_type} :: labels, arg :: args -> (
       let accs, eff = aux labels args in
       match (args, (arg : E.t)) with
-      | [], {expression_desc = Array ls; _} -> (Ext_list.append ls accs, eff)
+      | [], {expression_desc = Array ls; _} -> (List.append ls accs, eff)
       | _ ->
         if args = [] then dynamic := true;
         let acc, new_eff = ocaml_to_js_eff ~arg_type ~arg_label arg in
-        (append_list acc accs, Ext_list.append new_eff eff))
+        (append_list acc accs, List.append new_eff eff))
     | _ :: _, [] -> assert false
   in
   let args, eff = aux arg_types args in
@@ -281,14 +281,14 @@ let translate_scoped_module_val
         E.external_var_field ?import_attributes ~external_name:bundle ~field:x
           ~default id
       in
-      Ext_list.fold_left (Ext_list.append rest [fn]) start E.dot)
+      List.fold_left E.dot start (List.append rest [fn]))
   | None -> (
     (*  no [@@module], assume it's global *)
     match scopes with
     | [] -> E.js_global fn
     | x :: rest ->
       let start = E.js_global x in
-      Ext_list.fold_left (Ext_list.append_one rest fn) start E.dot)
+      List.fold_left E.dot start (rest @ [fn]))
 
 (* The constructor of a class, read like the value of an external: a global
    path, such as "Intl.Locale", is a global with properties, so that a binding
@@ -322,7 +322,7 @@ let jsx_callee
 let translate_scoped_access scopes obj =
   match scopes with
   | [] -> obj
-  | x :: xs -> Ext_list.fold_left xs (E.dot obj x) E.dot
+  | x :: xs -> List.fold_left E.dot (E.dot obj x) xs
 
 let translate_ffi (cxt : Lam_compile_context.t) arg_types ~(prim_name : string)
     (decl : External_ffi_types.external_decl) (args : J.expression list) =

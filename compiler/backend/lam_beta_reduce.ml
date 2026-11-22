@@ -120,10 +120,8 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
   | Some x -> x
   | None ->
     let rest_bindings, rev_new_params =
-      Ext_list.fold_left2 params
-        (List.combine args (effects_after args))
-        ([], [])
-        (fun old_param (arg, effects_after) (rest_bindings, acc) ->
+      List.fold_left2
+        (fun (rest_bindings, acc) old_param ((arg : Lambda.t), effects_after) ->
           match arg with
           | Lconst _ -> (rest_bindings, arg :: acc)
           | Lvar _ when can_move ~assignable ~effects_after old_param body arg
@@ -132,6 +130,8 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
           | _ ->
             let p = Ident.rename old_param in
             ((p, arg) :: rest_bindings, Lambda.var p :: acc))
+        ([], []) params
+        (List.combine args (effects_after args))
     in
     let new_body =
       Lam_bounded_vars.rewrite
@@ -141,7 +141,8 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
     (* [rest_bindings] is in reverse parameter order; folding left makes the
        first parameter's binding outermost, so arguments evaluate in call
        order. *)
-    Ext_list.fold_left rest_bindings new_body (fun l (param, arg) ->
+    List.fold_left
+      (fun l (param, (arg : Lambda.t)) ->
         (match arg with
         | Lprim {primitive = Pmakeblock info; args; _}
           when Lambda.is_immutable_block info ->
@@ -151,6 +152,7 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
           Hash_ident.replace meta.ident_tbl param (Normal_optional v)
         | _ -> ());
         Lam_util.refine_let ~assignable ~kind:Strict param arg l)
+      new_body rest_bindings
 
 let propagate_beta_reduce_with_map (meta : Lam_stats.t)
     (map : Lam_var_stats.stats Map_ident.t) params body args =
@@ -161,10 +163,8 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
   | Some x -> x
   | None ->
     let rest_bindings, rev_new_params =
-      Ext_list.fold_left2 params
-        (List.combine args (effects_after args))
-        ([], [])
-        (fun old_param (arg, effects_after) (rest_bindings, acc) ->
+      List.fold_left2
+        (fun (rest_bindings, acc) old_param ((arg : Lambda.t), effects_after) ->
           let bind () =
             let p = Ident.rename old_param in
             ((p, arg) :: rest_bindings, Lambda.var p :: acc)
@@ -184,6 +184,8 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
               && can_move ~assignable ~effects_after old_param body arg
             then (rest_bindings, arg :: acc)
             else bind ())
+        ([], []) params
+        (List.combine args (effects_after args))
     in
     let new_body =
       Lam_bounded_vars.rewrite
@@ -191,7 +193,7 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
         body
     in
     (* See above: fold left so arguments evaluate in call order. *)
-    Ext_list.fold_left rest_bindings new_body
+    List.fold_left
       (fun l (param, (arg : Lambda.t)) ->
         (match arg with
         | Lprim {primitive = Pmakeblock info; args}
@@ -202,6 +204,7 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
           Hash_ident.replace meta.ident_tbl param (Normal_optional v)
         | _ -> ());
         Lam_util.refine_let ~assignable ~kind:Strict param arg l)
+      new_body rest_bindings
 
 let no_names_beta_reduce ~assignable params body args =
   match
@@ -211,5 +214,7 @@ let no_names_beta_reduce ~assignable params body args =
   | None ->
     (* Fold right, so that the first parameter's binding is outermost and the
        arguments evaluate in call order *)
-    Ext_list.fold_right2 params args body (fun param arg l ->
+    List.fold_right2
+      (fun param arg l ->
         Lam_util.refine_let ~assignable ~kind:Strict param arg l)
+      params args body

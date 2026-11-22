@@ -1856,10 +1856,12 @@ let reintroduce_fail sw =
     if !max >= 3 then
       let default = !i_max in
       let remove ls =
-        Ext_list.filter ls (fun (_, lam) ->
+        List.filter
+          (fun (_, lam) ->
             match Lambda_exits.as_simple_exit lam with
             | Some j -> j <> default
             | None -> true)
+          ls
       in
       let sw_consts = remove sw.sw_consts in
       let sw_blocks = remove sw.sw_blocks in
@@ -2517,7 +2519,7 @@ let as_exit_call lam =
       Some
         ( i,
           if env == Ident.empty then args
-          else Ext_list.map args (Lambda_traverse.subst_lambda env) )
+          else List.map (Lambda_traverse.subst_lambda env) args )
     | Llet (Alias, x, ex, body) ->
       go (Ident.add x (Lambda_traverse.subst_lambda env ex) env) body
     | _ -> None

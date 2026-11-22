@@ -146,7 +146,8 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
   | Ppat_record (fields, _, rest) -> (
     let field_with_cursor = ref None in
     let field_with_pat_hole = ref None in
-    Ext_list.iter fields (fun {lid = fname; x = f} ->
+    List.iter
+      (fun {Parsetree.lid = fname; x = f} ->
         match
           ( fname.Location.txt,
             f.Parsetree.ppat_loc
@@ -156,12 +157,15 @@ and traverse_pattern (pat : Parsetree.pattern) ~pattern_path ~loc_has_cursor
           field_with_cursor := Some (fname, f)
         | Lident fname, _ when is_pattern_hole f ->
           field_with_pat_hole := Some (fname, f)
-        | _ -> ());
+        | _ -> ())
+      fields;
     let seen_fields =
-      Ext_list.filter_map fields (fun {lid = field_name} ->
+      List.filter_map
+        (fun {Parsetree.lid = field_name} ->
           match field_name with
           | {Location.txt = Longident.Lident field_name} -> Some field_name
           | _ -> None)
+        fields
     in
     match (rest_cursor rest, !field_with_cursor, !field_with_pat_hole) with
     | Some (`Name txt), _, _ -> Some (txt, pattern_path)

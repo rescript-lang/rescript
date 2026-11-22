@@ -55,7 +55,7 @@ and translate (x : Lambda.structured_constant) : J.expression =
   | Const_string s -> E.str s
   | Const_polyvar name -> E.str name
   | Const_block (tag_info, xs) ->
-    Js_of_lam_block.make_block NA tag_info (Ext_list.map xs translate)
+    Js_of_lam_block.make_block NA tag_info (List.map translate xs)
 
 (* E.arr Mutable ~comment:"float array" *)
 (*   (Ext_list.map (fun x ->  E.float  x ) ars) *)

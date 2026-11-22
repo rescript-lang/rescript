@@ -125,7 +125,7 @@ let map_opt f = function
   | None -> None
   | Some x -> Some (f x)
 let has_template_attr attrs =
-  Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.template")
+  List.exists (fun ({txt}, _) -> txt = "res.template") attrs
 
 let remove_template_attr attrs =
   List.filter (fun ({Location.txt}, _) -> txt <> "res.template") attrs
@@ -959,7 +959,7 @@ module E = struct
          attribute (that is where the old parser kept them, and where the
          built-in PPX looks for decorators like [@this]). *)
       let lab = Asttypes.to_arg_label lab in
-      let async = Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.async") in
+      let async = List.exists (fun ({txt}, _) -> txt = "res.async") attrs in
       (* [res.async] is bridge metadata added by [Ast_mapper_to0]; it is
          decoded into the [async] flag and must not survive as a real
          attribute. *)
@@ -1305,7 +1305,8 @@ module E = struct
       variant ~loc ~attrs lab {txt = args; loc = args_loc}
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
-        (Ext_list.map l (fun (lid, e) ->
+        (List.map
+           (fun (lid, e) ->
              let lid1 = map_loc sub lid in
              let e1 = sub.expr sub e in
              let optional, attrs =
@@ -1315,7 +1316,8 @@ module E = struct
                Pt.lid = lid1;
                x = {e1 with pexp_attributes = attrs};
                opt = optional;
-             }))
+             })
+           l)
         (map_opt (sub.expr sub) eo)
     | Pexp_field (e, lid) ->
       field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
@@ -1595,7 +1597,8 @@ module P = struct
     | Ppat_record (lpl, cf) ->
       let rest, attrs = get_record_rest_attr attrs in
       record ~loc ~attrs ?rest
-        (Ext_list.map lpl (fun (lid, p) ->
+        (List.map
+           (fun (lid, p) ->
              let lid1 = map_loc sub lid in
              let p1 = sub.pat sub p in
              let optional, attrs =
@@ -1605,7 +1608,8 @@ module P = struct
                Pt.lid = lid1;
                x = {p1 with ppat_attributes = attrs};
                opt = optional;
-             }))
+             })
+           lpl)
         cf
     | Ppat_array pl -> array ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_or (p1, p2) -> or_ ~loc ~attrs (sub.pat sub p1) (sub.pat sub p2)

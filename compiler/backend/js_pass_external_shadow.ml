@@ -42,18 +42,22 @@ let add_binding (ident : Ident.t) names =
    including before the declaration. A [Block] statement is printed without
    braces, so its declarations are in the enclosing block. *)
 let rec add_declarations (block : J.block) names =
-  Ext_list.fold_left block names (fun acc (st : J.statement) ->
+  List.fold_left
+    (fun acc (st : J.statement) ->
       match st.statement_desc with
       | Variable {ident} -> add_binding ident acc
       | Block block -> add_declarations block acc
       | _ -> acc)
+    names block
 
 (* The cases of a switch are printed without braces, so they share one scope. *)
 let add_switch_declarations (clauses : (_ * J.case_clause) list)
     (default : J.block option) names =
   let names =
-    Ext_list.fold_left clauses names (fun acc (_, c) ->
+    List.fold_left
+      (fun acc ((_, c) : _ * J.case_clause) ->
         add_declarations c.switch_body acc)
+      names clauses
   in
   match default with
   | Some block -> add_declarations block names
@@ -88,8 +92,10 @@ let program (js : J.program) : J.program =
   let super = Js_record_map.super in
   let map_cases (self : Js_record_map.iter) clauses default =
     with_bindings (add_switch_declarations clauses default) (fun () ->
-        ( Ext_list.map clauses (fun (key, (c : J.case_clause)) ->
-              (key, {c with switch_body = self.block self c.switch_body})),
+        ( List.map
+            (fun (key, (c : J.case_clause)) ->
+              (key, {c with switch_body = self.block self c.switch_body}))
+            clauses,
           match default with
           | None -> None
           | Some block -> Some (self.block self block) ))
@@ -110,7 +116,7 @@ let program (js : J.program) : J.program =
           | Fun {params} ->
             with_bindings
               (fun names ->
-                Ext_list.fold_left params names (fun acc p -> add_binding p acc))
+                List.fold_left (fun acc p -> add_binding p acc) names params)
               (fun () -> super.expression self expr)
           | _ -> super.expression self expr);
       statement =

@@ -110,15 +110,19 @@ let simple_beta_reduce ~assignable params body args =
      evaluates *)
   let check_order_exn () =
     let unused =
-      Ext_list.filter_map params (fun p ->
+      List.filter_map
+        (fun p ->
           let {used; rank; motion} = Hash_ident.find param_hash p in
           if used then None else Some (rank, motion))
+        params
     in
     let rec in_order = function
       | [] -> true
       | (rank, motion) :: later ->
-        Ext_list.for_all later (fun (rank', motion') ->
+        List.for_all
+          (fun (rank', motion') ->
             rank <= rank' || not (Lam_analysis.conflict motion motion'))
+          later
         && in_order later
     in
     if not (in_order (unused @ List.rev !evaluated)) then

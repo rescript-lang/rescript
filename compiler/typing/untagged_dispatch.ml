@@ -38,13 +38,13 @@ let is_primitive = function
 (* The cases of a switch: arms with one body share it, the earlier ones
    falling through to the last *)
 let clauses ~same ~shares arms =
-  Ext_list.flat_map
-    (Ext_list.stable_group arms (fun (key1, body1) (key2, body2) ->
-         shares key1 key2 && same body1 body2))
+  List.concat_map
     (fun group ->
       Ext_list.map_last group (fun last (key, body) ->
           if last then (key, Body (Run body))
           else (key, Falls_through (Some body))))
+    (Ext_list.stable_group arms (fun (key1, body1) (key2, body2) ->
+         shares key1 key2 && same body1 body2))
 
 (* A subclass is checked before its superclasses, otherwise the declaration
    order decides *)
@@ -95,9 +95,11 @@ let payload_part ~same ~block_cases ~null_guard ~fallback ~has_default arms =
     in
     let instances =
       subclasses_first
-        (Ext_list.filter_map block_cases (function
-          | InstanceType i -> Some i
-          | _ -> None))
+        (List.filter_map
+           (function
+             | InstanceType i -> Some i
+             | _ -> None)
+           block_cases)
     in
     let is_class = function
       | Instance.Class _ -> true
@@ -190,9 +192,11 @@ let payload_part ~same ~block_cases ~null_guard ~fallback ~has_default arms =
               && not (List.exists (fun (k, _) -> k = kind) primitive_clauses))
             block_cases
         in
-        Ext_list.mapi kinds (fun index kind ->
+        List.mapi
+          (fun index kind ->
             if index = List.length kinds - 1 then (kind, Body Fallback)
             else (kind, Falls_through None))
+          kinds
       else []
     in
     let primitive_clauses = primitive_clauses @ unmatched_primitives in
@@ -412,9 +416,11 @@ let plan ~same
     let unnamed =
       match literal_default with
       | Some fallback ->
-        Ext_list.filter_map unnamed (fun literal ->
+        List.filter_map
+          (fun literal ->
             if payload_has_default && skips_the_switch literal then None
             else Some (literal, fallback))
+          unnamed
       | None -> []
     in
     let literal_arms = literal_arms @ unnamed in

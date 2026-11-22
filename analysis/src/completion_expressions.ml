@@ -137,7 +137,8 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
   | Pexp_record (fields, _) -> (
     let field_with_cursor = ref None in
     let field_with_expr_hole = ref None in
-    Ext_list.iter fields (fun {lid = fname; x = exp} ->
+    List.iter
+      (fun {Parsetree.lid = fname; x = exp} ->
         match
           ( fname.Location.txt,
             exp.Parsetree.pexp_loc |> Cursor_position.classify_loc ~pos )
@@ -146,12 +147,15 @@ let rec traverse_expr (exp : Parsetree.expression) ~expr_path ~pos
           field_with_cursor := Some (fname, exp)
         | Lident fname, _ when is_expr_hole exp ->
           field_with_expr_hole := Some (fname, exp)
-        | _ -> ());
+        | _ -> ())
+      fields;
     let seen_fields =
-      Ext_list.filter_map fields (fun {lid = field_name} ->
+      List.filter_map
+        (fun {Parsetree.lid = field_name} ->
           match field_name with
           | {Location.txt = Longident.Lident field_name} -> Some field_name
           | _ -> None)
+        fields
     in
     match (!field_with_cursor, !field_with_expr_hole) with
     | Some (fname, f), _ | None, Some (fname, f) -> (

@@ -48,7 +48,7 @@ let check ~file ~pass lam =
     else Hash_ident.add defined_variables id ()
   in
   let rec check_list xs (cxt : Set_int.t) =
-    Ext_list.iter xs (fun x -> check_staticfails x cxt)
+    List.iter (fun x -> check_staticfails x cxt) xs
   and check_list_snd : 'a. ('a * Lambda.t) list -> _ -> unit =
    fun xs cxt -> Ext_list.iter_snd xs (fun x -> check_staticfails x cxt)
   and check_staticfails (l : Lambda.t) (cxt : Set_int.t) =
@@ -99,7 +99,7 @@ let check ~file ~pass lam =
     | Lsequence (e1, e2) -> check_list [e1; e2] cxt
     | Lassign (_id, e) -> check_staticfails e cxt
   in
-  let rec iter_list xs = Ext_list.iter xs iter
+  let rec iter_list xs = List.iter iter xs
   and iter_list_snd : 'a. ('a * Lambda.t) list -> unit =
    fun xs -> Ext_list.iter_snd xs iter
   and iter (l : Lambda.t) =

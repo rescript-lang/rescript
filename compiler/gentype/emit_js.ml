@@ -200,7 +200,8 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
         | Object (closed_flags, fields) ->
           (* JSX V3 *)
           let fields =
-            Ext_list.filter_map fields (fun (field : field) ->
+            List.filter_map
+              (fun (field : field) ->
                 match field.name_js with
                 | "children" when field.type_ |> Emit_type.is_type_react_element
                   ->
@@ -209,6 +210,7 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
                   (* Filter out key, which is added to the props type definition in V4 *)
                   None
                 | _ -> Some field)
+              fields
           in
           let function_ =
             {
@@ -329,7 +331,8 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
             (* JSX V4 *)
             let props_type =
               let fields =
-                Ext_list.filter_map fields (fun (field : field) ->
+                List.filter_map
+                  (fun (field : field) ->
                     match field.name_js with
                     | "children"
                       when field.type_ |> Emit_type.is_type_react_element ->
@@ -338,6 +341,7 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
                       (* Filter out key, which is added to the props type definition in V4 *)
                       None
                     | _ -> Some field)
+                  fields
               in
               Object (closed_flags, fields)
             in

@@ -60,7 +60,7 @@ let wrap_then_path import (path : string list) =
       E.ocaml_fun ~return_unit:false ~async:false ~one_unit_arg:false [arg]
         [
           {
-            statement_desc = J.Return (Ext_list.fold_left path (E.var arg) E.dot);
+            statement_desc = J.Return (List.fold_left E.dot (E.var arg) path);
             comment = None;
             source_loc = None;
           };

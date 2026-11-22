@@ -26,13 +26,9 @@ val map_to_array : 'a list -> ('a -> 'b) -> 'b array
 (** Map left to right directly into an array without allocating an intermediate
     list. *)
 
-val map : 'a list -> ('a -> 'b) -> 'b list
-
 val map_combine : 'a list -> 'b list -> ('a -> 'c) -> ('c * 'b) list
 
 val combine_array : 'a array -> 'b list -> ('a -> 'c) -> ('c * 'b) list
-
-val mapi : 'a list -> (int -> 'a -> 'b) -> 'b list
 
 val mapi_append : 'a list -> (int -> 'a -> 'b) -> 'b list -> 'b list
 
@@ -58,26 +54,13 @@ val last : 'a list -> 'a
     raise if the list is empty
 *)
 
-val append : 'a list -> 'a list -> 'a list
-
-val append_one : 'a list -> 'a -> 'a list
-
 val map_append : 'b list -> 'a list -> ('b -> 'a) -> 'a list
-
-val fold_right : 'a list -> 'b -> ('a -> 'b -> 'b) -> 'b
-
-val fold_right2 : 'a list -> 'b list -> 'c -> ('a -> 'b -> 'c -> 'c) -> 'c
 
 val fold_right3 :
   'a list -> 'b list -> 'c list -> 'd -> ('a -> 'b -> 'c -> 'd -> 'd) -> 'd
 
-val map2 : 'a list -> 'b list -> ('a -> 'b -> 'c) -> 'c list
-
 val fold_left_with_offset :
   'a list -> 'acc -> int -> ('a -> 'acc -> int -> 'acc) -> 'acc
-
-val filter_map : 'a list -> ('a -> 'b option) -> 'b list
-(** @unused *)
 
 (** [excludes p l]
     return a tuple [excluded,newl]
@@ -85,8 +68,6 @@ val filter_map : 'a list -> ('a -> 'b option) -> 'b list
     element is removed,[newl] is the new list where all [p x] for [x] is false
 
 *)
-
-val same_length : 'a list -> 'b list -> bool
 
 val split_at : 'a list -> int -> 'a list * 'a list
 (** [split_at n l]
@@ -116,8 +97,6 @@ val rev_map_append : 'a list -> 'b list -> ('a -> 'b) -> 'b list
    we can do
 *)
 
-val flat_map : 'a list -> ('a -> 'b list) -> 'b list
-
 val stable_group : 'a list -> ('a -> 'a -> bool) -> 'a list list
 (**
     [stable_group eq lst]
@@ -134,8 +113,6 @@ val stable_group : 'a list -> ('a -> 'a -> bool) -> 'a list list
     which could be improved later
 *)
 
-val find_first : 'a list -> ('a -> bool) -> 'a option
-
 val find_first_not : 'a list -> ('a -> bool) -> 'a option
 (** [find_first_not p lst ]
     if all elements in [lst] pass, return [None] 
@@ -144,10 +121,6 @@ val find_first_not : 'a list -> ('a -> bool) -> 'a option
 *)
 
 val rev_iter : 'a list -> ('a -> unit) -> unit
-
-val iter : 'a list -> ('a -> unit) -> unit
-
-val for_all : 'a list -> ('a -> bool) -> bool
 
 val for_all_snd : ('a * 'b) list -> ('b -> bool) -> bool
 
@@ -172,26 +145,22 @@ val assoc_by_string : (string * 'a) list -> string -> 'a option -> 'a
 *)
 
 val nth_opt : 'a list -> int -> 'a option
+(** Returns [None] for a negative index, where [List.nth_opt] raises
+    [Invalid_argument]. Callers pass constant indexes from the compiled
+    program, such as the [-1] in [[1, 2][-1]]. *)
 
 val iter_snd : ('a * 'b) list -> ('b -> unit) -> unit
 
 val iter_fst : ('a * 'b) list -> ('a -> unit) -> unit
 
-val exists : 'a list -> ('a -> bool) -> bool
-
 val exists_fst : ('a * 'b) list -> ('a -> bool) -> bool
 
 val exists_snd : ('a * 'b) list -> ('b -> bool) -> bool
 
-val fold_left2 : 'a list -> 'b list -> 'c -> ('a -> 'b -> 'c -> 'c) -> 'c
-
-val fold_left : 'a list -> 'b -> ('b -> 'a -> 'b) -> 'b
-
 val singleton_exn : 'a list -> 'a
-
-val filter : 'a list -> ('a -> bool) -> 'a list
 
 val array_list_filter_map :
   'a array -> 'b list -> ('a -> 'b -> 'c option) -> 'c list
 
 val is_empty : 'a list -> bool
+(** [List.is_empty] needs OCaml 5.1. *)

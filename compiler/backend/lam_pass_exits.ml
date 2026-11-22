@@ -19,7 +19,7 @@
         to inline directly since if it contains bounded variables it
         must be rebounded before inlining
 *)
-let rec no_list args = Ext_list.for_all args no_bounded_variables
+let rec no_list args = List.for_all no_bounded_variables args
 
 and no_list_snd : 'a. ('a * Lambda.t) list -> bool =
  fun args -> Ext_list.for_all_snd args no_bounded_variables
@@ -195,13 +195,16 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lambda.t) :
       match Hash_int.find_opt subst i with
       | Some (xs, handler) ->
         let handler = to_lam handler in
-        let ys = Ext_list.map xs Ident.rename in
+        let ys = List.map Ident.rename xs in
         let env =
-          Ext_list.fold_right2 xs ys Ident.empty (fun x y t ->
-              Ident.add x (Lambda.var y) t)
+          List.fold_right2
+            (fun x y t -> Ident.add x (Lambda.var y) t)
+            xs ys Ident.empty
         in
-        Ext_list.fold_right2 ys ls' (Lambda_traverse.subst_lambda env handler)
+        List.fold_right2
           (fun y l r -> Lambda.let_ Strict y l r)
+          ys ls'
+          (Lambda_traverse.subst_lambda env handler)
       | None -> if ls' == ls then lam else Lambda.staticraise i ls')
     | _ -> Lambda_traverse.shallow_map_sharing simplif lam
   in

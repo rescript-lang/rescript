@@ -851,7 +851,7 @@ let rec copy ?env ?partial ?keep_names ty =
                   then
                     ( more',
                       {
-                        row_fields = Ext_list.filter row.row_fields not_reither;
+                        row_fields = List.filter not_reither row.row_fields;
                         row_more = more';
                         row_closed = false;
                         row_fixed = false;
@@ -4432,7 +4432,7 @@ let rec normalize_type_rec env visited ty =
          let fields =
            List.sort
              (fun (p, _) (q, _) -> compare p q)
-             (Ext_list.filter fields (fun (_, fi) -> fi <> Rabsent))
+             (List.filter (fun (_, fi) -> fi <> Rabsent) fields)
          in
          log_type ty;
          ty.desc <- Tvariant {row with row_fields = fields}

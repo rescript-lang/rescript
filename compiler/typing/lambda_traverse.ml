@@ -178,11 +178,11 @@ let make_key e =
 let shallow_exists (f : t -> bool) (lam : t) : bool =
   match lam with
   | Lvar _ | Lglobal_module _ | Lconst _ | Lbreak | Lcontinue -> false
-  | Lapply {ap_func; ap_args} -> f ap_func || Ext_list.exists ap_args f
+  | Lapply {ap_func; ap_args} -> f ap_func || List.exists f ap_args
   | Lfunction {body} -> f body
   | Llet (_, _, arg, body) -> f arg || f body
   | Lletrec (decl, body) -> f body || Ext_list.exists_snd decl f
-  | Lprim {args} -> Ext_list.exists args f
+  | Lprim {args} -> List.exists f args
   | Lswitch (arg, {sw_consts; sw_blocks; sw_failaction}) ->
     f arg
     || Ext_list.exists_snd sw_consts f
@@ -192,7 +192,7 @@ let shallow_exists (f : t -> bool) (lam : t) : bool =
     f arg
     || Ext_list.exists_snd cases f
     || Option.fold ~none:false ~some:f default
-  | Lstaticraise (_, args) -> Ext_list.exists args f
+  | Lstaticraise (_, args) -> List.exists f args
   | Lstaticcatch (e1, _, e2) -> f e1 || f e2
   | Ltrywith (e1, _, e2) | Ltryfinally (e1, e2) -> f e1 || f e2
   | Lifthenelse (e1, e2, e3) -> f e1 || f e2 || f e3

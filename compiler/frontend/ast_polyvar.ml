@@ -24,7 +24,8 @@
 
 let map_row_fields_into_ints ptyp_loc (row_fields : Parsetree.row_field list) =
   let _, acc =
-    Ext_list.fold_left row_fields (0, []) (fun (i, acc) rtag ->
+    List.fold_left
+      (fun (i, acc) (rtag : Parsetree.row_field) ->
         match rtag with
         | Rtag ({txt}, attrs, true, []) ->
           let i =
@@ -34,6 +35,7 @@ let map_row_fields_into_ints ptyp_loc (row_fields : Parsetree.row_field list) =
           in
           (i + 1, (txt, i) :: acc)
         | _ -> Bs_syntaxerr.err ptyp_loc Invalid_bs_int_type)
+      (0, []) row_fields
   in
   List.rev acc
 
@@ -45,7 +47,8 @@ let map_row_fields_into_strings ptyp_loc (row_fields : Parsetree.row_field list)
     : External_arg_spec.attr =
   let has_bs_as = ref false in
   let case, result =
-    Ext_list.fold_right row_fields (`Nothing, []) (fun tag (nullary, acc) ->
+    List.fold_right
+      (fun (tag : Parsetree.row_field) (nullary, acc) ->
         match (nullary, tag) with
         | (`Nothing | `Null), Rtag ({txt}, attrs, true, []) ->
           let name =
@@ -66,6 +69,7 @@ let map_row_fields_into_strings ptyp_loc (row_fields : Parsetree.row_field list)
           in
           (`NonNull, (txt, name) :: acc)
         | _ -> Bs_syntaxerr.err ptyp_loc Invalid_bs_string_type)
+      row_fields (`Nothing, [])
   in
   match case with
   | `Nothing -> Bs_syntaxerr.err ptyp_loc Invalid_bs_string_type

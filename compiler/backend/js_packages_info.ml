@@ -64,9 +64,9 @@ let same_package_by_name (x : t) (y : t) =
 
 let is_runtime_package (x : t) = x.name = Pkg_runtime
 
-let iter (x : t) cb = Ext_list.iter x.module_systems cb
+let iter (x : t) cb = List.iter cb x.module_systems
 
-let map (x : t) cb = Ext_list.map x.module_systems cb
+let map (x : t) cb = List.map cb x.module_systems
 
 (* let equal (x : t) ({name; module_systems}) =
     x.name = name &&
@@ -113,8 +113,9 @@ let query_package_infos ({name; module_systems} : t)
   | Pkg_empty -> Package_script
   | Pkg_normal name -> (
     match
-      Ext_list.find_first module_systems (fun k ->
-          compatible k.module_system module_system)
+      List.find_opt
+        (fun k -> compatible k.module_system module_system)
+        module_systems
     with
     | Some k ->
       let rel_path = k.path in
@@ -124,8 +125,9 @@ let query_package_infos ({name; module_systems} : t)
   | Pkg_runtime -> (
     (*FIXME: [compatible] seems not correct *)
     match
-      Ext_list.find_first module_systems (fun k ->
-          compatible k.module_system module_system)
+      List.find_opt
+        (fun k -> compatible k.module_system module_system)
+        module_systems
     with
     | Some k ->
       let rel_path = k.path in

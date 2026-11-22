@@ -131,11 +131,12 @@ let expand_labels_with_type_spreads (env : Env.t)
         | _p0, _p, {type_kind = Type_record (fields, _repr); type_params} ->
           let type_vars = extract_type_vars type_params ld_type.ctyp_type in
           process_lbls
-            ( fst acc @ Ext_list.map fields (fun l -> mk_lbl l ld_type type_vars),
+            ( fst acc @ List.map (fun l -> mk_lbl l ld_type type_vars) fields,
               snd acc
-              @ Ext_list.map fields (fun l ->
-                  {l with ld_type = substitute_type_vars type_vars l.ld_type})
-            )
+              @ List.map
+                  (fun (l : Types.label_declaration) ->
+                    {l with ld_type = substitute_type_vars type_vars l.ld_type})
+                  fields )
             rest rest'
         | _ -> None
         | exception _ -> None)

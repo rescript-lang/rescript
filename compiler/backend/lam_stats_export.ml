@@ -28,7 +28,8 @@ let single_na = Js_cmj_format.single_na
 
 let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
     Js_cmj_format.cmj_value Map_string.t =
-  Ext_list.fold_left meta.exports Map_string.empty (fun acc x ->
+  List.fold_left
+    (fun acc x ->
       let arity : Js_cmj_format.arity =
         match Hash_ident.find_opt meta.ident_tbl x with
         | Some (FunctionId {arity; _}) -> Single arity
@@ -106,6 +107,7 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
           {arity; persistent_closed_lambda}
         in
         Map_string.add x.name cmj_value acc)
+    Map_string.empty meta.exports
 
 (* ATTENTION: all runtime modules, if it is not hard required,
    it should be okay to not reference it

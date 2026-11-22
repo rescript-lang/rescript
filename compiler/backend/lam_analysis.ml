@@ -38,7 +38,7 @@ let rec no_side_effects (lam : Lambda.t) : bool =
      this expression itself is side effect free
   *)
   | Lprim {primitive; args; _} -> (
-    Ext_list.for_all args no_side_effects
+    List.for_all no_side_effects args
     &&
     match primitive with
     | Pmodint | Pdivint | Pdivbigint | Pmodbigint -> (
@@ -150,7 +150,7 @@ let rec delay_safe ~assignable (lam : Lambda.t) : bool =
     delay_safe ~assignable a && delay_safe ~assignable b
     && delay_safe ~assignable c
   | Lprim {primitive; args} -> (
-    Ext_list.for_all args (delay_safe ~assignable)
+    List.for_all (delay_safe ~assignable) args
     &&
     match primitive with
     | Pdivint | Pmodint | Pdivbigint | Pmodbigint | Ppowbigint ->
@@ -301,10 +301,12 @@ let size_upto ~limit (lam : Lambda.t) =
   | exception Limit_reached -> limit
 
 let args_all_const (args : Lambda.t list) =
-  Ext_list.for_all args (fun x ->
+  List.for_all
+    (fun (x : Lambda.t) ->
       match x with
       | Lconst _ -> true
       | _ -> false)
+    args
 
 let exit_inline_size = 7
 

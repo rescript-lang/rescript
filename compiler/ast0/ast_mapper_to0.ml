@@ -106,7 +106,7 @@ let raw_extension sub ~name ~name_loc (source : Parsetree.raw_source) :
       ] )
 
 let add_template_attr attrs =
-  if Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.template") then attrs
+  if List.exists (fun ({txt}, _) -> txt = "res.template") attrs then attrs
   else template_attr :: attrs
 
 let for_of_attr_name = "_res.for_of"
@@ -115,7 +115,7 @@ let finally_attr_name = "_res.finally"
 let ppx_context_string_attr_name = "_res.ppx_context_string"
 
 let has_ppx_context_string_attr attrs =
-  Ext_list.exists attrs (fun ({txt}, _) -> txt = ppx_context_string_attr_name)
+  List.exists (fun ({txt}, _) -> txt = ppx_context_string_attr_name) attrs
 
 let remove_ppx_context_string_attr attrs =
   List.filter
@@ -706,13 +706,15 @@ module E = struct
       variant ~loc ~attrs lab arg
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
-        (Ext_list.map l (fun {lid; x = e; opt = optional} ->
+        (List.map
+           (fun {lid; x = e; opt = optional} ->
              let lid1 = map_loc sub lid in
              let e1 = sub.expr sub e in
              let attr =
                Parsetree0.add_optional_attr ~optional e1.pexp_attributes
              in
-             (lid1, {e1 with pexp_attributes = attr})))
+             (lid1, {e1 with pexp_attributes = attr}))
+           l)
         (map_opt (sub.expr sub) eo)
     | Pexp_field (e, lid) ->
       field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
@@ -1017,13 +1019,15 @@ module P = struct
           add_record_rest_attr ~rest:(record_rest_to_pattern sub rest_pat) attrs
       in
       record ~loc ~attrs
-        (Ext_list.map lpl (fun {lid; x = p; opt = optional} ->
+        (List.map
+           (fun {lid; x = p; opt = optional} ->
              let lid1 = map_loc sub lid in
              let p1 = sub.pat sub p in
              let attr =
                Parsetree0.add_optional_attr ~optional p1.ppat_attributes
              in
-             (lid1, {p1 with ppat_attributes = attr})))
+             (lid1, {p1 with ppat_attributes = attr}))
+           lpl)
         cf
     | Ppat_array pl -> array ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_or (p1, p2) -> or_ ~loc ~attrs (sub.pat sub p1) (sub.pat sub p2)

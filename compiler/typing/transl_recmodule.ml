@@ -171,11 +171,13 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
 let rec is_function_or_const_block (lam : Lambda.t) acc =
   match lam with
   | Lprim {primitive = Pmakeblock _; args; loc = _} ->
-    Ext_list.for_all args (fun x ->
+    List.for_all
+      (fun x ->
         match x with
         | Lvar id -> Set_ident.mem id acc
         | Lfunction _ | Lconst _ -> true
         | _ -> false)
+      args
   | Llet (_, id, Lfunction _, cont) ->
     is_function_or_const_block cont (Set_ident.add id acc)
   | Lletrec (bindings, cont) -> (
@@ -195,10 +197,12 @@ let rec is_function_or_const_block (lam : Lambda.t) acc =
   | _ -> false
 
 let is_strict_or_all_functions (xs : binding list) =
-  Ext_list.for_all xs (fun (_, opt, rhs) ->
+  List.for_all
+    (fun (_, opt, rhs) ->
       match opt with
       | None -> true
       | _ -> is_function_or_const_block rhs Set_ident.empty)
+    xs
 
 (* Without such optimizations:
 
@@ -234,9 +238,7 @@ let is_strict_or_all_functions (xs : binding list) =
 *)
 let eval_rec_bindings (bindings : binding list) (cont : t) : t =
   if is_strict_or_all_functions bindings then
-    Lambda_scc.bind_rec
-      (Ext_list.map bindings (fun (id, _, rhs) -> (id, rhs)))
-      cont
+    Lambda_scc.bind_rec (List.map (fun (id, _, rhs) -> (id, rhs)) bindings) cont
   else eval_rec_bindings_aux bindings cont
 
 let compile_recmodule compile_rhs bindings cont =
