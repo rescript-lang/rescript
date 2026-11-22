@@ -185,7 +185,7 @@ let implementation_map ppf sourcefile =
   let () = (Js_config.current ()).cmj_only := true in
   let ichan = open_in_bin (Compiler_request_state.resolve_path sourcefile) in
   seek_in ichan (Ext_digest.length + 1);
-  let list_of_modules = Ext_io.rev_lines_of_chann ichan in
+  let list_of_modules = File_io.rev_lines_of_chann ichan in
   close_in ichan;
   let ns = Ext_filename.module_name (Filename.remove_extension sourcefile) in
   let ml_ast =

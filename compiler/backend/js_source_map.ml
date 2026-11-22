@@ -124,7 +124,7 @@ let make ~generated_file ~source_root ~sources_content =
   }
 
 let load_content filename =
-  try Some (Ext_io.load_file filename) with _ -> None
+  try Some (File_io.load_file filename) with _ -> None
 
 let add_source builder filename =
   let filename =

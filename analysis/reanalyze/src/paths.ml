@@ -6,7 +6,7 @@ let get key t =
   | `Assoc items -> List.assoc_opt key items
   | _ -> None
 
-let read_file filename = try Some (Ext_io.load_file filename) with _ -> None
+let read_file filename = try Some (File_io.load_file filename) with _ -> None
 
 let rec find_project_root ~dir =
   let rescript_json_file = Filename.concat dir rescript_json in

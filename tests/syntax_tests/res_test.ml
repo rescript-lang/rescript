@@ -200,7 +200,7 @@ let () =
   let filename =
     Filename.concat data_dir "printer/comments/callbackTrailing.res"
   in
-  let source = Ext_io.load_file filename in
+  let source = File_io.load_file filename in
   let parse source =
     let result =
       Res_driver.parse_implementation_from_source ~display_filename:filename
@@ -247,7 +247,7 @@ let () =
 
 let () =
   let filename = Filename.concat data_dir "printer/regexpStatements.res" in
-  let source = Ext_io.load_file filename in
+  let source = File_io.load_file filename in
   let parse source =
     let result =
       Res_driver.parse_implementation_from_source ~display_filename:filename
@@ -427,8 +427,8 @@ let () =
 let () =
   let filename = Filename.concat data_dir "printer/expr/jsxChildren.res" in
   let source =
-    Ext_io.load_file filename
-    ^ Ext_io.load_file
+    File_io.load_file filename
+    ^ File_io.load_file
         (Filename.concat data_dir "printer/expr/jsxChildrenComments.res")
   in
   let parse source =
@@ -706,7 +706,7 @@ module Outcome_printer_tests = struct
         exit 1)
       else result.Res_driver.parsetree
     in
-    Ext_io.write_file
+    File_io.write_file
       (Filename.concat data_dir "oprint/expected/oprint.resi.txt")
       (signature_to_outcome signature)
 end

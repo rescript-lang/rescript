@@ -24,7 +24,7 @@
 
 module Set_string = Ast_extract.Set_string
 
-type 'a kind = 'a Ml_binary.kind =
+type 'a kind = 'a Ppx_ast.kind =
   | Ml : Parsetree.structure kind
   | Mli : Parsetree.signature kind
 
@@ -57,11 +57,11 @@ let header_source contents header =
     (header.source_end - header.source_start)
 
 let read_ast_exn (type t) ~fname (_ : t kind) : t =
-  let contents = Ext_io.load_file fname in
+  let contents = File_io.load_file fname in
   match read_header contents with
   | Some header ->
     Loc_report.set_input_name (header_source contents header);
-    Ext_io.unmarshal contents (header.source_end + 1)
+    File_io.unmarshal contents (header.source_end + 1)
   | None -> raise End_of_file
 
 (*

@@ -94,7 +94,7 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lambda.t Map_ident.t) :
                 lam_size < Lam_analysis.small_inline_size
                 && Map_ident.is_empty free_variables
               then (
-                Ext_log.dwarn ~__POS__ "%s recorded for inlining @." x.name;
+                Ir_log.dwarn ~__POS__ "%s recorded for inlining @." x.name;
                 optlam)
               else None
           else None

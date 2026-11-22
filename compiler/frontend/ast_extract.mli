@@ -24,4 +24,4 @@
 
 module Set_string = Depend.String_set
 
-val read_parse_and_extract : 'a Ml_binary.kind -> 'a -> Set_string.t
+val read_parse_and_extract : 'a Ppx_ast.kind -> 'a -> Set_string.t

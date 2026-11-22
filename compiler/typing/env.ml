@@ -707,7 +707,7 @@ let save_pers_struct crc ps =
 module Persistent_signature = struct
   type t = {filename: string; cmi: Cmi_format.cmi_infos}
 
-  (* Bs_conditional_initial installs the native loader once at startup. *)
+  (* Compiler_setup installs the native loader once at startup. *)
   let load =
     ref (fun ~unit_name ->
         match

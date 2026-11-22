@@ -31,7 +31,7 @@ let map_pat0 pat =
 (* The [ocaml.ppx.context] attribute a PPX receives. *)
 let ppx_context_fields0 ast0 =
   match ast0 with
-  | Ml_binary.Impl
+  | Ppx_ast.Impl
       ({
          Parsetree0.pstr_desc =
            Pstr_attribute
@@ -57,7 +57,7 @@ let test_ppx_context_on_the_wire _ =
       ]
   in
   let fields =
-    ppx_context_fields0 (Ml_binary.to_ast0 Ml_binary.Ml structure)
+    ppx_context_fields0 (Ppx_ast.to_ast0 Ppx_ast.Ml structure)
     |> List.map (fun (({txt} : Longident.t Location.loc), value) ->
         (Longident.last txt, value))
   in

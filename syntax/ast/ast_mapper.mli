@@ -40,7 +40,7 @@ let rewrite (str : structure) = test_mapper.structure test_mapper str]}
   External rewriters passed to [bsc] with [-ppx] are separate
   executables. {!Cmd_ppx_apply} prepends the [ocaml.ppx.context]
   attribute ({!Ppx_context.add_str}, {!Ppx_context.add_sig}), writes the
-  AST to a temporary file as the magic number of {!Ml_binary}, the
+  AST to a temporary file as the magic number of {!Ppx_ast}, the
   source file name and the marshalled {!Parsetree0} structure or
   signature, and runs [ppx input output]. The executable writes its
   result to [output] in the same format; {!Cmd_ppx_apply} reads it back,

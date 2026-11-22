@@ -93,9 +93,9 @@ let string_of_module_id (dep_module_id : Lam_module_ident.t)
         in
         match (dep_info_query, current_info_query) with
         | Package_not_found, _ ->
-          Bs_exception.error (Missing_ml_dependency dep_module_id.id.name)
+          Dependency_error.error (Missing_ml_dependency dep_module_id.id.name)
         | Package_script, Package_found _ ->
-          Bs_exception.error
+          Dependency_error.error
             (Dependency_script_module_dependent_not dep_module_id.id.name)
         | (Package_script | Package_found _), Package_not_found -> assert false
         | Package_found ({suffix} as pkg), Package_script ->
@@ -136,4 +136,4 @@ let string_of_module_id (dep_module_id : Lam_module_ident.t)
               ~from:(Ext_path.absolute_cwd_path output_dir)
               ~to_:(Ext_path.absolute_cwd_path dirname)
               basename
-          | None -> Bs_exception.error (Js_not_found js_file)))))
+          | None -> Dependency_error.error (Js_not_found js_file)))))

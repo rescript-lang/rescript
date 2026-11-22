@@ -190,7 +190,7 @@ let medium_test_cases =
 
 (* Number of components and their sizes, last component first *)
 let graph_check v =
-  let v = Ext_scc.graph v in
+  let v = Scc.graph v in
   (List.length v, List.fold_left (fun acc x -> Array.length x :: acc) [] v)
 
 (* [edges] lists the edges in input order; the successors of each node keep
@@ -255,7 +255,7 @@ let test2 (input : (string * string list) list) =
   String_hash.iter (fun k v -> other_mapping.(v) <- k) tbl;
 
   let output =
-    Ext_scc.graph (graph_of_edges nodes_num (edges_of_input tbl input))
+    Scc.graph (graph_of_edges nodes_num (edges_of_input tbl input))
   in
   output
   |> List.map (fun component ->

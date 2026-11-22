@@ -126,7 +126,7 @@ let print ?(src = None) ~message_kind intro ppf (loc : t) =
       let src =
         match src with
         | Some src -> src
-        | None -> Ext_io.load_file file
+        | None -> File_io.load_file file
       in
       (* we're putting the line break `@,` here rather than above, because this
          branch might not be reached (aka no inline file content display) so

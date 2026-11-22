@@ -70,7 +70,7 @@ let make ~(values : cmj_value Map_string.t) ~effect_ ~package_spec ~case : t =
 
 (* Serialization .. *)
 let from_file name : t =
-  Ext_io.unmarshal (Ext_io.load_file name) Ext_digest.length
+  File_io.unmarshal (File_io.load_file name) Ext_digest.length
 
 (* The length rules out a file cut short after its digest, as by a build
    killed while it wrote it in place. *)

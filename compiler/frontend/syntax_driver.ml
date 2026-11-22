@@ -35,7 +35,7 @@ let report_warnings warnings =
         (Warnings.Deprecated (Res_warning.message kind, loc, loc, false)))
     warnings
 
-let parsing_engine = Res_driver.make_parsing_engine ~load_file:Ext_io.load_file
+let parsing_engine = Res_driver.make_parsing_engine ~load_file:File_io.load_file
 
 exception Already_reported
 

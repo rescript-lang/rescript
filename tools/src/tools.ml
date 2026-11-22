@@ -883,7 +883,7 @@ module Format_codeblocks = struct
     in
     let content =
       if Filename.check_suffix path ".md" then
-        let content = Ext_io.load_file path in
+        let content = File_io.load_file path in
         let display_filename = Filename.basename path in
         let formatted_contents, had_code_blocks =
           format_rescript_code_blocks ~transform_assert_equal ~add_error
@@ -1166,7 +1166,7 @@ module Extract_codeblocks = struct
 
     let content =
       if Filename.check_suffix path ".md" then
-        let content = Ext_io.load_file path in
+        let content = File_io.load_file path in
         let display_filename = Filename.basename path in
         let code_blocks =
           extract_rescript_code_blocks ~transform_assert_equal ~add_error

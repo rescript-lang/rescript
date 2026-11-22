@@ -226,7 +226,7 @@ end
 
 (* One time setup for all relevant modules *)
 let () =
-  Bs_conditional_initial.setup_env ();
+  Compiler_setup.init ();
   (Clflags.current ()).binary_annotations := false;
   (Clflags.current ()).color := Some Always
 

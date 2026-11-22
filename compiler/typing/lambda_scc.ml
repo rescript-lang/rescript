@@ -104,7 +104,7 @@ let bind_rec (groups : bindings) (body : Lambda.t) : Lambda.t =
     else let_ Strict id bind body
   | _ ->
     let ids, lams, node_edges = preprocess_deps groups in
-    let clusters = Ext_scc.graph node_edges in
+    let clusters = Scc.graph node_edges in
     if List.compare_length_with clusters 1 <= 0 then letrec groups body
     else
       List.fold_right
