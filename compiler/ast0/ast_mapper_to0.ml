@@ -486,8 +486,8 @@ module E = struct
       aux pos offset
 
   let jsx_unit_expr =
-    Ast_helper0.Exp.construct ~loc:!Ast_helper0.default_loc
-      {txt = Lident "()"; loc = !Ast_helper0.default_loc}
+    Ast_helper0.Exp.construct ~loc:Ast_helper0.default_loc
+      {txt = Lident "()"; loc = Ast_helper0.default_loc}
       None
 
   let map_jsx_props sub props =
@@ -928,8 +928,8 @@ module E = struct
         Ast_helper0.Exp.construct ~loc {txt = Lident "[]"; loc} None
       in
       let unit_expr =
-        Ast_helper0.Exp.construct ~loc:!Ast_helper0.default_loc
-          {txt = Lident "()"; loc = !Ast_helper0.default_loc}
+        Ast_helper0.Exp.construct ~loc:Ast_helper0.default_loc
+          {txt = Lident "()"; loc = Ast_helper0.default_loc}
           None
       in
       apply ~loc ~attrs:(jsx_attr sub :: attrs) (ident tag_ident)
