@@ -135,7 +135,7 @@ let rec rewrite_pipe_rhs ~loc ~attrs a (f : exp) =
       pexp_loc = loc;
     }
   | Pexp_apply {funct = fn1; args; partial; transformed_jsx} ->
-    Bs_ast_invariant.warn_discarded_unused_attributes fn1.pexp_attributes;
+    Ast_checks.warn_discarded_unused_attributes fn1.pexp_attributes;
     {
       pexp_desc =
         Pexp_apply
@@ -163,7 +163,7 @@ let rec rewrite_pipe_rhs ~loc ~attrs a (f : exp) =
                              } );
                      }
                    | Pexp_apply {funct = fn; args; transformed_jsx} ->
-                     Bs_ast_invariant.warn_discarded_unused_attributes
+                     Ast_checks.warn_discarded_unused_attributes
                        fn.pexp_attributes;
                      {
                        Parsetree.pexp_desc =

@@ -15,8 +15,6 @@
 
 (* Description of primitive functions *)
 
-open Misc
-
 type prim_kind =
   | Kind_intrinsic
   | Kind_external of External_ffi_types.t
@@ -54,12 +52,6 @@ type resolved_external = {
   resolved_name: string;
   resolved_kind: prim_kind;
 }
-
-let resolve_external :
-    (Parsetree.value_description -> string -> resolved_external) ref =
-  ref (fun (_ : Parsetree.value_description) (_ : string) ->
-      fatal_error
-        "Primitive.resolve_external: no resolver registered (link Ppx_entry)")
 
 let make ~name ~kind ~arity ~from_constructor =
   {

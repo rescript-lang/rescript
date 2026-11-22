@@ -22,8 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(* The resolver behind [Primitive.resolve_external], which the type checker
-   calls once per declaration: an [@inline] constant, an FFI external with its
+(* [Typedecl] resolves each external declaration here: an [@inline] constant,
+   an FFI external with its
    specification, or an intrinsic. An FFI external's errors and warnings are
    reported here, including unused attributes on its resolved form. *)
 let resolve (value_desc : Parsetree.value_description) (prim_name : string) :
@@ -46,8 +46,7 @@ let resolve (value_desc : Parsetree.value_description) (prim_name : string) :
       Ast_external_process.resolve value_desc.pval_loc value_desc.pval_type
         value_desc.pval_attributes prim_name
     in
-    Bs_ast_invariant.emit_external_warnings_on_resolved_external value_desc
-      ~pval_type ~pval_attributes;
+    Ast_checks.check_resolved_external value_desc ~pval_type ~pval_attributes;
     {
       resolved_type = pval_type;
       resolved_attributes = pval_attributes;

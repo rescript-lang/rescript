@@ -1,5 +1,5 @@
 (* Copyright (C) 2015-2016 Bloomberg Finance L.P.
- * Copyright (C) 2017- Hongbo Zhang, Authors of ReScript 
+ * Copyright (C) 2017- Hongbo Zhang, Authors of ReScript
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,147 +17,14 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(** Warn about unused compiler attributes.
-    Note if we warn `deriving` too, 
-    it may fail third party ppxes
-*)
-let is_checked_attribute txt =
-  match txt with
-  | "as" | "config" | "ignore" | "int" | "optional" | "res.hoistedFunction"
-  | "string" | "unwrap" ->
-    true
-  | _ -> false
-
-(* OCaml spellings of builtin attributes the compiler used to accept. *)
-let removed_ocaml_attribute txt =
-  match txt with
-  | "ocaml.deprecated" -> Some "use `@deprecated` instead."
-  | "ocaml.unboxed" -> Some "use `@unboxed` instead."
-  | "ocaml.immediate" -> Some "use `@immediate` instead."
-  | "ocaml.warnerror" -> Some "use `@warnerror` instead."
-  | "ocaml.boxed" -> Some "remove it: types are boxed unless marked `@unboxed`."
-  | "ocaml.deprecated_mutable" -> Some "remove it."
-  | "ocaml.text" -> Some "use a doc comment instead."
-  | "ocaml.warning" -> Some "use `@warning` instead."
-  | "ocaml.ppwarning" -> Some "use `@ppwarning` instead."
-  | _ -> None
-
-let check_removed_ocaml_attribute (({txt; loc}, _) : Parsetree.attribute) =
-  match removed_ocaml_attribute txt with
-  | Some hint ->
-    Loc_report.raise_errorf ~loc "`@%s` is no longer supported, %s" txt hint
-  | None -> ()
-
-let check_removed_ocaml_extension (({txt; loc}, _) : Parsetree.extension) =
-  if txt = "ocaml.error" then
-    Loc_report.raise_errorf ~loc
-      "`%%ocaml.error` is no longer supported, use `%%error` instead."
-
-let warn_unused_attribute
-    ((({txt; loc} as sloc), _) as attr : Parsetree.attribute) =
-  check_removed_ocaml_attribute attr;
-  if
-    is_checked_attribute txt && (not loc.loc_ghost)
-    && not (Used_attributes.is_used_attribute sloc)
-  then Loc_report.prerr_warning loc (Bs_unused_attribute txt)
-
-let warn_discarded_unused_attributes (attrs : Parsetree.attributes) =
-  if attrs <> [] then List.iter warn_unused_attribute attrs
-
 type iterator = Ast_iterator.iterator
 
 let super = Ast_iterator.default_iterator
-
-let check_constant loc (const : Parsetree.constant) =
-  match const with
-  | Pconst_integer (s, None) -> (
-    (* range check using int32
-       It is better to give a warning instead of error to avoid make people unhappy.
-       It also has restrictions in which platform bsc is running on since it will
-       affect int ranges
-    *)
-    try ignore @@ Int32.of_string s
-    with _ -> Bs_warnings.warn_literal_overflow loc)
-  | _ -> ()
-
-(* Note we only used Bs_ast_iterator here, we can reuse compiler-libs instead of
-   rolling our own*)
-let emit_external_warnings : iterator =
-  {
-    super with
-    type_declaration =
-      (fun self ptyp ->
-        let txt = ptyp.ptype_name.txt in
-        if Ast_core_type.is_builtin_rank0_type txt then
-          Loc_report.raise_errorf ~loc:ptyp.ptype_loc
-            "built-in type `%s` can not be redefined " txt;
-        super.type_declaration self ptyp);
-    attribute = (fun _ attr -> warn_unused_attribute attr);
-    extension =
-      (fun self ext ->
-        check_removed_ocaml_extension ext;
-        super.extension self ext);
-    expr =
-      (fun self ({pexp_loc = loc} as a) ->
-        match a.pexp_desc with
-        | Pexp_constant const ->
-          check_constant loc const;
-          self.attributes self a.pexp_attributes
-        | _ -> super.expr self a);
-    label_declaration =
-      (fun self lbl ->
-        (* A field's [@as] is taken out of its attributes when it names the
-           field, so one still here is either a second one, which the type
-           checker rejects, or a payload that is not a name. The first is
-           reported already; the second is reported by nothing else, so let it
-           warn as the unused attribute it is. *)
-        List.iter
-          (fun (({txt}, payload) as attr : Parsetree.attribute) ->
-            if
-              txt = "as"
-              && Ast_payload.string_literal_of_payload payload <> None
-            then Used_attributes.mark_used_attribute attr)
-          lbl.pld_attributes;
-        super.label_declaration self lbl);
-    constructor_declaration =
-      (fun self ({pcd_name = {txt; loc}} as ctr) ->
-        ignore (Ast_untagged_variants.process_constructor_tag ctr);
-        (match txt with
-        | "false" | "true" | "()" ->
-          Loc_report.raise_errorf ~loc "%s can not be redefined " txt
-        | _ -> ());
-        super.constructor_declaration self ctr);
-    value_description =
-      (fun self v ->
-        match v with
-        | {pval_prim = Some prim_name}
-          when Ast_attributes.is_ffi_external v.pval_attributes prim_name ->
-          (* The type checker checks it in its resolved form, through
-             [Ast_external.resolve]. *)
-          ()
-        | {
-         pval_loc;
-         pval_prim = Some (("%identity" | "%component_identity") as byte_name);
-         pval_type;
-        }
-          when not (Ast_core_type.is_arity_one pval_type) ->
-          Loc_report.raise_errorf ~loc:pval_loc
-            "%s expects a function type of the form 'a => 'b (arity 1)"
-            byte_name
-        | _ -> super.value_description self v);
-    pat =
-      (fun self (pat : Parsetree.pattern) ->
-        match pat.ppat_desc with
-        | Ppat_constant constant ->
-          check_constant pat.ppat_loc constant;
-          self.attributes self pat.ppat_attributes
-        | _ -> super.pat self pat);
-  }
 
 let rec iter_warnings_on_stru (stru : Parsetree.structure) =
   match stru with
@@ -180,45 +47,10 @@ let rec iter_warnings_on_sigi (stru : Parsetree.signature) =
     | _ -> ())
 
 let emit_external_warnings_on_structure (stru : Parsetree.structure) =
-  emit_external_warnings.structure emit_external_warnings stru
+  Ast_checks.iterator.structure Ast_checks.iterator stru
 
 let emit_external_warnings_on_signature (sigi : Parsetree.signature) =
-  emit_external_warnings.signature emit_external_warnings sigi
-
-(* Can the walk report something for this part of a resolved external? Its
-   [attribute] case doesn't look into payloads, so an attribute can only if
-   the walk checks its name; a type can through its attributes and the forms
-   this doesn't look into. Most resolved externals hold nothing to report, and
-   skipping the walk saves its allocations. *)
-let attribute_may_report (({txt}, _) : Parsetree.attribute) =
-  is_checked_attribute txt || removed_ocaml_attribute txt <> None
-
-let rec type_may_report (ty : Parsetree.core_type) =
-  List.exists attribute_may_report ty.ptyp_attributes
-  ||
-  match ty.ptyp_desc with
-  | Ptyp_any | Ptyp_var _ -> false
-  | Ptyp_arrow {params; ret} ->
-    List.exists
-      (function
-        | Parsetree.Parg_type {attrs; typ} ->
-          List.exists attribute_may_report attrs || type_may_report typ
-        | Parg_fixed _ -> true)
-      params
-    || type_may_report ret
-  | Ptyp_tuple args | Ptyp_constr (_, args) -> List.exists type_may_report args
-  | Ptyp_object _ | Ptyp_alias _ | Ptyp_variant _ | Ptyp_poly _ | Ptyp_package _
-  | Ptyp_extension _ ->
-    true
-
-let emit_external_warnings_on_resolved_external
-    (value_desc : Parsetree.value_description) ~pval_type ~pval_attributes =
-  if
-    List.exists attribute_may_report pval_attributes
-    || type_may_report pval_type
-  then
-    super.value_description emit_external_warnings
-      {value_desc with pval_type; pval_prim = None; pval_attributes}
+  Ast_checks.iterator.signature Ast_checks.iterator sigi
 
 (* The PPX bridge renames the [ocaml.]-prefixed builtins a PPX emits to their
    bare names, so source written with them is checked before it reaches the
@@ -228,11 +60,11 @@ let removed_ocaml_spellings : iterator =
     super with
     attribute =
       (fun self attr ->
-        check_removed_ocaml_attribute attr;
+        Ast_checks.check_removed_ocaml_attribute attr;
         super.attribute self attr);
     extension =
       (fun self ext ->
-        check_removed_ocaml_extension ext;
+        Ast_checks.check_removed_ocaml_extension ext;
         super.extension self ext);
   }
 

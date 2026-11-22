@@ -89,7 +89,7 @@ let refine_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
          we should warn, there is a trade off whether
          we should warn dropped non bs attribute or not
       *)
-      Bs_ast_invariant.warn_discarded_unused_attributes ptyp_attrs;
+      Ast_checks.warn_discarded_unused_attributes ptyp_attrs;
       arg_cst_of_as_const cst)
   else (* ([`a|`b] [@string]) *)
     spec_of_ptyp nolabel ptyp
@@ -103,7 +103,7 @@ let refine_obj_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
        we should warn, there is a trade off whether
        we should warn dropped non bs attribute or not
     *)
-    Bs_ast_invariant.warn_discarded_unused_attributes ptyp_attrs;
+    Ast_checks.warn_discarded_unused_attributes ptyp_attrs;
     match payload with
     | None -> Bs_syntaxerr.err ptyp.ptyp_loc Invalid_underscore_type_in_external
     | Some cst -> arg_cst_of_as_const cst)

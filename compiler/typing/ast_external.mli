@@ -24,6 +24,6 @@
 
 val resolve :
   Parsetree.value_description -> string -> Primitive.resolved_external
-(** The resolver behind [Primitive.resolve_external]: an [@inline] constant,
-    an FFI external with its specification, or an intrinsic. Reports an FFI
-    external's errors and warnings. *)
+(** Resolve an external declaration during type checking: an [@inline]
+    constant, an FFI external with its specification, or an intrinsic.
+    Reports an FFI external's errors and warnings. *)

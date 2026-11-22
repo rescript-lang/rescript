@@ -52,7 +52,7 @@ let succeed attr attrs =
   | [_] -> ()
   | _ ->
     Used_attributes.mark_used_attribute attr;
-    Bs_ast_invariant.warn_discarded_unused_attributes attrs
+    Ast_checks.warn_discarded_unused_attributes attrs
 
 type mapper = Ast_mapper.mapper
 
