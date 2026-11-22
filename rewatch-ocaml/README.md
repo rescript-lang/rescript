@@ -46,7 +46,7 @@ does not depend on the runner's libc. The version lives in
 | Sources | `source`, `source_filter` (`--filter`), `source_dirs` |
 | Build orchestration | `build` (one build or watch rebuild), `build_preparation`, `build_session` (state kept across watch rebuilds), `build_attempt` (state of one attempt), `build_state`, `build_report` |
 | Parsing and compiling | `package_parse`, `package_compilation`, `compiler_args`, `compiler_process` (logical compiler jobs and their in-process execution), `compiler_execution_mode` (worker count), `compiler_scheduler`, `compiler_info` (fingerprints that decide when a package is cleaned), `compile_assets`, `module_graph`, `graph` |
-| Embedded compiler | `compiler/bsc/rescript_compiler_driver` (one request: argv in, exit code and captured output out), `compiler/ext/compiler_request_state` and `compiler_request_output` (per-request working directory and output capture) |
+| Embedded compiler | `compiler/bsc/rescript_compiler_driver` (one request: argv in, exit code and captured output out), `compiler/typing/compiler_request_state` and `compiler_request_output` (per-request working directory and output capture) |
 | Artifacts | `build_artifacts` (output paths, publication, stale cleanup), `build_freshness`, `clean`, `file_util` |
 | Processes | `process` (worker pool), `process_child` (one child and its pipes), `after_build` |
 | Platform | `platform.mli` implemented by `platform_unix.ml` or `platform_windows.ml` (selected by dune), `windows_job_stubs.c`, `termination_signals`, `build_lock` |

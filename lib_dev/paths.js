@@ -38,12 +38,12 @@ export const docstringTestDir = path.resolve(testDir, "docstring_tests");
 export const commonjsTestDir = path.resolve(testDir, "commonjs_tests");
 
 /**
- * path: `<projectDir>/compiler/common/bs_version.ml`
+ * path: `<projectDir>/compiler/typing/config.ml`
  */
 export const compilerVersionFile = path.resolve(
   compilerRootDir,
-  "common",
-  "bs_version.ml",
+  "typing",
+  "config.ml",
 );
 
 /**

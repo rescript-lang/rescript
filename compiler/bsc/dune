@@ -25,7 +25,10 @@
  (flags
   (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
  (wrapped false)
- (modules rescript_compiler_driver rescript_compiler_build_identity)
+ (modules
+  rescript_compiler_driver
+  rescript_compiler_build_identity
+  ext_file_extensions)
  (instrumentation
   (backend bisect_ppx))
  (libraries

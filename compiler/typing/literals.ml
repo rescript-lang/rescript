@@ -22,6 +22,61 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val version : string
+let js_type_number = "number"
 
-val header : string
+let js_type_string = "string"
+
+let js_type_object = "object"
+
+let js_type_boolean = "boolean"
+
+let tmp = "tmp"
+
+let create = "create" (* {!Primitive_exceptions.create}*)
+
+let suffix_cmj = ".cmj"
+
+let suffix_cmi = ".cmi"
+
+let suffix_res = ".res"
+
+let suffix_resi = ".resi"
+
+let suffix_mlmap = ".mlmap"
+
+let suffix_ast = ".ast"
+
+let suffix_iast = ".iast"
+
+let suffix_js = ".js"
+
+(** Used when produce node compatible paths *)
+let node_sep = "/"
+
+let node_parent = ".."
+
+let node_current = "."
+
+let gentype_import1 = "genType.import"
+let gentype_import2 = "gentype.import"
+
+(* Note the build system should check the validity of filenames
+   espeically, it should not contain '-'
+*)
+
+(* Same as [Ext_namespace.ns_sep_char]. *)
+let ns_sep = "-"
+
+let exception_id = "RE_EXN_ID"
+
+let polyvar_hash = "NAME"
+
+let polyvar_value = "VAL"
+
+let cons = "::"
+
+let hd = "hd"
+
+let tl = "tl"
+
+let pure = "@__PURE__"

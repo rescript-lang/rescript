@@ -22,12 +22,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+(* The separator between a module name and its namespace, as in [A-Ns].
+   [Literals.ns_sep] is the same as a string. *)
+let ns_sep_char = '-'
+
 let rec rindex_rec s i =
   if i < 0 then i
   else
     let char = String.unsafe_get s i in
     if Ext_filename.is_dir_sep char then -1
-    else if char = Literals.ns_sep_char then i
+    else if char = ns_sep_char then i
     else rindex_rec s (i - 1)
 
 let change_ext_ns_suffix name ext =

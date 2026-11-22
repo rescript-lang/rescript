@@ -295,7 +295,7 @@ test("releases fragments without a link with their pull request's link", async t
     changelog,
   );
   await fs.unlink(path.join(root, "changes", "lost.fix.md"));
-  await fs.mkdir(path.join(root, "compiler", "ext"), { recursive: true });
+  await fs.mkdir(path.join(root, "compiler", "typing"), { recursive: true });
   await run(
     "release",
     root,
@@ -306,7 +306,10 @@ test("releases fragments without a link with their pull request's link", async t
     },
   );
   assert.equal(
-    await fs.readFile(path.join(root, "compiler", "ext", "config.ml"), "utf8"),
+    await fs.readFile(
+      path.join(root, "compiler", "typing", "config.ml"),
+      "utf8",
+    ),
     "bumped",
   );
   assert.ok(

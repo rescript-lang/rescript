@@ -12,7 +12,7 @@ import {
   checkMagicNumbers,
   configPath,
   releaseMagicNumbers,
-  showAt,
+  showConfigAt,
 } from "./magicNumbers.js";
 
 export { categories, parseFragment, placeholderLink };
@@ -271,7 +271,7 @@ export async function run(
       }
       checkPullRequest(files, pullRequest);
       checkMagicNumbers(
-        showAt(root, pullRequest.base.sha, configPath),
+        showConfigAt(root, pullRequest.base.sha),
         await fs.readFile(path.join(root, configPath), "utf8"),
         pullRequest.labels.map(label => label.name),
       );
