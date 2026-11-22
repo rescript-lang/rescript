@@ -64,6 +64,3 @@ val zyva :
   (int * int * int) array ->
   Lambda.t t_store ->
   Lambda.t
-
-val test_sequence :
-  Lambda.t -> (int * int * int) array -> Lambda.t t_store -> Lambda.t

@@ -16,10 +16,8 @@
 (* Module [Outcometree]: printable representation of types and
    signature items *)
 
-(* [Printtyp] builds these trees. They are printed through the hooks
-   [Oprint.out_type], [Oprint.out_sig_item],
-   [Oprint.out_signature] and related refs, which bsc sets to the ReScript
-   printer through [Res_outcome_printer.setup]. *)
+(* [Printtyp] builds these trees, and [Res_outcome_printer] prints them in
+   ReScript syntax. *)
 
 type out_ident =
   | Oide_apply of out_ident * out_ident

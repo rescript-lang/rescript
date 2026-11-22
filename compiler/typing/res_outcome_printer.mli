@@ -7,7 +7,12 @@
  *
  * In general it represent messages to show results or errors to the user. *)
 
-val setup : unit lazy_t [@@live]
+val print_out_type : Format.formatter -> Outcometree.out_type -> unit
+val print_out_module_type :
+  Format.formatter -> Outcometree.out_module_type -> unit
+val print_out_sig_item : Format.formatter -> Outcometree.out_sig_item -> unit
+val print_out_signature :
+  Format.formatter -> Outcometree.out_sig_item list -> unit
 
 (* Needed for e.g. the playground to print typedtree data *)
 val print_out_type_doc : Outcometree.out_type -> Res_doc.t [@@live]

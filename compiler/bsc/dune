@@ -37,7 +37,6 @@
   depends
   flow_parser
   gentype
-  outcome_printer
   rescript_printer
   rescript_parser
   unix))

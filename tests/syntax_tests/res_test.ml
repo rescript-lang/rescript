@@ -657,7 +657,6 @@ let () =
 
 module Outcome_printer_tests = struct
   let signature_to_outcome structure =
-    Lazy.force Res_outcome_printer.setup;
     (* The type checker resolves externals through this hook, which the
        compiler's drivers register in [Ppx_entry]. This test doesn't link it. *)
     Primitive.resolve_external := Ast_external.resolve;
@@ -670,7 +669,7 @@ module Outcome_printer_tests = struct
         Typemod.type_structure env structure
       in
       signature |> Printtyp.tree_of_signature
-      |> !Oprint.out_signature Format.str_formatter;
+      |> Res_outcome_printer.print_out_signature Format.str_formatter;
       Format.flush_str_formatter ()
     with
     | Typetexp.Error (_, _, err) ->

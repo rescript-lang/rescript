@@ -251,7 +251,6 @@ let unification_settings =
 let umode () = (Domain.DLS.get unification_settings).mode
 let generate_equations () = (Domain.DLS.get unification_settings).equations
 let assume_injective () = (Domain.DLS.get unification_settings).injective
-let variant_is_subtype = ref (fun _env _row _p1 -> false)
 let set_mode_pattern ~generate ~injective f =
   let old_unification_mode = !(umode ())
   and old_gen = !(generate_equations ())
@@ -3639,6 +3638,81 @@ type constructor_coercion =
   | Fails_with of subtype_context
   | Fails_unexplained
 
+(* We use the expand_head_opt version of expand_head to get access
+   to the manifest type of private abbreviations. *)
+let rec get_unboxed_type_representation env ty fuel =
+  if fuel < 0 then None
+  else
+    let ty = repr (expand_head_opt env ty) in
+    match ty.desc with
+    | Tconstr (p, args, _) -> (
+      match Env.find_type p env with
+      | exception Not_found -> Some ty
+      | {type_representation = Boxed} -> Some ty
+      | {
+       type_params;
+       type_kind =
+         ( Type_record ([{ld_type = ty2; _}], _)
+         | Type_variant ([{cd_args = Cstr_tuple [ty2]; _}], _)
+         | Type_variant ([{cd_args = Cstr_record [{ld_type = ty2; _}]; _}], _) );
+      } ->
+        get_unboxed_type_representation env
+          (apply env type_params ty2 args)
+          (fuel - 1)
+      | {type_kind = Type_abstract} ->
+        None
+        (* This case can occur when checking a recursive unboxed type
+           declaration. *)
+      | _ -> assert false (* only the above can be unboxed *))
+    | _ -> Some ty
+
+let get_unboxed_type_representation env ty =
+  (* Do not give too much fuel: PR#7424 *)
+  get_unboxed_type_representation env ty 100
+
+(* Whether a closed polymorphic variant whose constructors have no payload is
+   a subtype of [ty]: of int when all constructors are numbers (#1, #2), of
+   string when none is. A row with type variables is not supported. *)
+let variant_is_subtype env (row_desc : row_desc) (ty : type_expr) =
+  let is_base_type base_ty_path =
+    let ty = expand_head_opt env (correct_levels ty) in
+    let ty =
+      match ty.desc with
+      | Tconstr (p, _, _) -> (
+        match Env.find_type p env with
+        | {type_representation = Unboxed} -> (
+          match get_unboxed_type_representation env ty with
+          | None -> ty
+          | Some ty2 -> ty2)
+        | _ -> ty
+        | exception Not_found -> ty)
+      | _ -> ty
+    in
+    match ty.desc with
+    | Tconstr (p, _, _) -> Path.same p base_ty_path
+    | _ -> false
+  in
+  match row_desc with
+  | {row_closed = true; row_fields = (name, (Rabsent | Rpresent None)) :: rest}
+    ->
+    if Ext_string.is_valid_hash_number name then
+      List.for_all
+        (function
+          | name, (Rabsent | Rpresent None) ->
+            Ext_string.is_valid_hash_number name
+          | _ -> false)
+        rest
+      && is_base_type Predef.path_int
+    else
+      List.for_all
+        (function
+          | name, (Rabsent | Rpresent None) ->
+            not (Ext_string.is_valid_hash_number name)
+          | _ -> false)
+        rest
+      && is_base_type Predef.path_string
+  | _ -> false
+
 let rec subtype_rec env trace t1 t2 cstrs =
   let t1 = repr t1 in
   let t2 = repr t2 in
@@ -4058,7 +4132,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
           | Error _ ->
             (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
         | _ -> (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
-      | Tvariant v, _ when !variant_is_subtype env (row_repr v) t2 -> cstrs
+      | Tvariant v, _ when variant_is_subtype env (row_repr v) t2 -> cstrs
       | Tpoly (u1, []), Tpoly (u2, []) -> subtype_rec env trace u1 u2 cstrs
       | Tpoly (u1, tl1), Tpoly (u2, []) ->
         let _, u1' = instance_poly ~fixed:false tl1 u1 in
@@ -4586,35 +4660,3 @@ let get_arity env typ =
 module For_test = struct
   let previous_env_is_empty () = !(previous_env ()) == Env.empty
 end
-
-(* We use the expand_head_opt version of expand_head to get access
-   to the manifest type of private abbreviations. *)
-let rec get_unboxed_type_representation env ty fuel =
-  if fuel < 0 then None
-  else
-    let ty = repr (expand_head_opt env ty) in
-    match ty.desc with
-    | Tconstr (p, args, _) -> (
-      match Env.find_type p env with
-      | exception Not_found -> Some ty
-      | {type_representation = Boxed} -> Some ty
-      | {
-       type_params;
-       type_kind =
-         ( Type_record ([{ld_type = ty2; _}], _)
-         | Type_variant ([{cd_args = Cstr_tuple [ty2]; _}], _)
-         | Type_variant ([{cd_args = Cstr_record [{ld_type = ty2; _}]; _}], _) );
-      } ->
-        get_unboxed_type_representation env
-          (apply env type_params ty2 args)
-          (fuel - 1)
-      | {type_kind = Type_abstract} ->
-        None
-        (* This case can occur when checking a recursive unboxed type
-           declaration. *)
-      | _ -> assert false (* only the above can be unboxed *))
-    | _ -> Some ty
-
-let get_unboxed_type_representation env ty =
-  (* Do not give too much fuel: PR#7424 *)
-  get_unboxed_type_representation env ty 100

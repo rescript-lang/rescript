@@ -17,22 +17,6 @@
 
 open Typedtree
 
-val call_switcher_variant_constant :
-  (Lambda.t option -> Lambda.t -> (int * (string * Lambda.t)) list -> Lambda.t)
-  ref
-
-val call_switcher_variant_constr :
-  (Location.t ->
-  Lambda.t option ->
-  Lambda.t ->
-  (int * (string * Lambda.t)) list ->
-  Lambda.t)
-  ref
-
-val make_test_sequence_variant_constant :
-  (Lambda.t option -> Lambda.t -> (int * (string * Lambda.t)) list -> Lambda.t)
-  ref
-
 (* A case's right-hand side. The guard is kept apart from the body until the
    match compiler knows what it falls through to; it is not encoded as a term
    to be recognized by shape later. *)

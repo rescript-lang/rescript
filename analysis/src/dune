@@ -13,5 +13,4 @@
   lsp
   rescript_printer
   rescript_parser
-  outcome_printer
   reanalyze))
