@@ -775,7 +775,7 @@ module Export = struct
           @@ Js.wrap_meth_callback (fun _ code ->
               Compile.implementation ~include_debug_outputs:true ~config ~lang
                 (Js.to_string code)) );
-        ("version", inject @@ Js.string Bs_version.version);
+        ("version", inject @@ Js.string Config.version);
       |]
     in
     let attrs =
@@ -864,7 +864,7 @@ module Export = struct
     Js.Unsafe.(
       obj
         [|
-          ("version", inject @@ Js.string Bs_version.version);
+          ("version", inject @@ Js.string Config.version);
           ("rescript", inject @@ make_compiler ~config ~lang:Res);
           ( "convertSyntax",
             inject
@@ -959,6 +959,6 @@ let () =
       obj
         [|
           ("api_version", inject @@ Js.string api_version);
-          ("version", inject @@ Js.string Bs_version.version);
+          ("version", inject @@ Js.string Config.version);
           ("make", inject @@ Export.make);
         |])

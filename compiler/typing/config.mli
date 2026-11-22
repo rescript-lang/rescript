@@ -15,6 +15,12 @@
 
 (* System configuration *)
 
+val version : string
+(** The compiler version, as in package.json. *)
+
+val header : string
+(** The first line of every generated JavaScript file. *)
+
 (* Directories in the search path for .cmi and .cmo files *)
 val get_load_path : unit -> string list
 val set_load_path : string list -> unit

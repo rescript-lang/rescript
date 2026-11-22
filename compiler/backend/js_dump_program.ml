@@ -131,7 +131,7 @@ let pp_deps_program ~(output_prefix : string)
       P.string f prim;
       P.newline f);
   if not !((Js_config.current ()).no_version_header) then (
-    P.string f Bs_version.header;
+    P.string f Config.header;
     P.newline f);
 
   if deps_program_is_empty program then P.string f empty_explanation

@@ -151,13 +151,80 @@ test("bumps the magic numbers once per release when format sources changed", asy
   await commit(configPath, bumped);
   git("tag", "v1.1.0");
   assert.equal(previousReleaseTag(root, "1.1.0"), "v1.0.0");
-  await commit("compiler/ext/ident.ml", "type t = string\n");
+  await commit("compiler/typing/ident.ml", "type t = string\n");
   assert.equal(await releaseMagicNumbers(root, "1.1.0"), null);
   // The next release compares with the one before it.
   assert.equal(
     await releaseMagicNumbers(root, "1.2.0"),
     config("042", "050", "01319"),
   );
+});
+
+test("finds the previous magic numbers in config.ml's old place", async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "rescript-magic-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const git = (...args) =>
+    execFileSync("git", args, {
+      cwd: root,
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "a",
+        GIT_AUTHOR_EMAIL: "a@example.com",
+        GIT_COMMITTER_NAME: "a",
+        GIT_COMMITTER_EMAIL: "a@example.com",
+      },
+    });
+  const write = async (file, text) => {
+    await fs.mkdir(path.dirname(path.join(root, file)), { recursive: true });
+    await fs.writeFile(path.join(root, file), text);
+  };
+  git("init", "-q");
+  // The previous release has config.ml in compiler/ext.
+  await write("compiler/ext/config.ml", config("040", "048", "01317"));
+  await write("compiler/typing/types.ml", "type t = A\n");
+  git("add", ".");
+  git("commit", "-q", "-m", "release");
+  git("tag", "v1.0.0");
+  await write(configPath, config("040", "048", "01317"));
+  await fs.rm(path.join(root, "compiler/ext/config.ml"));
+  await write("compiler/typing/types.ml", "type t = A | B\n");
+  git("add", "-A");
+  git("commit", "-q", "-m", "move config.ml and change a type");
+  assert.equal(
+    await releaseMagicNumbers(root, "1.1.0"),
+    config("041", "049", "01318"),
+  );
+});
+
+test("doesn't bump the magic numbers for a new compiler version", async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "rescript-magic-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const git = (...args) =>
+    execFileSync("git", args, {
+      cwd: root,
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "a",
+        GIT_AUTHOR_EMAIL: "a@example.com",
+        GIT_COMMITTER_NAME: "a",
+        GIT_COMMITTER_EMAIL: "a@example.com",
+      },
+    });
+  const write = async (file, text) => {
+    await fs.mkdir(path.dirname(path.join(root, file)), { recursive: true });
+    await fs.writeFile(path.join(root, file), text);
+  };
+  git("init", "-q");
+  const numbers = config("040", "048", "01317");
+  await write(configPath, `${numbers}let version = "1.0.0"\n`);
+  await write("compiler/typing/types.ml", "type t = A\n");
+  git("add", ".");
+  git("commit", "-q", "-m", "release");
+  git("tag", "v1.0.0");
+  // config.ml lives among the format sources but is none itself.
+  await write(configPath, `${numbers}let version = "1.1.0"\n`);
+  git("commit", "-q", "-am", "next version");
+  assert.equal(await releaseMagicNumbers(root, "1.1.0"), null);
 });
 
 test("rejects pull requests that bump a magic number", () => {

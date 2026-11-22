@@ -3,10 +3,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import semver from "semver";
 
-export const configPath = "compiler/ext/config.ml";
+export const configPath = "compiler/typing/config.ml";
+
+// Where config.ml lived before, newest first. A release compares with the
+// previous release tag, which may predate a move; without its old path the
+// previous magic numbers would read as missing and nothing would be bumped.
+const previousConfigPaths = ["compiler/ext/config.ml"];
 
 // The libraries that define the serialized parsetree and typed tree types,
-// and everything those types refer to: `ml` and the libraries it depends on.
+// and everything those types refer to.
 export const formatSources = [
   "syntax/ast",
   "compiler/typing",
@@ -92,7 +97,17 @@ export function previousReleaseTag(root, version) {
 function changedSince(root, tag) {
   const result = spawnSync(
     "git",
-    ["diff", "--quiet", tag, "HEAD", "--", ...formatSources],
+    // config.ml is no format source: it holds the magic numbers themselves and
+    // the compiler version, which changes after every release.
+    [
+      "diff",
+      "--quiet",
+      tag,
+      "HEAD",
+      "--",
+      ...formatSources,
+      `:(exclude)${configPath}`,
+    ],
     { cwd: root },
   );
   if (result.status === 0) return false;
@@ -106,6 +121,15 @@ export function showAt(root, revision, file) {
     encoding: "utf8",
   });
   return result.status === 0 ? result.stdout : null;
+}
+
+// config.ml at a revision, from its current path or an earlier one.
+export function showConfigAt(root, revision) {
+  for (const file of [configPath, ...previousConfigPaths]) {
+    const config = showAt(root, revision, file);
+    if (config !== null) return config;
+  }
+  return null;
 }
 
 const counterPrefix = value => /^(.*?)\d*$/.exec(value)[1];
@@ -138,7 +162,7 @@ export async function releaseMagicNumbers(root, version) {
   const config = await fs.readFile(path.join(root, configPath), "utf8");
   const output = bumpMagicNumbers(
     config,
-    showAt(root, tag, configPath),
+    showConfigAt(root, tag),
     changedSince(root, tag),
   );
   return output === config ? null : output;

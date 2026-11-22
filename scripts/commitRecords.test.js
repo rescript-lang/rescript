@@ -318,7 +318,7 @@ test("a card draws the message alone, whatever the diff", async () => {
     "tests/tests/src/a_test.mjs": "y\n",
     "tests/build_tests/super_errors/expected/x.res.expected": "e\n",
     "changes/x.fix.md": "- Fix a thing.\n",
-    "compiler/ext/config.ml": 'let cmi_magic_number = "BS00MI002"\n',
+    "compiler/typing/config.ml": 'let cmi_magic_number = "BS00MI002"\n',
   });
   assert.equal(touched, await card({}));
   has(touched, "A reason.");
