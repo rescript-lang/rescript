@@ -106,6 +106,30 @@ let classify ?(check : (Location.t * int) option) (prog : string) :
   | Some _, [] | None, [] -> classify_exp prog
   | None, _ :: _ -> Js_exp_unknown
 
+(* Whether a line comment runs to the end of [code], an expression, so that
+   what is printed after it on the same line is commented out. Only a "//" on
+   the last line can start one, since a line comment ends at its line break,
+   and then [code] followed by a closing parenthesis does not parse; a "//" in
+   a string, a template or a regular expression does not count. Code that the
+   parser rejects counts as ending in one. *)
+let ends_in_line_comment (code : string) : bool =
+  let rec last_line_has_slashes i =
+    i > 0
+    &&
+    match code.[i] with
+    | '\n' | '\r' -> false
+    | '/' when code.[i - 1] = '/' -> true
+    | _ -> last_line_has_slashes (i - 1)
+  in
+  last_line_has_slashes (String.length code - 1)
+  &&
+  let _, errors =
+    let open Parser_flow in
+    let env = Parser_env.init_env None ("(" ^ code ^ ")") in
+    do_parse env Parse.expression false
+  in
+  errors <> []
+
 let classify_stmt (prog : string) : Js_raw_info.stmt =
   let result = Parser_flow.parse_program false None prog in
   match fst result with

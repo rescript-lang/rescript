@@ -724,6 +724,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       in
       if raw_paren then P.string f L.lparen;
       P.string f s;
+      if Classify_function.ends_in_line_comment s then P.newline f;
       if raw_paren then P.string f L.rparen;
       cxt
     | Stmt stmt_info ->

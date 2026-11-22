@@ -27,3 +27,7 @@ val classify : ?check:Location.t * int -> string -> Js_raw_info.exp
 val classify_exp : (Loc.t, Loc.t) Flow_ast.Expression.t -> Js_raw_info.exp
 
 val classify_stmt : string -> Js_raw_info.stmt
+
+val ends_in_line_comment : string -> bool
+(** Whether a line comment runs to the end of the code of an expression, so
+    that what is printed after it on the same line is commented out *)
