@@ -229,7 +229,28 @@ let rec longident f = function
 
 let longident_loc f x = pp f "%a" longident x.txt
 
-let string_of_int_as_char i = Ext_util.string_of_int_as_char i
+let string_of_int_as_char (i : int) : string =
+  if i <= 255 && i >= 0 then Format.asprintf "%C" (Char.unsafe_chr i)
+  else
+    let str =
+      match Char.unsafe_chr i with
+      | '\'' -> "\\'"
+      | '\\' -> "\\\\"
+      | '\n' -> "\\n"
+      | '\t' -> "\\t"
+      | '\r' -> "\\r"
+      | '\b' -> "\\b"
+      | ' ' .. '~' as c ->
+        let s = (Bytes.create [@doesNotThrow]) 1 in
+        Bytes.unsafe_set s 0 c;
+        Bytes.unsafe_to_string s
+      | _ when Uchar.is_valid i ->
+        let buffer = Buffer.create 4 in
+        Buffer.add_utf_8_uchar buffer (Uchar.of_int i);
+        Buffer.contents buffer
+      | _ -> Printf.sprintf "\\u{%X}" i
+    in
+    Printf.sprintf "\'%s\'" str
 
 (* Keep layout stable across OCaml <5.4 (byte width) and >=5.4 (Unicode scalar width). *)
 let print_string_with_byte_width f s = Format.pp_print_as f (String.length s) s

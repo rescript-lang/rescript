@@ -128,7 +128,7 @@ let is_package_relative_path (x : string) =
 
 let valid_global_name ?loc txt =
   if not (valid_ident txt) then
-    let v = Ext_string.split_by ~keep_empty:true (fun x -> x = '.') txt in
+    let v = String.split_on_char '.' txt in
     List.iter
       (fun s ->
         if not (valid_ident s) then

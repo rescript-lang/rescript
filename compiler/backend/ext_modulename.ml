@@ -39,10 +39,10 @@ let rec collect_start buf s off len =
     let next = succ off in
     match String.unsafe_get s off with
     | 'a' .. 'z' as c ->
-      Ext_buffer.add_char buf (Char.uppercase_ascii c);
+      Buffer.add_char buf (Char.uppercase_ascii c);
       collect_next buf s next len
     | 'A' .. 'Z' as c ->
-      Ext_buffer.add_char buf c;
+      Buffer.add_char buf c;
       collect_next buf s next len
     | _ -> collect_start buf s next len
 
@@ -52,7 +52,7 @@ and collect_next buf s off len =
     let next = off + 1 in
     match String.unsafe_get s off with
     | ('a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_') as c ->
-      Ext_buffer.add_char buf c;
+      Buffer.add_char buf c;
       collect_next buf s next len
     | '.' | '-' -> collect_start buf s next len
     | _ -> collect_next buf s next len
@@ -70,16 +70,17 @@ let js_id_name_of_hint_name module_name =
   if i >= 0 then (
     let offset = succ i in
     if good_hint_name module_name offset then
-      String.capitalize_ascii (Ext_string.tail_from module_name offset)
+      String.capitalize_ascii
+        (String.sub module_name offset (String.length module_name - offset))
     else
       let str_len = String.length module_name in
-      let buf = Ext_buffer.create str_len in
+      let buf = Buffer.create str_len in
       collect_start buf module_name offset str_len;
-      if Ext_buffer.is_empty buf then String.capitalize_ascii module_name
-      else Ext_buffer.contents buf)
+      if Buffer.length buf = 0 then String.capitalize_ascii module_name
+      else Buffer.contents buf)
   else if good_hint_name module_name 0 then String.capitalize_ascii module_name
   else
     let str_len = String.length module_name in
-    let buf = Ext_buffer.create str_len in
+    let buf = Buffer.create str_len in
     collect_start buf module_name 0 str_len;
-    if Ext_buffer.is_empty buf then module_name else Ext_buffer.contents buf
+    if Buffer.length buf = 0 then module_name else Buffer.contents buf

@@ -2252,7 +2252,7 @@ let rec pattern_literal p : Variant_runtime.literal_tag option =
     (* A polymorphic variant is its name, or the number its name spells, as
        in [Lambda.const_polyvar] *)
     if Ext_string.is_valid_hash_number label then
-      Some (Int (Int32.to_int (Ext_string.hash_number_as_i32_exn label)))
+      Some (Int (Int32.to_int (Int32.of_string label)))
     else Some (String label)
   | Tpat_construct (_, {cstr_name; cstr_res}, [])
     when is_type_path Predef.path_bool cstr_res ->

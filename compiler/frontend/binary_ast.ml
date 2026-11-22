@@ -72,22 +72,23 @@ let read_ast_exn (type t) ~fname (_ : t kind) : t =
 let write_ast (type t) ~(sourcefile : string) ~output (kind : t kind) (pt : t) :
     unit =
   let output_set = Ast_extract.read_parse_and_extract kind pt in
-  let buf = Ext_buffer.create 1000 in
-  Ext_buffer.add_char buf magic_sep_char;
+  let buf = Buffer.create 1000 in
+  Buffer.add_char buf magic_sep_char;
   Set_string.iter
     (fun s ->
-      if s <> "" && s.[0] <> '*' then
-        (* filter *predef* *)
-        Ext_buffer.add_string_char buf s magic_sep_char)
+      (* filter *predef* *)
+      if s <> "" && s.[0] <> '*' then (
+        Buffer.add_string buf s;
+        Buffer.add_char buf magic_sep_char))
     output_set;
   let length = Bytes.create 4 in
-  Bytes.set_int32_be length 0 (Int32.of_int (Ext_buffer.length buf));
+  Bytes.set_int32_be length 0 (Int32.of_int (Buffer.length buf));
   Build_file_store.write
     (Compiler_request_state.resolve_path output)
     (String.concat ""
        [
          Bytes.unsafe_to_string length;
-         Ext_buffer.contents buf;
+         Buffer.contents buf;
          sourcefile;
          "\n";
          Marshal.to_string pt [];
