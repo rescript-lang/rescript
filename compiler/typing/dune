@@ -17,7 +17,7 @@
   (copy# platform/native/cmt_format_persistence.ml cmt_format_persistence.ml)))
 
 (library
- (name ml)
+ (name typing)
  (flags
   (:standard -open Rescript_ast))
  (wrapped false)

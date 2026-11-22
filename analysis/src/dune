@@ -8,7 +8,7 @@
   unix
   str
   ext
-  ml
+  typing
   yojson
   lsp
   rescript_printer

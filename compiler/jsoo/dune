@@ -9,10 +9,10 @@
   (= %{profile} browser))
  (libraries
   common
-  core
+  backend
   rescript_printer
   rescript_parser
-  ml
+  typing
   gentype
   outcome_printer
   js_of_ocaml))

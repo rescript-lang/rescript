@@ -8,4 +8,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (libraries ml rescript_printer))
+ (libraries typing rescript_printer))

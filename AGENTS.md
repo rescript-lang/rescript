@@ -41,9 +41,9 @@ need the relevant guidance from each.
   printing
 - [`compiler/jsx/README.md`](compiler/jsx/README.md) for the JSX
   transformation
-- [`compiler/ml/README.md`](compiler/ml/README.md) for the type checker and
+- [`compiler/typing/README.md`](compiler/typing/README.md) for the type checker and
   typed tree
-- [`compiler/core/README.md`](compiler/core/README.md) for Lambda
+- [`compiler/backend/README.md`](compiler/backend/README.md) for Lambda
   optimization and JavaScript generation
 - [`analysis/README.md`](analysis/README.md) for editor analysis
 - [`rewatch-ocaml/README.md`](rewatch-ocaml/README.md) for the build system

@@ -15,7 +15,7 @@
   (copy# platform/native/js_name_of_module_id.ml js_name_of_module_id.ml)))
 
 (library
- (name core)
+ (name backend)
  (flags
   (:standard -open Rescript_ast -open Rescript_printer))
  (wrapped false)

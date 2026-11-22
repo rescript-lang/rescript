@@ -21,8 +21,8 @@ Thanks to the [OCaml](https://ocaml.org) team, obviously, without such a beautif
 
 ReScript builds on these parts of OCaml:
 
-- [`compiler/core/lam_pass_exits.ml`](compiler/core/lam_pass_exits.ml)
-- [`compiler/core/lam_pass_lets_dce.ml`](compiler/core/lam_pass_lets_dce.ml)
+- [`compiler/backend/lam_pass_exits.ml`](compiler/backend/lam_pass_exits.ml)
+- [`compiler/backend/lam_pass_lets_dce.ml`](compiler/backend/lam_pass_lets_dce.ml)
 
 These modules were adapted from [`ocaml/bytecomp/simplif.ml`](ocaml/bytecomp/simplif.ml) for
 JavaScript specific optimization purposes.
@@ -34,7 +34,7 @@ point of the underlying compiler.
 
 ReScript imported one file from [jsoo](https://github.com/ocsigen/js_of_ocaml)
 
-- [`compiler/core/js_dump.ml`](compiler/core/js_dump.ml) (pretty printer)
+- [`compiler/backend/js_dump.ml`](compiler/backend/js_dump.ml) (pretty printer)
 
 This file was imported but changed significantly in iterations later.
 

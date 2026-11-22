@@ -9,7 +9,7 @@ export const configPath = "compiler/ext/config.ml";
 // and everything those types refer to: `ml` and the libraries it depends on.
 export const formatSources = [
   "syntax/ast",
-  "compiler/ml",
+  "compiler/typing",
   "compiler/ext",
   "compiler/flow_parser",
 ];

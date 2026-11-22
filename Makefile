@@ -242,7 +242,7 @@ semantic-diff:
 #                      { source_files: [{ name, coverage: [null|N, ...] }] }
 #                      null = not instrumented, 0 = uncovered, N > 0 = hit count
 #                      e.g. uncovered line numbers in one file:
-#                      jq -r --arg f compiler/ml/typecore.ml \
+#                      jq -r --arg f compiler/typing/typecore.ml \
 #                        '.source_files[] | select(.name==$f) | .coverage
 #                         | to_entries[] | select(.value==0) | (.key+1)' \
 #                        _coverage/coverage.json

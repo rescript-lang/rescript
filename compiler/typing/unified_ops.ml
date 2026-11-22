@@ -26,8 +26,8 @@
   Actual implementations of translation are colocated into core modules
 
   You can find it in:
-  - Type-level : ml/typecore.ml
-  - IR-level   : ml/translcore.ml
+  - Type-level : typing/typecore.ml
+  - IR-level   : typing/translcore.ml
 
   With function name "translate_unified_ops"
 *)

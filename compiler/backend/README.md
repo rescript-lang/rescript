@@ -2,13 +2,13 @@
 
 This directory contains the compiler backend after typedtree translation. It
 owns the Lambda optimization passes, the JavaScript IR, and JavaScript output.
-Lambda itself is defined in [`../ml/lambda.mli`](../ml/lambda.mli).
+Lambda itself is defined in [`../typing/lambda.mli`](../typing/lambda.mli).
 
 ## Pipeline and code map
 
-Typedtree translation in `compiler/ml/translcore.ml` and
-`compiler/ml/translmod.ml` produces the `Lambda` representation defined in
-`compiler/ml/lambda.mli`.
+Typedtree translation in `compiler/typing/translcore.ml` and
+`compiler/typing/translmod.ml` produces the `Lambda` representation defined in
+`compiler/typing/lambda.mli`.
 
 `lam_pass_*.ml` and the other `lam_*.ml` modules
 : Analyze and transform Lambda. [`lam_compile_main.ml`](lam_compile_main.ml)
@@ -57,7 +57,7 @@ Typedtree translation in `compiler/ml/translcore.ml` and
 ## Changing a representation
 
 `Lambda.t` is private: every term is built through the constructors in
-[`../ml/lambda.mli`](../ml/lambda.mli), seven of which normalize as they
+[`../typing/lambda.mli`](../typing/lambda.mli), seven of which normalize as they
 build: `apply`, `prim`, `switch`, `stringswitch`, `if_`, `seq` and `not_`.
 A constructor may replace a node with an equivalent one, but may not move code
 between branches - that is what a pass is for. When adding or changing a
@@ -90,5 +90,5 @@ compiler flags below to compare intermediate forms for a small source file:
 ./cli/bsc.js -drawlambda example.res
 ```
 
-For backend debugging, use [`printlambda.ml`](../ml/printlambda.ml) at the relevant
+For backend debugging, use [`printlambda.ml`](../typing/printlambda.ml) at the relevant
 pass boundary and remove temporary output before committing.
