@@ -457,7 +457,8 @@ module Create_interface_file = struct
 
     let should_create =
       match Document.kind doc with
-      | Res -> not (Fs.exists ~fs:state.fs ~follow:false (Uri.to_path uri))
+      | Res ->
+        not (Fs.exists ~fs:state.fs ~follow:false (Uri.to_path uri ^ "i"))
       | _ -> false
     in
 

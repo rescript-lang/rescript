@@ -49,19 +49,29 @@ module Create_interface_file = struct
   let make ~uri ~cmi_uri ~(state : State.t) =
     match Document.kind_of_uri uri with
     | Res -> (
-      match
-        Analysis.Create_interface.command ~path:(Uri.to_path uri)
-          ~source:(Document_store.get ~uri state.store |> Document.text)
-          ~cmi_file:(cmi_uri |> Uri.to_path)
-      with
-      | Ok content ->
-        let resi_file = Uri.to_path uri ^ "i" in
-        let () =
-          Fs.save ~append:false ~create:(`Or_truncate 0o644) ~fs:state.fs
-            resi_file content
-        in
-        Ok (Uri.of_path resi_file)
-      | Error e -> Error e)
+      let resi_file = Uri.to_path uri ^ "i" in
+      let already_exists () =
+        Error
+          (Printf.sprintf "Cannot create interface file %s: it already exists."
+             resi_file)
+      in
+      if Fs.exists ~fs:state.fs ~follow:false resi_file then already_exists ()
+      else
+        match
+          Analysis.Create_interface.command ~path:(Uri.to_path uri)
+            ~source:(Document_store.get ~uri state.store |> Document.text)
+            ~cmi_file:(cmi_uri |> Uri.to_path)
+        with
+        | Ok content -> (
+          try
+            (* A file may appear after the availability check, including after
+               a code action was offered. Never truncate an existing interface. *)
+            Fs.save ~append:false ~create:(`Exclusive 0o644) ~fs:state.fs
+              resi_file content;
+            Ok (Uri.of_path resi_file)
+          with Eio.Io (Eio.Fs.E (Eio.Fs.Already_exists _), _) ->
+            already_exists ())
+        | Error e -> Error e)
     | _ ->
       Error
         (Printf.sprintf

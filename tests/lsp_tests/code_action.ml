@@ -45,6 +45,17 @@ let value = switch variant {
         },
         "kind": "refactor.rewrite",
         "title": "Expand catch-all"
+      },
+      {
+        "command": {
+          "arguments": [
+            "file:///workspace/Test.res",
+            "file:///workspace/lib/rescript/Test.cmi"
+          ],
+          "command": "rescript/createInterface",
+          "title": "Create interface file"
+        },
+        "title": "Create interface file"
       }
     ]
     |}]
@@ -105,6 +116,17 @@ let%expect_test "extracts a local module into its own file" =
         },
         "kind": "refactor.rewrite",
         "title": "Extract local module \"ExtractableModule\" to file \"ExtractableModule.res\""
+      },
+      {
+        "command": {
+          "arguments": [
+            "file:///workspace/Test.res",
+            "file:///workspace/lib/rescript/Test.cmi"
+          ],
+          "command": "rescript/createInterface",
+          "title": "Create interface file"
+        },
+        "title": "Create interface file"
       }
     ]
     |}]
@@ -170,6 +192,17 @@ let value = if kind == First {
         },
         "kind": "refactor.rewrite",
         "title": "Replace with switch"
+      },
+      {
+        "command": {
+          "arguments": [
+            "file:///workspace/Test.res",
+            "file:///workspace/lib/rescript/Test.cmi"
+          ],
+          "command": "rescript/createInterface",
+          "title": "Create interface file"
+        },
+        "title": "Create interface file"
       }
     ]
     |}]
@@ -227,6 +260,17 @@ let%expect_test "offers a type annotation for an inferred string binding" =
         },
         "kind": "refactor.rewrite",
         "title": "Add Documentation template"
+      },
+      {
+        "command": {
+          "arguments": [
+            "file:///workspace/Test.res",
+            "file:///workspace/lib/rescript/Test.cmi"
+          ],
+          "command": "rescript/createInterface",
+          "title": "Create interface file"
+        },
+        "title": "Create interface file"
       }
     ]
     |}]
@@ -263,6 +307,17 @@ let noBraces = () => name
         },
         "kind": "refactor.rewrite",
         "title": "Add braces to function"
+      },
+      {
+        "command": {
+          "arguments": [
+            "file:///workspace/Test.res",
+            "file:///workspace/lib/rescript/Test.cmi"
+          ],
+          "command": "rescript/createInterface",
+          "title": "Create interface file"
+        },
+        "title": "Create interface file"
       }
     ]
     |}]
@@ -297,6 +352,17 @@ let%expect_test "does not offer another annotation for an annotated binding" =
         },
         "kind": "refactor.rewrite",
         "title": "Add Documentation template"
+      },
+      {
+        "command": {
+          "arguments": [
+            "file:///workspace/Test.res",
+            "file:///workspace/lib/rescript/Test.cmi"
+          ],
+          "command": "rescript/createInterface",
+          "title": "Create interface file"
+        },
+        "title": "Create interface file"
       }
     ]
     |}]

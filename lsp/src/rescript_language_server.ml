@@ -63,6 +63,7 @@ let initialization (client_capabilities : ClientCapabilities.t) =
       ~commands:
         [
           Execute_commands.Open_compiled.name;
+          Execute_commands.Create_interface.name;
           Execute_commands.Switch_implementation_interface.name;
           Execute_commands.Dump_server_state.name;
           Execute_commands.Dump_cmt.name;
