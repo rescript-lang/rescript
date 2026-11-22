@@ -399,9 +399,13 @@ let default_fn_exp_state = No_name {single_arg = false}
 
 (* TODO: refactoring
    Note that {!pp_function} could print both statement and expression when [No_name] is given
+
+   [paren] puts a function printed for [No_name] in parentheses, but not the
+   name it is printed as when it only calls that name.
 *)
-let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
-    ~fn_state (l : Ident.t list) (b : J.block) (env : Js_fun_env.t) : cxt =
+let rec pp_function ~return_unit ~async ~is_method ?directive ?(paren = false)
+    cxt (f : P.t) ~fn_state (l : Ident.t list) (b : J.block)
+    (env : Js_fun_env.t) : cxt =
   match b with
   | [
    {
@@ -511,8 +515,9 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
           P.string f (L.function_ ~async ~arrow);
           param_body ()
         | No_name _ ->
-          P.string f (L.function_ ~async ~arrow);
-          param_body ()
+          P.cond_paren_group f paren (fun _ ->
+              P.string f (L.function_ ~async ~arrow);
+              param_body ())
         | Name_non_top x ->
           ignore (pp_var_assign inner_cxt f x : cxt);
           P.string f (L.function_ ~async ~arrow);
@@ -660,7 +665,11 @@ and expression_desc cxt ~(level : int) f x : cxt =
         expression ~level:0 cxt f e2)
   | Fun {is_method; params; body; env; return_unit; async; directive} ->
     (* TODO: dump for comments *)
-    pp_function ?directive ~is_method ~return_unit ~async
+    (* An arrow function takes parentheses where a conditional does: as an
+       operand and as the object of a call or member access. A [function]
+       expression takes them there too, as it would otherwise start a
+       declaration at the start of a statement. *)
+    pp_function ?directive ~is_method ~return_unit ~async ~paren:(level > 2)
       ~fn_state:default_fn_exp_state cxt f params body env
   | Jsx {callee; tag; spread; props; children; key; multi; fragment} ->
     if jsx_printable ~tag ~spread ~props ~children ~key ~multi ~fragment then
@@ -689,13 +698,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | Call (e, el, _info) ->
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
-            let cxt =
-              P.cond_paren_group f
-                (match e.expression_desc with
-                | Fun _ -> true
-                | _ -> false)
-                (fun () -> expression ~level:15 cxt f e)
-            in
+            let cxt = expression ~level:15 cxt f e in
             P.paren_group f 0 (fun _ ->
                 match el with
                 | [
@@ -726,13 +729,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
                   in
                   arguments cxt f el)))
   | Tagged_template (call_expr, string_args, value_args) ->
-    let cxt =
-      P.cond_paren_group f
-        (match call_expr.expression_desc with
-        | Fun _ -> true
-        | _ -> false)
-        (fun () -> expression ~level:15 cxt f call_expr)
-    in
+    let cxt = expression ~level:15 cxt f call_expr in
     P.string f "`";
     let rec aux cxt xs ys =
       match (xs, ys) with
@@ -849,14 +846,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f " in ";
         expression ~level:rght cxt f obj)
   | Typeof e ->
-    let is_fun =
-      match e.expression_desc with
-      | Fun _ -> true
-      | _ -> false
-    in
-    P.string f "typeof";
-    P.space f;
-    P.cond_paren_group f is_fun (fun _ -> unary_operand cxt f e)
+    P.cond_paren_group f (level > 13) (fun _ ->
+        P.string f "typeof";
+        P.space f;
+        unary_operand cxt f e)
   | Bin (Minus, {expression_desc = Number (Float {f = "-0."})}, e) ->
     (* [-0 - x] is [-x] for every [x], while [0 - x] is [0] and not [-0] when
        [x] is [0] *)
@@ -1058,14 +1051,22 @@ and expression_desc cxt ~(level : int) f x : cxt =
       P.space f;
       (*
             [level 1] is correct, however
-            to make nice indentation , force nested conditional to be parenthesized
+            to make nice indentation , force nested conditional to be parenthesized.
+            A function takes no parentheses here either.
           *)
-      let cxt = P.group f 1 (fun _ -> expression ~level:3 cxt f e1) in
+      let branch_level (e : J.expression) =
+        match e.expression_desc with
+        | Fun _ -> 1
+        | _ -> 3
+      in
+      let cxt =
+        P.group f 1 (fun _ -> expression ~level:(branch_level e1) cxt f e1)
+      in
 
       P.space f;
       P.string f L.colon_space;
       (* idem *)
-      P.group f 1 (fun _ -> expression ~level:3 cxt f e2)
+      P.group f 1 (fun _ -> expression ~level:(branch_level e2) cxt f e2)
     in
     if level > 2 then P.paren_vgroup f 1 action else action ()
   | Object entries ->
