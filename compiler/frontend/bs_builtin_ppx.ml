@@ -65,15 +65,18 @@ let default_mapper = Ast_mapper.default_mapper
 let default_expr_mapper (self : mapper) (e : Parsetree.expression) =
   match e.pexp_desc with
   | Pexp_let (Nonrecursive, vbs, body) ->
-    {
-      e with
-      pexp_desc =
-        Pexp_let
-          ( Nonrecursive,
-            Ast_tuple_pattern_flatten.value_bindings_mapper self vbs,
-            self.expr self body );
-      pexp_attributes = self.attributes self e.pexp_attributes;
-    }
+    (* The attributes, the body, then the bindings: the order in which the
+       record and constructor this used to build evaluated them *)
+    let attrs = self.attributes self e.pexp_attributes in
+    let body' = self.expr self body in
+    let vbs' = Ast_tuple_pattern_flatten.value_bindings_mapper self vbs in
+    if attrs == e.pexp_attributes && body' == body && vbs' == vbs then e
+    else
+      {
+        e with
+        pexp_desc = Pexp_let (Nonrecursive, vbs', body');
+        pexp_attributes = attrs;
+      }
   | _ -> Ast_mapper.default_mapper.expr self e
 
 let rec add_this_to_braced_function attrs (e : Parsetree.expression) =
@@ -169,24 +172,35 @@ let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
          inner function is not async and compiles to a plain arrow. *)
       async_context := async;
       let attrs = self.attributes self e.pexp_attributes in
-      let params =
-        List.map
-          (fun (p : Parsetree.fun_param) ->
-            {
-              p with
-              p_default = Option.map (self.expr self) p.p_default;
-              p_pat = self.pat self p.p_pat;
-            })
-          params
+      let params' =
+        Ext_list.map_sharing params (fun (p : Parsetree.fun_param) ->
+            (* The pattern before the default, as the record this used to
+               build evaluated them *)
+            let p_pat = self.pat self p.p_pat in
+            let p_default =
+              match p.p_default with
+              | None -> None
+              | Some default as option ->
+                let default' = self.expr self default in
+                if default' == default then option else Some default'
+            in
+            if p_pat == p.p_pat && p_default == p.p_default then p
+            else {p with p_default; p_pat})
       in
-      let body = self.expr self body in
-      let newtypes =
-        List.map
-          (fun (name, nt_attrs) -> (name, self.attributes self nt_attrs))
-          newtypes
+      let body' = self.expr self body in
+      let newtypes' =
+        Ext_list.map_sharing newtypes (fun ((name, nt_attrs) as newtype) ->
+            let nt_attrs' = self.attributes self nt_attrs in
+            if nt_attrs' == nt_attrs then newtype else (name, nt_attrs'))
       in
       let mapped =
-        Ast_helper.Exp.fun_ ~loc:e.pexp_loc ~attrs ~async ~newtypes params body
+        if
+          attrs == e.pexp_attributes && params' == params && body' == body
+          && newtypes' == newtypes
+        then e
+        else
+          Ast_helper.Exp.fun_ ~loc:e.pexp_loc ~attrs ~async ~newtypes:newtypes'
+            params' body'
       in
       Ast_async.make_function_async ~async mapped
     | Meth_callback _, pexp_attributes ->
@@ -517,15 +531,15 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
         [
           {
             pvb_pat = {ppat_desc = Ppat_var pval_name} as pvb_pat;
-            pvb_expr;
+            pvb_expr = expr;
             pvb_constraint = None;
             pvb_jsx_component;
-            pvb_attributes;
+            pvb_attributes = attributes;
             pvb_loc;
           };
         ] ) -> (
-    let pvb_expr = self.expr self pvb_expr in
-    let pvb_attributes = self.attributes self pvb_attributes in
+    let pvb_expr = self.expr self expr in
+    let pvb_attributes = self.attributes self attributes in
     let has_inline_property =
       Ast_attributes.has_inline_payload pvb_attributes
     in
@@ -563,6 +577,7 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
                }
                pvb_expr);
       }
+    | _ when pvb_expr == expr && pvb_attributes == attributes -> str
     | _ ->
       {
         str with
@@ -582,8 +597,9 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
       })
   | Pstr_attribute ({txt = "config"}, _) -> str
   | Pstr_value (Nonrecursive, vbs) ->
-    Ast_helper.Str.value ~loc:str.pstr_loc Nonrecursive
-      (Ast_tuple_pattern_flatten.value_bindings_mapper self vbs)
+    let vbs' = Ast_tuple_pattern_flatten.value_bindings_mapper self vbs in
+    if vbs' == vbs then str
+    else Ast_helper.Str.value ~loc:str.pstr_loc Nonrecursive vbs'
   | _ -> default_mapper.structure_item self str
 
 type mapper_context = {
@@ -724,11 +740,10 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
               };
         }
         :: structure_mapper ~await_context self rest
-      | Some (_, _, Some _) | None ->
-        self.structure_item self item
-        :: structure_mapper ~await_context self rest)
+      | Some (_, _, Some _) | None -> map_item_and_rest ~await_context self stru
+      )
     | Pstr_value (_, vbs) ->
-      let item = self.structure_item self item in
+      let item' = self.structure_item self item in
       (* [ module __List__ = module type of List ] *)
       let rec spelunk_vbs acc vbs =
         match vbs with
@@ -766,11 +781,21 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
           aux pvb_expr @ spelunk_vbs acc tl
       in
       let module_type_decls = spelunk_vbs [] vbs in
+      let rest' = structure_mapper ~await_context self rest in
+      if module_type_decls = [] && item' == item && rest' == rest then stru
+      else module_type_decls @ (item' :: rest')
+    | _ -> map_item_and_rest ~await_context self stru)
 
-      module_type_decls @ (item :: structure_mapper ~await_context self rest)
-    | _ ->
-      self.structure_item self item :: structure_mapper ~await_context self rest
-    )
+(* [item :: rest] mapped as [self.structure_item self item :: structure_mapper
+   self rest] used to: the rest first, then the item. It is returned as it is
+   when neither changes. *)
+and map_item_and_rest ~await_context self stru =
+  match stru with
+  | [] -> stru
+  | item :: rest ->
+    let rest' = structure_mapper ~await_context self rest in
+    let item' = self.structure_item self item in
+    if item' == item && rest' == rest then stru else item' :: rest'
 
 let structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t) =
   let await_saved = !await_context in

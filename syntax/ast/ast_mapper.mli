@@ -94,4 +94,6 @@ type mapper = {
     tree. *)
 
 val default_mapper : mapper
-(** A default mapper, which implements a "deep identity" mapping. *)
+(** A default mapper, which implements a "deep identity" mapping. It returns a
+    node as it is when none of its parts change, so the result shares the
+    parts of the input that no method rewrote. *)

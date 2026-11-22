@@ -78,6 +78,18 @@ let is_jsx_config_attr ((loc, _) : attribute) = loc.txt = "jsxConfig"
 let process_config_attribute attribute config =
   if is_jsx_config_attr attribute then update_config config (snd attribute)
 
+(* [List.concat_map f items], but [items] itself when [f] maps every item to
+   itself alone. Items are mapped in list order. *)
+let rec concat_map_sharing f items =
+  match items with
+  | [] -> items
+  | item :: rest -> (
+    let mapped = f item in
+    let rest' = concat_map_sharing f rest in
+    match mapped with
+    | [item'] when item' == item && rest' == rest -> items
+    | _ -> mapped @ rest')
+
 let get_mapper ~config =
   let ( expr4,
         module_binding4,
@@ -113,7 +125,7 @@ let get_mapper ~config =
     let old_config = save_config () in
     config.has_component <- false;
     let result =
-      List.map
+      concat_map_sharing
         (fun item ->
           (match item.psig_desc with
           | Psig_attribute attr -> process_config_attribute attr config
@@ -121,7 +133,6 @@ let get_mapper ~config =
           let item = default_mapper.signature_item mapper item in
           if config.version = 4 then transform_signature_item4 item else [item])
         items
-      |> List.flatten
     in
     restore_config old_config;
     result
@@ -130,7 +141,7 @@ let get_mapper ~config =
     let old_config = save_config () in
     config.has_component <- false;
     let result =
-      List.map
+      concat_map_sharing
         (fun item ->
           (match item.pstr_desc with
           | Pstr_attribute attr -> process_config_attribute attr config
@@ -138,7 +149,6 @@ let get_mapper ~config =
           let item = default_mapper.structure_item mapper item in
           if config.version = 4 then transform_structure_item4 item else [item])
         items
-      |> List.flatten
     in
     restore_config old_config;
     result

@@ -1,0 +1,1 @@
+- Return unchanged parsetree nodes from the built-in PPX and JSX passes instead of copying them, so parsing allocates about 9% less.

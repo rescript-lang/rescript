@@ -46,33 +46,44 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
     Parsetree.value_binding list =
   let pvb_pat = self.pat self vb.pvb_pat in
   let pvb_constraint =
-    Option.map
-      (fun {Parsetree.pvc_newtypes; pvc_type} ->
-        {
-          Parsetree.pvc_newtypes =
-            List.map
-              (fun (name : string Asttypes.loc) ->
-                {name with loc = self.location self name.loc})
-              pvc_newtypes;
-          pvc_type = self.typ self pvc_type;
-        })
-      vb.pvb_constraint
+    match vb.pvb_constraint with
+    | None -> None
+    | Some {pvc_newtypes; pvc_type} as option ->
+      (* The type before the names, as the record this used to build
+         evaluated them *)
+      let pvc_type' = self.typ self pvc_type in
+      let pvc_newtypes' =
+        Ext_list.map_sharing pvc_newtypes (fun (name : string Asttypes.loc) ->
+            let loc = self.location self name.loc in
+            if loc == name.loc then name else {name with loc})
+      in
+      if pvc_type' == pvc_type && pvc_newtypes' == pvc_newtypes then option
+      else Some {pvc_newtypes = pvc_newtypes'; pvc_type = pvc_type'}
   in
   let pvb_expr = self.expr self vb.pvb_expr in
   let pvb_attributes = self.attributes self vb.pvb_attributes in
   let pvb_jsx_component = vb.pvb_jsx_component in
+  (* The binding with its mapped parts, [vb] itself when none changed *)
+  let mapped_binding () : Parsetree.value_binding =
+    if
+      pvb_pat == vb.pvb_pat
+      && pvb_constraint == vb.pvb_constraint
+      && pvb_expr == vb.pvb_expr
+      && pvb_attributes == vb.pvb_attributes
+    then vb
+    else
+      {
+        pvb_pat;
+        pvb_expr;
+        pvb_constraint;
+        pvb_jsx_component;
+        pvb_loc = vb.pvb_loc;
+        pvb_attributes;
+      }
+  in
   let pvb_expr_desc = (Ast_payload.unwrap_braces pvb_expr).pexp_desc in
   match (pvb_constraint, pvb_pat.ppat_desc, pvb_expr_desc) with
-  | Some _, _, _ ->
-    {
-      pvb_pat;
-      pvb_expr;
-      pvb_constraint;
-      pvb_jsx_component;
-      pvb_loc = vb.pvb_loc;
-      pvb_attributes;
-    }
-    :: acc
+  | Some _, _, _ -> mapped_binding () :: acc
   | None, Ppat_tuple xs, _ when List.for_all is_simple_pattern xs -> (
     match Ast_open_cxt.destruct_open_tuple pvb_expr [] with
     | Some (wholes, es, tuple_attributes)
@@ -92,16 +103,7 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
           }
           :: acc)
         xs es acc
-    | _ ->
-      {
-        pvb_pat;
-        pvb_expr;
-        pvb_constraint;
-        pvb_jsx_component;
-        pvb_loc = vb.pvb_loc;
-        pvb_attributes;
-      }
-      :: acc)
+    | _ -> mapped_binding () :: acc)
   | None, Ppat_record (_, _, Some rest), Pexp_pack {pmod_desc = Pmod_ident _} ->
     Loc_report.raise_errorf ~loc:rest.rest_loc
       "Record rest patterns are not supported when destructuring modules. Bind \
@@ -124,18 +126,16 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
         | _ ->
           Loc_report.raise_errorf ~loc:lid.loc
             "Not supported pattern match on modules")
-  | _ ->
-    {
-      pvb_pat;
-      pvb_expr;
-      pvb_constraint;
-      pvb_jsx_component;
-      pvb_loc = vb.pvb_loc;
-      pvb_attributes;
-    }
-    :: acc
+  | _ -> mapped_binding () :: acc
 
-let value_bindings_mapper (self : Ast_mapper.mapper)
+(* The bindings are mapped last to first, as [Ext_list.fold_right] did. A list
+   whose bindings all come back unchanged is returned as it is. *)
+let rec value_bindings_mapper (self : Ast_mapper.mapper)
     (vbs : Parsetree.value_binding list) =
-  (* Ast_mapper.default_mapper.value_bindings self  vbs   *)
-  List.fold_right (fun vb acc -> flattern_tuple_pattern_vb self vb acc) vbs []
+  match vbs with
+  | [] -> vbs
+  | vb :: rest -> (
+    let rest' = value_bindings_mapper self rest in
+    match flattern_tuple_pattern_vb self vb rest' with
+    | vb' :: tail when vb' == vb && tail == rest' && rest' == rest -> vbs
+    | mapped -> mapped)
