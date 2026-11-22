@@ -1,7 +1,7 @@
 open Lsp
 open Lsp.Types
 
-let initialization (client_capabilities : ClientCapabilities.t) =
+let initialization ~state (client_capabilities : ClientCapabilities.t) =
   let textDocumentSync =
     `TextDocumentSyncOptions
       (TextDocumentSyncOptions.create ~openClose:true
@@ -60,14 +60,7 @@ let initialization (client_capabilities : ClientCapabilities.t) =
   in
   let executeCommandProvider =
     ExecuteCommandOptions.create
-      ~commands:
-        [
-          Execute_commands.Open_compiled.name;
-          Execute_commands.Create_interface.name;
-          Execute_commands.Switch_implementation_interface.name;
-          Execute_commands.Dump_server_state.name;
-          Execute_commands.Dump_cmt.name;
-        ]
+      ~commands:(Execute_commands.advertised_names ~state)
       ()
   in
   let diagnosticProvider =
@@ -251,7 +244,7 @@ let on_initialize (params : InitializeParams.t) (server : State.t Server.t) =
     discover_project_context ~notify_errors:true ~workspace_root server
   in
 
-  let initialization_info = initialization params.capabilities in
+  let initialization_info = initialization ~state params.capabilities in
 
   let position_encoding =
     match initialization_info.capabilities.positionEncoding with
@@ -532,18 +525,7 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
         reporting a formatting failure to the user. *)
       (ok None, state))
   | ExecuteCommand {command; arguments} -> (
-    let open Execute_commands in
-    match
-      List.assoc_opt command
-        [
-          (Open_compiled.name, Open_compiled.execute);
-          (Create_interface.name, Create_interface.execute);
-          ( Switch_implementation_interface.name,
-            Switch_implementation_interface.execute );
-          (Dump_server_state.name, Dump_server_state.execute);
-          (Dump_cmt.name, Dump_cmt.execute);
-        ]
-    with
+    match Execute_commands.find ~state command with
     | Some execute -> (
       match execute ~arguments server with
       | Ok None -> (ok `Null, state)

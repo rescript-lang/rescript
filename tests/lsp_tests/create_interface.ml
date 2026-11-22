@@ -51,10 +51,13 @@ let%expect_test "advertises interface creation as an executable command" =
           in
           match initialized.capabilities.executeCommandProvider with
           | Some {commands} ->
-            List.filter (( = ) "rescript/createInterface") commands
-            |> List.iter print_endline
+            List.filter
+              (String.starts_with ~prefix:"rescript/createInterface:")
+              commands
+            |> List.iter (fun command ->
+                Test.print_json ~root (`String command))
           | None -> failwith "Expected executable commands"));
-  [%expect {| rescript/createInterface |}]
+  [%expect {| "rescript/createInterface:<instance>" |}]
 
 let%expect_test
     "offers and executes interface creation for a saved implementation" =
@@ -68,6 +71,7 @@ let%expect_test
         | [{command = Some command}] -> command
         | _ -> failwith "Expected one create-interface command"
       in
+      assert (List.mem command.command (Test.Client.commands client));
       let id =
         Test.Client.send_request client
           (Client_request.ExecuteCommand
@@ -102,7 +106,7 @@ let%expect_test
             "file:///workspace/Test.res",
             "file:///workspace/lib/rescript/Test.cmi"
           ],
-          "command": "rescript/createInterface",
+          "command": "rescript/createInterface:<instance>",
           "title": "Create interface file"
         },
         "title": "Create interface file"

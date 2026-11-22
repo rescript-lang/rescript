@@ -70,6 +70,7 @@ module Client = struct
     mutable next_id: int;
     mutable status: Unix.process_status option;
     mutable notifications: Jsonrpc.Notification.t list;
+    mutable commands: string list;
   }
 
   let frame body : string =
@@ -128,6 +129,7 @@ module Client = struct
       next_id = 0;
       status = None;
       notifications = [];
+      commands = [];
     }
 
   let send_body t body =
@@ -183,6 +185,8 @@ module Client = struct
     let notifications = List.rev t.notifications in
     t.notifications <- [];
     notifications
+
+  let commands t = t.commands
 
   (** Send a typed request and synchronously wait for its response, decoded
       back into the request's result type. *)
@@ -271,8 +275,13 @@ let initialize_client ~capabilities ~root client =
   let init_params =
     InitializeParams.create ~capabilities ~rootUri:(DocumentUri.of_path root) ()
   in
-  let id = Client.send_request client (Client_request.Initialize init_params) in
-  assert ((Client.read_response client id).result |> Result.is_ok);
+  let initialized =
+    Client.request client (Client_request.Initialize init_params)
+  in
+  client.commands <-
+    (match initialized.capabilities.executeCommandProvider with
+    | Some {commands} -> commands
+    | None -> []);
   Client.send_notification client
     (Client_notification.Initialized (InitializedParams.t_of_yojson (`Assoc [])));
   let registration = Client.read_request client "client/registerCapability" in
@@ -343,8 +352,9 @@ let range start end_ =
 let text_document (doc : TextDocumentItem.t) =
   TextDocumentIdentifier.create ~uri:doc.uri
 
-(* Only replace the temporary workspace prefix; keep relative paths, ranges and
-   response ordering intact so snapshots still catch navigation/edit regressions. *)
+(* Replace nondeterministic workspace paths and per-session command suffixes;
+   keep relative paths, ranges and response ordering intact. Command identity
+   and routing are also checked against the unnormalized initialize response. *)
 let normalize_json ~root json =
   let prefixes =
     [
@@ -381,8 +391,25 @@ let normalize_json ~root json =
       prefixes
     |> Option.value ~default:value
   in
+  let normalize_command value =
+    match String.index_opt value ':' with
+    | Some index when String.starts_with ~prefix:"rescript/" value ->
+      let suffix =
+        String.sub value (index + 1) (String.length value - index - 1)
+      in
+      if
+        String.length suffix = 32
+        && String.for_all
+             (function
+               | '0' .. '9' | 'a' .. 'f' -> true
+               | _ -> false)
+             suffix
+      then String.sub value 0 (index + 1) ^ "<instance>"
+      else value
+    | _ -> value
+  in
   let rec normalize = function
-    | `String value -> `String (normalize_string value)
+    | `String value -> `String (normalize_string value |> normalize_command)
     | `Assoc fields ->
       `Assoc
         (List.map

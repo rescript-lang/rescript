@@ -1,6 +1,9 @@
 open Lsp
 open Lsp.Types
 
+let scoped_name ~(state : State.t) name =
+  name ^ ":" ^ state.execute_command_id_suffix
+
 let request_show_document ~uri ~takeFocus (server : State.t Server.t) =
   let state = Server.state server in
   let client_support_window_show_document =
@@ -136,3 +139,25 @@ module Dump_cmt = struct
             of string: [uri]"
            name)
 end
+
+let commands =
+  [
+    (Open_compiled.name, Open_compiled.execute);
+    (Create_interface.name, Create_interface.execute);
+    ( Switch_implementation_interface.name,
+      Switch_implementation_interface.execute );
+    (Dump_server_state.name, Dump_server_state.execute);
+    (Dump_cmt.name, Dump_cmt.execute);
+  ]
+
+let advertised_names ~state =
+  List.map (fun (name, _) -> scoped_name ~state name) commands
+
+let find ~state command =
+  (* Plain names remain available for clients that invoke commands directly,
+     but accept scoped names only from this session, not another server. *)
+  List.find_map
+    (fun (name, execute) ->
+      if command = name || command = scoped_name ~state name then Some execute
+      else None)
+    commands

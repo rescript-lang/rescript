@@ -258,6 +258,12 @@ warning number. Monorepo compiler-log discovery uses `cmt_scan` build roots in
 | `rescript/dumpServerState` | Writes a temporary `.json` dump of session state and opens it. |
 | `rescript/dumpCmt` | Writes a temporary `.txt` dump of typed metadata and opens it. |
 
+Advertised execute-command IDs and code-action commands append a random
+per-session suffix, such as `rescript/openCompiled:<instance>`, so multiple
+servers can coexist in clients that register commands globally. The plain names
+above remain accepted by `workspace/executeCommand` for direct client calls,
+but are not advertised. A suffixed ID is accepted only by its owning server.
+
 State dumps include document versions/lengths, diagnostics, configuration,
 initialization parameters, analysis state, and compiler configuration. The
 file-opening command flow is:

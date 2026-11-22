@@ -52,7 +52,7 @@ let value = switch variant {
             "file:///workspace/Test.res",
             "file:///workspace/lib/rescript/Test.cmi"
           ],
-          "command": "rescript/createInterface",
+          "command": "rescript/createInterface:<instance>",
           "title": "Create interface file"
         },
         "title": "Create interface file"
@@ -123,7 +123,7 @@ let%expect_test "extracts a local module into its own file" =
             "file:///workspace/Test.res",
             "file:///workspace/lib/rescript/Test.cmi"
           ],
-          "command": "rescript/createInterface",
+          "command": "rescript/createInterface:<instance>",
           "title": "Create interface file"
         },
         "title": "Create interface file"
@@ -199,7 +199,7 @@ let value = if kind == First {
             "file:///workspace/Test.res",
             "file:///workspace/lib/rescript/Test.cmi"
           ],
-          "command": "rescript/createInterface",
+          "command": "rescript/createInterface:<instance>",
           "title": "Create interface file"
         },
         "title": "Create interface file"
@@ -267,7 +267,7 @@ let%expect_test "offers a type annotation for an inferred string binding" =
             "file:///workspace/Test.res",
             "file:///workspace/lib/rescript/Test.cmi"
           ],
-          "command": "rescript/createInterface",
+          "command": "rescript/createInterface:<instance>",
           "title": "Create interface file"
         },
         "title": "Create interface file"
@@ -314,7 +314,7 @@ let noBraces = () => name
             "file:///workspace/Test.res",
             "file:///workspace/lib/rescript/Test.cmi"
           ],
-          "command": "rescript/createInterface",
+          "command": "rescript/createInterface:<instance>",
           "title": "Create interface file"
         },
         "title": "Create interface file"
@@ -359,7 +359,7 @@ let%expect_test "does not offer another annotation for an annotated binding" =
             "file:///workspace/Test.res",
             "file:///workspace/lib/rescript/Test.cmi"
           ],
-          "command": "rescript/createInterface",
+          "command": "rescript/createInterface:<instance>",
           "title": "Create interface file"
         },
         "title": "Create interface file"

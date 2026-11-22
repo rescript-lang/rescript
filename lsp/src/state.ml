@@ -15,10 +15,17 @@ type t = {
   store: Document_store.t;
   configuration: Configuration.t;
   fs: Eio.Fs.dir_ty Eio.Path.t;
+  execute_command_id_suffix: string;
 }
 
 let make ~store ~configuration ~fs =
-  {status = Uninitialized; store; configuration; fs}
+  (* Some clients register advertised commands globally, even when each
+     project has its own server. Keep IDs unique and stable for this session. *)
+  let random = Random.State.make_self_init () in
+  let execute_command_id_suffix =
+    String.init 32 (fun _ -> "0123456789abcdef".[Random.State.int random 16])
+  in
+  {status = Uninitialized; store; configuration; fs; execute_command_id_suffix}
 
 let initialize t ~params ~diagnostics ~analysis_state ~compiler_config
     ~position_encoding =
