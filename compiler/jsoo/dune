@@ -14,5 +14,4 @@
   rescript_parser
   typing
   gentype
-  outcome_printer
   js_of_ocaml))

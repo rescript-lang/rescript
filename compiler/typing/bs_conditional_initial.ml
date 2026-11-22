@@ -1,5 +1,5 @@
-(* Copyright (C) 2020- Hongbo Zhang, Authors of ReScript
- *
+(* Copyright (C) 2015 - 2016 Bloomberg Finance L.P.
+ * Copyright (C) 2016 - Hongbo Zhang, Authors of ReScript
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -22,28 +22,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(**
-    Note it is a bit tricky when there is unbound var, 
-    its type will be Tvar which is too complicated to support subtyping
-*)
-let variant_is_subtype (env : Env.t) (row_desc : Types.row_desc)
-    (ty : Types.type_expr) : bool =
-  match row_desc with
-  | {
-   row_closed = true;
-   row_fixed = _;
-   row_fields = (name, (Rabsent | Rpresent None)) :: rest;
-  } ->
-    if Ext_string.is_valid_hash_number name then
-      Ext_list.for_all rest (function
-        | name, (Rabsent | Rpresent None) ->
-          Ext_string.is_valid_hash_number name
-        | _ -> false)
-      && Typeopt.is_base_type env ty Predef.path_int
-    else
-      Ext_list.for_all rest (function
-        | name, (Rabsent | Rpresent None) ->
-          not (Ext_string.is_valid_hash_number name)
-        | _ -> false)
-      && Typeopt.is_base_type env ty Predef.path_string
-  | _ -> false
+let setup_env () =
+  Env.Persistent_signature.load := Bs_cmi_load.load_cmi;
+  Build_file_store.set_disk_reader Bs_cmi_load.read_file;
+  (* bsc's defaults, which differ from OCaml's in [Clflags.create]. *)
+  Clflags.reset ()
+(*; Switch.cut := 100*)
+(* tweakable but not very useful *)
+
+let () = at_exit (fun _ -> Format.pp_print_flush Format.err_formatter ())

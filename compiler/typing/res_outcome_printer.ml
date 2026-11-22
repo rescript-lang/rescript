@@ -954,12 +954,3 @@ let print_out_signature fmt signature =
 
 let print_out_module_type fmt out_module_type =
   pp_doc fmt (print_out_module_type_doc out_module_type)
-
-(* Not supported in ReScript *)
-(* Oprint.out_class_type *)
-let setup =
-  lazy
-    (Oprint.out_type := print_out_type;
-     Oprint.out_module_type := print_out_module_type;
-     Oprint.out_sig_item := print_out_sig_item;
-     Oprint.out_signature := print_out_signature)

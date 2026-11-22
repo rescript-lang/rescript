@@ -228,8 +228,7 @@ end
 let () =
   Bs_conditional_initial.setup_env ();
   (Clflags.current ()).binary_annotations := false;
-  (Clflags.current ()).color := Some Always;
-  Lazy.force Res_outcome_printer.setup
+  (Clflags.current ()).color := Some Always
 
 let error_of_exn e =
   match Loc_report.error_of_exn e with

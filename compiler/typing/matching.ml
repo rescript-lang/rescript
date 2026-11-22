@@ -1987,9 +1987,6 @@ let as_interval_ranges fail low high l =
     | None -> as_interval_nofail l
     | Some act -> as_interval_canfail act low high l )
 
-let as_interval fail low high l =
-  as_interval_ranges fail low high (List.map (fun (i, act) -> (i, i, act)) l)
-
 let call_switcher_ranges fail arg low high range_lambda_list =
   let edges, (cases, actions) =
     as_interval_ranges fail low high range_lambda_list
@@ -2403,49 +2400,6 @@ let combine_constructor loc arg ex_pat cstr partial ctx def
     let lambda1 = lower_constructor_matching_plan ~loc ~arg plan in
     (lambda1, jumps_union local_jumps total1)
 
-let make_test_sequence_variant_constant fail arg int_lambda_list =
-  let _, (cases, actions) =
-    as_interval fail int32_low int32_high
-      (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list)
-  in
-  Switch.test_sequence arg cases actions
-
-let call_switcher_variant_constant fail arg int_lambda_list =
-  call_switcher fail arg int32_low int32_high
-    (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list)
-
-let call_switcher_variant_constr loc fail arg int_lambda_list =
-  let v = Ident.create "variant" in
-  let_ Alias v
-    (prim ~primitive:(Pfield (0, Fld_poly_var_tag)) ~args:[arg] loc)
-    (call_switcher fail (var v) int32_low int32_high
-       (List.map (fun (a, (_, c)) -> (a, c)) int_lambda_list))
-
-let call_switcher_variant_constant :
-    (Lambda.t option ->
-    Lambda.t ->
-    (int * (string * Lambda.t)) list ->
-    Lambda.t)
-    ref =
-  ref call_switcher_variant_constant
-
-let call_switcher_variant_constr :
-    (Location.t ->
-    Lambda.t option ->
-    Lambda.t ->
-    (int * (string * Lambda.t)) list ->
-    Lambda.t)
-    ref =
-  ref call_switcher_variant_constr
-
-let make_test_sequence_variant_constant :
-    (Lambda.t option ->
-    Lambda.t ->
-    (int * (string * Lambda.t)) list ->
-    Lambda.t)
-    ref =
-  ref make_test_sequence_variant_constant
-
 let combine_variant loc row arg partial ctx def (tag_lambda_list, total1, _pats)
     =
   let row = Btype.row_repr row in
@@ -2484,17 +2438,23 @@ let combine_variant loc row arg partial ctx def (tag_lambda_list, total1, _pats)
         test_int_or_block arg act1 act2
       | _, [] ->
         (* One can compare integers and pointers *)
-        !make_test_sequence_variant_constant fail arg consts
+        Polyvar_pattern_match.make_test_sequence_variant_constant fail arg
+          consts
       | [], _ -> (
-        let lam = !call_switcher_variant_constr loc fail arg nonconsts in
+        let lam =
+          Polyvar_pattern_match.call_switcher_variant_constr loc fail arg
+            nonconsts
+        in
         (* One must not dereference integers *)
         match fail with
         | None -> lam
         | Some fail -> test_int_or_block arg fail lam)
       | _, _ ->
-        let lam_const = !call_switcher_variant_constant fail arg consts
+        let lam_const =
+          Polyvar_pattern_match.call_switcher_variant_constant fail arg consts
         and lam_nonconst =
-          !call_switcher_variant_constr loc fail arg nonconsts
+          Polyvar_pattern_match.call_switcher_variant_constr loc fail arg
+            nonconsts
         in
         test_int_or_block arg lam_const lam_nonconst)
   in

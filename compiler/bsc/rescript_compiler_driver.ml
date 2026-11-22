@@ -56,13 +56,11 @@ let set_abs_input_name sourcefile =
   in
   Loc_report.set_input_name sourcefile;
   sourcefile
-let setup_outcome_printer () = Lazy.force Res_outcome_printer.setup
 
 let setup_runtime_path path = Runtime_package.set_path path
 
 let process_file sourcefile ppf =
   (* The input name must identify the source when writing the binary AST. *)
-  setup_outcome_printer ();
   Error_message_utils_support.setup ();
   let kind =
     Ext_file_extensions.classify_input
@@ -546,7 +544,6 @@ let file_level_flags_handler (e : Parsetree.expression option) =
    on a first request. *)
 let () =
   Bs_conditional_initial.setup_env ();
-  setup_outcome_printer ();
   Error_message_utils_support.install_parser ();
   let flags = "flags" in
   Ast_config.add_structure flags file_level_flags_handler;

@@ -415,9 +415,6 @@ let get_type_path ty tenv =
 (* Values as patterns pretty printer *)
 (*************************************)
 
-let print_res_pat : (Typedtree.pattern -> string) ref =
-  ref (fun _ -> assert false)
-
 open Format
 
 let is_cons = function
@@ -2110,7 +2107,7 @@ let do_check_partial ?partial_match_warning_hint ~pred exhaust loc casel pss =
              try
                let buf = Buffer.create 16 in
                Buffer.add_string buf "| ";
-               Buffer.add_string buf (!print_res_pat v);
+               Buffer.add_string buf (Pattern_printer.print_pattern v);
                (match check_partial_all v casel with
                | None -> ()
                | Some _ ->

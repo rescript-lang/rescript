@@ -23,8 +23,6 @@ val pretty_pat : pattern -> unit
 val pretty_line : pattern list -> unit
 val pretty_matrix : pattern list list -> unit
 
-val print_res_pat : (Typedtree.pattern -> string) ref
-
 val omega : pattern
 val omegas : int -> pattern list
 val omega_list : 'a list -> pattern list

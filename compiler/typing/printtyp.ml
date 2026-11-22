@@ -27,9 +27,6 @@ open Outcometree
 
 type printing_context = {inlined_types: type_inlined_type list}
 
-let print_res_poly_identifier : (string -> string) ref =
-  ref (fun _ -> assert false)
-
 (* Print a long identifier *)
 
 let rec longident ppf = function
@@ -988,7 +985,8 @@ and tree_of_constraints ~printing_context params =
       else list)
     params []
 
-let typexp sch ppf ty = !Oprint.out_type ppf (tree_of_typexp sch ty)
+let typexp sch ppf ty =
+  Res_outcome_printer.print_out_type ppf (tree_of_typexp sch ty)
 
 let type_expr ppf ty = typexp false ppf ty
 
@@ -1007,11 +1005,12 @@ let tree_of_type_declaration id decl rs =
   Osig_type (tree_of_type_decl id decl, tree_of_rec rs)
 
 let type_declaration id ppf decl =
-  !Oprint.out_sig_item ppf (tree_of_type_declaration id decl Trec_not)
+  Res_outcome_printer.print_out_sig_item ppf
+    (tree_of_type_declaration id decl Trec_not)
 
 let constructor_arguments ppf a =
   let tys = tree_of_constructor_arguments a in
-  !Oprint.out_type ppf (Otyp_tuple tys)
+  Res_outcome_printer.print_out_type ppf (Otyp_tuple tys)
 
 (* Print an extension declaration *)
 
@@ -1063,7 +1062,8 @@ let tree_of_extension_constructor id ext es =
   Osig_typext (ext, es)
 
 let extension_constructor id ppf ext =
-  !Oprint.out_sig_item ppf (tree_of_extension_constructor id ext Text_first)
+  Res_outcome_printer.print_out_sig_item ppf
+    (tree_of_extension_constructor id ext Text_first)
 
 (* Print a value declaration *)
 
@@ -1078,7 +1078,7 @@ let tree_of_value_description id decl =
   Osig_value {oval_name = id; oval_type = ty; oval_prim; oval_attributes = []}
 
 let value_description id ppf decl =
-  !Oprint.out_sig_item ppf (tree_of_value_description id decl)
+  Res_outcome_printer.print_out_sig_item ppf (tree_of_value_description id decl)
 
 (* Print a module type *)
 
@@ -1192,14 +1192,16 @@ and tree_of_modtype_declaration id decl =
 and tree_of_module id ~ellipsis mty rs =
   Osig_module (Ident.name id, tree_of_modtype ~ellipsis mty, tree_of_rec rs)
 
-let modtype ppf mty = !Oprint.out_module_type ppf (tree_of_modtype mty)
+let modtype ppf mty =
+  Res_outcome_printer.print_out_module_type ppf (tree_of_modtype mty)
 let modtype_declaration id ppf decl =
-  !Oprint.out_sig_item ppf (tree_of_modtype_declaration id decl)
+  Res_outcome_printer.print_out_sig_item ppf
+    (tree_of_modtype_declaration id decl)
 
 (* Print a signature body (used by -i when compiling a .ml) *)
 
 let print_signature ppf tree =
-  fprintf ppf "@[<v>%a@]" !Oprint.out_signature tree
+  fprintf ppf "@[<v>%a@]" Res_outcome_printer.print_out_signature tree
 
 let signature ppf sg = fprintf ppf "%a" print_signature (tree_of_signature sg)
 
@@ -1292,9 +1294,10 @@ let print_tags ppf fields =
   match fields with
   | [] -> ()
   | (t, _) :: fields ->
-    fprintf ppf "%s" (!print_res_poly_identifier t);
+    fprintf ppf "%s" (Res_printer.polyvar_ident_to_string t);
     List.iter
-      (fun (t, _) -> fprintf ppf ",@ %s" (!print_res_poly_identifier t))
+      (fun (t, _) ->
+        fprintf ppf ",@ %s" (Res_printer.polyvar_ident_to_string t))
       fields
 
 let has_explanation t3 t4 =
@@ -1437,8 +1440,8 @@ let explanation unif t3 t4 ppf =
          their payload types are incompatible.@,\
          Make sure the payload types for @{<info>%s@} match exactly in both \
          polymorphic variants."
-        (!print_res_poly_identifier l1)
-        (!print_res_poly_identifier l1)
+        (Res_printer.polyvar_ident_to_string l1)
+        (Res_printer.polyvar_ident_to_string l1)
     | _ -> ())
   | _ -> ()
 

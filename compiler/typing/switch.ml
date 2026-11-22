@@ -705,18 +705,3 @@ let zyva lh arg cases actions =
   let actions = actions.act_get_shared () in
   let hs, actions = abstract_shared actions in
   hs (do_zyva lh arg cases actions)
-
-and test_sequence arg cases actions =
-  assert (Array.length cases > 0);
-  let actions = actions.act_get_shared () in
-  let hs, actions = abstract_shared actions in
-  let old_ok = !(ok_inter ()) in
-  ok_inter () := false;
-  if !(ok_inter ()) <> old_ok then Hashtbl.clear (cache ());
-  let s = {cases; actions = Array.map (fun act _ -> act) actions} in
-  (*
-  Printf.eprintf "SEQUENCE: %B\n" !ok_inter ;
-  pcases stderr cases ;
-  prerr_endline "" ;
-*)
-  hs (c_test {arg; off = 0} s)

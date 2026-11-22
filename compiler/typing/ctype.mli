@@ -344,9 +344,6 @@ val package_subtype :
   bool)
   ref
 
-val variant_is_subtype :
-  (Env.t -> Types.row_desc -> Types.type_expr -> bool) ref
-
 val get_arity : Env.t -> type_expr -> int option
 
 module For_test : sig

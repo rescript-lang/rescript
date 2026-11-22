@@ -22,7 +22,6 @@ open Outcometree
 type printing_context = {inlined_types: type_inlined_type list}
 (** Tracks things like inlined records, to help with printing. *)
 
-val print_res_poly_identifier : (string -> string) ref
 val longident : formatter -> Longident.t -> unit
 val ident : formatter -> Ident.t -> unit
 val path : formatter -> Path.t -> unit
