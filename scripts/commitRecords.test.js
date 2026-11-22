@@ -43,8 +43,15 @@ async function write(dir, files) {
  */
 async function render(setup, args) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "commit-records-"));
+  // A fixed date, so that cards rendered from different commits don't differ
+  // when the commits fall on either side of a minute boundary.
+  const env = {
+    ...process.env,
+    GIT_AUTHOR_DATE: "2026-01-02T12:00:00Z",
+    GIT_COMMITTER_DATE: "2026-01-02T12:00:00Z",
+  };
   const git = (/** @type {string[]} */ ...a) =>
-    execFileSync("git", a, { cwd: dir, encoding: "utf8" });
+    execFileSync("git", a, { cwd: dir, encoding: "utf8", env });
   git("init", "-q", "-b", "main");
   git("config", "user.name", "A Person");
   git("config", "user.email", "a@example.com");
