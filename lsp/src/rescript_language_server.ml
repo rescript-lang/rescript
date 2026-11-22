@@ -513,11 +513,24 @@ let on_request (Client_request.E request) (server : State.t Server.t) =
     in
     (ok resp, state)
   | TextDocumentFormatting {textDocument = {uri}} -> (
-    match Formatter.run ~uri ~state with
-    | Ok text_edit -> (ok (Some text_edit), state)
-    | Error message ->
-      Server.show_message_notification ~kind:MessageType.Error message server;
-      (error message, state))
+    let doc = Document_store.get ~uri state.store in
+    let source = Document.text doc in
+    let kind_file = Document.kind doc in
+    match Analysis.Commands.format ~source ~kind_file with
+    | Ok edits ->
+      (* Analysis returns full-document replacements. Compute edits against the
+        original buffer instead of using the formatted text's replacement range. *)
+      ( ok
+          (Some
+             (List.concat_map
+                (fun (edit : Lsp.Types.TextEdit.t) ->
+                  Lsp.Diff.edit ~from:source ~to_:edit.newText)
+                edits)),
+        state )
+    | Error _ ->
+      (* Incomplete code is normal while editing; leave it unchanged without
+        reporting a formatting failure to the user. *)
+      (ok None, state))
   | ExecuteCommand {command; arguments} -> (
     let open Execute_commands in
     match

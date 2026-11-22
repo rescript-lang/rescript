@@ -19,12 +19,6 @@ let kind_of_uri uri =
 
 let kind doc = doc |> Text_document.documentUri |> kind_of_uri
 
-let extension_of_kind (kind : kind) =
-  match kind with
-  | Res -> "res"
-  | Resi -> "resi"
-  | Other -> assert false
-
 let make (doc : DidOpenTextDocumentParams.t) ~position_encoding =
   let t_doc = Text_document.make ~position_encoding doc in
   t_doc

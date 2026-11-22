@@ -107,7 +107,6 @@ The server library lives in `lsp/src` and has an opam package named
 | [diagnostics.ml](src/diagnostics.ml) | Separate diagnostic sources, snapshot updates, URI/range conversion, and publication. |
 | [code_actions.ml](src/code_actions.ml), [custom_requests.ml](src/custom_requests.ml), [execute_commands.ml](src/execute_commands.ml) | Analysis actions, interface creation, compiled-file navigation, and debugging commands. |
 | [configuration.ml](src/configuration.ml) | Settings decoding and defaults. |
-| [formatter.ml](src/formatter.ml) | Runs the project's `rescript format` command on the buffer and computes text edits; its process helper uses Unix on Windows and Eio on Linux/macOS. |
 | [fs.ml](src/fs.ml) | Filesystem helpers over the Eio filesystem capability. |
 
 ### Project discovery and recovery

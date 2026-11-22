@@ -3,9 +3,6 @@
  (libraries
   lsp
   eio
-  eio_main
-  eio.unix
-  unix
   analysis
   str
   ppx_deriving_yojson.runtime)
