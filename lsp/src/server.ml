@@ -81,7 +81,22 @@ end = struct
     Eio.Mutex.use_rw ~protect:true input.mutex @@ fun () ->
     if Eio.Buf_read.eof_seen input.buf then Ok None
     else
-      match Eio.Buf_read.take size input.buf with
+      match
+        if size <= max_size then Eio.Buf_read.take size input.buf
+        else
+          (* [take] requires its entire argument to fit in the reader's buffer.
+             Assemble large JSON bodies in bounded chunks, consuming exactly the
+             declared length so the following header remains untouched. *)
+          let body = Buffer.create max_size in
+          let rec read_chunks remaining =
+            if remaining > 0 then (
+              let length = min remaining max_size in
+              Buffer.add_string body (Eio.Buf_read.take length input.buf);
+              read_chunks (remaining - length))
+          in
+          read_chunks size;
+          Buffer.contents body
+      with
       | data -> Ok (Some data)
       | exception End_of_file -> Ok None
 
