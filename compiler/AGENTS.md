@@ -27,13 +27,15 @@ commands below are relative to the repository root unless stated otherwise.
 ReScript Source (.res)
   ↓ (ReScript Parser - syntax/parser/)
 Surface Syntax Tree
-  ↓ (Frontend transformations - compiler/frontend/)
+  ↓ (PPXes, built-in PPX and JSX - compiler/frontend/)
 Surface Syntax Tree
-  ↓ (OCaml Type Checker - compiler/typing/)
+  ↓ (Type checker - compiler/typing/)
 Typedtree
-  ↓ (Lambda compilation - compiler/backend/lam_*)
+  ↓ (Translation to Lambda - compiler/typing/transl*, matching)
 Lambda IR
-  ↓ (JS compilation - compiler/backend/js_*)
+  ↓ (Lambda optimizations - compiler/backend/lam_*)
+Lambda IR
+  ↓ (JS compilation - compiler/backend/lam_compile*, js_*)
 JS IR
   ↓ (JS output - compiler/backend/js_dump*)
 JavaScript Code
@@ -60,12 +62,19 @@ Read the relevant area guide linked from the [root instructions](../AGENTS.md#ar
      printing surface syntax. The parser depends on the printer
    - **AST layer** (`syntax/ast/`): The parsetree and the helpers the parser
      shares with the type checker. It depends on the standard library only, not
-     on `ext`, `ml` or `flow_parser`
-   - **Typing layer** (`compiler/typing/`): Type checking and the translation to Lambda
+     on `ext`, `typing` or `flow_parser`
+   - **Frontend** (`compiler/frontend/`): Turns source files into the
+     parsetree the type checker reads: loads sources and `.ast` files, runs
+     external PPXes, and applies the built-in PPX and the JSX transform
+   - **Typing layer** (`compiler/typing/`): Type checking, the translation to
+     Lambda, and the compiler's options
    - **v0 AST** (`compiler/ast0/`): The frozen `Parsetree0` that external PPXes
      read and write, and the bridge between it and the current parsetree
    - **Lambda layer** (`compiler/backend/lam_*`): Intermediate representation and optimizations
    - **JS layer** (`compiler/backend/js_*`): JavaScript generation
+   - **Driver** (`compiler/driver/`): Compiles one file through all layers and
+     implements bsc's command line
+   - **Utilities** (`compiler/ext/`): General helpers with no other dependency
 
 2. **Always run appropriate tests:**
 

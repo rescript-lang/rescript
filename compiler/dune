@@ -2,6 +2,7 @@
  ast0
  backend
  bsc
+ driver
  ext
  flow_parser
  frontend

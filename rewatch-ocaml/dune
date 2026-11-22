@@ -88,16 +88,7 @@
   output
   build
   format)
- (libraries
-  unix
-  threads
-  yojson
-  str
-  spawn
-  cmdliner
-  luv
-  re.perl
-  rescript_compiler_driver)
+ (libraries unix threads yojson str spawn cmdliner luv re.perl driver)
  (foreign_stubs
   (language c)
   (names windows_job_stubs)))

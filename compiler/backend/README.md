@@ -50,9 +50,9 @@ Typedtree translation in `compiler/typing/translcore.ml` and
 : Defines JavaScript expressions, statements, and blocks.
 
 `js_pass_*.ml` and other `js_*.ml` modules
-: Analyze and transform JavaScript IR. `js_dump*.ml` renders the final program,
-  while [`js_implementation.ml`](js_implementation.ml) coordinates compilation
-  from a source file.
+: Analyze and transform JavaScript IR. `js_dump*.ml` renders the final program.
+  The driver's [`js_implementation.ml`](../driver/js_implementation.ml) runs a
+  source file through all compiler layers.
 
 ## Changing a representation
 

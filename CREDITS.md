@@ -27,9 +27,9 @@ ReScript builds on these parts of OCaml:
 These modules were adapted from [`ocaml/bytecomp/simplif.ml`](ocaml/bytecomp/simplif.ml) for
 JavaScript specific optimization purposes.
 
-- [`compiler/main/rescript_compiler_main.ml`](compiler/main/rescript_compiler_main.ml)
+- [`compiler/bsc/rescript_compiler_main.ml`](compiler/bsc/rescript_compiler_main.ml)
 
-`compiler/main/rescript_compiler_main.ml` is adapted from [`ocaml/driver/main.ml`](ocaml/driver/main.ml). It is the main entry
+`compiler/bsc/rescript_compiler_main.ml` is adapted from [`ocaml/driver/main.ml`](ocaml/driver/main.ml). It is the main entry
 point of the underlying compiler.
 
 ReScript imported one file from [jsoo](https://github.com/ocsigen/js_of_ocaml)
