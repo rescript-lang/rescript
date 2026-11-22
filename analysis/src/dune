@@ -7,7 +7,6 @@
  (libraries
   unix
   str
-  ext
   typing
   yojson
   lsp

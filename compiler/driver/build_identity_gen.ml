@@ -21,8 +21,8 @@ let () =
   in
   [
     "/flow_parser/parser/expression_parser.ml";
-    "/ext/ext_platform_primitives_stubs.c";
-    "/ext/platform/native/ext_platform_primitives.ml";
+    "/typing/ext_platform_primitives_stubs.c";
+    "/typing/platform/native/ext_platform_primitives.ml";
     "/backend/platform/native/js_name_of_module_id.ml";
     "/syntax/parser/res_driver.ml";
     "/syntax/parser/dune";

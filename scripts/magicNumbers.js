@@ -15,7 +15,6 @@ const previousConfigPaths = ["compiler/ext/config.ml"];
 export const formatSources = [
   "syntax/ast",
   "compiler/typing",
-  "compiler/ext",
   "compiler/flow_parser",
 ];
 
