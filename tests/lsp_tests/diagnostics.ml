@@ -371,3 +371,79 @@ Somewhere wanted: string
     }
     { "kind": "full", "items": [] }
     |}]
+
+let%expect_test
+    "Windows drive casing preserves compiler errors across open and close" =
+  Test.with_project ~name:"diagnostics-drive-case" ~text:{|let value = 1|}
+    (fun ~root ~doc:_ client ->
+      ignore (publications client);
+      (* A slash-prefixed Windows drive also reproduces the URI mismatch on
+         Unix. The document stays in memory; no file on that drive is needed. *)
+      let doc =
+        Test.make_document
+          ~uri:(Uri.of_string "file:///d%3A/a/project/src/Broken.res")
+          ~text:{|let value: int = "broken"|}
+      in
+      write_log ~root client
+        {|#Start(1)
+We've found a bug for you!
+/D:/a/project/src/Broken.res:1:18-25
+
+This has type: string
+Somewhere wanted: int
+
+#Done(2)
+|};
+      ignore (publications client);
+      Test.perform client (Test.open_document doc);
+      print_endline "open document pushes:";
+      print_publications ~root client;
+      print_endline "open document pull:";
+      Test.snapshot ~root client (Syntax_test.diagnostics doc);
+      close_document client doc;
+      print_endline "closed document pushes:";
+      print_publications ~root client;
+      write_log ~root client {|#Start(3)
+#Done(4)
+|};
+      print_endline "clean build pushes:";
+      print_publications ~root client);
+  [%expect
+    {|
+    open document pushes:
+    [ { "diagnostics": [], "uri": "file:///d%3A/a/project/src/Broken.res" } ]
+    open document pull:
+    {
+      "kind": "full",
+      "items": [
+        {
+          "message": "This has type: string\nSomewhere wanted: int",
+          "range": {
+            "end": { "character": 25, "line": 0 },
+            "start": { "character": 17, "line": 0 }
+          },
+          "severity": 1,
+          "source": "ReScript"
+        }
+      ]
+    }
+    closed document pushes:
+    [
+      {
+        "diagnostics": [
+          {
+            "message": "This has type: string\nSomewhere wanted: int",
+            "range": {
+              "end": { "character": 25, "line": 0 },
+              "start": { "character": 17, "line": 0 }
+            },
+            "severity": 1,
+            "source": "ReScript"
+          }
+        ],
+        "uri": "file:///d%3A/a/project/src/Broken.res"
+      }
+    ]
+    clean build pushes:
+    [ { "diagnostics": [], "uri": "file:///d%3A/a/project/src/Broken.res" } ]
+    |}]

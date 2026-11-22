@@ -95,7 +95,7 @@ let to_yojson (t : t) : Yojson.Safe.t =
   let document_store_to_yojson (store : Document_store.t) =
     store.documents |> Hashtbl.to_seq
     |> Seq.map (fun (uri, doc) ->
-        ( Lsp.Uri.to_string uri,
+        ( uri,
           `Assoc
             [
               ("version", `Int (Lsp.Text_document.version doc));

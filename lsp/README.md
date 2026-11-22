@@ -155,6 +155,11 @@ Avoid publishing the same diagnostic through both channels: clients can retain
 them separately and display duplicates. Supported clients are asked to refresh
 pull diagnostics after compiler-log updates.
 
+Document and diagnostic keys use the URI's serialized form so Windows drive
+letters match regardless of the case used by the compiler or client. Filename
+case is preserved. Pull-capable clients decide when to request diagnostics;
+documents opened without a visible editor may not be pulled by the client.
+
 ### Diagnostic scenarios and design history
 
 Three editor scenarios motivated the ownership model:
