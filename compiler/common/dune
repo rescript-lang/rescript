@@ -1,8 +1,0 @@
-(library
- (name common)
- (flags
-  (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
- (wrapped false)
- (instrumentation
-  (backend bisect_ppx))
- (libraries ast0 typing rescript_printer rescript_parser))

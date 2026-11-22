@@ -32,9 +32,8 @@
  (instrumentation
   (backend bisect_ppx))
  (libraries
-  common
+  frontend
   backend
-  depends
   flow_parser
   gentype
   rescript_printer

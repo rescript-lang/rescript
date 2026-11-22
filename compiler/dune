@@ -2,14 +2,11 @@
  ast0
  backend
  bsc
- common
- depends
  ext
  flow_parser
  frontend
  gentype
  jsoo
- jsx
  sync
  syntax_cli
  typing)
