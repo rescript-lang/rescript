@@ -2,6 +2,8 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Primitive_float from "@rescript/runtime/lib/es6/Primitive_float.js";
+import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.js";
 
 function id(x) {
   return x;
@@ -18,25 +20,31 @@ Mocha.describe("Compare_fold_test", () => {
     let c = id({
       x: 2
     });
-    Test_utils.eq("File \"compare_fold_test.res\", line 20, characters 7-14", a === b, true);
-    Test_utils.eq("File \"compare_fold_test.res\", line 22, characters 7-14", a < c, true);
-    Test_utils.eq("File \"compare_fold_test.res\", line 24, characters 7-14", c > a, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 19, characters 7-14", Primitive_object.compare(a, b) === 0, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 20, characters 7-14", Primitive_object.compare(a, c) < 0, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 21, characters 7-14", Primitive_object.compare(c, a) > 0, true);
   });
   Mocha.test("tuples, arrays and options", () => {
-    Test_utils.eq("File \"compare_fold_test.res\", line 29, characters 7-14", id([
+    Test_utils.eq("File \"compare_fold_test.res\", line 25, characters 7-14", Primitive_object.compare(id([
       1,
       2
-    ]) === id([
+    ]), id([
       1,
       2
-    ]), true);
-    Test_utils.eq("File \"compare_fold_test.res\", line 31, characters 7-14", id([10]) < id([9]), false);
-    Test_utils.eq("File \"compare_fold_test.res\", line 33, characters 7-14", id(undefined) < id(1), true);
+    ])) === 0, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 26, characters 7-14", Primitive_object.compare(id([10]), id([9])) < 0, false);
+    Test_utils.eq("File \"compare_fold_test.res\", line 27, characters 7-14", Primitive_object.compare(id(undefined), id(1)) < 0, true);
   });
   Mocha.test("NaN", () => {
     let nan = id(NaN);
-    Test_utils.eq("File \"compare_fold_test.res\", line 39, characters 7-14", nan < id(1.0), true);
-    Test_utils.eq("File \"compare_fold_test.res\", line 41, characters 7-14", nan === nan, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 32, characters 7-14", Primitive_float.compare(nan, id(1.0)) < 0, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 33, characters 7-14", Primitive_float.compare(nan, nan) === 0, true);
+  });
+  Mocha.test("primitives that fold", () => {
+    Test_utils.eq("File \"compare_fold_test.res\", line 37, characters 7-14", id(1) < id(2), true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 38, characters 7-14", id("b") > id("a"), true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 39, characters 7-14", id(true) === id(true), true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 40, characters 7-14", id(2n) >= id(1n), true);
   });
 });
 

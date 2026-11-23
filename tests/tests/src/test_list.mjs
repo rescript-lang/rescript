@@ -2,6 +2,7 @@
 
 import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.js";
 import * as Pervasives from "@rescript/runtime/lib/es6/Pervasives.js";
+import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.js";
 
 function length_aux(_len, _x) {
   while (true) {
@@ -361,7 +362,7 @@ function mem(x, _x_) {
     if (x_ === 0) {
       return false;
     }
-    if (x_.hd === x) {
+    if (Primitive_object.compare(x_.hd, x) === 0) {
       return true;
     }
     _x_ = x_.tl;
@@ -388,7 +389,7 @@ function assoc(x, _x_) {
     let x_ = _x_;
     if (x_ !== 0) {
       let match = x_.hd;
-      if (match[0] === x) {
+      if (Primitive_object.compare(match[0], x) === 0) {
         return match[1];
       }
       _x_ = x_.tl;
@@ -425,7 +426,7 @@ function mem_assoc(x, _x_) {
     if (x_ === 0) {
       return false;
     }
-    if (x_.hd[0] === x) {
+    if (Primitive_object.compare(x_.hd[0], x) === 0) {
       return true;
     }
     _x_ = x_.tl;
@@ -453,7 +454,7 @@ function remove_assoc(x, x_) {
   }
   let l = x_.tl;
   let pair = x_.hd;
-  if (pair[0] === x) {
+  if (Primitive_object.compare(pair[0], x) === 0) {
     return l;
   } else {
     return {

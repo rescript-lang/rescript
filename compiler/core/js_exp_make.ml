@@ -1376,6 +1376,16 @@ let compare_int_aux (cmp : Lam_compat.comparison) (l : int) r =
   | Cle -> l <= r
   | Cge -> l >= r
 
+(* [compare] of these runtime modules is a total order that agrees with the JS
+   operators, so [compare a b <op> 0] is [a <op> b]. Not so for
+   [Primitive_float] (NaN) nor [Primitive_object] (structural). *)
+let compare_agrees_with_js_operators (module_id : J.module_id) =
+  let name = Ident.name module_id.id in
+  name = Primitive_modules.int
+  || name = Primitive_modules.bool
+  || name = Primitive_modules.string
+  || name = Primitive_modules.bigint
+
 let rec int_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
   match (cmp, e0.expression_desc, e1.expression_desc) with
   | _, Number (Int {i = l}), Number (Int {i = r}) ->
@@ -1385,12 +1395,13 @@ let rec int_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
   | ( _,
       Call
         ( {
-            expression_desc = Var (Qualified ({kind = Runtime}, Some "compare"));
-            _;
+            expression_desc =
+              Var (Qualified (({kind = Runtime} as module_id), Some "compare"));
           },
           [l; r],
           _ ),
-      Number (Int {i = 0l}) ) ->
+      Number (Int {i = 0l}) )
+    when compare_agrees_with_js_operators module_id ->
     int_comp cmp l r (* = 0 > 0 < 0 *)
   | (Ceq, Optional_block _, Undefined _ | Ceq, Undefined _, Optional_block _)
     when no_side_effect e0 && no_side_effect e1 ->
