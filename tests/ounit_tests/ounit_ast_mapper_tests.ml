@@ -124,6 +124,52 @@ let test_parts_are_mapped_in_their_order _ =
   OUnit.assert_equal ~printer:(String.concat " ") ["z"; "g"; "x"; "y"; "f"]
     (List.rev !visited)
 
+(* Lists longer than the depth at which [map_list] switches from recursion to
+   a loop keep the same sharing and order *)
+let check_long_structure ~changed_at =
+  let n = 3000 in
+  let structure =
+    parse
+      (String.concat "\n"
+         (List.init n (fun i -> Printf.sprintf "let x%d = %d" i i)))
+  in
+  OUnit.assert_bool "unchanged structure shared"
+    (mapper.structure mapper structure == structure);
+  let visited = ref [] in
+  let changed = Ast_helper.Exp.constant (Pconst_integer ("-1", None)) in
+  let rewrite =
+    {
+      mapper with
+      expr =
+        (fun self e ->
+          match e.pexp_desc with
+          | Pexp_constant (Pconst_integer (i, None)) ->
+            visited := int_of_string i :: !visited;
+            if int_of_string i = changed_at then changed else e
+          | _ -> mapper.expr self e);
+    }
+  in
+  let structure' = rewrite.structure rewrite structure in
+  OUnit.assert_equal ~msg:"visited in order" (List.init n Fun.id)
+    (List.rev !visited);
+  List.iteri
+    (fun i (item, item') ->
+      OUnit.assert_bool
+        (Printf.sprintf "item %d %s" i
+           (if i = changed_at then "rebuilt" else "shared"))
+        (item' == item = (i <> changed_at)))
+    (List.combine structure structure');
+  let rec drop k l = if k = 0 then l else drop (k - 1) (List.tl l) in
+  OUnit.assert_bool "the list after the rebuilt item is shared"
+    (drop (changed_at + 1) structure' == drop (changed_at + 1) structure)
+
+(* A change before the switch to the loop, at its first element, and in the
+   loop *)
+let test_long_lists_share_and_keep_their_order _ =
+  List.iter
+    (fun changed_at -> check_long_structure ~changed_at)
+    [500; 1000; 2500]
+
 let suites =
   __FILE__
   >::: [
@@ -133,4 +179,6 @@ let suites =
          >:: test_rewrite_rebuilds_only_its_path;
          "parts_are_mapped_in_their_order"
          >:: test_parts_are_mapped_in_their_order;
+         "long_lists_share_and_keep_their_order"
+         >:: test_long_lists_share_and_keep_their_order;
        ]

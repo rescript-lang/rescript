@@ -133,21 +133,89 @@ let rec map_snd l f =
     let y5 = f x5 in
     (v1, y1) :: (v2, y2) :: (v3, y3) :: (v4, y4) :: (v5, y5) :: map_snd tail f
 
-let rec map_sharing l f =
+(* The sharing maps recurse over the first [sharing_depth] elements, which
+   allocates nothing for an unchanged list, and continue with a loop in
+   constant stack after that, so a long list doesn't grow the stack by a frame
+   per element. Both map the elements in list order. *)
+let sharing_depth = 1000
+
+(* The elements of [l] before its suffix [stop], reversed onto [acc] *)
+let rec rev_prefix_onto l stop acc =
+  if l == stop then acc
+  else
+    match l with
+    | [] -> acc
+    | x :: xs -> rev_prefix_onto xs stop (x :: acc)
+
+(* [map_sharing] in constant stack. [acc] is the result up to the last changed
+   element, reversed, and [run] the input after that element, whose elements
+   seen so far map to themselves and are shared at the end. *)
+let rec map_sharing_loop f changed acc run l =
   match l with
-  | [] -> l
+  | [] -> if changed then List.rev_append acc run else run
   | x :: xs ->
     let x' = f x in
-    let xs' = map_sharing xs f in
-    if x' == x && xs' == xs then l else x' :: xs'
+    if x' == x then map_sharing_loop f changed acc run xs
+    else map_sharing_loop f true (x' :: rev_prefix_onto run l acc) xs xs
 
-let rec map_snd_sharing l f =
+let rec map_sharing_depth l f depth =
   match l with
   | [] -> l
+  | _ when depth = 0 -> map_sharing_loop f false [] l l
+  | x :: xs ->
+    let x' = f x in
+    let xs' = map_sharing_depth xs f (depth - 1) in
+    if x' == x && xs' == xs then l else x' :: xs'
+
+let map_sharing l f = map_sharing_depth l f sharing_depth
+
+(* [map_snd_sharing] has its own copy of [map_sharing]'s two parts, as going
+   through [map_sharing] would allocate a closure per call, and the Lambda
+   passes call it for every switch *)
+let rec map_snd_sharing_loop f changed acc run l =
+  match l with
+  | [] -> if changed then List.rev_append acc run else run
   | (k, x) :: xs ->
     let x' = f x in
-    let xs' = map_snd_sharing xs f in
+    if x' == x then map_snd_sharing_loop f changed acc run xs
+    else
+      map_snd_sharing_loop f true ((k, x') :: rev_prefix_onto run l acc) xs xs
+
+let rec map_snd_sharing_depth l f depth =
+  match l with
+  | [] -> l
+  | _ when depth = 0 -> map_snd_sharing_loop f false [] l l
+  | (k, x) :: xs ->
+    let x' = f x in
+    let xs' = map_snd_sharing_depth xs f (depth - 1) in
     if x' == x && xs' == xs then l else (k, x') :: xs'
+
+let map_snd_sharing l f = map_snd_sharing_depth l f sharing_depth
+
+(* [concat_map_sharing] in constant stack, like [map_sharing_loop] *)
+let rec concat_map_sharing_loop f changed acc run l =
+  match l with
+  | [] -> if changed then List.rev_append acc run else run
+  | x :: xs -> (
+    match f x with
+    | [x'] when x' == x -> concat_map_sharing_loop f changed acc run xs
+    | mapped ->
+      concat_map_sharing_loop f true
+        (List.rev_append mapped (rev_prefix_onto run l acc))
+        xs xs)
+
+let rec concat_map_sharing_depth l f depth =
+  match l with
+  | [] -> l
+  | _ when depth = 0 -> concat_map_sharing_loop f false [] l l
+  | x :: xs -> (
+    let mapped = f x in
+    let xs' = concat_map_sharing_depth xs f (depth - 1) in
+    match mapped with
+    | [x'] when x' == x && xs' == xs -> l
+    | _ -> mapped @ xs')
+
+let concat_map_sharing l f = concat_map_sharing_depth l f sharing_depth
 
 let rec map_last l f =
   match l with

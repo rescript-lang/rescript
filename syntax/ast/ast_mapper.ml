@@ -68,14 +68,43 @@ type mapper = {
    the arguments of the constructor calls this mapper used to make, right to
    left in the order of the callee's parameters (or of a record's fields). *)
 
-(* [List.map], keeping [l] when no element changes *)
-let rec map_list f l =
+(* [List.map], keeping [l] when no element changes and sharing the unchanged
+   tail otherwise; the same as [Ext_list.map_sharing], which this library
+   cannot use. It recurses over the first [map_list_depth] elements, which
+   allocates nothing for an unchanged list, and continues with a loop in
+   constant stack after that, so a long list doesn't grow the stack by a frame
+   per element. The elements are mapped in list order. *)
+let map_list_depth = 1000
+
+(* The elements of [l] before its suffix [stop], reversed onto [acc] *)
+let rec rev_prefix_onto l stop acc =
+  if l == stop then acc
+  else
+    match l with
+    | [] -> acc
+    | x :: xs -> rev_prefix_onto xs stop (x :: acc)
+
+(* [acc] is the result up to the last changed element, reversed, and [run] the
+   input after that element, whose elements seen so far map to themselves and
+   are shared at the end. *)
+let rec map_list_loop f changed acc run l =
   match l with
-  | [] -> l
+  | [] -> if changed then List.rev_append acc run else run
   | x :: xs ->
     let x' = f x in
-    let xs' = map_list f xs in
+    if x' == x then map_list_loop f changed acc run xs
+    else map_list_loop f true (x' :: rev_prefix_onto run l acc) xs xs
+
+let rec map_list_bounded f l depth =
+  match l with
+  | [] -> l
+  | _ when depth = 0 -> map_list_loop f false [] l l
+  | x :: xs ->
+    let x' = f x in
+    let xs' = map_list_bounded f xs (depth - 1) in
     if x' == x && xs' == xs then l else x' :: xs'
+
+let map_list f l = map_list_bounded f l map_list_depth
 
 let map_opt f o =
   match o with
