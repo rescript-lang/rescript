@@ -43,8 +43,8 @@ val map_snd_sharing : ('a * 'b) list -> ('b -> 'b) -> ('a * 'b) list
 
 val concat_map_sharing : 'a list -> ('a -> 'a list) -> 'a list
 (** [List.concat_map f l], but [l] itself when [f] maps every element to a list
-    of just that element. The sharing maps keep the unchanged tail of a list
-    and run in constant stack beyond their first thousand elements. *)
+    of just that element. It keeps the unchanged tail of a list, and runs in
+    constant stack beyond the first thousand elements. *)
 
 val map_last : 'a list -> (bool -> 'a -> 'b) -> 'b list
 (** [map_last f xs ]

@@ -11,7 +11,7 @@ let rec drop k l = if k = 0 then l else drop (k - 1) (List.tl l)
 let sharing_lengths = [0; 1; 999; 1000; 1001; 1002; 5000]
 
 (* Indices to change: none, or ones before, at and past the depth (1000) at
-   which the sharing maps switch from recursion to a loop *)
+   which [concat_map_sharing] switches from recursion to a loop *)
 let sharing_changes n =
   List.map
     (List.filter (fun i -> i >= 0 && i < n))
