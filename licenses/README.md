@@ -12,6 +12,10 @@ The files are generated from `components.json` by
   Its version and license text come from the current opam switch. The script
   asks dune which opam packages the shipped executables link, and fails when
   one is missing from the inventory or listed without being linked.
+  A metadata-only compatibility package can set `licenseOpam` to the package
+  providing its implementation and license text (for example, `seq.base` uses
+  the OCaml standard library's license). Additional bundled-source notices
+  are included through `licenseFiles`.
 - Every other entry is vendored or adapted source, or a platform toolchain,
   with its license text in this directory or in the vendored source
   directory. Entries with a `platforms` field are included only there: Linux

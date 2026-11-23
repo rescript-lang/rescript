@@ -4,6 +4,7 @@ type command =
   | Watch of build_options
   | Format of format_input
   | Compiler_args of {verbosity: int; path: string}
+  | Lsp
 
 and build_options = {
   verbosity: int;
@@ -217,6 +218,14 @@ let compiler_args_term =
   let+ verbosity = verbosity and+ path in
   Compiler_args {verbosity; path}
 
+let lsp_term =
+  Arg.(
+    required
+    & vflag None
+        [
+          (Some Lsp, info ["stdio"] ~doc:"Use standard input/output (required).");
+        ])
+
 let exits =
   [
     Cmd.Exit.info 0 ~doc:"on success.";
@@ -270,6 +279,11 @@ let root =
       (command_info "help" "Print this message or command help.")
       help_term
   in
+  let lsp =
+    Cmd.make
+      (command_info "lsp" "Start the ReScript language server over stdio.")
+      lsp_term
+  in
   let info =
     let man =
       [
@@ -287,7 +301,7 @@ let root =
       ~version:("rescript " ^ Rewatch_version.version)
       ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
   in
-  let commands = [build; watch; clean; format; compiler_args; help] in
+  let commands = [build; watch; clean; format; compiler_args; lsp; help] in
   (* Options before a command name make Cmdliner read the name as the folder of
      the default build, so [rescript -v watch] would build a folder named
      watch. *)
