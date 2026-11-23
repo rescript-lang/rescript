@@ -24,13 +24,13 @@
 (* Note: some of the functions here should go to Ast_mapper instead,
    which would encapsulate the "binary AST" protocol. *)
 
-let write_ast fn (ast0 : Ml_binary.ast0) =
+let write_ast fn (ast0 : Ppx_ast.ast0) =
   let oc = open_out_bin fn in
-  output_string oc (Ml_binary.magic_of_ast0 ast0);
+  output_string oc (Ppx_ast.magic_of_ast0 ast0);
   output_value oc (Loc_report.get_input_name () : string);
   (match ast0 with
-  | Ml_binary.Impl ast -> output_value oc (ast : Parsetree0.structure)
-  | Ml_binary.Intf ast -> output_value oc (ast : Parsetree0.signature));
+  | Ppx_ast.Impl ast -> output_value oc (ast : Parsetree0.structure)
+  | Ppx_ast.Intf ast -> output_value oc (ast : Parsetree0.signature));
   close_out oc
 
 (* Absolute, because the PPX runs in the request's directory while a relative
@@ -43,7 +43,7 @@ let temp_ppx_file () =
   else path
 
 let apply_rewriter kind fn_in ppx fn_out =
-  let magic = Ml_binary.magic_of_kind kind in
+  let magic = Ppx_ast.magic_of_kind kind in
   let comm =
     Printf.sprintf "%s %s %s" ppx (Filename.quote fn_in) (Filename.quote fn_out)
   in
@@ -59,19 +59,19 @@ let apply_rewriter kind fn_in ppx fn_out =
   if buffer <> magic then Cmd_ast_exception.wrong_magic buffer
 
 (* This is a fatal error, no need to protect it *)
-let read_ast (type a) (kind : a Ml_binary.kind) fn : Ml_binary.ast0 =
+let read_ast (type a) (kind : a Ppx_ast.kind) fn : Ppx_ast.ast0 =
   let ic = open_in_bin fn in
   Fun.protect
     ~finally:(fun () -> close_in_noerr ic)
     (fun () ->
-      let magic = Ml_binary.magic_of_kind kind in
+      let magic = Ppx_ast.magic_of_kind kind in
       let buffer = really_input_string ic (String.length magic) in
       assert (buffer = magic);
       (* already checked by apply_rewriter *)
       Loc_report.set_input_name @@ (input_value ic : string);
       match kind with
-      | Ml_binary.Ml -> Ml_binary.Impl (input_value ic : Parsetree0.structure)
-      | Ml_binary.Mli -> Ml_binary.Intf (input_value ic : Parsetree0.signature))
+      | Ppx_ast.Ml -> Ppx_ast.Impl (input_value ic : Parsetree0.structure)
+      | Ppx_ast.Mli -> Ppx_ast.Intf (input_value ic : Parsetree0.signature))
 
 (** [ppxs] are a stack, 
     [-ppx1 -ppx2  -ppx3]
@@ -90,7 +90,7 @@ let rewrite kind ppxs ast =
     ~finally:(fun () -> List.iter Misc.remove_file !temp_files)
     (fun () ->
       let fn_in = new_temp_file () in
-      write_ast fn_in (Ml_binary.to_ast0 kind ast);
+      write_ast fn_in (Ppx_ast.to_ast0 kind ast);
       let last_fn =
         List.fold_right
           (fun ppx fn_in ->
@@ -105,28 +105,27 @@ let apply_rewriters_str ~tool_name ast =
   match !((Clflags.current ()).all_ppx) with
   | [] ->
     if !((Js_config.current ()).test_ast_conversion) then
-      Ml_binary.ast0_roundtrip Ml_binary.Ml ast
+      Ppx_ast.ast0_roundtrip Ppx_ast.Ml ast
     else ast
   | ppxs ->
     Bs_ast_invariant.check_removed_ocaml_spellings_on_structure ast;
     ast
     |> Ppx_context.add_str ~tool_name
-    |> rewrite Ml ppxs |> Ml_binary.ast0_to_structure |> Ppx_context.drop_str
+    |> rewrite Ml ppxs |> Ppx_ast.ast0_to_structure |> Ppx_context.drop_str
 
 let apply_rewriters_sig ~tool_name ast =
   match !((Clflags.current ()).all_ppx) with
   | [] ->
     if !((Js_config.current ()).test_ast_conversion) then
-      Ml_binary.ast0_roundtrip Ml_binary.Mli ast
+      Ppx_ast.ast0_roundtrip Ppx_ast.Mli ast
     else ast
   | ppxs ->
     Bs_ast_invariant.check_removed_ocaml_spellings_on_signature ast;
     ast
     |> Ppx_context.add_sig ~tool_name
-    |> rewrite Mli ppxs |> Ml_binary.ast0_to_signature |> Ppx_context.drop_sig
+    |> rewrite Mli ppxs |> Ppx_ast.ast0_to_signature |> Ppx_context.drop_sig
 
-let apply_rewriters ~tool_name (type a) (kind : a Ml_binary.kind) (ast : a) : a
-    =
+let apply_rewriters ~tool_name (type a) (kind : a Ppx_ast.kind) (ast : a) : a =
   match kind with
-  | Ml_binary.Ml -> apply_rewriters_str ~tool_name ast
-  | Ml_binary.Mli -> apply_rewriters_sig ~tool_name ast
+  | Ppx_ast.Ml -> apply_rewriters_str ~tool_name ast
+  | Ppx_ast.Mli -> apply_rewriters_sig ~tool_name ast

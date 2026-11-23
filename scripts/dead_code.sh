@@ -14,7 +14,7 @@ reanalyze=${REANALYZE:-reanalyze.exe}
 
 # Modules with an interface only get a .cmt in the @check target.
 dune build --root . @check
-# The playground (compiler/jsoo) and the playground variants of platform
+# The playground (compiler/playground) and the playground variants of platform
 # modules only build in the browser profile. Analyze both builds together so
 # their uses count.
 dune build --root . --profile browser --build-dir _build_playground @compiler/check @syntax/check

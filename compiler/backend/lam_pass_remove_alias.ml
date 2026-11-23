@@ -201,7 +201,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
                we are going to have two copy?
             *)
             (* Check: recursive applying may result in non-termination *)
-            (* Ext_log.dwarn __LOC__ "beta .. %s/%d" v.name v.stamp ; *)
+            (* Ir_log.dwarn __LOC__ "beta .. %s/%d" v.name v.stamp ; *)
             simpl
               (Lam_beta_reduce.propagate_beta_reduce meta params body ap_args)
           else if Lam_analysis.ok_to_inline_fun_when_app m ap_args then

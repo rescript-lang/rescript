@@ -8,9 +8,8 @@ let parse_structure source =
   |> fun result -> result.parsetree
 
 let roundtrip_structure source =
-  parse_structure source
-  |> Ml_binary.to_ast0 Ml_binary.Ml
-  |> Ml_binary.ast0_to_structure
+  parse_structure source |> Ppx_ast.to_ast0 Ppx_ast.Ml
+  |> Ppx_ast.ast0_to_structure
 
 let get_jsx_props structure =
   let from_expr = function

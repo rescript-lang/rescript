@@ -81,7 +81,7 @@ module Cli_arg_processor = struct
       is_interface
       || (len > 0 && (String.get [@doesNotThrow]) filename (len - 1) = 'i')
     in
-    let source = lazy (Ext_io.load_file filename) in
+    let source = lazy (File_io.load_file filename) in
     let load_source () = Lazy.force source in
     (* The engine for the newline of the parsed source *)
     let print_engine =

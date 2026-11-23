@@ -385,7 +385,7 @@ implementations API-compatible when changing one of these modules.
 
 ### Building the Bundle
 
-The entry point of the JSOO bundle is located in `compiler/jsoo/jsoo_playground_main.ml`, the compiler and its relevant runtime cmij files can be built via make:
+The entry point of the JSOO bundle is located in `compiler/playground/playground_main.ml`, the compiler and its relevant runtime cmij files can be built via make:
 
 ```sh
 make playground
@@ -441,7 +441,7 @@ PLAYGROUND_BUNDLE_ENDPOINT=http://localhost:8888 npm run dev
 
 ### Working on the Playground JS API
 
-Whenever you are modifying any files in the ReScript compiler, or in the `jsoo_playground_main.ml` file, you'll need to rebuild the source and recreate the JS bundle.
+Whenever you are modifying any files in the ReScript compiler, or in the `playground_main.ml` file, you'll need to rebuild the source and recreate the JS bundle.
 
 ```
 make playground

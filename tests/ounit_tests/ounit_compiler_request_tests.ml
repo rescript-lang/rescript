@@ -793,8 +793,8 @@ let request_root_io_isolation_tests _context =
                      ~filename:"Input.res")
                     .source
                 in
-                let compiler_source = Ext_io.load_file "Input.res" in
-                Ext_io.write_file "Output.txt" rescript_source;
+                let compiler_source = File_io.load_file "Input.res" in
+                File_io.write_file "Output.txt" rescript_source;
                 (rescript_source, compiler_source)))
       in
       let left = access first in

@@ -25,4 +25,4 @@
 val load_unit : string -> Js_cmj_format.cmj_load_info
 (** [load_unit name] reads [name.cmj] from the load path, together with the
     package path of the directory it was found in. Raises
-    [Bs_exception.Error (Cmj_not_found name)] when no such file exists. *)
+    [Dependency_error.Error (Cmj_not_found name)] when no such file exists. *)

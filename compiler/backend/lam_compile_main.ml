@@ -291,11 +291,11 @@ let compile ?on_optimized_lambda (output_prefix : string)
     (match diagnostics with
     | Some diagnostics ->
       Ir_diagnostics.dump_lam diagnostics ~pass lam;
-      Ext_log.dwarn ~__POS__ "START CHECKING PASS %s@." pass
+      Ir_log.dwarn ~__POS__ "START CHECKING PASS %s@." pass
     | None -> ());
     if !((Js_config.current ()).check_lam) || debug_ir then (
       ignore @@ Lam_check.check ~file:(Loc_report.get_input_name ()) ~pass lam;
-      if debug_ir then Ext_log.dwarn ~__POS__ "FINISH CHECKING PASS %s@." pass);
+      if debug_ir then Ir_log.dwarn ~__POS__ "FINISH CHECKING PASS %s@." pass);
     lam
   in
   let j pass program =
@@ -310,7 +310,7 @@ let compile ?on_optimized_lambda (output_prefix : string)
     if debug_ir then
       List.iter
         (fun (id : Ident.t) ->
-          Ext_log.dwarn ~__POS__ "export idents: %s/%d" id.name id.stamp)
+          Ir_log.dwarn ~__POS__ "export idents: %s/%d" id.name id.stamp)
         export_idents;
     Lam_compile_env.reset ()
   in
@@ -329,8 +329,7 @@ let compile ?on_optimized_lambda (output_prefix : string)
       |> (fun lam ->
       Lam_pass_collect.collect_info meta lam;
       if debug_ir then
-        Ext_log.dwarn ~__POS__ "Before simplify_alias: %a@." Lam_stats.print
-          meta;
+        Ir_log.dwarn ~__POS__ "Before simplify_alias: %a@." Lam_stats.print meta;
       lam)
       |> Lam_pass_remove_alias.simplify_alias meta
       |> d "simplify_alias 1" |> Lam_pass_deep_flatten.deep_flatten
@@ -355,7 +354,7 @@ let compile ?on_optimized_lambda (output_prefix : string)
     |> Lam_pass_guard_raises.guard_raises |> d "guard_raises"
     |> fun lam ->
     if debug_ir then
-      Ext_log.dwarn ~__POS__ "Before coercion: %a@." Lam_stats.print meta;
+      Ir_log.dwarn ~__POS__ "Before coercion: %a@." Lam_stats.print meta;
     lam
   in
 
@@ -368,7 +367,7 @@ let compile ?on_optimized_lambda (output_prefix : string)
 
   let () =
     if debug_ir then (
-      Ext_log.dwarn ~__POS__ "After coercion: %a@." Lam_stats.print meta;
+      Ir_log.dwarn ~__POS__ "After coercion: %a@." Lam_stats.print meta;
       diagnostics
       |> Option.iter (fun diagnostics ->
           Ir_diagnostics.dump_groups diagnostics coerced_input.groups))
@@ -404,7 +403,7 @@ let compile ?on_optimized_lambda (output_prefix : string)
   in
   let () =
     if debug_ir then
-      Ext_log.dwarn ~__POS__ "\n@[[TIME:]Pre-compile: %f@]@."
+      Ir_log.dwarn ~__POS__ "\n@[[TIME:]Pre-compile: %f@]@."
         (Sys.time () *. 1000.)
   in
   let body =
@@ -419,7 +418,7 @@ let compile ?on_optimized_lambda (output_prefix : string)
   in
   let () =
     if debug_ir then
-      Ext_log.dwarn ~__POS__ "\n@[[TIME:]Post-compile: %f@]@."
+      Ir_log.dwarn ~__POS__ "\n@[[TIME:]Post-compile: %f@]@."
         (Sys.time () *. 1000.)
   in
   let meta_exports = meta.exports in
@@ -509,9 +508,9 @@ let dump_deps_program_with_source_map ?(remove_stale_map = true) ~target_file
     let json = Js_source_map.json builder in
     sink.add_string
       (Js_source_map.linked_comment ~map_file:(target_file ^ ".map"));
-    Ext_io.write_file (target_file ^ ".map") json
+    File_io.write_file (target_file ^ ".map") json
   | Hidden ->
-    Ext_io.write_file (target_file ^ ".map") (Js_source_map.json builder)
+    File_io.write_file (target_file ^ ".map") (Js_source_map.json builder)
   | Inline ->
     sink.add_string
       (Js_source_map.inline_comment ~json:(Js_source_map.json builder));

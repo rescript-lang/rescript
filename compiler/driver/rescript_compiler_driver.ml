@@ -176,7 +176,7 @@ let format_file input =
   in
   match !((Clflags.current ()).output_name) with
   | None -> Compiler_request_output.write_stdout_binary formatted
-  | Some fname -> Ext_io.write_file fname formatted
+  | Some fname -> File_io.write_file fname formatted
 
 let set_color_option option =
   match Clflags.parse_color_setting option with
@@ -197,7 +197,7 @@ let eval (s : string) ~suffix =
       if not !((Clflags.current ()).verbose) then
         try Sys.remove tmpfile with _ -> ())
     (fun () ->
-      Ext_io.write_file tmpfile s;
+      File_io.write_file tmpfile s;
       anonymous ~rev_args:[tmpfile])
 
 (* let (//) = Filename.concat *)
@@ -545,7 +545,7 @@ let file_level_flags_handler (e : Parsetree.expression option) =
    request can start on another domain. Concurrent Lazy.force calls would race
    on a first request. *)
 let () =
-  Bs_conditional_initial.setup_env ();
+  Compiler_setup.init ();
   Error_message_utils_support.install_parser ();
   let flags = "flags" in
   Ast_config.add_structure flags file_level_flags_handler;

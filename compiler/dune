@@ -6,7 +6,7 @@
  flow_parser
  frontend
  gentype
- jsoo
+ playground
  sync
  syntax_cli
  typing)

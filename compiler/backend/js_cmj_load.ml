@@ -31,4 +31,4 @@ let load_unit unit_name : Js_cmj_format.cmj_load_info =
   let file = unit_name ^ Literals.suffix_cmj in
   match Config_util.find_opt file with
   | Some f -> {cmj_table = Js_cmj_format.from_file f}
-  | None -> Bs_exception.error (Cmj_not_found unit_name)
+  | None -> Dependency_error.error (Cmj_not_found unit_name)

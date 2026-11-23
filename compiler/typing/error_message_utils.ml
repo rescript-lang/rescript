@@ -47,7 +47,7 @@ end = struct
     else
       try
         (* TODO: Maybe cache later on *)
-        let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
+        let src = File_io.load_file loc.Location.loc_start.pos_fname in
         extract_location_string ~src loc
       with _ -> ""
 

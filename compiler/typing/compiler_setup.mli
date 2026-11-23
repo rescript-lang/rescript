@@ -1,4 +1,4 @@
-(* Copyright (C) 2015 - 2016 Bloomberg Finance L.P.
+(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
  * Copyright (C) 2016 - Hongbo Zhang, Authors of ReScript
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -17,17 +17,13 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let setup_env () =
-  Env.Persistent_signature.load := Bs_cmi_load.load_cmi;
-  Build_file_store.set_disk_reader Bs_cmi_load.read_file;
-  (* bsc's defaults, which differ from OCaml's in [Clflags.create]. *)
-  Clflags.reset ()
-(*; Switch.cut := 100*)
-(* tweakable but not very useful *)
-
-let () = at_exit (fun _ -> Format.pp_print_flush Format.err_formatter ())
+val init : unit -> unit
+(** Sets the compiler's default flags, makes the type checker load .cmi files
+    through [Bs_cmi_load], and makes the build file store read files from disk
+    through [Bs_cmi_load.read_file]. bsc and the playground call it before
+    compiling. *)

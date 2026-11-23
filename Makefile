@@ -176,7 +176,7 @@ $(PLAYGROUND_COMPILER): $(PLAYGROUND_BUILD_STAMP)
 
 $(PLAYGROUND_BUILD_STAMP): $(COMPILER_SOURCES)
 	dune build --profile browser --build-dir $(PLAYGROUND_BUILD_DIR)
-	cp -f $(PLAYGROUND_BUILD_DIR)/default/compiler/jsoo/jsoo_playground_main.bc.js $(PLAYGROUND_COMPILER)
+	cp -f $(PLAYGROUND_BUILD_DIR)/default/compiler/playground/playground_main.bc.js $(PLAYGROUND_COMPILER)
 
 # Creates all the relevant core and third party cmij files to side-load together with the playground bundle
 playground-cmijs: $(PLAYGROUND_CMI_BUILD_STAMP)

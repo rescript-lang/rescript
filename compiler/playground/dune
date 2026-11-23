@@ -1,7 +1,7 @@
 ; Don't build the JS compiler by default as it slows down CI considerably.
 
 (executables
- (names jsoo_playground_main)
+ (names playground_main)
  (flags
   (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
  (modes js wasm)
