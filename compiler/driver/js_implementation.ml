@@ -134,6 +134,7 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
           (Loc_report.get_input_name ())
           outputprefix modulename env ast
       in
+      Compile_phase_hook.typing_finished ();
       let typedtree_coercion = (typedtree, coercion) in
       print_if ppf (Clflags.current ()).dump_typedtree
         Printtyped.implementation_with_coercion typedtree_coercion;

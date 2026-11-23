@@ -2416,3 +2416,57 @@ if ! test "${worker_words:-0}" -gt 0; then
   cat "$worker_allocations/build.log" >&2
   exit 1
 fi
+
+# RESCRIPT_TRACE writes a Chrome trace of the build and leaves its outputs as
+# they are without it.
+build_trace="$work/build-trace"
+mkdir -p "$build_trace/src"
+printf '%s\n' \
+  '{"name":"build-trace","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
+  >"$build_trace/rescript.json"
+printf 'let x = 1\n' >"$build_trace/src/A.res"
+printf 'let x: int\n' >"$build_trace/src/A.resi"
+printf 'let y = A.x + 1\n' >"$build_trace/src/B.res"
+"$port" build "$build_trace" >"$build_trace/plain.log" 2>&1
+cp "$build_trace/src/A.mjs" "$build_trace/A.plain.mjs"
+cp "$build_trace/src/B.mjs" "$build_trace/B.plain.mjs"
+"$port" clean "$build_trace" >/dev/null 2>&1
+env RESCRIPT_TRACE="$(native_path "$build_trace/trace.json")" \
+  "$port" build "$build_trace" >"$build_trace/traced.log" 2>&1
+cmp "$build_trace/A.plain.mjs" "$build_trace/src/A.mjs"
+cmp "$build_trace/B.plain.mjs" "$build_trace/src/B.mjs"
+TRACE=$(native_path "$build_trace/trace.json") node -e '
+  const fs = require("node:fs");
+  const events = JSON.parse(fs.readFileSync(process.env.TRACE, "utf8")).traceEvents;
+  const fail = message => {
+    console.error(message);
+    process.exit(1);
+  };
+  const spans = events.filter(event => event.ph === "X");
+  const find = (name, cat) =>
+    spans.find(event => event.name === name && event.cat === cat) ||
+    fail(`no ${cat} span ${name}`);
+  find("A.res", "parse");
+  find("A.resi", "parse");
+  find("A.iast", "interface");
+  const end = event => event.ts + event.dur;
+  for (const name of ["A.ast", "B.ast"]) {
+    const request = find(name, "implementation");
+    // Type checking and then code generation nest in the request on its track
+    const child = phase =>
+      spans.find(event =>
+        event.name === phase && event.tid === request.tid &&
+        event.ts >= request.ts && end(event) <= end(request)) ||
+      fail(`no ${phase} span in ${name}`);
+    if (end(child("type checking")) > child("code generation").ts)
+      fail(`type checking overlaps code generation in ${name}`);
+  }
+  if (!spans.some(event => event.name === "start task" && event.tid === 0))
+    fail("no scheduler step spans");
+  const graph = spans.find(event => event.name === "compile" && event.tid === 0);
+  if (!graph || graph.args.tasks !== 2) fail("no compile graph span with 2 tasks");
+  if (!events.some(event => event.ph === "C" && event.name === "tasks: compile"))
+    fail("no compile task counters");
+  if (!events.some(event => event.ph === "M" && event.name === "thread_name"))
+    fail("no track names");
+'

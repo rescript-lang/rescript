@@ -328,7 +328,7 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
   let () =
     try
       let max_jobs = Compiler_execution_mode.configured_count () in
-      Process.run_dependency_graph ~max_jobs ?poll
+      Process.run_dependency_graph ~trace_label:"compile" ~max_jobs ?poll
         works
         (* Finish ready independent work after a module failure; dependents of
            the failed module remain blocked. Interruptions still abort. *)

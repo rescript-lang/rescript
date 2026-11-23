@@ -76,7 +76,7 @@ let run_namespace_jobs (attempt : Build_attempt.t) =
         attempt.parse_seconds +. (Unix.gettimeofday () -. started_at))
     (fun () ->
       let results =
-        Process.run_tasks
+        Process.run_tasks ~trace_label:"namespaces"
           ~max_jobs:(Compiler_execution_mode.configured_count ())
           ?poll:attempt.process_poll
           (List.map (fun job -> job.Build_attempt.task) jobs)
