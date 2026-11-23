@@ -10,11 +10,12 @@ type rec t =
 @unboxed
 type replacer = Keys(array<string>) | Replacer((string, t) => t)
 
-@throws @val external parseOrThrow: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
+@throws(JsExn) @val
+external parseOrThrow: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
 
 @val external stringify: (t, ~replacer: replacer=?, ~space: int=?) => string = "JSON.stringify"
 
-@throws @val
+@throws(JsExn) @val
 external stringifyAny: ('a, ~replacer: replacer=?, ~space: int=?) => option<string> =
   "JSON.stringify"
 

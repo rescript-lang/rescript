@@ -103,8 +103,10 @@ let get: (t<'v>, key) => option<'v>
 
 let getWithDefault: (t<'v>, key, 'v) => 'v
 
+@throws(Not_found)
 let getExn: (t<'v>, key) => 'v
 
+@throws(Not_found)
 let getOrThrow: (t<'v>, key) => 'v
 
 /**

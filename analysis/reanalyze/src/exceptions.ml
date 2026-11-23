@@ -6,8 +6,8 @@ let add = Exn_set.add
 let diff = Exn_set.diff
 let empty = Exn_set.empty
 let from_list = Exn_set.of_list
-let to_list = Exn_set.elements
 let is_empty = Exn_set.is_empty
+let map = Exn_set.map
 let iter = Exn_set.iter
 let union = Exn_set.union
 
@@ -19,7 +19,7 @@ let pp ~exn_table ppf exceptions =
     let name = Exn.to_string exn in
     match exn_table with
     | Some exn_table -> (
-      match Hashtbl.find_opt exn_table exn with
+      match Exn.Table.find_opt exn_table exn with
       | Some loc_set ->
         let positions =
           loc_set |> Loc_set.elements

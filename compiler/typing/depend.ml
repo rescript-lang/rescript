@@ -95,6 +95,15 @@ let add = add_parent
 
 let addmodule bv lid = add_path bv lid.txt
 
+(* The type checker looks up the exceptions a [@throws] names, so their
+   modules are dependencies, as for any other use. *)
+let add_throws bv (attributes : Parsetree.attributes) =
+  attributes
+  |> List.iter (fun (({txt}, payload) : Parsetree.attribute) ->
+      if txt = "throws" then
+        Throws_attribute.names payload
+        |> List.iter (fun (lid, loc) -> add bv {Location.txt = lid; loc}))
+
 let handle_extension ext =
   match (fst ext).txt with
   | "error" ->
@@ -370,6 +379,7 @@ and add_case bv {pc_lhs; pc_guard; pc_rhs} =
   add_expr bv pc_rhs
 
 and add_bindings recf bv pel =
+  List.iter (fun x -> add_throws bv x.pvb_attributes) pel;
   let bv' = List.fold_left (fun bv x -> add_pattern bv x.pvb_pat) bv pel in
   let bv = if recf = Recursive then bv' else bv in
   List.iter (fun x -> add_expr bv x.pvb_expr) pel;
@@ -425,6 +435,7 @@ and add_sig_item (bv, m) item =
   match item.psig_desc with
   | Psig_value vd ->
     add_type bv vd.pval_type;
+    add_throws bv vd.pval_attributes;
     (bv, m)
   | Psig_type (_, dcls) ->
     List.iter (add_type_declaration bv) dcls;
@@ -507,7 +518,8 @@ and add_structure_binding bv item_list =
 
 and add_struct_item (bv, m) item : _ String_map.t * _ String_map.t =
   match item.pstr_desc with
-  | Pstr_eval (e, _attrs) ->
+  | Pstr_eval (e, attrs) ->
+    add_throws bv attrs;
     add_expr bv e;
     (bv, m)
   | Pstr_value (rf, pel) ->
@@ -515,6 +527,7 @@ and add_struct_item (bv, m) item : _ String_map.t * _ String_map.t =
     (bv, m)
   | Pstr_primitive vd ->
     add_type bv vd.pval_type;
+    add_throws bv vd.pval_attributes;
     (bv, m)
   | Pstr_type (_, dcls) ->
     List.iter (add_type_declaration bv) dcls;

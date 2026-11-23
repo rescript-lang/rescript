@@ -68,6 +68,7 @@ type t =
   | Bs_todo of string option (* 110 *)
   | Bs_private_record_mutation of string (* 111 *)
   | Bs_record_rest_optional_overlap of string list (* 112 *)
+  | Bs_throws_unbound of string (* 113 *)
 
 val parse_options : bool -> string -> unit
 

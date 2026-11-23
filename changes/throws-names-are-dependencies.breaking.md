@@ -1,0 +1,1 @@
+- A module named in `@throws` is now a dependency of the module that names it, so a dependency cycle through such a name is an error. Move the exception to a module of its own.

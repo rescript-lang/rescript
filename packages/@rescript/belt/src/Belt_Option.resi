@@ -70,6 +70,7 @@ switch Belt.Option.getExn(None) {
 }
 ```
 */
+@throws(Not_found)
 let getExn: option<'a> => 'a
 
 /**
@@ -87,6 +88,7 @@ switch Belt.Option.getOrThrow(None) {
 }
 ```
 */
+@throws(Not_found)
 let getOrThrow: option<'a> => 'a
 
 /**

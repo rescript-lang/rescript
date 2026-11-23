@@ -5159,8 +5159,12 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
         {
           vb_pat = p;
           vb_expr = e;
-          (* As written, like a value description's in [Typedecl]. *)
-          vb_attributes = Ast_helper.Vb.binding_attributes pvb;
+          (* As written, like a value description's in [Typedecl], with the
+             exceptions a [@throws] names resolved here. *)
+          vb_attributes =
+            Builtin_attributes.warning_scope pvb.pvb_attributes (fun () ->
+                Ast_helper.Vb.binding_attributes pvb
+                |> Throws_attribute.resolve env);
           vb_loc = pvb.pvb_loc;
         })
       l spat_sexp_list

@@ -73,6 +73,7 @@ switch Option.getOrThrow(None, ~message="was None!") {
 
 - Throws an error if `opt` is `None`
 */
+@throws(JsExn)
 let getOrThrow: (option<'a>, ~message: string=?) => 'a
 
 /**
