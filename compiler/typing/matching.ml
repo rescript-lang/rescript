@@ -1912,20 +1912,21 @@ let as_interval_canfail fail low high l =
       let act_index = do_store "NO" i j act_i in
       if cur_high + 1 = i then
         if act_index = cur_act then nofail_rec cur_low j cur_act rem
-        else if act_index = 0 then (cur_low, i - 1, cur_act) :: fail_rec i j rem
+        else if act_index = 0 then (cur_low, i - 1, cur_act) :: fail_rec i rem
         else (cur_low, i - 1, cur_act) :: nofail_rec i j act_index rem
       else if act_index = 0 then
-        (cur_low, cur_high, cur_act)
-        :: fail_rec (cur_high + 1) (cur_high + 1) all
+        (cur_low, cur_high, cur_act) :: fail_rec (cur_high + 1) all
       else
         (cur_low, cur_high, cur_act)
         :: (cur_high + 1, i - 1, 0)
         :: nofail_rec i j act_index rem
-  and fail_rec cur_low cur_high = function
-    | [] -> [(cur_low, cur_high, 0)]
+  (* The failure range ending the list runs up to [high]: values above the
+     last case must reach the fail action too. *)
+  and fail_rec cur_low = function
+    | [] -> [(cur_low, high, 0)]
     | (i, j, act_i) :: rem ->
       let index = do_store "YES" i j act_i in
-      if index = 0 then fail_rec cur_low j rem
+      if index = 0 then fail_rec cur_low rem
       else (cur_low, i - 1, 0) :: nofail_rec i j index rem
   in
 
@@ -1933,13 +1934,14 @@ let as_interval_canfail fail low high l =
     | [] -> [(low, high, 0)]
     | (i, j, act_i) :: rem ->
       let index = do_store "INIT" i j act_i in
-      if index = 0 then fail_rec low j rem
+      if index = 0 then fail_rec low rem
       else if low < i then (low, i - 1, 0) :: nofail_rec i j index rem
       else nofail_rec i j index rem
   in
 
-  assert (do_store "FAIL" 0 0 fail = 0);
   (* fail has action index 0 *)
+  let fail_index = do_store "FAIL" 0 0 fail in
+  assert (fail_index = 0);
   let r = init_rec l in
   (Array.of_list r, store)
 
