@@ -143,7 +143,8 @@ type typeInner = Inner.tInner
     ]
     |}]
 
-let%expect_test "finds a value declaration in an open interface" =
+let%expect_test "navigates from an interface declaration to its implementation"
+    =
   Test.with_project ~name:"definition" ~text:{|let y = 4
 |}
     ~files:[("Test.resi", {|let y: int
@@ -165,7 +166,7 @@ let%expect_test "finds a value declaration in an open interface" =
           "end": { "character": 5, "line": 0 },
           "start": { "character": 4, "line": 0 }
         },
-        "uri": "file:///workspace/Test.resi"
+        "uri": "file:///workspace/Test.res"
       }
     ]
     |}]
