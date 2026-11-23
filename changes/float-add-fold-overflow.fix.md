@@ -1,0 +1,2 @@
+- Float addition and subtraction of constants that came from int literals, such as `Float.fromInt(2147483647) +. Float.fromInt(1)`, are no longer folded with int wraparound, and chains such as `x +. Float.fromInt(1) +. Float.fromInt(2)` are no longer reassociated.
+- Subtracting an expression that starts with a minus sign from zero no longer prints `--`, which was a decrement or a syntax error.
