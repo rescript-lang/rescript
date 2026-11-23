@@ -147,13 +147,14 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     in
     safe_literal && no_side_effect a
   | Bin (_, a, b) -> no_side_effect a && no_side_effect b
-  | Tagged_template (call_expr, _, values) ->
-    no_side_effect call_expr && List.for_all no_side_effect values
   | Js_not e | Js_bnot e -> no_side_effect e
   | In (prop, obj) -> no_side_effect prop && no_side_effect obj
   | Cond (a, b, c) -> no_side_effect a && no_side_effect b && no_side_effect c
   | Call (fn, [e], _) when is_array_function fn -> no_side_effect e
-  | Call _ | Jsx _ | New _ | Raw_js_code _ (* actually true? *) -> false
+  (* A tagged template calls its tag function, which may have effects *)
+  | Call _ | Tagged_template _ | Jsx _ | New _
+  | Raw_js_code _ (* actually true? *) ->
+    false
   | Await _ -> false
   | Spread _ -> false
   | Record_rest _ -> false

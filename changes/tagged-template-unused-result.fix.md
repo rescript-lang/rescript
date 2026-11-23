@@ -1,0 +1,1 @@
+- Fix a tagged template call whose result is unused being removed, so its tag function never ran, and the missing parentheses around a function, conditional or awaited tag.
