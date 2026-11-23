@@ -82,9 +82,9 @@ function fib3(n) {
     if (n$1 <= 0) {
       return a;
     }
-    _n = n$1 - 1 | 0;
-    _b = a + b | 0;
     _a = b;
+    _b = a + b | 0;
+    _n = n$1 - 1 | 0;
     continue;
   };
 }

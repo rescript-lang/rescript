@@ -35,8 +35,8 @@ function count() {
     if (n <= 0) {
       return acc;
     }
-    _acc = acc + n | 0;
     _n = n - 1 | 0;
+    _acc = acc + n | 0;
     continue;
   };
 }

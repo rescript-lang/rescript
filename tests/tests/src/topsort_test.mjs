@@ -54,8 +54,8 @@ function dfs1(_nodes, graph, _visited) {
       continue;
     }
     console.log(x);
-    _visited = {hd: x, tl: visited};
     _nodes = Stdlib_List.concat(nexts(x, graph), xs);
+    _visited = {hd: x, tl: visited};
     continue;
   };
 }
@@ -103,8 +103,8 @@ function dfs2(nodes, graph, visited) {
         _nodes = xs;
         continue;
       }
-      _visited = aux(nexts(x, graph), graph, {hd: x, tl: visited});
       _nodes = xs;
+      _visited = aux(nexts(x, graph), graph, {hd: x, tl: visited});
       continue;
     };
   };

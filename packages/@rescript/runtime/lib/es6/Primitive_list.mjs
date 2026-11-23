@@ -10,8 +10,8 @@ function copyAux(_list, _previous) {
     }
     let next = {hd: list.hd, tl: /* [] */0};
     previous.tl = next;
-    _previous = next;
     _list = list.tl;
+    _previous = next;
     continue;
   };
 }

@@ -101,8 +101,8 @@ function eqBy(_xs, _ys, fn) {
     if (!fn(Primitive_option.valFromOption(match), Primitive_option.valFromOption(match$1))) {
       return false;
     }
-    _ys = Belt_Array.sliceToEnd(ys, 1);
     _xs = Belt_Array.sliceToEnd(xs, 1);
+    _ys = Belt_Array.sliceToEnd(ys, 1);
     continue;
   };
 }
@@ -141,8 +141,8 @@ function distinct(t, eq) {
     }
     let y = t[idx];
     let acc$1 = Belt_Array.some(acc, x => eq(x, y)) ? acc : Belt_Array.concat(acc, [y]);
-    _idx = idx + 1 | 0;
     _acc = acc$1;
+    _idx = idx + 1 | 0;
     continue;
   };
 }
@@ -165,12 +165,12 @@ function partition(t, fn) {
     let item = t[idx];
     let idx$1 = idx + 1 | 0;
     if (fn(item)) {
-      _idx = idx$1;
       _a = Belt_Array.concat(a, [item]);
+      _idx = idx$1;
       continue;
     }
-    _idx = idx$1;
     _b = Belt_Array.concat(b, [item]);
+    _idx = idx$1;
     continue;
   };
 }

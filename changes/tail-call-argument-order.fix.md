@@ -1,0 +1,3 @@
+- Fix a self tail call evaluating its arguments right to left instead of left to right.
+- Fix a self tail call of a `()` function dropping its argument's side effects.
+- Fix the compiler crashing on a self tail call whose argument count a cast such as `Obj.magic` makes differ from the parameter count; it is now compiled as an ordinary call.

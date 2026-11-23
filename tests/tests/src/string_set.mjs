@@ -190,8 +190,8 @@ function subset(_s1, _s2) {
       if (!subset(l1, l2)) {
         return false;
       }
-      _s2 = r2;
       _s1 = r1;
+      _s2 = r2;
       continue;
     }
     if (c < 0) {

@@ -13,11 +13,11 @@ function test_sum() {
       if (n === 0) {
         return acc();
       }
+      _n = n - 1 | 0;
       _acc = () => {
         v = v + n | 0;
         return acc();
       };
-      _n = n - 1 | 0;
       continue;
     };
   };

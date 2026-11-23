@@ -2082,8 +2082,8 @@ function check_collisions(collid, all_collids, state) {
       let o$1 = new_objs[1];
       acc$1 = o$1 !== undefined ? ({hd: o$1, tl: acc}) : acc;
     }
-    _acc = acc$1;
     _cs = cs.tl;
+    _acc = acc$1;
     continue;
   };
 }
@@ -2803,8 +2803,8 @@ function generate_enemies(blockw, blockh, _cbx, _cby, acc) {
       return /* [] */0;
     }
     if (cby > blockh - 1 || cbx < 15) {
-      _cby = 0;
       _cbx = cbx + 1;
+      _cby = 0;
       continue;
     }
     if (mem_loc([
@@ -2866,8 +2866,8 @@ function generate_block_locs(blockw, blockh, _cbx, _cby, _acc) {
       return acc;
     }
     if (cby > blockh - 1) {
-      _cby = 0;
       _cbx = cbx + 1;
+      _cby = 0;
       continue;
     }
     if (mem_loc([
@@ -2882,8 +2882,8 @@ function generate_block_locs(blockw, blockh, _cbx, _cby, _acc) {
       let newacc = choose_block_pattern(blockw, blockh, cbx, cby, prob);
       let undup_lst = avoid_overlap(newacc, acc);
       let called_acc = Stdlib_List.concat(acc, undup_lst);
-      _acc = called_acc;
       _cby = cby + 1;
+      _acc = called_acc;
       continue;
     }
     _cby = cby + 1;
@@ -2921,8 +2921,8 @@ function generate_ground(blockw, blockh, _inc, _acc) {
         _inc = inc + 1;
         continue;
       }
-      _acc = newacc;
       _inc = inc + 1;
+      _acc = newacc;
       continue;
     }
     let newacc$1 = Stdlib_List.concat(acc, {hd: [
@@ -2932,8 +2932,8 @@ function generate_ground(blockw, blockh, _inc, _acc) {
         blockh * 16
       ]
     ], tl: /* [] */0});
-    _acc = newacc$1;
     _inc = inc + 1;
+    _acc = newacc$1;
     continue;
   };
 }

@@ -186,8 +186,8 @@ function format(_fmt, _acc) {
     }
     switch (fmt.TAG) {
       case "Text" :
-        _acc = acc + fmt._0;
         _fmt = fmt._1;
+        _acc = acc + fmt._0;
         continue;
       case "IntArg" :
         let rest = fmt._0;

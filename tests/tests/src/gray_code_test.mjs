@@ -14,8 +14,8 @@ function gray_decode(n) {
     if (n$1 === 0) {
       return p;
     }
-    _n = (n$1 >>> 1);
     _p = p ^ n$1;
+    _n = (n$1 >>> 1);
     continue;
   };
 }

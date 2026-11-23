@@ -33,8 +33,8 @@ function length_aux(_len, _x) {
     if (x === 0) {
       return len;
     }
-    _x = x.tl;
     _len = len + 1 | 0;
+    _x = x.tl;
     continue;
   };
 }

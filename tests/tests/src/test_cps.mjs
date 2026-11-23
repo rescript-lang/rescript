@@ -9,11 +9,11 @@ function f(_n, _acc) {
     if (n === 0) {
       return acc();
     }
+    _n = n - 1 | 0;
     _acc = () => {
       console.log(n.toString());
       return acc();
     };
-    _n = n - 1 | 0;
     continue;
   };
 }

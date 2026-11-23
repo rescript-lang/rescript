@@ -90,8 +90,8 @@ function copy(q) {
         next: tail$p
       };
       prev.next = res;
-      _cell = cell.next;
       _prev = res;
+      _cell = cell.next;
       continue;
     };
   };
@@ -141,8 +141,8 @@ function fold(f, accu, q) {
     if (cell === tail) {
       return accu$2;
     }
-    _cell = cell.next;
     _accu = accu$2;
+    _cell = cell.next;
     continue;
   };
 }

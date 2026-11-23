@@ -88,7 +88,10 @@ let forEach = (h, f) => {
 let rec do_bucket_fold = (~f, b, accu) =>
   switch C.toOpt(b) {
   | None => accu
-  | Some(cell) => do_bucket_fold(~f, cell.next, f(accu, cell.key, cell.value))
+  | Some(cell) =>
+    // `f` may remove entries, so the rest is read after the call, as in `forEach`.
+    let accu = f(accu, cell.key, cell.value)
+    do_bucket_fold(~f, cell.next, accu)
   }
 
 let reduce = (h, init, f) => {

@@ -166,8 +166,8 @@ function compare(context, state, _a, _b) {
         if (denom !== 0) {
           return denom;
         }
-        _b = nb;
         _a = na;
+        _b = nb;
         continue;
     }
   };

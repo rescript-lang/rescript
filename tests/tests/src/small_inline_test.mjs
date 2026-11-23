@@ -37,8 +37,8 @@ function ff(_x, _y) {
   while (true) {
     let y = _y;
     let x = _x;
-    _y = x + 1 | 0;
     _x = y;
+    _y = x + 1 | 0;
     continue;
   };
 }
@@ -47,8 +47,8 @@ function fff(_x, _y) {
   while (true) {
     let y = _y;
     let x = _x;
-    _y = x;
     _x = y;
+    _y = x;
     continue;
   };
 }
