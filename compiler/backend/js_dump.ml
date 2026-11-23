@@ -1409,10 +1409,10 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
                         match
                           (for_ident_expression, finish.expression_desc)
                         with
-                        | Some ident_expression, (Number _ | Var _) ->
+                        | ident_expression, (Number _ | Var _) ->
                           let cxt = pp_var_assign cxt f id in
                           (expression ~level:1 cxt f ident_expression, None)
-                        | Some ident_expression, _ ->
+                        | ident_expression, _ ->
                           let cxt = pp_var_assign cxt f id in
                           let cxt =
                             expression ~level:1 cxt f ident_expression
@@ -1420,20 +1420,14 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
                           comma f;
                           P.space f;
                           let id =
-                            Ext_ident.create (Ident.name id ^ "_finish")
+                            Ext_ident.create
+                              (Ext_ident.derived_name id ~suffix:"_finish")
                           in
                           let cxt = Ext_pp_scope.ident cxt f id in
                           P.space f;
                           P.string f L.eq;
                           P.space f;
                           (expression ~level:1 cxt f finish, Some id)
-                        | None, (Number _ | Var _) -> (cxt, None)
-                        | None, _ ->
-                          let id =
-                            Ext_ident.create (Ident.name id ^ "_finish")
-                          in
-                          let cxt = pp_var_assign cxt f id in
-                          (expression ~level:15 cxt f finish, Some id)
                       in
                       semi f;
                       P.space f;

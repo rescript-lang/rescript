@@ -95,6 +95,9 @@ let unwrap_uppercase_exotic name =
     String.sub name 2 (len - 3)
   else name
 
+let derived_name (id : Ident.t) ~suffix =
+  unwrap_uppercase_exotic (Ident.name id) ^ suffix
+
 exception Not_normal_letter of int
 let name_mangle name =
   let len = String.length name in

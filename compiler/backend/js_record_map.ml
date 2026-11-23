@@ -243,7 +243,7 @@ let statement_desc : statement_desc fn =
     let _x1 = _self.block _self _x1 in
     While (_label, _x0, _x1)
   | ForRange (_label, _x0, _x1, _x2, _x3, _x4) ->
-    let _x0 = option for_ident_expression _self _x0 in
+    let _x0 = for_ident_expression _self _x0 in
     let _x1 = finish_ident_expression _self _x1 in
     let _x2 = _self.for_ident _self _x2 in
     let _x3 = for_direction _self _x3 in

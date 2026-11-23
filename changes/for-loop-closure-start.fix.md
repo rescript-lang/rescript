@@ -1,0 +1,1 @@
+- Fix closures in a `for` loop all seeing the loop variable's final value when the loop's start is a call or a mutable read and its end needs statements, as in a `try` or `switch`.

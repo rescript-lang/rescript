@@ -208,44 +208,20 @@ and expression_desc =
   | Record_rest of record_rest_field list * expression
 
 and for_ident_expression = expression
-(* pure*)
+(* The start of a [ForRange]. The loop header evaluates it once, before the
+   end. It may have side effects. *)
 
 and finish_ident_expression = expression
+(* The end of a [ForRange]. It may have side effects. The loop header evaluates
+   it once and binds its value, unless it is a number or a variable, which the
+   loop test reads directly. *)
 
-(* pure *)
 (* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/block
    block can be nested, specified in ES3
 *)
 
 (* Delay some units like [primitive] into JS layer ,
    benefit: better cross module inlining, and smaller IR size?
-*)
-
-(*
-   [closure] captured loop mutable values in the outer loop
-
-   check if it contains loop mutable values, happens in nested loop
-   when closured, it's no longer loop mutable value.
-   which means the outer loop mutable value can not peek into the inner loop
-    {[
-      var i = f ();
-      for(var finish = 32; i < finish; ++i){
-        }
-    ]}
-    when [for_ident_expression] is [None], [var i] has to
-    be initialized outside, so
-
-    {[
-      var i = f ()
-        (function (xxx){
-             for(var finish = 32; i < finish; ++i)
-           }(..i))
-    ]}
-    This happens rare it's okay
-
-    this is because [i] has to be initialized outside, if [j]
-    contains a block side effect
-    TODO: create such example
 *)
 
 (* Since in OCaml,
@@ -303,7 +279,7 @@ and statement_desc =
     (* check if it contains loop mutable values, happens in nested loop *)
   | ForRange of
       label option
-      * for_ident_expression option
+      * for_ident_expression
       * finish_ident_expression
       * for_ident
       * for_direction
