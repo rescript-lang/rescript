@@ -1,0 +1,1 @@
+- Return unchanged JS IR nodes from the JS passes instead of copying them, so compiling allocates about 3% less.

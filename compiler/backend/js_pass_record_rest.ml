@@ -116,7 +116,14 @@ let pass =
       S.define_variable ~kind:Strict rest
         {rest_expr with expression_desc = Record_rest (fields, source)}
       :: (return @ tail)
-    | statement :: tail -> self.statement self statement :: self.block self tail
+    | statement :: tail as b ->
+      (* The tail is mapped before the head, as in the
+         [self.statement self statement :: self.block self tail] this
+         replaces. *)
+      let tail' = self.block self tail in
+      let statement' = self.statement self statement in
+      if statement' == statement && tail' == tail then b
+      else statement' :: tail'
     | [] -> []
   in
   {super with block}

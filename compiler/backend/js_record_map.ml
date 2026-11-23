@@ -22,21 +22,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+(* The mapper returns a node as it is when all its parts come back physically
+   unchanged, and rebuilds it otherwise, so a pass that rewrites little
+   allocates little. The parts are mapped in the same order either way. *)
+
 open J
 
 let[@inline] unknown _ x = x
 
 let[@inline] option sub self v =
   match v with
-  | None -> None
-  | Some v -> Some (sub self v)
+  | None -> v
+  | Some x ->
+    let x' = sub self x in
+    if x' == x then v else Some x'
 
-let rec list sub self x =
-  match x with
-  | [] -> []
-  | x :: xs ->
-    let v = sub self x in
-    v :: list sub self xs
+(* [Ext_list.map_sharing] maps the head before the tail, so the elements are
+   mapped in list order. *)
+let[@inline] list sub self x = Ext_list.map_sharing x (sub self)
 
 type iter = {
   ident: ident fn;
@@ -56,18 +59,19 @@ and 'a fn = iter -> 'a -> 'a
 let ident : ident fn = unknown
 
 let module_id : module_id fn =
- fun _self {id = _x0; kind = _x1; dynamic_import = _x2} ->
-  let _x0 = _self.ident _self _x0 in
-  {id = _x0; kind = _x1; dynamic_import = _x2}
+ fun _self ({id} as m) ->
+  let id' = _self.ident _self id in
+  if id' == id then m else {m with id = id'}
 
 let vident : vident fn =
- fun _self -> function
-  | Id _x0 ->
-    let _x0 = _self.ident _self _x0 in
-    Id _x0
-  | Qualified (_x0, _x1) ->
-    let _x0 = _self.module_id _self _x0 in
-    Qualified (_x0, _x1)
+ fun _self v ->
+  match v with
+  | Id x ->
+    let x' = _self.ident _self x in
+    if x' == x then v else Id x'
+  | Qualified (x, name) ->
+    let x' = _self.module_id _self x in
+    if x' == x then v else Qualified (x', name)
 
 let exception_ident : exception_ident fn =
  fun _self arg -> _self.ident _self arg
@@ -77,128 +81,144 @@ let for_ident : for_ident fn = fun _self arg -> _self.ident _self arg
 let for_direction : for_direction fn = unknown
 
 let object_entry : object_entry fn =
- fun _self -> function
-  | Object_property (_x0, _x1) ->
-    let _x1 = _self.expression _self _x1 in
-    Object_property (_x0, _x1)
-  | Object_spread _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Object_spread _x0
-  | Record_spread _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Record_spread _x0
+ fun _self v ->
+  match v with
+  | Object_property (name, x) ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Object_property (name, x')
+  | Object_spread x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Object_spread x'
+  | Record_spread x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Record_spread x'
+
+let jsx_prop : (string * expression) fn =
+ fun _self ((name, value) as prop) ->
+  let value' = _self.expression _self value in
+  if value' == value then prop else (name, value')
 
 let expression_desc : expression_desc fn =
- fun _self -> function
-  | Length _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Length _x0
-  | Is_null_or_undefined _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Is_null_or_undefined _x0
-  | String_append (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    String_append (_x0, _x1)
-  | Bool _ as v -> v
-  | Typeof _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Typeof _x0
-  | Js_not _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Js_not _x0
-  | Js_bnot _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Js_bnot _x0
-  | In (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    In (_x0, _x1)
-  | Seq (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    Seq (_x0, _x1)
-  | Cond (_x0, _x1, _x2) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    let _x2 = _self.expression _self _x2 in
-    Cond (_x0, _x1, _x2)
-  | Bin (_x0, _x1, _x2) ->
-    let _x1 = _self.expression _self _x1 in
-    let _x2 = _self.expression _self _x2 in
-    Bin (_x0, _x1, _x2)
-  | Call (_x0, _x1, _x2) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = list _self.expression _self _x1 in
-    Call (_x0, _x1, _x2)
-  | Tagged_template (_x0, _x1, _x2) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x2 = list _self.expression _self _x2 in
-    Tagged_template (_x0, _x1, _x2)
+ fun _self v ->
+  match v with
+  | Length x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Length x'
+  | Is_null_or_undefined x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Is_null_or_undefined x'
+  | String_append (a, b) ->
+    let a' = _self.expression _self a in
+    let b' = _self.expression _self b in
+    if a' == a && b' == b then v else String_append (a', b')
+  | Bool _ -> v
+  | Typeof x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Typeof x'
+  | Js_not x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Js_not x'
+  | Js_bnot x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Js_bnot x'
+  | In (a, b) ->
+    let a' = _self.expression _self a in
+    let b' = _self.expression _self b in
+    if a' == a && b' == b then v else In (a', b')
+  | Seq (a, b) ->
+    let a' = _self.expression _self a in
+    let b' = _self.expression _self b in
+    if a' == a && b' == b then v else Seq (a', b')
+  | Cond (a, b, c) ->
+    let a' = _self.expression _self a in
+    let b' = _self.expression _self b in
+    let c' = _self.expression _self c in
+    if a' == a && b' == b && c' == c then v else Cond (a', b', c')
+  | Bin (op, a, b) ->
+    let a' = _self.expression _self a in
+    let b' = _self.expression _self b in
+    if a' == a && b' == b then v else Bin (op, a', b')
+  | Call (f, args, info) ->
+    let f' = _self.expression _self f in
+    let args' = list _self.expression _self args in
+    if f' == f && args' == args then v else Call (f', args', info)
+  | Tagged_template (tag, strings, values) ->
+    let tag' = _self.expression _self tag in
+    let values' = list _self.expression _self values in
+    if tag' == tag && values' == values then v
+    else Tagged_template (tag', strings, values')
   | Jsx ({callee; tag; spread; props; children; key} as jsx) ->
-    let callee = _self.expression _self callee in
-    let tag = _self.expression _self tag in
-    let spread = option _self.expression _self spread in
-    let props =
-      list
-        (fun _self (name, value) -> (name, _self.expression _self value))
-        _self props
-    in
-    let children = option (list _self.expression) _self children in
-    let key = option _self.expression _self key in
-    Jsx {jsx with callee; tag; spread; props; children; key}
+    let callee' = _self.expression _self callee in
+    let tag' = _self.expression _self tag in
+    let spread' = option _self.expression _self spread in
+    let props' = list jsx_prop _self props in
+    let children' = option (list _self.expression) _self children in
+    let key' = option _self.expression _self key in
+    if
+      callee' == callee && tag' == tag && spread' == spread && props' == props
+      && children' == children && key' == key
+    then v
+    else
+      Jsx
+        {
+          jsx with
+          callee = callee';
+          tag = tag';
+          spread = spread';
+          props = props';
+          children = children';
+          key = key';
+        }
   | Interpolated_template ({values} as template) ->
-    let values = list _self.expression _self values in
-    Interpolated_template {template with values}
-  | Array_index (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    Array_index (_x0, _x1)
-  | Static_index (_x0, _x1, _x2) ->
-    let _x0 = _self.expression _self _x0 in
-    Static_index (_x0, _x1, _x2)
-  | New (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = list _self.expression _self _x1 in
-    New (_x0, _x1)
-  | Var _x0 ->
-    let _x0 = _self.vident _self _x0 in
-    Var _x0
+    let values' = list _self.expression _self values in
+    if values' == values then v
+    else Interpolated_template {template with values = values'}
+  | Array_index (a, b) ->
+    let a' = _self.expression _self a in
+    let b' = _self.expression _self b in
+    if a' == a && b' == b then v else Array_index (a', b')
+  | Static_index (x, name, pos) ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Static_index (x', name, pos)
+  | New (f, args) ->
+    let f' = _self.expression _self f in
+    let args' = list _self.expression _self args in
+    if f' == f && args' == args then v else New (f', args')
+  | Var x ->
+    let x' = _self.vident _self x in
+    if x' == x then v else Var x'
   | Fun ({params; body} as fun_) ->
-    let params = list _self.ident _self params in
-    let body = _self.block _self body in
-    Fun {fun_ with params; body}
-  | Str _ as v -> v
-  | Template_literal _ as v -> v
-  | Json_literal _ as v -> v
-  | Raw_js_code _ as v -> v
-  | Array _x0 ->
-    let _x0 = list _self.expression _self _x0 in
-    Array _x0
-  | Optional_block (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    Optional_block (_x0, _x1)
-  | Caml_block (_x0, _x1, _x2) ->
-    let _x0 = list _self.expression _self _x0 in
-    Caml_block (_x0, _x1, _x2)
-  | Caml_block_tag (_x0, tag) ->
-    let _x0 = _self.expression _self _x0 in
-    Caml_block_tag (_x0, tag)
-  | Number _ as v -> v
-  | Object _x0 ->
-    let _x0 = list object_entry _self _x0 in
-    Object _x0
-  | Undefined _ as v -> v
-  | Null as v -> v
-  | Await _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Await _x0
-  | Spread _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Spread _x0
-  | Record_rest (_x0, _x1) ->
-    let _x1 = _self.expression _self _x1 in
-    Record_rest (_x0, _x1)
+    let params' = list _self.ident _self params in
+    let body' = _self.block _self body in
+    if params' == params && body' == body then v
+    else Fun {fun_ with params = params'; body = body'}
+  | Str _ | Template_literal _ | Json_literal _ | Raw_js_code _ -> v
+  | Array xs ->
+    let xs' = list _self.expression _self xs in
+    if xs' == xs then v else Array xs'
+  | Optional_block (x, identity) ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Optional_block (x', identity)
+  | Caml_block (xs, mutable_flag, tag_info) ->
+    let xs' = list _self.expression _self xs in
+    if xs' == xs then v else Caml_block (xs', mutable_flag, tag_info)
+  | Caml_block_tag (x, tag) ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Caml_block_tag (x', tag)
+  | Number _ -> v
+  | Object entries ->
+    let entries' = list object_entry _self entries in
+    if entries' == entries then v else Object entries'
+  | Undefined _ | Null -> v
+  | Await x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Await x'
+  | Spread x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Spread x'
+  | Record_rest (fields, x) ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Record_rest (fields, x')
 
 let for_ident_expression : for_ident_expression fn =
  fun _self arg -> _self.expression _self arg
@@ -207,112 +227,121 @@ let finish_ident_expression : finish_ident_expression fn =
  fun _self arg -> _self.expression _self arg
 
 let case_clause : case_clause fn =
- fun _self
-     {switch_body = _x0; should_break = _x1; comment = _x2; source_loc = _x3} ->
-  let _x0 = _self.block _self _x0 in
-  {switch_body = _x0; should_break = _x1; comment = _x2; source_loc = _x3}
+ fun _self ({switch_body} as clause) ->
+  let switch_body' = _self.block _self switch_body in
+  if switch_body' == switch_body then clause
+  else {clause with switch_body = switch_body'}
 
 let string_clause : string_clause fn =
- fun _self (_x0, _x1) ->
-  let _x1 = case_clause _self _x1 in
-  (_x0, _x1)
+ fun _self ((tag, clause) as x) ->
+  let clause' = case_clause _self clause in
+  if clause' == clause then x else (tag, clause')
 
 let int_clause : int_clause fn =
- fun _self (_x0, _x1) ->
-  let _x1 = case_clause _self _x1 in
-  (_x0, _x1)
+ fun _self ((tag, clause) as x) ->
+  let clause' = case_clause _self clause in
+  if clause' == clause then x else (tag, clause')
+
+let catch_clause : (exception_ident * block) fn =
+ fun _self ((id, handler) as x) ->
+  let id' = _self.exception_ident _self id in
+  let handler' = _self.block _self handler in
+  if id' == id && handler' == handler then x else (id', handler')
 
 let statement_desc : statement_desc fn =
- fun _self -> function
-  | Block _x0 ->
-    let _x0 = _self.block _self _x0 in
-    Block _x0
-  | Variable _x0 ->
-    let _x0 = _self.variable_declaration _self _x0 in
-    Variable _x0
-  | Exp _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Exp _x0
-  | If (_x0, _x1, _x2) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.block _self _x1 in
-    let _x2 = _self.block _self _x2 in
-    If (_x0, _x1, _x2)
-  | While (_label, _x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = _self.block _self _x1 in
-    While (_label, _x0, _x1)
-  | ForRange (_label, _x0, _x1, _x2, _x3, _x4) ->
-    let _x0 = option for_ident_expression _self _x0 in
-    let _x1 = finish_ident_expression _self _x1 in
-    let _x2 = _self.for_ident _self _x2 in
-    let _x3 = for_direction _self _x3 in
-    let _x4 = _self.block _self _x4 in
-    ForRange (_label, _x0, _x1, _x2, _x3, _x4)
-  | ForOf (_label, _x0, _x1, _x2) ->
-    let _x0 = _self.for_ident _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    let _x2 = _self.block _self _x2 in
-    ForOf (_label, _x0, _x1, _x2)
-  | ForAwaitOf (_label, _x0, _x1, _x2) ->
-    let _x0 = _self.for_ident _self _x0 in
-    let _x1 = _self.expression _self _x1 in
-    let _x2 = _self.block _self _x2 in
-    ForAwaitOf (_label, _x0, _x1, _x2)
-  | Continue _ as v -> v
-  | Break _ as v -> v
-  | Return _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Return _x0
-  | Int_switch (_x0, _x1, _x2) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = list int_clause _self _x1 in
-    let _x2 = option _self.block _self _x2 in
-    Int_switch (_x0, _x1, _x2)
-  | String_switch (_x0, _x1, _x2) ->
-    let _x0 = _self.expression _self _x0 in
-    let _x1 = list string_clause _self _x1 in
-    let _x2 = option _self.block _self _x2 in
-    String_switch (_x0, _x1, _x2)
-  | Throw _x0 ->
-    let _x0 = _self.expression _self _x0 in
-    Throw _x0
-  | Try (_x0, _x1, _x2) ->
-    let _x0 = _self.block _self _x0 in
-    let _x1 =
-      option
-        (fun _self (_x0, _x1) ->
-          let _x0 = _self.exception_ident _self _x0 in
-          let _x1 = _self.block _self _x1 in
-          (_x0, _x1))
-        _self _x1
-    in
-    let _x2 = option _self.block _self _x2 in
-    Try (_x0, _x1, _x2)
-  | Debugger as v -> v
+ fun _self v ->
+  match v with
+  | Block b ->
+    let b' = _self.block _self b in
+    if b' == b then v else Block b'
+  | Variable d ->
+    let d' = _self.variable_declaration _self d in
+    if d' == d then v else Variable d'
+  | Exp x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Exp x'
+  | If (a, b, c) ->
+    let a' = _self.expression _self a in
+    let b' = _self.block _self b in
+    let c' = _self.block _self c in
+    if a' == a && b' == b && c' == c then v else If (a', b', c')
+  | While (label, a, b) ->
+    let a' = _self.expression _self a in
+    let b' = _self.block _self b in
+    if a' == a && b' == b then v else While (label, a', b')
+  | ForRange (label, init, finish, id, dir, body) ->
+    let init' = option for_ident_expression _self init in
+    let finish' = finish_ident_expression _self finish in
+    let id' = _self.for_ident _self id in
+    let dir' = for_direction _self dir in
+    let body' = _self.block _self body in
+    if
+      init' == init && finish' == finish && id' == id && dir' == dir
+      && body' == body
+    then v
+    else ForRange (label, init', finish', id', dir', body')
+  | ForOf (label, id, a, body) ->
+    let id' = _self.for_ident _self id in
+    let a' = _self.expression _self a in
+    let body' = _self.block _self body in
+    if id' == id && a' == a && body' == body then v
+    else ForOf (label, id', a', body')
+  | ForAwaitOf (label, id, a, body) ->
+    let id' = _self.for_ident _self id in
+    let a' = _self.expression _self a in
+    let body' = _self.block _self body in
+    if id' == id && a' == a && body' == body then v
+    else ForAwaitOf (label, id', a', body')
+  | Continue _ | Break _ -> v
+  | Return x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Return x'
+  | Int_switch (e, clauses, default) ->
+    let e' = _self.expression _self e in
+    let clauses' = list int_clause _self clauses in
+    let default' = option _self.block _self default in
+    if e' == e && clauses' == clauses && default' == default then v
+    else Int_switch (e', clauses', default')
+  | String_switch (e, clauses, default) ->
+    let e' = _self.expression _self e in
+    let clauses' = list string_clause _self clauses in
+    let default' = option _self.block _self default in
+    if e' == e && clauses' == clauses && default' == default then v
+    else String_switch (e', clauses', default')
+  | Throw x ->
+    let x' = _self.expression _self x in
+    if x' == x then v else Throw x'
+  | Try (body, catch, finally) ->
+    let body' = _self.block _self body in
+    let catch' = option catch_clause _self catch in
+    let finally' = option _self.block _self finally in
+    if body' == body && catch' == catch && finally' == finally then v
+    else Try (body', catch', finally')
+  | Debugger -> v
 
 let expression : expression fn =
- fun _self {expression_desc = _x0; comment = _x1; source_loc = _x2} ->
-  let _x0 = expression_desc _self _x0 in
-  {expression_desc = _x0; comment = _x1; source_loc = _x2}
+ fun _self ({expression_desc = desc} as e) ->
+  let desc' = expression_desc _self desc in
+  if desc' == desc then e else {e with expression_desc = desc'}
 
 let statement : statement fn =
- fun _self {statement_desc = _x0; comment = _x1; source_loc = _x2} ->
-  let _x0 = statement_desc _self _x0 in
-  {statement_desc = _x0; comment = _x1; source_loc = _x2}
+ fun _self ({statement_desc = desc} as s) ->
+  let desc' = statement_desc _self desc in
+  if desc' == desc then s else {s with statement_desc = desc'}
 
 let variable_declaration : variable_declaration fn =
- fun _self {ident = _x0; value = _x1; property = _x2; ident_info = _x3} ->
-  let _x0 = _self.ident _self _x0 in
-  let _x1 = option _self.expression _self _x1 in
-  {ident = _x0; value = _x1; property = _x2; ident_info = _x3}
+ fun _self ({ident; value} as d) ->
+  let ident' = _self.ident _self ident in
+  let value' = option _self.expression _self value in
+  if ident' == ident && value' == value then d
+  else {d with ident = ident'; value = value'}
 
 let block : block fn = fun _self arg -> list _self.statement _self arg
 
 let program : program fn =
- fun _self {block = _x0; exports = _x1; export_set = _x2} ->
-  let _x0 = _self.block _self _x0 in
-  {block = _x0; exports = _x1; export_set = _x2}
+ fun _self ({block = b} as p) ->
+  let b' = _self.block _self b in
+  if b' == b then p else {p with block = b'}
 
 let super : iter =
   {

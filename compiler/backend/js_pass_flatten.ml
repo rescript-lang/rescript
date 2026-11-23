@@ -109,7 +109,7 @@ let flatten_map =
           let block = self.block self rest in
           match st.statement_desc with
           | Block bs -> bs @ block
-          | _ -> st :: block)
+          | _ -> if st == x && block == rest then b else st :: block)
         | [] -> []);
   }
 

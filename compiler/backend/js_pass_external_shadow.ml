@@ -92,13 +92,13 @@ let program (js : J.program) : J.program =
   let super = Js_record_map.super in
   let map_cases (self : Js_record_map.iter) clauses default =
     with_bindings (add_switch_declarations clauses default) (fun () ->
-        ( List.map
-            (fun (key, (c : J.case_clause)) ->
-              (key, {c with switch_body = self.block self c.switch_body}))
-            clauses,
-          match default with
-          | None -> None
-          | Some block -> Some (self.block self block) ))
+        (* The default case is mapped before the clauses, as the pair this
+           function used to build evaluated its second component first. *)
+        let default = Js_record_map.option self.block self default in
+        let clauses =
+          Ext_list.map_snd_sharing clauses (Js_record_map.case_clause self)
+        in
+        (clauses, default))
   in
   let self =
     {
@@ -131,31 +131,32 @@ let program (js : J.program) : J.program =
              one scope. The discriminant is evaluated before that scope is
              entered. *)
           | Int_switch (e, clauses, default) ->
-            let e = self.expression self e in
-            let clauses, default = map_cases self clauses default in
-            {st with statement_desc = Int_switch (e, clauses, default)}
+            let e' = self.expression self e in
+            let clauses', default' = map_cases self clauses default in
+            if e' == e && clauses' == clauses && default' == default then st
+            else {st with statement_desc = Int_switch (e', clauses', default')}
           | String_switch (e, clauses, default) ->
-            let e = self.expression self e in
-            let clauses, default = map_cases self clauses default in
-            {st with statement_desc = String_switch (e, clauses, default)}
+            let e' = self.expression self e in
+            let clauses', default' = map_cases self clauses default in
+            if e' == e && clauses' == clauses && default' == default then st
+            else
+              {st with statement_desc = String_switch (e', clauses', default')}
           (* The catch parameter is only in scope in the handler. *)
           | Try (body, catch, finally) ->
-            let body = self.block self body in
-            let catch =
+            let body' = self.block self body in
+            let catch' =
               match catch with
-              | None -> None
+              | None -> catch
               | Some (ident, handler) ->
-                Some
-                  ( ident,
-                    with_bindings (add_binding ident) (fun () ->
-                        self.block self handler) )
+                let handler' =
+                  with_bindings (add_binding ident) (fun () ->
+                      self.block self handler)
+                in
+                if handler' == handler then catch else Some (ident, handler')
             in
-            let finally =
-              match finally with
-              | None -> None
-              | Some block -> Some (self.block self block)
-            in
-            {st with statement_desc = Try (body, catch, finally)}
+            let finally' = Js_record_map.option self.block self finally in
+            if body' == body && catch' == catch && finally' == finally then st
+            else {st with statement_desc = Try (body', catch', finally')}
           | _ -> super.statement self st);
     }
   in

@@ -178,6 +178,15 @@ let inline_call (assignable : Set_ident.t) (immutable_list : bool list) params
 *)
 let super = Js_record_map.super
 
+(* [map_cons self bs x xs] maps [bs = x :: xs] like
+   [self.statement self x :: self.block self xs]: the tail first, then the
+   head (the pass records statistics as it goes). It returns [bs] itself
+   when neither changes. *)
+let map_cons (self : Js_record_map.iter) bs x xs =
+  let xs' = self.block self xs in
+  let x' = self.statement self x in
+  if x' == x && xs' == xs then bs else x' :: xs'
+
 let subst (export_set : Set_ident.t) (assignable : Set_ident.t) stats =
   {
     super with
@@ -211,7 +220,7 @@ let subst (export_set : Set_ident.t) (assignable : Set_ident.t) stats =
            } as st)
           :: rest -> (
           let is_export = Set_ident.mem vd.ident export_set in
-          if is_export then self.statement self st :: self.block self rest
+          if is_export then map_cons self bs st rest
           else
             match Hash_ident.find_opt stats vd.ident with
             (* TODO: could be improved as [mem] *)
@@ -219,7 +228,7 @@ let subst (export_set : Set_ident.t) (assignable : Set_ident.t) stats =
               if Js_analyzer.no_side_effect_expression v then
                 S.exp v :: self.block self rest
               else self.block self rest
-            | Some _ -> self.statement self st :: self.block self rest)
+            | Some _ -> map_cons self bs st rest)
         | [
          ({
             statement_desc =
@@ -270,7 +279,9 @@ let subst (export_set : Set_ident.t) (assignable : Set_ident.t) stats =
           (* Mark a function as dead means it will never be scanned,
              here we inline the function
           *)
-          | None | Some _ -> [self.statement self st])
+          | None | Some _ ->
+            let st' = self.statement self st in
+            if st' == st then bs else [st'])
         | [
          {
            statement_desc =
@@ -302,8 +313,8 @@ let subst (export_set : Set_ident.t) (assignable : Set_ident.t) stats =
             (* see #278 before changes*)
           in
           inline_call assignable no_tailcall params args processed_blocks
-        | x :: xs -> self.statement self x :: self.block self xs
-        | [] -> []);
+        | x :: xs -> map_cons self bs x xs
+        | [] -> bs);
   }
 
 let tailcall_inline ~assignable (program : J.program) =
