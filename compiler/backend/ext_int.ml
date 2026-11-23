@@ -22,13 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let move = 0x1_0000_0000
-
-(* works only on 64 bit platform *)
-let int32_unsigned_to_int (n : int32) : int =
-  let i = Int32.to_int n in
-  if i < 0 then i + move else i
-
 let int32_pow (x : int32) (y : int32) =
   let x_float = Int32.to_float x in
   let y_float = Int32.to_float y in

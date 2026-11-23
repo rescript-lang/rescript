@@ -22,10 +22,4 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val int32_unsigned_to_int : int32 -> int
-(** 
-   works on 64 bit platform only
-   given input as an uint32 and convert it io int64
-*)
-
 val int32_pow : int32 -> int32 -> int32
