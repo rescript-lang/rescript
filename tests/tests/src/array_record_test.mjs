@@ -86,9 +86,9 @@ let swappedValue = {
 };
 
 function split(r) {
-  let {"0": __rest_field0, ...rest} = r;
+  let {"0": s0, ...rest} = r;
   return [
-    __rest_field0,
+    s0,
     rest
   ];
 }

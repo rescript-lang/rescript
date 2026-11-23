@@ -37,9 +37,9 @@ function getRenamedRest(param) {
 }
 
 function getRenamedNameAndRest(param) {
-  let {"user-name": __rest_field0, ...rest} = param;
+  let {"user-name": name, ...rest} = param;
   return [
-    __rest_field0,
+    name,
     rest
   ];
 }
