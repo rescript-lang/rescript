@@ -53,12 +53,6 @@ type resolved_external = {
 }
 (** An [external] declaration after its FFI attributes are applied. *)
 
-val resolve_external :
-  (Parsetree.value_description -> string -> resolved_external) ref
-(** [!resolve_external value_desc prim] resolves an [external] declaration
-    whose primitive string is [prim] during type checking. FFI resolution
-    lives in the frontend, above this library; [Ppx_entry] registers it. *)
-
 val coercible : description -> description -> bool
 (** Can an implementation's primitive satisfy an interface's during signature
     inclusion? *)

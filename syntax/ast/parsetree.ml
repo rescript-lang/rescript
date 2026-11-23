@@ -542,7 +542,7 @@ and value_description = {
       (* The primitive string as written: an intrinsic ("%identity",
          "#raw_expr") or the JS name of an FFI external. Its FFI attributes
          stay in [pval_attributes] and on the argument types; the type
-         checker resolves them through [Primitive.resolve_external]. *)
+         checker resolves them through [Ast_external.resolve]. *)
   pval_jsx_component: jsx_component option;
       (* The [@react.component] annotation, taken out of the attributes when
          the description is built. *)

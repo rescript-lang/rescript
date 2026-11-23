@@ -1948,7 +1948,7 @@ let transl_value_decl env loc valdecl =
         resolved_name;
         resolved_kind;
       } =
-        !Primitive.resolve_external valdecl txt
+        Ast_external.resolve valdecl txt
       in
       (resolved_type, resolved_attributes, Some (resolved_name, resolved_kind))
   in

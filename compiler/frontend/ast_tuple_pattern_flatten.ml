@@ -78,7 +78,7 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
     | Some (wholes, es, tuple_attributes)
       when List.for_all is_simple_pattern xs && List.compare_lengths es xs = 0
       ->
-      Bs_ast_invariant.warn_discarded_unused_attributes tuple_attributes;
+      Ast_checks.warn_discarded_unused_attributes tuple_attributes;
       (* will be dropped*)
       List.fold_right2
         (fun pat exp acc ->
