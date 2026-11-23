@@ -1,5 +1,7 @@
 (library
- (name rescript_language_server)
+ (name rescript_language_server_core)
+ (modules
+  (:standard \ rescript_language_server))
  (libraries
   lsp
   eio
@@ -8,8 +10,14 @@
   str
   yojson
   ppx_deriving_yojson.runtime)
- (inline_tests)
  (preprocess
-  (pps ppx_deriving_yojson ppx_expect))
+  (pps ppx_deriving_yojson))
+ (flags
+  (:standard -w +a-4-9-30-40-41-42-44-48-70)))
+
+(library
+ (name rescript_language_server)
+ (modules rescript_language_server)
+ (libraries lsp eio analysis yojson rescript_language_server_core)
  (flags
   (:standard -w +a-4-9-30-40-41-42-44-48-70)))

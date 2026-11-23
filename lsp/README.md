@@ -91,8 +91,12 @@ updating its compiler.
 
 The server library lives in `lsp/src` and has an opam package named
 `rescript-language-server`. It depends on the OCaml `lsp` library, Eio,
-Yojson, `ppx_deriving_yojson`, and the in-tree analysis and rewatch libraries;
-tests use `ppx_expect`.
+Yojson, `ppx_deriving_yojson`, and the in-tree analysis and rewatch libraries.
+The private `rescript_language_server_core` library contains the implementation;
+the `rescript_language_server` library exposes the CLI entrypoint. Unit tests
+import the core library from `tests/lsp_unit_tests`, keeping `ppx_expect` and its
+test runtimes out of the shipped executable.
+
 Project configuration uses rewatch's decoder, namespace rules, and artifact-path
 helpers. Only editor settings and the required `.sourcedirs.json` fields are
 decoded locally: editor settings use derived codecs, while source-directory
@@ -318,18 +322,17 @@ analysis artifact lookup is not a complete implementation of either feature.
 
 ## Development and tests
 
-From the repository root, build the toolchain/runtime and run the E2E suite:
+From the repository root, build the toolchain/runtime and run both LSP suites:
 
 ```sh
 opam exec -- make test-lsp
 ```
 
-After those artifacts are built, run only the E2E tests or the server's inline
-tests:
+After those artifacts are built, run either suite separately:
 
 ```sh
 opam exec -- dune runtest tests/lsp_tests
-opam exec -- dune runtest lsp
+opam exec -- dune runtest tests/lsp_unit_tests
 ```
 
 The E2E tests are OCaml `ppx_expect` snapshots. Their shared client launches the
@@ -337,7 +340,9 @@ actual CLI over stdio using Unix process APIs for Windows/Linux/macOS support.
 Tests create temporary projects, build them, edit buffers, send requests and
 notifications, and normalize workspace paths in snapshots. Coverage includes
 editor features, diagnostic ownership, build recovery, formatting, and command
-capability handling. The server also has inline tests for its local helpers.
+capability handling. The separate unit-test library covers configuration,
+compiler-log parsing, diagnostics, and document helpers using the production
+implementation directly.
 
 `Test.setup_project` writes `rescript.json` and documents and can run a build;
 `Test.with_project` provides temporary workspace setup and cleanup. Tests use

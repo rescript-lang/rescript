@@ -1,5 +1,6 @@
 open Lsp
 open Lsp.Types
+open Rescript_language_server_core
 
 let initialization ~state (client_capabilities : ClientCapabilities.t) =
   let textDocumentSync =

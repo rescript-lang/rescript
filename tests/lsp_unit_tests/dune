@@ -1,0 +1,6 @@
+(library
+ (name rescript_lsp_unit_tests)
+ (libraries rescript_language_server_core lsp yojson)
+ (inline_tests)
+ (preprocess
+  (pps ppx_expect)))

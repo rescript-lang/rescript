@@ -160,7 +160,7 @@ test-rewatch: lib
 	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
 
 test-lsp: lib
-	@dune runtest tests/lsp_tests
+	@dune runtest tests/lsp_unit_tests tests/lsp_tests
 
 test-all: test test-gentype test-analysis test-tools test-rewatch test-lsp
 
