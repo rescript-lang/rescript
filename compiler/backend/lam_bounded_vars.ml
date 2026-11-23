@@ -103,7 +103,7 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
       let l1 = aux l1 in
       let l2 = aux l2 in
       let l3 = aux l3 in
-      Lambda.for_ ident (aux l1) l2 dir l3
+      Lambda.for_ ident l1 l2 dir l3
     | Lfor_of (ident, l1, l2) ->
       let ident = rebind ident in
       let l1 = aux l1 in

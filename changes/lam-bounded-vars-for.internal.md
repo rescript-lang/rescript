@@ -1,0 +1,1 @@
+- Rename the variables in a for loop's start expression once instead of twice when inlining a function.

@@ -19,6 +19,7 @@ let suites =
       Ounit_deep_flatten_tests.suites;
       Ounit_exits_tests.suites;
       Ounit_lam_size_tests.suites;
+      Ounit_lam_bounded_vars_tests.suites;
       Ounit_sroa_tests.suites;
       Ounit_ast_mapper0_tests.suites;
       Ounit_ast_helper_tests.suites;
