@@ -21,4 +21,4 @@
  (wrapped false)
  (instrumentation
   (backend bisect_ppx))
- (libraries ext typing yojson unix))
+ (libraries typing yojson unix))

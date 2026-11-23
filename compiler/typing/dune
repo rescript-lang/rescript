@@ -1,4 +1,4 @@
-; The browser profile builds the playground compiler; this rule pair generates a module from platform/{native,playground}.
+; The browser profile builds the playground compiler; these rules generate modules from platform/{native,playground}.
 
 (rule
  (target cmt_format_persistence.ml)
@@ -16,6 +16,24 @@
  (action
   (copy# platform/native/cmt_format_persistence.ml cmt_format_persistence.ml)))
 
+(rule
+ (target ext_platform_primitives.ml)
+ (enabled_if
+  (= %{profile} browser))
+ (action
+  (copy#
+   platform/playground/ext_platform_primitives.ml
+   ext_platform_primitives.ml)))
+
+(rule
+ (target ext_platform_primitives.ml)
+ (enabled_if
+  (<> %{profile} browser))
+ (action
+  (copy#
+   platform/native/ext_platform_primitives.ml
+   ext_platform_primitives.ml)))
+
 (library
  (name typing)
  (flags
@@ -24,4 +42,7 @@
  (private_modules cmt_format_common cmt_format_persistence)
  (instrumentation
   (backend bisect_ppx))
- (libraries ext rescript_ast rescript_printer flow_parser unix))
+ (foreign_stubs
+  (language c)
+  (names ext_platform_primitives_stubs))
+ (libraries rescript_ast rescript_printer flow_parser unix))

@@ -1,5 +1,5 @@
 ; The parsetree and the helpers the parser and printer need. It depends on the
-; standard library only: keep it free of ext, the type checker and flow_parser.
+; standard library only: keep it free of the compiler and flow_parser.
 
 (library
  (name rescript_ast)
