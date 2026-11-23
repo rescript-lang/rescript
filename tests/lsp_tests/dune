@@ -5,6 +5,6 @@
  (inline_tests
   (deps ../../rewatch-ocaml/rescript_ocaml.exe))
  (preprocess
-  (pps ppx_deriving_yojson ppx_expect))
+  (pps ppx_expect))
  (flags
   (-w "-9-32-33")))

@@ -50,3 +50,54 @@ let%expect_test "parse config" =
   in
   parse_and_print_config example_config_json_1;
   [%expect {| { "codeLens": true, "inlayHints": { "enable": true } } |}]
+
+let%expect_test "settings retain defaults, optional limits, and unknown fields"
+    =
+  List.iter
+    (fun text ->
+      match of_yojson (Yojson.Safe.from_string text) with
+      | Ok config ->
+        let json = to_yojson config in
+        assert (of_yojson json = Ok config);
+        print_endline (Yojson.Safe.to_string json)
+      | Error message -> failwith message)
+    [
+      {|{}|};
+      {|{"hover":{},"inlayHints":{},"futureSetting":true}|};
+      {|{"hover":{"supportMarkdownLinks":true},"codeLens":true,"inlayHints":{"enable":true,"maxLength":0}}|};
+      {|{"inlayHints":{"maxLength":null}}|};
+    ];
+  [%expect
+    {|
+    {}
+    {}
+    {"hover":{"supportMarkdownLinks":true},"codeLens":true,"inlayHints":{"enable":true,"maxLength":0}}
+    {"inlayHints":{"maxLength":null}}
+    |}]
+
+let%expect_test "settings reject invalid known fields" =
+  List.iter
+    (fun text ->
+      Printf.printf "%s: %b\n" text
+        (Result.is_error (of_yojson (Yojson.Safe.from_string text))))
+    [
+      {|[]|};
+      {|{"hover":null}|};
+      {|{"codeLens":null}|};
+      {|{"codeLens":1}|};
+      {|{"hover":{"supportMarkdownLinks":"true"}}|};
+      {|{"inlayHints":false}|};
+      {|{"inlayHints":{"enable":null}}|};
+      {|{"inlayHints":{"maxLength":"25"}}|};
+    ];
+  [%expect
+    {|
+    []: true
+    {"hover":null}: true
+    {"codeLens":null}: true
+    {"codeLens":1}: true
+    {"hover":{"supportMarkdownLinks":"true"}}: true
+    {"inlayHints":false}: true
+    {"inlayHints":{"enable":null}}: true
+    {"inlayHints":{"maxLength":"25"}}: true
+    |}]

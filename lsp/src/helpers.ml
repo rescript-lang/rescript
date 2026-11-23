@@ -50,147 +50,44 @@ let best_root_match ~path entries =
          else best)
        None
 
-let relative_to ~root path =
-  let root = if String.ends_with ~suffix:"/" root then root else root ^ "/" in
-
-  if String.starts_with ~prefix:root path then
-    let root_len = String.length root in
-    String.sub path root_len (String.length path - root_len)
-  else path
-
-let to_camel_case (text : string) : string =
-  let len = String.length text in
-  let buffer = Buffer.create len in
-
-  let is_separator = function
-    | ' ' | '\t' | '\n' | '\r' | '-' -> true
-    | _ -> false
-  in
-
-  let rec loop i capitalize_next =
-    if i >= len then Buffer.contents buffer
-    else
-      let c = text.[i] in
-
-      if is_separator c then loop (i + 1) true
-      else if capitalize_next then (
-        Buffer.add_char buffer (Char.uppercase_ascii c);
-        loop (i + 1) false)
-      else (
-        Buffer.add_char buffer c;
-        loop (i + 1) false)
-  in
-
-  loop 0 true
-
-let get_cmi_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
-    ~(fs : Fs.fs) =
+let config_for_uri ~(uri : Uri.t) (compiler_config : Compiler_config.t) =
   let path = Uri.to_path uri in
   let config_roots =
     compiler_config |> Compiler_config.Uri_map.to_seq
-    |> Seq.map (fun (uri, config) -> (uri |> Uri.to_path, config))
-    |> List.of_seq |> List.map fst
+    |> Seq.map (fun (uri, _) -> Uri.to_path uri)
+    |> List.of_seq
   in
-
-  let config =
-    match config_roots |> best_root_match ~path with
-    | Some root ->
-      Compiler_config.Uri_map.find_opt (Uri.of_path root) compiler_config
-    | None -> None
-  in
-  match config with
-  | Some config ->
-    let namespace =
-      match config.namespace with
-      | Some (Namespace_bool true) -> config.name |> to_camel_case
-      | Some (Namespace_string name) -> name |> to_camel_case
-      | _ -> ""
-    in
-    let suffix_to_append =
-      if String.length namespace > 0 then "-" ^ namespace else ""
-    in
-    let resi_file =
-      match best_root_match ~path config_roots with
-      | Some package_root_path ->
-        let cmi_file =
-          let open Filename in
-          let ( /+ ) = concat in
-          let relative_path = relative_to ~root:package_root_path path in
-          let cmi =
-            let stem = basename relative_path |> remove_extension in
-            stem ^ suffix_to_append ^ ".cmi"
-          in
-          (* Build artifacts are flat, regardless of the source directory. *)
-          package_root_path /+ Constants.compiler_dir_partial_path /+ cmi
-        in
-        let result =
-          match Fs.exists ~follow:false ~fs cmi_file with
-          | true -> Some cmi_file
-          | false -> None
-        in
-        result
-      | None -> None
-    in
-    resi_file
+  match best_root_match ~path config_roots with
+  | Some root ->
+    Compiler_config.Uri_map.find_opt (Uri.of_path root) compiler_config
   | None -> None
 
-let get_compiled_file ~(uri : Uri.t) ~(compiler_config : Compiler_config.t)
-    ~(fs : Fs.fs) =
-  let path = Uri.to_path uri in
-  let config_roots =
-    compiler_config |> Compiler_config.Uri_map.to_seq
-    |> Seq.map (fun (uri, config) -> (uri |> Uri.to_path, config))
-    |> List.of_seq |> List.map fst
-  in
-
-  let config =
-    match config_roots |> best_root_match ~path with
-    | Some root ->
-      Compiler_config.Uri_map.find_opt (Uri.of_path root) compiler_config
-    | None -> None
-  in
-  match config with
+let get_cmi_file ~uri ~compiler_config ~fs =
+  match config_for_uri ~uri compiler_config with
   | Some config ->
-    let {Compiler_config.suffix; folder; in_source} =
-      Compiler_config.get_output_config config
+    let open Rewatch_ocaml_lib in
+    let cmi_file =
+      Filename.concat
+        (Build_artifacts.artifact_dir config.root)
+        (Source.compiler_asset_basename config (Uri.to_path uri) ^ ".cmi")
     in
+    if Fs.exists ~follow:false ~fs cmi_file then Some cmi_file else None
+  | None -> None
 
-    let js_file_path =
-      let file_path =
-        let open Filename in
-        let ( /+ ) = concat in
-        if in_source then
-          let filename = basename path in
-          let js_file = remove_extension filename ^ suffix in
-          Some (dirname path /+ js_file)
-        else
-          match best_root_match ~path config_roots with
-          | Some package_root_path ->
-            (*
-              Some example with sources
-              package_root_path: /workspace/rescript-lang.org/apps/guide
-              path:              /workspace/rescript-lang.org/apps/guide/app/GuideHome.res
-              compiled js:       /workspace/rescript-lang.org/apps/guide/lib/es6/app/GuideHome.jsx
-            *)
-            (* app/GuideHome.res *)
-            let relative_path = relative_to ~root:package_root_path path in
-            let sources_dir = dirname relative_path in
-            let js_file =
-              let res_file = basename relative_path in
-              remove_extension res_file ^ suffix
-            in
-            Some
-              (package_root_path /+ Constants.build_output_folder /+ folder
-             /+ sources_dir /+ js_file)
-          | None -> None
-      in
-      match file_path with
-      | Some file_path when Fs.exists ~fs ~follow:false file_path ->
-        Some (file_path |> Uri.of_path)
-      | _ -> None
+let get_compiled_file ~uri ~compiler_config ~fs =
+  match config_for_uri ~uri compiler_config with
+  | Some config ->
+    let open Rewatch_ocaml_lib in
+    let relative_path =
+      Project_context.relative_to config.root (Uri.to_path uri)
     in
-
-    js_file_path
+    config.package_specs
+    |> List.find_map (fun spec ->
+        let path =
+          Build_artifacts.generated_js_path config relative_path spec
+        in
+        if Fs.exists ~follow:false ~fs path then Some (Uri.of_path path)
+        else None)
   | None -> None
 
 let load_full uri (analysis_state : Analysis.Shared_types.state) =

@@ -2174,7 +2174,7 @@ PPX_DERIVING_YOJSON RUNTIME
 Version: 3.10.0
 Source: https://github.com/ocaml-ppx/ppx_deriving_yojson
 License: MIT
-Included in: JSON codecs in the language-server library in rescript
+Included in: JSON codecs for language-server editor settings in rescript
 
 Copyright (c) 2014-2018  whitequark <whitequark@whitequark.org>
 

@@ -293,7 +293,7 @@ let%expect_test "navigation code actions use stable advertised IDs" =
     {|
     {
       "command": "rescript/openCompiled:<instance>",
-      "uri": "file:///workspace/lib/es6/./Test.res.js"
+      "uri": "file:///workspace/lib/es6/Test.res.js"
     }
     {
       "command": "rescript/switchImplementationInterface:<instance>",
@@ -301,7 +301,7 @@ let%expect_test "navigation code actions use stable advertised IDs" =
     }
     {
       "command": "rescript/openCompiled:<instance>",
-      "uri": "file:///workspace/lib/es6/./Test.res.js"
+      "uri": "file:///workspace/lib/es6/Test.res.js"
     }
     {
       "command": "rescript/switchImplementationInterface:<instance>",

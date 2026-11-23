@@ -66,7 +66,7 @@ let%expect_test "recovers after the first compiler log is created" =
     null
     repeated initialization messages: 0
     { "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
-    { "uri": "file:///workspace/lib/es6/./Test.res.js" }
+    { "uri": "file:///workspace/lib/es6/Test.res.js" }
     [
       {
         "kind": 16,
@@ -90,7 +90,7 @@ let%expect_test "recovers when the client reports the first build as a change" =
     null
     repeated initialization messages: 0
     { "contents": { "kind": "markdown", "value": "```rescript\nint\n```" } }
-    { "uri": "file:///workspace/lib/es6/./Test.res.js" }
+    { "uri": "file:///workspace/lib/es6/Test.res.js" }
     [
       {
         "kind": 16,

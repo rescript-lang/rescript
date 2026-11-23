@@ -118,7 +118,7 @@ let to_yojson (t : t) : Yojson.Safe.t =
   let compiler_config_to_yojson (compiler_config : Compiler_config.t) =
     compiler_config |> Compiler_config.Uri_map.to_seq
     |> Seq.map (fun (uri, config) ->
-        (Lsp.Uri.to_string uri, Compiler_config.Parse.to_yojson config))
+        (Lsp.Uri.to_string uri, Compiler_config.to_yojson config))
     |> List.of_seq
     |> fun fields -> `Assoc fields
   in

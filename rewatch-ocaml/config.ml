@@ -318,18 +318,7 @@ let deprecation_diagnostics path ~name fields =
         (String.concat "\n" deprecated);
     ]
 
-let load path =
-  let root =
-    with_read_errors path (fun () ->
-        Platform.canonicalize_path (Filename.dirname path))
-  in
-  let path = Filename.concat root (Filename.basename path) in
-  let contents =
-    with_read_errors path (fun () ->
-        if (Unix.stat path).Unix.st_kind = Unix.S_DIR then
-          fail_read path (Unix.error_message Unix.EISDIR);
-        File_util.read_file path)
-  in
+let of_string ~path ~root contents =
   (match Strict_json.check contents with
   | Ok () -> ()
   | Error {line; column; message} ->
@@ -447,6 +436,20 @@ let load path =
     deprecation_diagnostics;
     diagnostics;
   }
+
+let load path =
+  let root =
+    with_read_errors path (fun () ->
+        Platform.canonicalize_path (Filename.dirname path))
+  in
+  let path = Filename.concat root (Filename.basename path) in
+  let contents =
+    with_read_errors path (fun () ->
+        if (Unix.stat path).Unix.st_kind = Unix.S_DIR then
+          fail_read path (Unix.error_message Unix.EISDIR);
+        File_util.read_file path)
+  in
+  of_string ~path ~root contents
 
 let load_root root = load (path_in_root root)
 

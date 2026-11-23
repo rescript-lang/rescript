@@ -329,7 +329,7 @@
     "opam": "ppx_deriving_yojson",
     "source": "https://github.com/ocaml-ppx/ppx_deriving_yojson",
     "license": "MIT",
-    "scope": "JSON codecs in the language-server library in rescript"
+    "scope": "JSON codecs for language-server editor settings in rescript"
   },
   {
     "name": "Cmdliner",

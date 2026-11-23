@@ -91,7 +91,12 @@ updating its compiler.
 
 The server library lives in `lsp/src` and has an opam package named
 `rescript-language-server`. It depends on the OCaml `lsp` library, Eio,
-`ppx_deriving_yojson`, and the in-tree analysis library; tests use `ppx_expect`.
+Yojson, `ppx_deriving_yojson`, and the in-tree analysis and rewatch libraries;
+tests use `ppx_expect`.
+Project configuration uses rewatch's decoder, namespace rules, and artifact-path
+helpers. Only editor settings and the required `.sourcedirs.json` fields are
+decoded locally: editor settings use derived codecs, while source-directory
+metadata uses Yojson directly.
 
 ### Code map
 

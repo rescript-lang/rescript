@@ -1,12 +1,10 @@
-type cmt_scan_item = {build_root: string} [@@deriving yojson {strict = false}]
-
-type source_dirs = {cmt_scan: cmt_scan_item list}
-[@@deriving yojson {strict = false}]
-
 let get_build_roots_from_json json =
-  match source_dirs_of_yojson json with
-  | Ok {cmt_scan} -> Some (List.map (fun {build_root} -> build_root) cmt_scan)
-  | Error _ -> None
+  let open Yojson.Safe.Util in
+  try
+    json |> member "cmt_scan" |> to_list
+    |> List.map (fun item -> item |> member "build_root" |> to_string)
+    |> Option.some
+  with Type_error _ -> None
 
 let get_build_roots_from_file ~fs path =
   match Fs.load ~fs path with
@@ -78,3 +76,29 @@ let%expect_test "get_build_roots" =
 
   json_3 |> get_build_roots_from_json |> print_build_roots;
   [%expect {| |}]
+
+let%expect_test "source directory metadata rejects incomplete scan entries" =
+  List.iter
+    (fun text ->
+      match get_build_roots_from_json (Yojson.Safe.from_string text) with
+      | None -> print_endline "invalid"
+      | Some roots ->
+        `List (List.map (fun root -> `String root) roots)
+        |> Yojson.Safe.to_string |> print_endline)
+    [
+      {|{}|};
+      {|{"cmt_scan":null}|};
+      {|{"cmt_scan":[]}|};
+      {|{"cmt_scan":[{"build_root":"lib/rescript"},{}]}|};
+      {|{"cmt_scan":[{"build_root":null}]}|};
+      {|{"version":2,"cmt_scan":[{"build_root":"lib/rescript","scan_dirs":[]}]}|};
+    ];
+  [%expect
+    {|
+    invalid
+    invalid
+    []
+    invalid
+    invalid
+    ["lib/rescript"]
+    |}]

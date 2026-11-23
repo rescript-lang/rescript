@@ -8,6 +8,7 @@ val path_in_root : string -> string
 val exists_in_root : string -> bool
 val source_is_dev : t -> string -> bool
 val with_root_options : t -> t -> t
+val of_string : path:string -> root:string -> string -> t
 val load : string -> t
 val load_root : string -> t
 val package_spec_suffix : t -> package_spec -> string
