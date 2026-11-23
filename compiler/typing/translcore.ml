@@ -1916,7 +1916,7 @@ and transl_record loc env fields repres opt_init_expr =
       (* Take a shallow copy of the init record, then mutate the fields
          of the copy *)
       let copy_id = Ident.create "newrecord" in
-      let update_field cont (lbl, _lid, expr) =
+      let set_field (lbl, _lid, expr) =
         let upd =
           match repres with
           | Record_regular ->
@@ -1932,14 +1932,14 @@ and transl_record loc env fields repres opt_init_expr =
               ( lbl.lbl_pos + 1,
                 Lambda.fld_record_extension_set lbl.lbl_runtime_name )
         in
-        seq (prim ~primitive:upd ~args:[var copy_id; transl_exp expr] loc) cont
+        prim ~primitive:upd ~args:[var copy_id; transl_exp expr] loc
       in
       match opt_init_expr with
       | None -> assert false
       | Some init_expr ->
         let_ Strict copy_id
           (prim ~primitive:Pduprecord ~args:[transl_exp init_expr] loc)
-          (Array.fold_left update_field (var copy_id) fields))
+          (Array.fold_right seq (Array.map set_field fields) (var copy_id)))
 
 and transl_match e arg pat_expr_list exn_pat_expr_list partial =
   let id = Typecore.name_pattern "exn" exn_pat_expr_list

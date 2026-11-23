@@ -164,6 +164,16 @@ const originalRaiseErrorPositions = findTokenPositions(
   "JsError.throwWithMessage",
 );
 assert.equal(originalRaiseErrorPositions.length, 2);
+const recordSpreadBinding = "let updateSettings = base => ";
+const recordSpreadBindingPosition = findSingleTokenPosition(
+  demoSource,
+  recordSpreadBinding,
+);
+// Both fields set on the copy map to the record expression
+const originalFieldAssignmentPositions = Array.from({ length: 2 }, () => ({
+  line: recordSpreadBindingPosition.line,
+  column: recordSpreadBindingPosition.column + recordSpreadBinding.length,
+}));
 const originalPipeCallPositions = findTokenPositions(demoSource, "input->fn");
 assert.equal(originalPipeCallPositions.length, 1);
 const originalPatternBranchPositions = [
@@ -233,6 +243,7 @@ function sourceMapFixture(filename) {
         pipeCallPositions: originalPipeCallPositions,
         patternBranchPositions: originalPatternBranchPositions,
         debuggerPositions: originalDebuggerPositions,
+        fieldAssignmentPositions: originalFieldAssignmentPositions,
       };
     case "Helper":
       return {
@@ -242,6 +253,7 @@ function sourceMapFixture(filename) {
         pipeCallPositions: originalHelperPipeCallPositions,
         patternBranchPositions: originalHelperPatternBranchPositions,
         debuggerPositions: [],
+        fieldAssignmentPositions: [],
       };
     default:
       throw new Error(`Unknown source map fixture for ${filename}`);
@@ -324,6 +336,22 @@ function assertSourceMap(filename, js, map, options = {}) {
       };
     }),
     fixture.raiseErrorPositions,
+  );
+
+  assert.deepEqual(
+    findTokenPositions(js, "newrecord.").map(position => {
+      const mapping = decodedMappings.find(
+        decoded =>
+          decoded.generatedLine === position.line &&
+          decoded.generatedColumn === position.column,
+      );
+      assert.ok(
+        mapping,
+        `${filename}.map should include an exact mapping for the field assignment at ${position.line}:${position.column}`,
+      );
+      return { line: mapping.originalLine, column: mapping.originalColumn };
+    }),
+    fixture.fieldAssignmentPositions,
   );
 
   /** @type {[string, Position[]][]} */

@@ -1978,58 +1978,127 @@ let compile output_prefix =
         ~hold:(Lam_compile_external_call.hold_args arg_types)
         primitive args loc
     | {primitive; args; loc} -> compile_primitive_default primitive args loc
+  (* The fields set on the copy [copy_id] of a record before it is returned, in
+     the order they are set: the overrides of a spread, and then the fields
+     assigned to it by later code. None when one of the values uses the copy or
+     a field is set twice, since then the copy has to exist before the
+     assignments run. *)
   and collect_dup_overrides (copy_id : Ident.t) (lam : Lambda.t)
-      (acc : (Lambda.set_field_dbg_info * Lambda.t) list) :
-      (Lambda.set_field_dbg_info * Lambda.t) list option =
+      (acc : (int * Lambda.set_field_dbg_info * Location.t * Lambda.t) list) :
+      (int * Lambda.set_field_dbg_info * Location.t * Lambda.t) list option =
     match lam with
     | Lsequence
         ( Lprim
-            {primitive = Psetfield (_, fld_info); args = [Lvar id'; value]; _},
+            {primitive = Psetfield (i, fld_info); args = [Lvar id'; value]; loc},
           rest )
-      when Ident.same id' copy_id ->
-      collect_dup_overrides copy_id rest ((fld_info, value) :: acc)
-    | Lvar id' when Ident.same id' copy_id -> Some acc
+      when Ident.same id' copy_id
+           && (not (List.exists (fun (j, _, _, _) -> i = j) acc))
+           && not (Lam_hit.hit_variable copy_id value) ->
+      collect_dup_overrides copy_id rest ((i, fld_info, loc, value) :: acc)
+    | Lvar id' when Ident.same id' copy_id -> Some (List.rev acc)
     | _ -> None
   and try_compile_record_spread (lambda_cxt : Lam_compile_context.t)
-      (id : Ident.t) (arg : Lambda.t) (body : Lambda.t) : Js_output.t option =
+      (let_kind : Lambda.let_kind) (id : Ident.t) (arg : Lambda.t)
+      (body : Lambda.t) : Js_output.t option =
     match arg with
     | Lprim {primitive = Pduprecord; args = [init]; loc} -> (
       match collect_dup_overrides id body [] with
       | None -> None
       | Some overrides ->
-        let need_value_cxt =
-          {lambda_cxt with continuation = NeedValue Not_tail}
-        in
-        let init_output = compile_lambda need_value_cxt init in
-        let init_val =
-          match init_output.value with
-          | Some v -> v
+        let compile_value lam : Js_output.t * J.expression =
+          let output =
+            compile_lambda
+              {lambda_cxt with continuation = NeedValue Not_tail}
+              lam
+          in
+          match output.value with
+          | Some value -> (output, value)
           | None -> assert false
         in
-        let blocks, props =
-          List.fold_left
-            (fun (blocks, props)
-                 ((fld_info : Lambda.set_field_dbg_info), value_lam) ->
-              let val_output = compile_lambda need_value_cxt value_lam in
-              let val_val =
-                match val_output.value with
-                | Some v -> v
-                | None -> assert false
-              in
-              let name =
-                match fld_info with
-                | Fld_record_set name
-                | Fld_record_inline_set name
-                | Fld_record_extension_set name ->
-                  name
-              in
-              (blocks @ val_output.block, (Js_op.Lit name, val_val) :: props))
-            (init_output.block, []) (List.rev overrides)
+        let init_output, init_val = compile_value init in
+        let overrides =
+          List.map
+            (fun (i, fld_info, set_loc, value_lam) ->
+              let output, value = compile_value value_lam in
+              (i, fld_info, set_loc, output, value))
+            overrides
         in
-        Some
-          (Js_output.output_of_block_and_expression lambda_cxt.continuation
-             blocks
-             (with_source_loc loc (E.obj ~dup:init_val props))))
+        (* Whether the statements of the overrides can run before [init] is
+           copied and the values of the overrides are evaluated, as
+           [sequence_arguments] decides for the arguments of a call *)
+        let rec fits_literal ~earlier_run_no_code = function
+          | [] -> true
+          | (_, _, _, (output : Js_output.t), value) :: rest ->
+            (output.block = []
+            || (earlier_run_no_code && defines_pure_values output.block))
+            && fits_literal
+                 ~earlier_run_no_code:(earlier_run_no_code && runs_no_code value)
+                 rest
+        in
+        if fits_literal ~earlier_run_no_code:(runs_no_code init_val) overrides
+        then
+          let props =
+            List.map
+              (fun (_, (fld_info : Lambda.set_field_dbg_info), _, _, value) ->
+                let name =
+                  match fld_info with
+                  | Fld_record_set name
+                  | Fld_record_inline_set name
+                  | Fld_record_extension_set name ->
+                    name
+                in
+                (Js_op.Lit name, value))
+              overrides
+          in
+          let blocks =
+            List.concat_map
+              (fun (_, _, _, (output : Js_output.t), _) -> output.block)
+              overrides
+          in
+          Some
+            (Js_output.output_of_block_and_expression lambda_cxt.continuation
+               (init_output.block @ blocks)
+               (with_source_loc loc (E.obj ~dup:init_val props)))
+        else
+          let outputs =
+            init_output
+            :: List.map (fun (_, _, _, output, _) -> output) overrides
+          in
+          let copy_is_unused =
+            (match lambda_cxt.continuation with
+              | EffectCall Not_tail -> true
+              | EffectCall (Maybe_tail_is_return _)
+              | Declare _ | Assign _ | NeedValue _ ->
+                false)
+            || List.exists
+                 (fun (output : Js_output.t) -> output.output_finished = True)
+                 outputs
+          in
+          if copy_is_unused then Some (Js_output.concat outputs)
+          else
+            (* The object literal [{...init, f: v}] would copy [init] only after
+               the statements of every override have run, so they could mutate
+               the base before the copy. Copy first, then set each field. *)
+            let copy = E.var id in
+            let assignments =
+              List.concat_map
+                (fun (i, fld_info, set_loc, (output : Js_output.t), value) ->
+                  output.block
+                  @ [
+                      S.exp
+                        (with_source_loc set_loc
+                           (Js_of_lam_block.set_field fld_info copy
+                              (Int32.of_int i) value));
+                    ])
+                overrides
+            in
+            Some
+              (Js_output.output_of_block_and_expression lambda_cxt.continuation
+                 (init_output.block
+                 @ S.define_variable ~kind:let_kind id
+                     (with_source_loc loc (E.obj ~dup:init_val []))
+                   :: assignments)
+                 copy))
     | _ -> None
   and compile_lambda (lambda_cxt : Lam_compile_context.t) (cur_lam : Lambda.t) :
       Js_output.t =
@@ -2064,7 +2133,7 @@ let compile output_prefix =
                     body))))
     | Lapply appinfo -> compile_apply appinfo lambda_cxt
     | Llet (let_kind, id, arg, body) -> (
-      match try_compile_record_spread lambda_cxt id arg body with
+      match try_compile_record_spread lambda_cxt let_kind id arg body with
       | Some output -> output
       | None ->
         (* Order matters..  see comment below in [Lletrec] *)
