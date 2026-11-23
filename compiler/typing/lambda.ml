@@ -439,8 +439,7 @@ let const_shape_none = Const_js_undefined {is_unit = false}
    number at runtime, anything else is a string. Used both for a tagless
    variant and for the name field of one carrying a payload. *)
 let const_polyvar name =
-  if Ext_string.is_valid_hash_number name then
-    Const_int (Ext_string.hash_number_as_i32_exn name)
+  if Ext_string.is_valid_hash_number name then Const_int (Int32.of_string name)
   else Const_polyvar name
 
 let const_polyvar_name name =

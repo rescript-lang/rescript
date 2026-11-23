@@ -67,12 +67,6 @@ let for_all_from s start p =
   if start < 0 then invalid_arg "Ext_string.for_all_from"
   else unsafe_for_all_range s ~start ~finish:(len - 1) p
 
-let tail_from s x =
-  let len = String.length s in
-  if x > len then
-    invalid_arg ("Ext_string.tail_from " ^ s ^ " : " ^ string_of_int x)
-  else String.sub s x (len - x)
-
 (* let rec index_rec s lim i c =
    if i >= lim then -1 else
    if String.unsafe_get s i = c then i
@@ -119,5 +113,3 @@ let is_valid_hash_number (x : string) =
       | '0' .. '9' -> true
       | _ -> false)
   else a >= 48
-
-let hash_number_as_i32_exn (x : string) : int32 = Int32.of_string x

@@ -43,9 +43,9 @@ type error = Unknown of string | Missing of string
 
 type t = spec Ext_spec.t
 
-let ( +> ) = Ext_buffer.add_string
+let ( +> ) = Buffer.add_string
 
-let usage_b (buf : Ext_buffer.t) ~usage (speclist : t) =
+let usage_b (buf : Buffer.t) ~usage (speclist : t) =
   buf +> usage;
   buf +> "\nOptions:\n";
   let max_col = ref 0 in
@@ -78,11 +78,11 @@ let usage_b (buf : Ext_buffer.t) ~usage (speclist : t) =
         buf +> "\n"))
 
 let stop_raise ~usage ~(error : error) (speclist : t) =
-  let b = Ext_buffer.create 200 in
+  let b = Buffer.create 200 in
   (match error with
   | Unknown ("-help" | "--help" | "-h") ->
     usage_b b ~usage speclist;
-    raise_notrace (Help (Ext_buffer.contents b))
+    raise_notrace (Help (Buffer.contents b))
   | Unknown s ->
     b +> "Unknown option \"";
     b +> s;
@@ -92,7 +92,7 @@ let stop_raise ~usage ~(error : error) (speclist : t) =
     b +> s;
     b +> "\" needs an argument.\n");
   usage_b b ~usage speclist;
-  bad_arg (Ext_buffer.contents b)
+  bad_arg (Buffer.contents b)
 
 let parse_exn ~usage ~argv ?(start = 1) (speclist : t)
     (anonfun : rev_args:string list -> unit) =

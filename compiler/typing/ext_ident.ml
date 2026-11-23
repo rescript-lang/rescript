@@ -105,13 +105,13 @@ let name_mangle name =
     done;
     name (* Normal letter *)
   with Not_normal_letter i ->
-    let buffer = Ext_buffer.create len in
+    let buffer = Buffer.create len in
     for j = 0 to len - 1 do
       let c = String.unsafe_get name j in
-      if no_escape c then Ext_buffer.add_char buffer c
-      else Ext_buffer.add_string buffer (convert ~op:(i = 0) c)
+      if no_escape c then Buffer.add_char buffer c
+      else Buffer.add_string buffer (convert ~op:(i = 0) c)
     done;
-    Ext_buffer.contents buffer
+    Buffer.contents buffer
 
 (**
    [convert name] if [name] is a js keyword or js global, add "$$"

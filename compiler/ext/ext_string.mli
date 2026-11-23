@@ -28,24 +28,12 @@
 val split_by : ?keep_empty:bool -> (char -> bool) -> string -> string list
 (** default is false *)
 
-(** remove whitespace letters ('\t', '\n', ' ') on both side*)
-
 val split : ?keep_empty:bool -> string -> char -> string list
-(** default is false *)
+(** default is false. Unlike [String.split_on_char], [split "" c] is [[]]. *)
 
 val starts_with : string -> string -> bool
-(** [starts_with s prefix]. Unlike [String.starts_with], it allocates
-    nothing. *)
-
-(**
-   [ends_with_then_chop name ext]
-   @example:
-   {[
-     ends_with_then_chop "a.cmj" ".cmj"
-       "a"
-   ]}
-   This is useful in controlled or file case sensitve system
-*)
+(** [starts_with s prefix]. Unlike [String.starts_with], it allocates no
+    closure for its loop, which matters on hot paths without flambda. *)
 
 val for_all_from : string -> int -> (char -> bool) -> bool
 (**
@@ -54,28 +42,8 @@ val for_all_from : string -> int -> (char -> bool) -> bool
    if [start] is too large, it returns true
 *)
 
-(* val index_next :
-   string -> 
-   int ->
-   char -> 
-   int  *)
-
-(**
-   [find ~start ~sub s]
-   returns [-1] if not found
-*)
-
-val tail_from : string -> int -> string
-(** [tail_from s 1]
-    return a substring from offset 1 (inclusive)
-*)
-
 val rindex_neg : string -> char -> int
 (** returns negative number if not found *)
-
-(** return negative means no slash, otherwise [i] means the place for first slash *)
-
-(** if no conversion happens, reference equality holds *)
 
 val replace_backward_slash : string -> string
 (** if no conversion happens, reference equality holds *)
@@ -83,5 +51,3 @@ val replace_backward_slash : string -> string
 val compare : string -> string -> int
 
 val is_valid_hash_number : string -> bool
-
-val hash_number_as_i32_exn : string -> int32

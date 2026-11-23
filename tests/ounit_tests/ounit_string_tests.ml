@@ -39,9 +39,6 @@ let suites =
            Ext_string.starts_with "abb" "abb" =~ true;
            Ext_string.starts_with "abb" "abbc" =~ false );
          ( __LOC__ >:: fun _ ->
-           Ext_string.tail_from "ghsogh" 1 =~ "hsogh";
-           Ext_string.tail_from "ghsogh" 0 =~ "ghsogh" );
-         ( __LOC__ >:: fun _ ->
            OUnit.assert_bool __LOC__
              (Ext_string.replace_backward_slash "a:\\b\\d" = "a:/b/d");
            OUnit.assert_bool __LOC__

@@ -48,9 +48,9 @@ let js_name_of_modulename s (case : Ext_js_file_kind.case) suffix : string =
 
 let namespace_of_package_name (s : string) : string =
   let len = String.length s in
-  let buf = Ext_buffer.create len in
+  let buf = Buffer.create len in
   let add capital ch =
-    Ext_buffer.add_char buf (if capital then Char.uppercase_ascii ch else ch)
+    Buffer.add_char buf (if capital then Char.uppercase_ascii ch else ch)
   in
   let rec aux capital off len =
     if off >= len then ()
@@ -64,4 +64,4 @@ let namespace_of_package_name (s : string) : string =
       | _ -> aux capital (off + 1) len
   in
   aux true 0 len;
-  Ext_buffer.contents buf
+  Buffer.contents buf

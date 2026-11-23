@@ -26,10 +26,17 @@
 *)
 
 val finally : 'a -> clean:('a -> unit) -> ('a -> 'b) -> 'b
+(** [finally v ~clean f] runs [f v], then [clean v], also when [f] raises.
+    Kept instead of [Fun.protect], which allocates closures on every call (this
+    runs for every indented block of JavaScript output) and wraps exceptions of
+    the cleanup in [Fun.Finally_raised]. *)
 
 (* val try_it : (unit -> 'a) ->  unit  *)
 
 val with_file_as_chan : string -> (out_channel -> 'a) -> 'a
+(** Opens the file in binary mode. Unlike [Out_channel.with_open_bin], it
+    closes the channel with [close_out], so an error while flushing the output
+    is raised rather than ignored. *)
 
 val max_int_option : int option -> int option -> int option
 

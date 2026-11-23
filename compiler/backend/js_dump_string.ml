@@ -48,7 +48,7 @@ let array_conv =
   |]
 
 (* https://mathiasbynens.be/notes/javascript-escapes *)
-let ( +> ) = Ext_buffer.add_string
+let ( +> ) = Buffer.add_string
 
 (* Printable ASCII other than quote and backslash is copied as is. *)
 let needs_escape s =
@@ -109,7 +109,7 @@ let escape_to_buffer f (* ?(utf=false)*) s =
         if Uchar.utf_decode_is_valid decoded then (
           let length = Uchar.utf_decode_length decoded in
           for offset = 0 to length - 1 do
-            Ext_buffer.add_char f (String.unsafe_get s (!i + offset))
+            Buffer.add_char f (String.unsafe_get s (!i + offset))
           done;
           i := !i + length)
         else
@@ -122,7 +122,7 @@ let escape_to_buffer f (* ?(utf=false)*) s =
         f +> "\\\"";
         incr i (* quote*)
       | _ ->
-        Ext_buffer.add_char f c;
+        Buffer.add_char f c;
         incr i
     done
   in
@@ -132,9 +132,9 @@ let escape_to_buffer f (* ?(utf=false)*) s =
 
 let escape_to_string s =
   if needs_escape s then (
-    let buf = Ext_buffer.create (String.length s * 2) in
+    let buf = Buffer.create (String.length s * 2) in
     escape_to_buffer buf s;
-    Ext_buffer.contents buf)
+    Buffer.contents buf)
   else "\"" ^ s ^ "\""
 
 let pp_string f s =
