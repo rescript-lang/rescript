@@ -67,7 +67,7 @@ let count_helper (lam : Lambda.t) : collection option =
       match lam with
       | Lstaticraise (i, ls) ->
         incr_exit exits i;
-        Ext_list.iter ls count
+        List.iter count ls
       | Lstaticcatch (l1, (i, _), l2) ->
         count l1;
         if count_exit exits i > 0 then count l2
@@ -78,7 +78,7 @@ let count_helper (lam : Lambda.t) : collection option =
       | Lglobal_module _ | Lvar _ | Lconst _ -> ()
       | Lapply {ap_func; ap_args; _} ->
         count ap_func;
-        Ext_list.iter ap_args count
+        List.iter count ap_args
       | Lfunction {body} -> count body
       | Llet (_, _, l1, l2) ->
         count l2;

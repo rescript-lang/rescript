@@ -495,7 +495,8 @@ let check_recursive_bindings valbinds =
   let ids =
     List.concat (List.map (fun b -> pattern_variables b.vb_pat) valbinds)
   in
-  Ext_list.iter valbinds (fun {vb_expr} ->
+  List.iter
+    (fun {vb_expr} ->
       match vb_expr.exp_desc with
       | Texp_record {fields = [|(lbl, _, {exp_desc = Texp_function _})|]}
         when Array.length lbl.lbl_all = 1 ->
@@ -503,6 +504,7 @@ let check_recursive_bindings valbinds =
       | Texp_function _ -> ()
       (*TODO: add uncurried function too*)
       | _ -> check_recursive_expression ids vb_expr)
+    valbinds
 
 let report_error ppf = function
   | Illegal_letrec_expr ->

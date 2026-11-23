@@ -65,7 +65,8 @@ let or_list (arg : lam) (names : names) =
         ~args:[arg; Lambda.const (Lambda.const_polyvar name)]
         Location.none
     in
-    Ext_list.fold_left rest init (fun acc name ->
+    List.fold_left
+      (fun acc name ->
         Lambda.prim ~primitive:Psequor
           ~args:
             [
@@ -75,6 +76,7 @@ let or_list (arg : lam) (names : names) =
                 Location.none;
             ]
           Location.none)
+      init rest
   | _ -> assert false
 
 let make_test_sequence_variant_constant (fail : lam option) (arg : lam)
@@ -82,9 +84,11 @@ let make_test_sequence_variant_constant (fail : lam option) (arg : lam)
   let names_lambda_list : output = convert int_lambda_list in
   match (names_lambda_list, fail) with
   | (_, act) :: rest, None | rest, Some act ->
-    Ext_list.fold_right rest act (fun (names, act1) acc ->
+    List.fold_right
+      (fun (names, act1) acc ->
         let predicate : lam = or_list arg names in
         Lambda.if_ predicate act1 acc)
+      rest act
   | [], None -> assert false
 
 (* Both Matching hooks compile constant polymorphic-variant cases to the

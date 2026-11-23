@@ -77,7 +77,8 @@ let interface_mliast ppf fname =
   |> after_parsing_sig ppf (Config_util.output_prefix fname)
 
 let all_module_alias (ast : Parsetree.structure) =
-  Ext_list.for_all ast (fun {pstr_desc} ->
+  List.for_all
+    (fun {Parsetree.pstr_desc} ->
       match pstr_desc with
       | Pstr_module {pmb_expr = {pmod_desc = Pmod_ident _}} -> true
       | Pstr_attribute _ -> true
@@ -86,6 +87,7 @@ let all_module_alias (ast : Parsetree.structure) =
       | Pstr_modtype _ | Pstr_open _ | Pstr_include _ | Pstr_extension _
       | Pstr_raw _ ->
         false)
+    ast
 
 let no_export (rest : Parsetree.structure) : Parsetree.structure =
   match rest with
@@ -187,8 +189,10 @@ let implementation_map ppf sourcefile =
   close_in ichan;
   let ns = Ext_filename.module_name (Filename.remove_extension sourcefile) in
   let ml_ast =
-    Ext_list.fold_left list_of_modules [] (fun acc line ->
+    List.fold_left
+      (fun acc line ->
         if line = "" then acc else make_structure_item ~ns line :: acc)
+      [] list_of_modules
   in
   Res_compmisc.init_path ();
   ml_ast

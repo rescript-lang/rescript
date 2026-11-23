@@ -85,19 +85,17 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
       Lambda.let_ str v l1 l2
     | Lletrec (bindings, body) ->
       (*order matters see GPR #405*)
-      let vars = Ext_list.map bindings (fun (k, _) -> rebind k) in
-      let bindings =
-        Ext_list.map2 vars bindings (fun var (_, l) -> (var, aux l))
-      in
+      let vars = List.map (fun (k, _) -> rebind k) bindings in
+      let bindings = List.map2 (fun var (_, l) -> (var, aux l)) vars bindings in
       let body = aux body in
       Lambda.letrec bindings body
     | Lfunction {params; body; attr; loc} ->
-      let params = Ext_list.map params rebind in
+      let params = List.map rebind params in
       let body = aux body in
       Lambda.function_ ~loc ~params ~body ~attr
     | Lstaticcatch (l1, (i, xs), l2) ->
       let l1 = aux l1 in
-      let xs = Ext_list.map xs rebind in
+      let xs = List.map rebind xs in
       let l2 = aux l2 in
       Lambda.staticcatch l1 (i, xs) l2
     | Lfor (ident, l1, l2, dir, l3) ->
@@ -119,11 +117,11 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
     | Lconst _ -> lam
     | Lprim {primitive; args; loc} ->
       (* here it makes sure that global vars are not rebound *)
-      Lambda.prim ~primitive ~args:(Ext_list.map args aux) loc
+      Lambda.prim ~primitive ~args:(List.map aux args) loc
     | Lglobal_module _ -> lam
     | Lapply {ap_func; ap_args; ap_loc} ->
       let fn = aux ap_func in
-      let args = Ext_list.map ap_args aux in
+      let args = List.map aux ap_args in
       Lambda.apply fn args ap_loc
     | Lswitch
         ( l,
@@ -148,7 +146,7 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
     | Lstringswitch (l, sw, d) ->
       let l = aux l in
       Lambda.stringswitch l (Ext_list.map_snd sw aux) (option_map d)
-    | Lstaticraise (i, ls) -> Lambda.staticraise i (Ext_list.map ls aux)
+    | Lstaticraise (i, ls) -> Lambda.staticraise i (List.map aux ls)
     | Ltrywith (l1, v, l2) ->
       let l1 = aux l1 in
       let v = rebind v in

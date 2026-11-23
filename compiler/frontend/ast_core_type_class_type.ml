@@ -61,7 +61,8 @@ let typ_mapper (self : Ast_mapper.mapper) (ty : Parsetree.core_type) =
       {typ with ptyp_attributes = attr :: typ.ptyp_attributes}
     in
     let new_methods =
-      Ext_list.fold_right methods [] (fun meth_ acc ->
+      List.fold_right
+        (fun meth_ acc ->
           match meth_ with
           | Parsetree.Oinherit _ -> meth_ :: acc
           | Parsetree.Otag (label, ptyp_attrs, core_type) ->
@@ -74,6 +75,7 @@ let typ_mapper (self : Ast_mapper.mapper) (ty : Parsetree.core_type) =
               | Meth_callback attr, attrs -> (attrs, attr +> core_type)
             in
             Parsetree.Otag (label, attrs, self.typ self core_type) :: acc)
+        methods []
     in
     {ty with ptyp_desc = Ptyp_object (new_methods, closed_flag)}
   | _ -> default_typ_mapper self ty

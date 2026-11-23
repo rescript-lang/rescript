@@ -72,35 +72,6 @@ let map_to_array a f =
     in
     fill 5 tl
 
-let rec map l f =
-  match l with
-  | [] -> []
-  | [x1] ->
-    let y1 = f x1 in
-    [y1]
-  | [x1; x2] ->
-    let y1 = f x1 in
-    let y2 = f x2 in
-    [y1; y2]
-  | [x1; x2; x3] ->
-    let y1 = f x1 in
-    let y2 = f x2 in
-    let y3 = f x3 in
-    [y1; y2; y3]
-  | [x1; x2; x3; x4] ->
-    let y1 = f x1 in
-    let y2 = f x2 in
-    let y3 = f x3 in
-    let y4 = f x4 in
-    [y1; y2; y3; y4]
-  | x1 :: x2 :: x3 :: x4 :: x5 :: tail ->
-    let y1 = f x1 in
-    let y2 = f x2 in
-    let y3 = f x3 in
-    let y4 = f x4 in
-    let y5 = f x5 in
-    y1 :: y2 :: y3 :: y4 :: y5 :: map tail f
-
 let rec map_combine l1 l2 f =
   match (l1, l2) with
   | [], [] -> []
@@ -214,8 +185,6 @@ let rec mapi_aux lst i f tail =
     let r = f i a in
     r :: mapi_aux l (i + 1) f tail
 
-let mapi lst f = mapi_aux lst 0 f []
-
 let mapi_append lst f tail = mapi_aux lst 0 f tail
 
 let rec last xs =
@@ -223,24 +192,6 @@ let rec last xs =
   | [x] -> x
   | _ :: tl -> last tl
   | [] -> invalid_arg "Ext_list.last"
-
-let rec append_aux l1 l2 =
-  match l1 with
-  | [] -> l2
-  | [a0] -> a0 :: l2
-  | [a0; a1] -> a0 :: a1 :: l2
-  | [a0; a1; a2] -> a0 :: a1 :: a2 :: l2
-  | [a0; a1; a2; a3] -> a0 :: a1 :: a2 :: a3 :: l2
-  | [a0; a1; a2; a3; a4] -> a0 :: a1 :: a2 :: a3 :: a4 :: l2
-  | a0 :: a1 :: a2 :: a3 :: a4 :: rest ->
-    a0 :: a1 :: a2 :: a3 :: a4 :: append_aux rest l2
-
-let append l1 l2 =
-  match l2 with
-  | [] -> l1
-  | _ -> append_aux l1 l2
-
-let append_one l1 x = append_aux l1 [x]
 
 let rec map_append l1 l2 f =
   match l1 with
@@ -276,32 +227,6 @@ let rec map_append l1 l2 f =
     let b4 = f a4 in
     b0 :: b1 :: b2 :: b3 :: b4 :: map_append rest l2 f
 
-let rec fold_right l acc f =
-  match l with
-  | [] -> acc
-  | [a0] -> f a0 acc
-  | [a0; a1] -> f a0 (f a1 acc)
-  | [a0; a1; a2] -> f a0 (f a1 (f a2 acc))
-  | [a0; a1; a2; a3] -> f a0 (f a1 (f a2 (f a3 acc)))
-  | [a0; a1; a2; a3; a4] -> f a0 (f a1 (f a2 (f a3 (f a4 acc))))
-  | a0 :: a1 :: a2 :: a3 :: a4 :: rest ->
-    f a0 (f a1 (f a2 (f a3 (f a4 (fold_right rest acc f)))))
-
-let rec fold_right2 l r acc f =
-  match (l, r) with
-  | [], [] -> acc
-  | [a0], [b0] -> f a0 b0 acc
-  | [a0; a1], [b0; b1] -> f a0 b0 (f a1 b1 acc)
-  | [a0; a1; a2], [b0; b1; b2] -> f a0 b0 (f a1 b1 (f a2 b2 acc))
-  | [a0; a1; a2; a3], [b0; b1; b2; b3] ->
-    f a0 b0 (f a1 b1 (f a2 b2 (f a3 b3 acc)))
-  | [a0; a1; a2; a3; a4], [b0; b1; b2; b3; b4] ->
-    f a0 b0 (f a1 b1 (f a2 b2 (f a3 b3 (f a4 b4 acc))))
-  | a0 :: a1 :: a2 :: a3 :: a4 :: arest, b0 :: b1 :: b2 :: b3 :: b4 :: brest ->
-    f a0 b0
-      (f a1 b1 (f a2 b2 (f a3 b3 (f a4 b4 (fold_right2 arest brest acc f)))))
-  | _, _ -> invalid_arg "Ext_list.fold_right2"
-
 let rec fold_right3 l r last acc f =
   match (l, r, last) with
   | [], [], [] -> acc
@@ -322,71 +247,13 @@ let rec fold_right3 l r last acc f =
             (f a3 b3 c3 (f a4 b4 c4 (fold_right3 arest brest crest acc f)))))
   | _, _, _ -> invalid_arg "Ext_list.fold_right2"
 
-let rec map2 l r f =
-  match (l, r) with
-  | [], [] -> []
-  | [a0], [b0] -> [f a0 b0]
-  | [a0; a1], [b0; b1] ->
-    let c0 = f a0 b0 in
-    let c1 = f a1 b1 in
-    [c0; c1]
-  | [a0; a1; a2], [b0; b1; b2] ->
-    let c0 = f a0 b0 in
-    let c1 = f a1 b1 in
-    let c2 = f a2 b2 in
-    [c0; c1; c2]
-  | [a0; a1; a2; a3], [b0; b1; b2; b3] ->
-    let c0 = f a0 b0 in
-    let c1 = f a1 b1 in
-    let c2 = f a2 b2 in
-    let c3 = f a3 b3 in
-    [c0; c1; c2; c3]
-  | [a0; a1; a2; a3; a4], [b0; b1; b2; b3; b4] ->
-    let c0 = f a0 b0 in
-    let c1 = f a1 b1 in
-    let c2 = f a2 b2 in
-    let c3 = f a3 b3 in
-    let c4 = f a4 b4 in
-    [c0; c1; c2; c3; c4]
-  | a0 :: a1 :: a2 :: a3 :: a4 :: arest, b0 :: b1 :: b2 :: b3 :: b4 :: brest ->
-    let c0 = f a0 b0 in
-    let c1 = f a1 b1 in
-    let c2 = f a2 b2 in
-    let c3 = f a3 b3 in
-    let c4 = f a4 b4 in
-    c0 :: c1 :: c2 :: c3 :: c4 :: map2 arest brest f
-  | _, _ -> invalid_arg "Ext_list.map2"
-
 let rec fold_left_with_offset l accu i f =
   match l with
   | [] -> accu
   | a :: l -> fold_left_with_offset l (f a accu i) (i + 1) f
 
-let rec filter_map xs (f : 'a -> 'b option) =
-  match xs with
-  | [] -> []
-  | y :: ys -> (
-    match f y with
-    | None -> filter_map ys f
-    | Some z -> z :: filter_map ys f)
-
-let rec same_length xs ys =
-  match (xs, ys) with
-  | [], [] -> true
-  | _ :: xs, _ :: ys -> same_length xs ys
-  | _, _ -> false
-
-let rec rev_append l1 l2 =
-  match l1 with
-  | [] -> l2
-  | [a0] -> a0 :: l2 (* single element is common *)
-  | [a0; a1] -> a1 :: a0 :: l2
-  | a0 :: a1 :: a2 :: rest -> rev_append rest (a2 :: a1 :: a0 :: l2)
-
-let rev l = rev_append l []
-
 let rec small_split_at n acc l =
-  if n <= 0 then (rev acc, l)
+  if n <= 0 then (List.rev acc, l)
   else
     match l with
     | x :: xs -> small_split_at (n - 1) (x :: acc) xs
@@ -397,7 +264,7 @@ let split_at l n = small_split_at n [] l
 let rec split_at_last_aux acc x =
   match x with
   | [] -> invalid_arg "Ext_list.split_at_last"
-  | [x] -> (rev acc, x)
+  | [x] -> (List.rev acc, x)
   | y0 :: ys -> split_at_last_aux (y0 :: acc) ys
 
 let split_at_last (x : 'a list) =
@@ -431,25 +298,6 @@ let rec rev_map_append l1 l2 f =
   | [] -> l2
   | a :: l -> rev_map_append l (f a :: l2) f
 
-(** It is not worth loop unrolling, 
-    it is already tail-call, and we need to be careful 
-    about evaluation order when unroll
-*)
-let rec flat_map_aux f acc append lx =
-  match lx with
-  | [] -> rev_append acc append
-  | a0 :: rest ->
-    let new_acc =
-      match f a0 with
-      | [] -> acc
-      | [a0] -> a0 :: acc
-      | [a0; a1] -> a1 :: a0 :: acc
-      | a0 :: a1 :: a2 :: rest -> rev_append rest (a2 :: a1 :: a0 :: acc)
-    in
-    flat_map_aux f new_acc append rest
-
-let flat_map lx f = flat_map_aux f [] [] lx
-
 let rec group (eq : 'a -> 'a -> bool) lst =
   match lst with
   | [] -> []
@@ -463,12 +311,7 @@ and aux eq (x : 'a) (xss : 'a list list) : 'a list list =
     if eq x y0 then (x :: y) :: ys else y :: aux eq x ys
   | _ :: _ -> assert false
 
-let stable_group lst eq = group eq lst |> rev
-
-let rec find_first x p =
-  match x with
-  | [] -> None
-  | x :: l -> if p x then Some x else find_first l p
+let stable_group lst eq = group eq lst |> List.rev
 
 let rec find_first_not xs p =
   match xs with
@@ -498,35 +341,6 @@ let rec rev_iter l f =
     f x3;
     f x2;
     f x1
-
-let rec iter l f =
-  match l with
-  | [] -> ()
-  | [x1] -> f x1
-  | [x1; x2] ->
-    f x1;
-    f x2
-  | [x1; x2; x3] ->
-    f x1;
-    f x2;
-    f x3
-  | [x1; x2; x3; x4] ->
-    f x1;
-    f x2;
-    f x3;
-    f x4
-  | x1 :: x2 :: x3 :: x4 :: x5 :: tail ->
-    f x1;
-    f x2;
-    f x3;
-    f x4;
-    f x5;
-    iter tail f
-
-let rec for_all lst p =
-  match lst with
-  | [] -> true
-  | a :: l -> p a && for_all l p
 
 let rec for_all_snd lst p =
   match lst with
@@ -608,11 +422,6 @@ let rec iter_fst lst f =
     f x;
     iter_fst xs f
 
-let rec exists l p =
-  match l with
-  | [] -> false
-  | x :: xs -> p x || exists xs p
-
 let rec exists_fst l p =
   match l with
   | [] -> false
@@ -623,29 +432,10 @@ let rec exists_snd l p =
   | [] -> false
   | (_, a) :: l -> p a || exists_snd l p
 
-let rec fold_left l accu f =
-  match l with
-  | [] -> accu
-  | a :: l -> fold_left l (f accu a) f
-
-let rec fold_left2 l1 l2 accu f =
-  match (l1, l2) with
-  | [], [] -> accu
-  | a1 :: l1, a2 :: l2 -> fold_left2 l1 l2 (f a1 a2 accu) f
-  | _, _ -> invalid_arg "Ext_list.fold_left2"
-
 let singleton_exn xs =
   match xs with
   | [x] -> x
   | _ -> assert false
-
-let filter lst p =
-  let rec find ~p accu lst =
-    match lst with
-    | [] -> rev accu
-    | x :: l -> if p x then find (x :: accu) l ~p else find accu l ~p
-  in
-  find [] lst ~p
 
 let is_empty = function
   | [] -> true

@@ -41,9 +41,11 @@ let inlay ~source ~kind_file ~pos ~max_length ~full ~state ~debug =
     match pat.ppat_desc with
     | Ppat_tuple pl -> pl |> List.iter process_pattern
     | Ppat_dict entries ->
-      Ext_list.iter entries (fun {pdp_pattern} -> process_pattern pdp_pattern)
+      List.iter
+        (fun {Parsetree.pdp_pattern} -> process_pattern pdp_pattern)
+        entries
     | Ppat_record (fields, _, rest) -> (
-      Ext_list.iter fields (fun {x = p} -> process_pattern p);
+      List.iter (fun {Parsetree.x = p} -> process_pattern p) fields;
       match rest with
       | Some {rest_name; _} -> push rest_name.loc Type
       | None -> ())

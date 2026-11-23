@@ -460,9 +460,11 @@ let rec pretty_val ppf v =
     | Tpat_variant (l, Some w, _) -> fprintf ppf "@[<2>#%s(%a)@]" l pretty_arg w
     | Tpat_record (lvs, _, _rest) -> (
       let filtered_lvs =
-        Ext_list.filter lvs (function
-          | _, _, {pat_desc = Tpat_any}, _ -> false (* do not show lbl=_ *)
-          | _ -> true)
+        List.filter
+          (function
+            | _, _, {pat_desc = Tpat_any}, _ -> false (* do not show lbl=_ *)
+            | _ -> true)
+          lvs
       in
       match filtered_lvs with
       | [] -> fprintf ppf "_"
@@ -1028,8 +1030,10 @@ let complete_constrs p seen_constrs =
   in
   let constrs = get_variant_constructors p.pat_env c.cstr_res in
   let others =
-    Ext_list.filter constrs (fun cnstr ->
+    List.filter
+      (fun cnstr ->
         not (List.exists (Types.same_constructor cnstr) seen_constrs))
+      constrs
   in
   let const, nonconst =
     List.partition (fun cnstr -> cnstr.cstr_arity = 0) others
@@ -1760,7 +1764,8 @@ let rec le_pat p q =
   | Tpat_record (l1, _, _), Tpat_record (l2, _, _) ->
     let ps, qs = records_args l1 l2 in
     le_pats ps qs
-  | Tpat_array ps, Tpat_array qs -> Ext_list.same_length ps qs && le_pats ps qs
+  | Tpat_array ps, Tpat_array qs ->
+    List.compare_lengths ps qs = 0 && le_pats ps qs
   (* In all other cases, enumeration is performed *)
   | _, _ -> not (satisfiable [[p]] [q])
 
@@ -2420,7 +2425,7 @@ let check_unused pred casel =
       | {c_lhs = q; c_guard} :: rem ->
         let qs = [q] in
         (try
-           let pss = get_mins le_pats (Ext_list.filter pref (compats qs)) in
+           let pss = get_mins le_pats (List.filter (compats qs) pref) in
            (* First look for redundant or partially redundant patterns *)
            let r = every_satisfiables (make_rows pss) (make_row qs) in
            (* Do not warn for unused [pat -> .] *)

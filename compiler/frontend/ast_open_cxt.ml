@@ -54,7 +54,8 @@ let rec destruct_open_tuple (e : Parsetree.expression) (acc : t) :
 
 let restore_exp (xs : Parsetree.expression) (qualifiers : t) :
     Parsetree.expression =
-  Ext_list.fold_left qualifiers xs (fun x hole ->
+  List.fold_left
+    (fun x hole ->
       match hole with
       | Let_open (flag, lid, loc, attrs) ->
         ({
@@ -70,3 +71,4 @@ let restore_exp (xs : Parsetree.expression) (qualifiers : t) :
            pexp_loc = loc;
          }
           : Parsetree.expression))
+    xs qualifiers

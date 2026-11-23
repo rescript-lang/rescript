@@ -71,15 +71,19 @@ let compile_group output_prefix (meta : Lam_stats.t) (x : Lam_group.t) :
 let declare_undeclared_exports (exports : Ident.t list) (block : J.block) :
     J.block =
   let declared =
-    Ext_list.fold_left block Set_ident.empty (fun acc (stmt : J.statement) ->
+    List.fold_left
+      (fun acc (stmt : J.statement) ->
         match stmt.statement_desc with
         | Variable {ident} -> Set_ident.add ident acc
         | _ -> acc)
+      Set_ident.empty block
   in
   block
-  @ Ext_list.filter_map exports (fun id ->
-      if Set_ident.mem id declared then None
-      else Some (Js_stmt_make.declare_variable ~kind:Strict id))
+  @ List.filter_map
+      (fun id ->
+        if Set_ident.mem id declared then None
+        else Some (Js_stmt_make.declare_variable ~kind:Strict id))
+      exports
 
 (** Also need analyze its depenency is pure or not *)
 let no_side_effects (rest : Lam_group.t list) : string option =
@@ -118,13 +122,16 @@ let flat_make_aliases (export_ids : Ident.t list)
   if paths = [] then []
   else
     let group_map =
-      Ext_list.fold_left groups Map_ident.empty (fun group_map group ->
+      List.fold_left
+        (fun group_map (group : Lam_group.t) ->
           match group with
           | Single (_, id, lam) -> Map_ident.add id lam group_map
           | Recursive bindings ->
-            Ext_list.fold_left bindings group_map (fun group_map (id, lam) ->
-                Map_ident.add id lam group_map)
+            List.fold_left
+              (fun group_map (id, lam) -> Map_ident.add id lam group_map)
+              group_map bindings
           | Nop _ -> group_map)
+        Map_ident.empty groups
     in
     let rec access loc base fields =
       match fields with
@@ -172,17 +179,20 @@ let flat_make_aliases (export_ids : Ident.t list)
       | _ -> lam
     in
     let exported_modules =
-      Ext_list.fold_left export_ids Map_string.empty (fun modules id ->
-          Map_string.add id.Ident.name id modules)
+      List.fold_left
+        (fun modules id -> Map_string.add id.Ident.name id modules)
+        Map_string.empty export_ids
     in
     (* Only export names can clash: the printer renames other bindings. *)
     let occupied_names =
-      Ext_list.fold_left export_ids Set_string.empty (fun occupied id ->
+      List.fold_left
+        (fun occupied id ->
           Set_string.add (Ext_ident.convert id.Ident.name) occupied)
+        Set_string.empty export_ids
     in
     let loc = Location.in_file (Loc_report.get_input_name ()) in
     List.rev @@ fst
-    @@ Ext_list.fold_left paths ([], occupied_names)
+    @@ List.fold_left
          (fun (aliases, occupied_names) path ->
            let names = List.map (fun {Translmod.name} -> name) path in
            let name = Translmod.flat_export_name names in
@@ -206,6 +216,7 @@ let flat_make_aliases (export_ids : Ident.t list)
                  "Internal error: no export for module `%s` of `%s`." top
                  (String.concat "." names))
            | [] -> assert false)
+         ([], occupied_names) paths
 
 let is_awaited_unit (lam : Lambda.t) =
   match lam with
@@ -222,8 +233,10 @@ let assigned_variables (group : Lam_group.t) =
   match group with
   | Single (_, _, lam) | Nop lam -> Lambda_traverse.assigned_variables lam
   | Recursive bindings ->
-    Ext_list.fold_left bindings Set_ident.empty (fun acc (_, lam) ->
+    List.fold_left
+      (fun acc (_, lam) ->
         Set_ident.union acc (Lambda_traverse.assigned_variables lam))
+      Set_ident.empty bindings
 
 (* See [Lam_stats.awaited_units]. *)
 let awaited_units (groups : Lam_group.t list) =
@@ -235,14 +248,15 @@ let awaited_units (groups : Lam_group.t list) =
     | _ -> ());
     Lambda_traverse.iter collect lam
   in
-  Ext_list.iter groups (fun group ->
+  List.iter
+    (fun (group : Lam_group.t) ->
       match group with
       | Single (_, id, lam) ->
         if is_awaited_unit lam then units := Set_ident.add id !units;
         collect lam
-      | Recursive bindings ->
-        Ext_list.iter bindings (fun (_, lam) -> collect lam)
-      | Nop lam -> collect lam);
+      | Recursive bindings -> List.iter (fun (_, lam) -> collect lam) bindings
+      | Nop lam -> collect lam)
+    groups;
   !units
 
 (* The other compilation units this one refers to. Conversion used to drop
@@ -294,8 +308,10 @@ let compile ?on_optimized_lambda (output_prefix : string)
   (* To make toplevel happy - reentrant for js-demo *)
   let () =
     if debug_ir then
-      Ext_list.iter export_idents (fun id ->
-          Ext_log.dwarn ~__POS__ "export idents: %s/%d" id.name id.stamp);
+      List.iter
+        (fun (id : Ident.t) ->
+          Ext_log.dwarn ~__POS__ "export idents: %s/%d" id.name id.stamp)
+        export_idents;
     Lam_compile_env.reset ()
   in
   let may_required_modules = required_modules lam in
@@ -371,17 +387,20 @@ let compile ?on_optimized_lambda (output_prefix : string)
       meta with
       awaited_units = awaited_units groups;
       assignable =
-        Ext_list.fold_left groups Set_ident.empty (fun acc group ->
-            Set_ident.union acc (assigned_variables group));
+        List.fold_left
+          (fun acc group -> Set_ident.union acc (assigned_variables group))
+          Set_ident.empty groups;
       exports = meta.exports @ flat_exports;
       export_idents =
-        Ext_list.fold_left flat_exports meta.export_idents (fun acc id ->
-            Set_ident.add id acc);
+        List.fold_left
+          (fun acc id -> Set_ident.add id acc)
+          meta.export_idents flat_exports;
     }
   in
   let export_map =
-    Ext_list.fold_left flat_aliases coerced_input.export_map
+    List.fold_left
       (fun acc (id, lam) -> Map_ident.add id lam acc)
+      coerced_input.export_map flat_aliases
   in
   let () =
     if debug_ir then
@@ -390,7 +409,7 @@ let compile ?on_optimized_lambda (output_prefix : string)
   in
   let body =
     let output =
-      Ext_list.map groups (fun group -> compile_group output_prefix meta group)
+      List.map (fun group -> compile_group output_prefix meta group) groups
       |> Js_output.concat
     in
     let block = Js_output.output_as_block output in

@@ -80,8 +80,9 @@ let source_fields_and_repr ~env ~loc decl =
   | Type_record (_, Record_unboxed _) -> raise_error loc env Unboxed_record
   | Type_record (fields, repr) ->
     if
-      Ext_list.exists fields (fun (field : label_declaration) ->
-          field.ld_mutable = Mutable)
+      List.exists
+        (fun (field : label_declaration) -> field.ld_mutable = Mutable)
+        fields
     then raise_error loc env Mutable_source_record;
     (source_fields_of_decl fields, repr)
   | _ -> assert false
@@ -214,8 +215,9 @@ let type_record_pat_rest ~env ~pattern_force ~loc ~record_ty ~lbl_pat_list ~rest
       let rest_field = Ident.name rest_label.ld_id in
       let rest_runtime_name = runtime_label_declaration_name rest_label in
       match
-        Ext_list.find_first source_fields (fun field ->
-            field.source_name = rest_field)
+        List.find_opt
+          (fun field -> field.source_name = rest_field)
+          source_fields
       with
       | None ->
         raise_error rest_type_lid.loc env

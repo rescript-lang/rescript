@@ -102,12 +102,14 @@ let rec eliminate_tuple (id : Ident.t) (lam : Lambda.t) acc =
                 *)
 let lambda_of_groups ~assignable ~(rev_bindings : Lam_group.t list)
     (result : Lambda.t) : Lambda.t =
-  Ext_list.fold_left rev_bindings result (fun acc x ->
+  List.fold_left
+    (fun acc (x : Lam_group.t) ->
       match x with
       | Nop l -> Lambda.seq l acc
       | Single (kind, ident, lam) ->
         Lam_util.refine_let ~assignable ~kind ident lam acc
       | Recursive bindings -> Lambda.letrec bindings acc)
+    result rev_bindings
 
 (* TODO:
     refine effectful [ket_kind] to be pure or not
@@ -240,8 +242,9 @@ let deep_flatten (lam : Lambda.t) : Lambda.t =
          remains physically shared when neither its bindings nor body change. *)
       let groups = Ext_list.map_snd_sharing bind_args aux in
       let collections =
-        Ext_list.fold_left groups Set_ident.empty (fun set (id, _) ->
-            Set_ident.add id set)
+        List.fold_left
+          (fun set (id, _) -> Set_ident.add id set)
+          Set_ident.empty groups
       in
       (* Try to extract some value definitions from recursive values as [wrap],
          it will stop whenever it find it could not move forward

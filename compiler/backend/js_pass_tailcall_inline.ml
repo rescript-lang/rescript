@@ -137,9 +137,8 @@ let inline_call (assignable : Set_ident.t) (immutable_list : bool list) params
   in
   let vars, consts, block =
     if immutable_list = [] then
-      Ext_list.fold_right2 params args
+      List.fold_right2 substitute params args
         (Map_ident.empty, Map_ident.empty, processed_blocks)
-        substitute
     else
       Ext_list.fold_right3 params args immutable_list
         (Map_ident.empty, Map_ident.empty, processed_blocks)
@@ -256,7 +255,7 @@ let subst (export_set : Set_ident.t) (assignable : Set_ident.t) stats =
                  ident_info = {used_stats = Once_pure};
                  ident = _;
                } as v)
-            when Ext_list.same_length params args ->
+            when List.compare_lengths params args = 0 ->
             Js_op_util.update_used_stats v.ident_info Dead_pure;
             let no_tailcall = Js_fun_env.no_tailcall env in
             let processed_blocks =
@@ -296,7 +295,7 @@ let subst (export_set : Set_ident.t) (assignable : Set_ident.t) stats =
                };
          };
         ]
-          when Ext_list.same_length params args ->
+          when List.compare_lengths params args = 0 ->
           let no_tailcall = Js_fun_env.no_tailcall env in
           let processed_blocks =
             self.block self body

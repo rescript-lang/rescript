@@ -98,8 +98,7 @@ let rec hold_obj_args ~(delay_safe : J.expression -> bool)
        && List.exists order_matters (literal_args labels args)
      then
        let tmp = Ext_ident.create_tmp () in
-       ( Ext_list.append_one block (S.define_variable ~kind:Strict tmp value),
-         E.var tmp )
+       (block @ [S.define_variable ~kind:Strict tmp value], E.var tmp)
      else held)
     :: hold_obj_args ~delay_safe labels args
   | [], [] -> []
@@ -135,7 +134,7 @@ let assemble_obj_args (labels : External_arg_spec.obj_params)
       match acc with
       | Splice2 _ | Splice0 -> assert false
       | Splice1 x ->
-        ((Js_op.Lit label, x) :: accs, Ext_list.append new_eff eff, assign)
+        ((Js_op.Lit label, x) :: accs, List.append new_eff eff, assign)
       (* evaluation order is undefined *))
     | ( ({obj_arg_label = Obj_optional {name = label}; obj_arg_type} as arg_kind)
         :: labels,
@@ -150,7 +149,7 @@ let assemble_obj_args (labels : External_arg_spec.obj_params)
           match acc with
           | Splice2 _ | Splice0 -> assert false
           | Splice1 x ->
-            ((Js_op.Lit label, x) :: accs, Ext_list.append new_eff eff, assign))
+            ((Js_op.Lit label, x) :: accs, List.append new_eff eff, assign))
         ~not_sure:(fun _ -> (accs, eff, (arg_kind, arg) :: assign))
     | {obj_arg_label = Obj_empty | Obj_label _ | Obj_optional _} :: _, [] ->
       assert false
@@ -170,9 +169,9 @@ let assemble_obj_args (labels : External_arg_spec.obj_params)
         (match eff with
         | [] -> E.obj map
         | x :: xs -> E.seq (E.fuse_to_seq x xs) (E.obj map))
-      :: Ext_list.flat_map assignment
-           (fun
-             ((xlabel : External_arg_spec.obj_param), (arg : J.expression)) ->
+      :: List.concat_map
+           (fun ((xlabel : External_arg_spec.obj_param), (arg : J.expression))
+              ->
              match xlabel with
              | {
               obj_arg_label =
@@ -227,5 +226,6 @@ let assemble_obj_args (labels : External_arg_spec.obj_params)
                        ];
                    ]
                  | Splice0 | Splice2 _ -> assert false))
-             | _ -> assert false),
+             | _ -> assert false)
+           assignment,
       var_v )

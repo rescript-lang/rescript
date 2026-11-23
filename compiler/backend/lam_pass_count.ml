@@ -136,7 +136,7 @@ let collect_occurs ~assignable lam : occ_tbl =
     (* Note there is a difference here when do beta reduction for *)
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
-      when Ext_list.same_length params args
+      when List.compare_lengths params args = 0
            && Lambda.lfunction_can_be_inlined lfunction ->
       count bv
         (Lam_beta_reduce.no_names_beta_reduce ~assignable params body args)

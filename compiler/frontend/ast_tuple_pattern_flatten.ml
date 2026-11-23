@@ -76,13 +76,14 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
   | None, Ppat_tuple xs, _ when List.for_all is_simple_pattern xs -> (
     match Ast_open_cxt.destruct_open_tuple pvb_expr [] with
     | Some (wholes, es, tuple_attributes)
-      when Ext_list.for_all xs is_simple_pattern && Ext_list.same_length es xs
+      when List.for_all is_simple_pattern xs && List.compare_lengths es xs = 0
       ->
       Bs_ast_invariant.warn_discarded_unused_attributes tuple_attributes;
       (* will be dropped*)
-      Ext_list.fold_right2 xs es acc (fun pat exp acc ->
+      List.fold_right2
+        (fun pat exp acc ->
           {
-            pvb_pat = pat;
+            Parsetree.pvb_pat = pat;
             pvb_expr = Ast_open_cxt.restore_exp exp wholes;
             pvb_constraint = None;
             pvb_jsx_component;
@@ -90,6 +91,7 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
             pvb_loc = vb.pvb_loc;
           }
           :: acc)
+        xs es acc
     | _ ->
       {
         pvb_pat;
@@ -110,7 +112,7 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
         match lid.txt with
         | Lident s ->
           {
-            pvb_pat = pat;
+            Parsetree.pvb_pat = pat;
             pvb_expr =
               Ast_helper.Exp.ident ~loc:lid.loc
                 {lid with txt = Ldot (id.txt, s)};
@@ -136,5 +138,4 @@ let flattern_tuple_pattern_vb (self : Ast_mapper.mapper)
 let value_bindings_mapper (self : Ast_mapper.mapper)
     (vbs : Parsetree.value_binding list) =
   (* Ast_mapper.default_mapper.value_bindings self  vbs   *)
-  Ext_list.fold_right vbs [] (fun vb acc ->
-      flattern_tuple_pattern_vb self vb acc)
+  List.fold_right (fun vb acc -> flattern_tuple_pattern_vb self vb acc) vbs []

@@ -46,8 +46,7 @@ let flatten_map =
                (fun x -> self.statement self x)
                (Js_analyzer.rev_flatten_seq v))
         | Exp {expression_desc = Caml_block (args, _mutable_flag, _tag_info)} ->
-          S.block
-            (Ext_list.map args (fun arg -> self.statement self (S.exp arg)))
+          S.block (List.map (fun arg -> self.statement self (S.exp arg)) args)
         | Exp {expression_desc = Cond (a, b, c); comment; source_loc} ->
           (* A branch whose value is pure leaves nothing to run *)
           let branch e =

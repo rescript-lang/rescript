@@ -77,9 +77,11 @@ let default_expr_mapper = Ast_mapper.default_mapper.expr
 
 let check_and_discard (args : (Asttypes.arg_label * Parsetree.expression) list)
     =
-  Ext_list.map args (fun (label, x) ->
+  List.map
+    (fun (label, (x : Parsetree.expression)) ->
       Bs_syntaxerr.err_if_label x.pexp_loc label;
       x)
+    args
 
 type app_pattern = {
   op: string;
@@ -146,7 +148,8 @@ let rec rewrite_pipe_rhs ~loc ~attrs a (f : exp) =
         {
           pexp_desc =
             Pexp_tuple
-              (Ext_list.map xs (fun fn ->
+              (List.map
+                 (fun (fn : Parsetree.expression) ->
                    match fn.pexp_desc with
                    | Pexp_construct (ctor, {txt = []}) ->
                      {
@@ -175,7 +178,8 @@ let rec rewrite_pipe_rhs ~loc ~attrs a (f : exp) =
                        pexp_loc = fn.pexp_loc;
                      }
                    | _ ->
-                     Exp.apply ~loc:fn.pexp_loc fn [(Nolabel, bounded_obj_arg)]));
+                     Exp.apply ~loc:fn.pexp_loc fn [(Nolabel, bounded_obj_arg)])
+                 xs);
           pexp_attributes = f.pexp_attributes;
           pexp_loc = f.pexp_loc;
         })

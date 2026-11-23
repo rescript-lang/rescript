@@ -113,7 +113,7 @@ let lets_helper ~assignable (count_var : Ident.t -> Lam_pass_count.used_info)
           Lam_util.refine_let ~original:lam ~assignable ~kind v l1 (simplif l2))
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
-      when Ext_list.same_length params args
+      when List.compare_lengths params args = 0
            && Lambda.lfunction_can_be_inlined lfunction ->
       simplif
         (Lam_beta_reduce.no_names_beta_reduce ~assignable params body args)

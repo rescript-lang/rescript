@@ -85,10 +85,12 @@ let with_block_source_loc lam block =
     with_statement_source_loc (source_map_loc_of_lam lam) stmt :: rest
 
 let args_either_function_or_const (args : Lambda.t list) =
-  Ext_list.for_all args (fun x ->
+  List.for_all
+    (fun (x : Lambda.t) ->
       match x with
       | Lfunction _ | Lconst _ -> true
       | _ -> false)
+    args
 
 (* Whether the callee's arity is known and this call saturates it. The printer
    uses it to decide whether a wrapper around the call may be eta reduced,
@@ -138,7 +140,9 @@ let rec flat_catches (acc : Lam_compile_context.handler list) (x : Lambda.t) :
     when acc = []
          || not
               (Lam_exit_code.has_exit_code handler (fun exit ->
-                   Ext_list.exists acc (fun x -> x.label = exit))) ->
+                   List.exists
+                     (fun (x : Lam_compile_context.handler) -> x.label = exit)
+                     acc)) ->
     (* #1698 should not crush exit code here without checking *)
     flat_catches ({label; handler; bindings} :: acc) l
   | _ -> (acc, x)
@@ -154,10 +158,10 @@ let morph_declare_to_assign (cxt : Lam_compile_context.t) k =
   | _ -> k cxt None
 
 let group_apply cases callback =
-  Ext_list.flat_map
+  List.concat_map
+    (fun group -> Ext_list.map_last group callback)
     (Ext_list.stable_group cases (fun (_, lam) (_, lam1) ->
          Lambda.eq_approx lam lam1))
-    (fun group -> Ext_list.map_last group callback)
 (* TODO:
     for expression generation,
     name, should_return  is not needed,
@@ -223,10 +227,12 @@ type initialization = J.block
    functions before values so dummy / updateDummy init is well-ordered. *)
 let functions_before_values (group : (Ident.t * Lambda.t) list) =
   if
-    Ext_list.for_all group (fun (_, x) ->
+    List.for_all
+      (fun (_, (x : Lambda.t)) ->
         match x with
         | Lfunction _ -> true
         | _ -> false)
+      group
   then group
   else
     List.sort
@@ -266,13 +272,14 @@ let rec delay_safe ~assignable (e : J.expression) =
     delay_safe ~assignable a && delay_safe ~assignable b
     && delay_safe ~assignable c
   | Interpolated_template {values} ->
-    Ext_list.for_all values (delay_safe ~assignable)
-  | Array xs | Caml_block (xs, _, _) ->
-    Ext_list.for_all xs (delay_safe ~assignable)
+    List.for_all (delay_safe ~assignable) values
+  | Array xs | Caml_block (xs, _, _) -> List.for_all (delay_safe ~assignable) xs
   | Object entries ->
-    Ext_list.for_all entries (function
-      | J.Object_property (_, v) -> delay_safe ~assignable v
-      | Record_spread _ | Object_spread _ -> false)
+    List.for_all
+      (function
+        | J.Object_property (_, v) -> delay_safe ~assignable v
+        | Record_spread _ | Object_spread _ -> false)
+      entries
   | _ -> false
 
 (* Statements that evaluate [e] now, and the expression that stands for its
@@ -301,14 +308,18 @@ let rec evaluate_now ~assignable (e : J.expression) : J.block * J.expression =
     let held, xs = evaluate_all_now ~assignable xs in
     (held, {e with expression_desc = Caml_block (xs, mutable_flag, tag)})
   | Object entries
-    when Ext_list.for_all entries (function
-           | J.Object_property _ -> true
-           | Record_spread _ | Object_spread _ -> false) ->
+    when List.for_all
+           (function
+             | J.Object_property _ -> true
+             | Record_spread _ | Object_spread _ -> false)
+           entries ->
     let held, values =
       evaluate_all_now ~assignable
-        (Ext_list.filter_map entries (function
-          | J.Object_property (_, v) -> Some v
-          | Record_spread _ | Object_spread _ -> None))
+        (List.filter_map
+           (function
+             | J.Object_property (_, v) -> Some v
+             | Record_spread _ | Object_spread _ -> None)
+           entries)
     in
     let entries =
       List.map2
@@ -338,11 +349,13 @@ let runs_no_code (e : J.expression) =
 (* Whether [block] only defines variables as values that run no code, as a
    temporary bound to a record field does *)
 let defines_pure_values (block : J.block) =
-  Ext_list.for_all block (fun (s : J.statement) ->
+  List.for_all
+    (fun (s : J.statement) ->
       match s.statement_desc with
       | Variable {value = None} -> true
       | Variable {value = Some e} -> runs_no_code e
       | _ -> false)
+    block
 
 (* Assembles compiled arguments for a call or a literal that evaluates them
    left to right. Each argument comes with the statements that have to run
@@ -364,11 +377,11 @@ let sequence_arguments ?(method_callee = false) ~assignable
     | [] -> false
     | _ :: rest -> Ext_list.exists_fst rest (fun block -> block <> [])
   in
-  if not later_statements then (List.concat_map fst args, Ext_list.map args snd)
+  if not later_statements then (List.concat_map fst args, List.map snd args)
   else
     let last = List.length args - 1 in
     let _, code, values =
-      Ext_list.fold_right args (last, [], [])
+      List.fold_right
         (fun (block, value) (i, code, values) ->
           let held, value =
             if code = [] || (runs_no_code value && defines_pure_values code)
@@ -382,9 +395,8 @@ let sequence_arguments ?(method_callee = false) ~assignable
                 )
               | _ -> evaluate_now ~assignable value
           in
-          ( i - 1,
-            Ext_list.append block (Ext_list.append held code),
-            value :: values ))
+          (i - 1, List.append block (List.append held code), value :: values))
+        args (last, [], [])
     in
     (code, values)
 
@@ -464,7 +476,7 @@ let compile output_prefix =
     let ap_args = appinfo.ap_args in
     match ident_info.persistent_closed_lambda with
     | Some (Lfunction ({params; body; _} as lfunction))
-      when Ext_list.same_length params ap_args
+      when List.compare_lengths params ap_args = 0
            && Lambda.lfunction_can_be_inlined lfunction ->
       (* TODO: serialize it when exporting to save compile time *)
       let _, param_map =
@@ -555,10 +567,12 @@ let compile output_prefix =
           *)
             ~return_unit ~async ~one_unit_arg ?directive
             ~immutable_mask:ret.immutable_mask
-            (Ext_list.map params (fun x ->
+            (List.map
+               (fun x ->
                  match Map_ident.find_opt x ret.new_params with
                  | Some y -> y
-                 | None -> x))
+                 | None -> x)
+               params)
             [
               S.while_ E.true_
                 (Map_ident.fold
@@ -591,15 +605,18 @@ let compile output_prefix =
                | Blk_record_inlined {num_nonconst = 1} ) as tag_info);
           args = ls;
         }
-      when Ext_list.for_all ls (fun x ->
+      when List.for_all
+             (fun (x : Lambda.t) ->
                match x with
                | Lvar pid ->
                  Ident.same pid id
                  || not
-                    @@ Ext_list.exists all_bindings (fun (other, _) ->
-                        Ident.same other pid)
+                    @@ List.exists
+                         (fun (other, _) -> Ident.same other pid)
+                         all_bindings
                | Lconst _ -> true
-               | _ -> false) ->
+               | _ -> false)
+             ls ->
       (* capture cases like for {!Queue}
          {[let rec cell = { content = x; next = cell} ]}
          #1716: be careful not to optimize such cases:
@@ -609,25 +626,27 @@ let compile output_prefix =
       *)
       ( Js_output.make
           (S.define_variable ~kind:Variable id (E.dummy_obj tag_info)
-          :: Ext_list.mapi ls (fun i x ->
-              S.exp
-                (Js_of_lam_block.set_field
-                   (match tag_info with
-                   | Blk_record {fields = xs} -> Fld_record_set (fst xs.(i))
-                   | Blk_record_inlined xs ->
-                     Fld_record_inline_set (fst xs.fields.(i))
-                   | Blk_constructor p -> (
-                     let is_cons = p.name = Literals.cons in
-                     match (is_cons, i) with
-                     | true, 0 -> Fld_record_inline_set Literals.hd
-                     | true, 1 -> Fld_record_inline_set Literals.tl
-                     | _, _ -> Fld_record_inline_set ("_" ^ string_of_int i))
-                   | _ -> assert false)
-                   (E.var id) (Int32.of_int i)
-                   (match x with
-                   | Lvar lid -> E.var lid
-                   | Lconst x -> Lam_compile_const.translate x
-                   | _ -> assert false)))),
+          :: List.mapi
+               (fun i (x : Lambda.t) ->
+                 S.exp
+                   (Js_of_lam_block.set_field
+                      (match tag_info with
+                      | Blk_record {fields = xs} -> Fld_record_set (fst xs.(i))
+                      | Blk_record_inlined xs ->
+                        Fld_record_inline_set (fst xs.fields.(i))
+                      | Blk_constructor p -> (
+                        let is_cons = p.name = Literals.cons in
+                        match (is_cons, i) with
+                        | true, 0 -> Fld_record_inline_set Literals.hd
+                        | true, 1 -> Fld_record_inline_set Literals.tl
+                        | _, _ -> Fld_record_inline_set ("_" ^ string_of_int i))
+                      | _ -> assert false)
+                      (E.var id) (Int32.of_int i)
+                      (match x with
+                      | Lvar lid -> E.var lid
+                      | Lconst x -> Lam_compile_const.translate x
+                      | _ -> assert false)))
+               ls),
         [] )
     | Lprim {primitive = Pmakeblock tag_info} -> (
       (* Lconst should not appear here if we do [scc]
@@ -640,7 +659,7 @@ let compile output_prefix =
             could be improved for simple cases
         *)
         ( Js_output.make
-            (Ext_list.append b
+            (List.append b
                [
                  S.exp
                    (E.runtime_call Primitive_modules.object_ "updateDummy"
@@ -675,12 +694,13 @@ let compile output_prefix =
       Js_output.t =
     (* #1716 *)
     let output_code, ids =
-      Ext_list.fold_right id_args (Js_output.dummy, [])
+      List.fold_right
         (fun (ident, arg) (acc, ids) ->
           let code, declare_ids =
             compile_recursive_let ~all_bindings:id_args cxt ident arg
           in
-          (Js_output.append_output code acc, Ext_list.append declare_ids ids))
+          (Js_output.append_output code acc, List.append declare_ids ids))
+        id_args (Js_output.dummy, [])
     in
     match ids with
     | [] -> output_code
@@ -1100,14 +1120,14 @@ let compile output_prefix =
       | NeedValue _ ->
         let v = Ext_ident.create_tmp () in
         Js_output.make
-          (Ext_list.append block
+          (List.append block
              (compile_string_cases
                 ~cxt:{lambda_cxt with continuation = Declare (Variable, v)}
                 ~switch_exp:e ~default cases))
           ~value:(E.var v)
       | _ ->
         Js_output.make
-          (Ext_list.append block
+          (List.append block
              (compile_string_cases ~cxt:lambda_cxt ~switch_exp:e ~default cases))
       )
   (*
@@ -1125,11 +1145,8 @@ let compile output_prefix =
     (* [i] is the jump table, [largs] is the arguments passed to [Lstaticcatch]*)
     match Lam_compile_context.find_exn lambda_cxt i with
     | {exit_id; bindings; order_id} ->
-      Ext_list.fold_right2 largs bindings
-        (Js_output.make
-           (if order_id >= 0 then [S.assign exit_id (E.small_int order_id)]
-            else []))
-        (fun larg bind acc ->
+      List.fold_right2
+        (fun (larg : Lambda.t) bind acc ->
           let new_output =
             match larg with
             | Lvar id -> Js_output.make [S.assign bind (E.var id)]
@@ -1138,6 +1155,10 @@ let compile output_prefix =
               compile_lambda {lambda_cxt with continuation = Assign bind} larg
           in
           Js_output.append_output new_output acc)
+        largs bindings
+        (Js_output.make
+           (if order_id >= 0 then [S.assign exit_id (E.small_int order_id)]
+            else []))
   (* Invariant: exit_code can not be reused
       (catch l with (32)
       (handler))
@@ -1192,8 +1213,9 @@ let compile output_prefix =
 
       let lbody = compile_lambda new_cxt body in
       let declares =
-        Ext_list.map code_table.bindings (fun x ->
-            S.declare_variable ~kind:Variable x)
+        List.map
+          (fun x -> S.declare_variable ~kind:Variable x)
+          code_table.bindings
       in
       Js_output.append_output (Js_output.make declares)
         (Js_output.append_output lbody (compile_lambda lambda_cxt handler))
@@ -1210,8 +1232,10 @@ let compile output_prefix =
       let declares =
         S.define_variable ~kind:Variable exit_id E.zero_int_literal
         (* we should always make it zero here, since [zero] is reserved in our mapping*)
-        :: Ext_list.flat_map code_table (fun {bindings} ->
-            Ext_list.map bindings (fun x -> S.declare_variable ~kind:Variable x))
+        :: List.concat_map
+             (fun ({bindings} : Lam_compile_context.handler) ->
+               List.map (fun x -> S.declare_variable ~kind:Variable x) bindings)
+             code_table
       in
       match lambda_cxt.continuation with
       (* could be optimized when cases are less than 3 *)
@@ -1372,8 +1396,7 @@ let compile output_prefix =
         | [] -> (e, body_block)
         | _ :: _ ->
           ( E.true_,
-            Ext_list.append block (S.if_ (E.not e) [S.break_ ()] :: body_block)
-          )
+            List.append block (S.if_ (E.not e) [S.break_ ()] :: body_block) )
       in
       (* The label stays absent for ordinary loops and is filled in lazily if a
          nested switch emits break/continue for this loop. *)
@@ -1421,7 +1444,7 @@ let compile output_prefix =
             block_body
         in
         match (b1, b2) with
-        | _, [] -> Ext_list.append_one b1 (make_for (Some e1))
+        | _, [] -> b1 @ [make_for (Some e1)]
         | _, _
           when delay_safe ~assignable:lambda_cxt.meta.assignable e1
                (*
@@ -1430,11 +1453,10 @@ let compile output_prefix =
                      b2 > e1 > e2
                    *)
           ->
-          Ext_list.append b1 (Ext_list.append_one b2 (make_for (Some e1)))
+          List.append b1 (b2 @ [make_for (Some e1)])
         | _, _ ->
-          Ext_list.append b1
-            (S.define_variable ~kind:Variable id e1
-            :: Ext_list.append_one b2 (make_for None)))
+          List.append b1
+            (S.define_variable ~kind:Variable id e1 :: (b2 @ [make_for None])))
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
       E.unit
@@ -1456,7 +1478,7 @@ let compile output_prefix =
                {loop_cxt with continuation = EffectCall Not_tail}
                body)
         in
-        Ext_list.append b1
+        List.append b1
           [S.for_of ?label:loop_frame.label e1 emitted_id block_body]
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
@@ -1479,7 +1501,7 @@ let compile output_prefix =
                {loop_cxt with continuation = EffectCall Not_tail}
                body)
         in
-        Ext_list.append b1
+        List.append b1
           [S.for_await_of ?label:loop_frame.label e1 emitted_id block_body]
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
@@ -1495,7 +1517,7 @@ let compile output_prefix =
             lambda
         with
         | {value = None} -> assert false
-        | {block; value = Some v} -> Ext_list.append_one block (S.assign id v))
+        | {block; value = Some v} -> block @ [S.assign id v])
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
       E.unit
@@ -1593,7 +1615,7 @@ let compile output_prefix =
           with
           | out1, out2 ->
             Js_output.make
-              (Ext_list.append
+              (List.append
                  (S.declare_variable ~kind:Variable id :: b)
                  [
                    S.if_ e
@@ -1609,13 +1631,12 @@ let compile output_prefix =
         with
         | {block = []; value = Some out1}, {block = []; value = Some out2} ->
           (* Invariant: should_return is false*)
-          Js_output.make
-            (Ext_list.append_one b
-               (S.define_variable ~kind id (E.econd e out1 out2)))
+          Js_output.make (b @ [S.define_variable ~kind id (E.econd e out1 out2)])
         | _, _ ->
           Js_output.make
-            (Ext_list.append_one b
-               (S.if_ ~declaration:(kind, id) e
+            (b
+            @ [
+                S.if_ ~declaration:(kind, id) e
                   (Js_output.output_as_block
                   @@ compile_lambda
                        {lambda_cxt with continuation = Assign id}
@@ -1624,7 +1645,8 @@ let compile output_prefix =
                     (Js_output.output_as_block
                     @@ compile_lambda
                          {lambda_cxt with continuation = Assign id}
-                         f_branch))))
+                         f_branch);
+              ]))
       | Assign _ ->
         let then_output =
           Js_output.output_as_block (compile_lambda lambda_cxt t_branch)
@@ -1632,8 +1654,7 @@ let compile output_prefix =
         let else_output =
           Js_output.output_as_block (compile_lambda lambda_cxt f_branch)
         in
-        Js_output.make
-          (Ext_list.append_one b (S.if_ e then_output ~else_:else_output))
+        Js_output.make (b @ [S.if_ e then_output ~else_:else_output])
       | EffectCall should_return -> (
         let context1 =
           {lambda_cxt with continuation = NeedValue should_return}
@@ -1651,15 +1672,13 @@ let compile output_prefix =
             ( Js_exp_make.remove_pure_sub_exp out1,
               Js_exp_make.remove_pure_sub_exp out2 )
           with
-          | None, None -> Js_output.make (Ext_list.append_one b (S.if_ e []))
+          | None, None -> Js_output.make (b @ [S.if_ e []])
           (* FIX #1762 *)
           | Some out1, Some out2 ->
             Js_output.make b ~value:(E.econd e out1 out2)
-          | Some out1, None ->
-            Js_output.make (Ext_list.append_one b (S.if_ e [S.exp out1]))
+          | Some out1, None -> Js_output.make (b @ [S.if_ e [S.exp out1]])
           | None, Some out2 ->
-            Js_output.make
-              (Ext_list.append_one b (S.if_ (E.not e) [S.exp out2])))
+            Js_output.make (b @ [S.if_ (E.not e) [S.exp out2]]))
         | Not_tail, {block = []; value = Some out1}, _ ->
           (* assert branch
               TODO: here we re-compile two branches since
@@ -1667,7 +1686,7 @@ let compile output_prefix =
           *)
           if Js_analyzer.no_side_effect_expression out1 then
             Js_output.make
-              (Ext_list.append b
+              (List.append b
                  [
                    S.if_ (E.not e)
                      (Js_output.output_as_block
@@ -1675,7 +1694,7 @@ let compile output_prefix =
                  ])
           else
             Js_output.make
-              (Ext_list.append b
+              (List.append b
                  [
                    S.if_ e
                      (Js_output.output_as_block
@@ -1692,16 +1711,18 @@ let compile output_prefix =
                 (Js_output.output_as_block (compile_lambda lambda_cxt f_branch))
           in
           Js_output.make
-            (Ext_list.append_one b
-               (S.if_ e
+            (b
+            @ [
+                S.if_ e
                   (Js_output.output_as_block
                      (compile_lambda lambda_cxt t_branch))
-                  ?else_))
+                  ?else_;
+              ])
         | ( Maybe_tail_is_return _,
             {block = []; value = Some out1},
             {block = []; value = Some out2} ) ->
           Js_output.make
-            (Ext_list.append_one b (S.return_stmt (E.econd e out1 out2)))
+            (b @ [S.return_stmt (E.econd e out1 out2)])
             ~output_finished:True
         | _, _, _ ->
           let then_output =
@@ -1710,8 +1731,7 @@ let compile output_prefix =
           let else_output =
             Js_output.output_as_block (compile_lambda lambda_cxt f_branch)
           in
-          Js_output.make
-            (Ext_list.append_one b (S.if_ e then_output ~else_:else_output))))
+          Js_output.make (b @ [S.if_ e then_output ~else_:else_output])))
   and compile_apply (appinfo : Lambda.lambda_apply)
       (lambda_cxt : Lam_compile_context.t) =
     match appinfo with
@@ -1766,8 +1786,8 @@ let compile output_prefix =
         (* TODO: use [fold]*)
         let _, assigned_params, new_params =
           let args = if ret.params = [] then [] else args in
-          Ext_list.fold_left2 ret.params args (0, [], Map_ident.empty)
-            (fun param arg (i, assigns, new_params) ->
+          List.fold_left2
+            (fun (i, assigns, new_params) param (arg : J.expression) ->
               match arg with
               | {expression_desc = Var (Id x); _} when Ident.same x param ->
                 (i + 1, assigns, new_params)
@@ -1781,6 +1801,7 @@ let compile output_prefix =
                   | Some v -> (v, new_params)
                 in
                 (i + 1, (new_param, arg) :: assigns, m))
+            (0, [], Map_ident.empty) ret.params args
         in
         ret.new_params <-
           Map_ident.union (fun _ _ _ -> assert false) new_params ret.new_params;
@@ -1790,7 +1811,7 @@ let compile output_prefix =
             (fun (param, arg) -> S.assign param arg)
         in
         (* Note true and continue needed to be handled together*)
-        Js_output.make ~output_finished:True (Ext_list.append args_code block)
+        Js_output.make ~output_finished:True (List.append args_code block)
       | _ ->
         Js_output.output_of_block_and_expression lambda_cxt.continuation
           args_code
@@ -1810,10 +1831,12 @@ let compile output_prefix =
       let arg_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
       sequence_arguments ?method_callee ~assignable:lambda_cxt.meta.assignable
         (hold
-           (Ext_list.map args (fun arg ->
+           (List.map
+              (fun arg ->
                 match compile_lambda arg_cxt arg with
                 | {block; value = Some value} -> (block, value)
-                | {value = None} -> assert false)))
+                | {value = None} -> assert false)
+              args))
   and compile_prim (prim_info : Lambda.prim_info)
       (lambda_cxt : Lam_compile_context.t) =
     let compile_primitive_default ?hold primitive args loc =
@@ -1851,9 +1874,7 @@ let compile output_prefix =
         let stmt =
           with_statement_source_loc (source_map_loc loc) (S.throw_stmt v)
         in
-        Js_output.make
-          (Ext_list.append_one block stmt)
-          ~value:E.undefined ~output_finished:True
+        Js_output.make (block @ [stmt]) ~value:E.undefined ~output_finished:True
       (* FIXME -- breaks invariant when NeedValue, reason is that js [throw] is statement
          while ocaml it's an expression, we should remove such things in lambda optimizations
       *)
@@ -1865,11 +1886,13 @@ let compile output_prefix =
          [debugger(Console.log("x"))], so it runs before the statement. A
          literal [()] compiles to nothing. *)
       let args_block =
-        Ext_list.flat_map args (fun arg ->
+        List.concat_map
+          (fun arg ->
             Js_output.output_as_block
               (compile_lambda
                  {lambda_cxt with continuation = EffectCall Not_tail}
                  arg))
+          args
       in
       let stmt =
         with_statement_source_loc (source_map_loc loc) (S.debugger_stmt ())
@@ -1892,8 +1915,7 @@ let compile output_prefix =
           else
             match Js_ast_util.named_expression b with
             | None -> (block, E.dot b property)
-            | Some (x, b) ->
-              (Ext_list.append_one block x, E.dot (E.var b) property)
+            | Some (x, b) -> (block @ [x], E.dot (E.var b) property)
         in
         Js_output.output_of_block_and_expression lambda_cxt.continuation blocks
           ret)
@@ -1942,7 +1964,7 @@ let compile output_prefix =
         Lam_compile_external_obj.assemble_obj_args labels args_expr
       in
       Js_output.output_of_block_and_expression lambda_cxt.continuation
-        (Ext_list.append args_code block)
+        (List.append args_code block)
         exp
     | {primitive = Pjs_call {arg_types} as primitive; args; loc} ->
       compile_primitive_default

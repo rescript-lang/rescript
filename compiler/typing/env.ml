@@ -916,11 +916,11 @@ let find_type_full path env =
       | Functor_comps _ -> assert false
     in
     let exts =
-      Ext_list.filter
-        (try Tbl.find_str s comps.comp_constrs with Not_found -> assert false)
+      List.filter
         (function
           | {cstr_kind = Extension_constructor _} -> true
           | _ -> false)
+        (try Tbl.find_str s comps.comp_constrs with Not_found -> assert false)
     in
 
     match exts with
@@ -1169,8 +1169,7 @@ let lookup_all_simple proj1 proj2 shadow ?loc lid env =
     let rec do_shadow = function
       | [] -> []
       | (x, f) :: xs ->
-        (x, f)
-        :: do_shadow (Ext_list.filter xs (fun (y, _) -> not (shadow x y)))
+        (x, f) :: do_shadow (List.filter (fun (y, _) -> not (shadow x y)) xs)
     in
     do_shadow xl
   | Ldot (l, s) -> (

@@ -230,8 +230,11 @@ let rec render_type ~(config : Config.t) ?(indent = None)
             in
             let flds =
               tag_field
-              :: Ext_list.mapi payloads (fun n t ->
-                  t |> render |> field ~name:(Runtime.js_variant_payload_tag ~n))
+              :: List.mapi
+                   (fun n t ->
+                     t |> render
+                     |> field ~name:(Runtime.js_variant_payload_tag ~n))
+                   payloads
             in
             flds |> fields)
     in

@@ -33,7 +33,7 @@ let exists_var (p : Ident.t -> bool) (l : Lambda.t) : bool =
     | Some a -> hit a
   and hit_list_snd : 'a. ('a * Lambda.t) list -> bool =
    fun x -> Ext_list.exists_snd x hit
-  and hit_list xs = Ext_list.exists xs hit
+  and hit_list xs = List.exists hit xs
   and hit (l : Lambda.t) =
     match l with
     | Lvar id -> p id

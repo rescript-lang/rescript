@@ -573,16 +573,18 @@ let external_import_needs_adaptation (arg_types : External_arg_spec.params)
   || (match return_wrapper with
     | Return_null_to_opt | Return_null_undefined_to_opt -> true
     | Return_unset | Return_identity -> false)
-  || Ext_list.exists arg_types (fun {arg_type; arg_label} ->
-      (match arg_type with
-        | Nothing | Extern_unit -> false
-        | Poly_var_string _ | Poly_var _ | Int _ | Arg_cst _ | Ignore | Unwrap
-          ->
-          true)
-      ||
-      match arg_label with
-      | Arg_optional -> true
-      | Arg_label | Arg_empty -> false)
+  || List.exists
+       (fun ({arg_type; arg_label} : External_arg_spec.param) ->
+         (match arg_type with
+           | Nothing | Extern_unit -> false
+           | Poly_var_string _ | Poly_var _ | Int _ | Arg_cst _ | Ignore
+           | Unwrap ->
+             true)
+         ||
+         match arg_label with
+         | Arg_optional -> true
+         | Arg_label | Arg_empty -> false)
+       arg_types
 
 (* [import(f)] where [f]'s binding needs adaptation lowers to
 
@@ -920,7 +922,7 @@ let exception_id_destructed (l : Lambda.t) (fv : Ident.t) : bool =
     | Some a -> hit a
   and hit_list_snd : 'a. ('a * _) list -> bool =
    fun x -> Ext_list.exists_snd x hit
-  and hit_list xs = Ext_list.exists xs hit
+  and hit_list xs = List.exists hit xs
   and hit (l : Lambda.t) =
     match l with
     | Lprim {primitive = Praise; args = [Lvar _]; loc = _} -> false
@@ -1630,17 +1632,19 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
     let defs = ref [] in
     let lam = protect defs "func" lam in
     let args =
-      Ext_list.filter_map sargs (function
-        | _, Some e -> Some (protect defs "arg" (transl_exp e))
-        | _, None ->
-          let id_arg = Ident.create "none" in
-          none_ids := id_arg :: !none_ids;
-          Some (var id_arg))
+      List.filter_map
+        (function
+          | _, Some e -> Some (protect defs "arg" (transl_exp e))
+          | _, None ->
+            let id_arg = Ident.create "none" in
+            none_ids := id_arg :: !none_ids;
+            Some (var id_arg))
+        sargs
     in
     let extra_ids =
       Array.init extra_arity (fun _ -> Ident.create "extra") |> Array.to_list
     in
-    let extra_args = Ext_list.map extra_ids (fun id -> var id) in
+    let extra_args = List.map (fun id -> var id) extra_ids in
     let ap_args = args @ extra_args in
     let l0 = apply lam ap_args loc in
     bind_protected defs
@@ -1703,7 +1707,7 @@ and transl_let rec_flag pat_expr_list body =
       let lam = Translattribute.add_inline_attribute lam vb_loc vb_attributes in
       (id, lam)
     in
-    Lambda_scc.bind_rec (Ext_list.map pat_expr_list transl_case) body
+    Lambda_scc.bind_rec (List.map transl_case pat_expr_list) body
 
 (* See [jsx_call]. The arguments of [Pjsx] are in the order the call
    evaluates them, except that the children come after the other props, as in

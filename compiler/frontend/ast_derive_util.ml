@@ -27,7 +27,7 @@ open Ast_helper
 let core_type_of_type_declaration (tdcl : Parsetree.type_declaration) =
   match tdcl with
   | {ptype_name = {txt; loc}; ptype_params; ptype_attributes = attrs} ->
-    Typ.constr ~attrs {txt = Lident txt; loc} (Ext_list.map ptype_params fst)
+    Typ.constr ~attrs {txt = Lident txt; loc} (List.map fst ptype_params)
 
 let not_applicable loc deriving_name =
   Loc_report.prerr_warning loc

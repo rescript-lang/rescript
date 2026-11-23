@@ -43,7 +43,7 @@ let local_external_apply loc ~(pval_prim : string)
       Ast_helper.Exp.apply ~loc
         (Ast_helper.Exp.ident ~loc
            {txt = Ldot (Lident local_module_name, local_fun_name); loc})
-        (Ext_list.map args (fun x -> (Asttypes.Nolabel, x))) )
+        (List.map (fun x -> (Asttypes.Nolabel, x)) args) )
 
 let inline_const_prim = "#rescript-inline"
 

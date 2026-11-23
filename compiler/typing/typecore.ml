@@ -1120,12 +1120,12 @@ let disambiguate_label_by_ids closed ids =
   in
   fun labels ->
     let labels' =
-      Ext_list.filter labels (fun (lbl, _) -> fst (check lbl.lbl_all))
+      List.filter (fun (lbl, _) -> fst (check lbl.lbl_all)) labels
     in
     if labels' = [] then (false, labels)
     else
       let labels'' =
-        Ext_list.filter labels' (fun (lbl, _) -> snd (check lbl.lbl_all))
+        List.filter (fun (lbl, _) -> snd (check lbl.lbl_all)) labels'
       in
       if labels'' = [] then (false, labels') else (true, labels'')
 
@@ -2254,7 +2254,8 @@ let check_univars env expans kind exp ty_expected vars =
   let vars = List.map (expand_head env) vars in
   let vars = List.map (expand_head env) vars in
   let vars' =
-    Ext_list.filter vars (fun t ->
+    List.filter
+      (fun t ->
         let t = repr t in
         generalize t;
         match t.desc with
@@ -2263,6 +2264,7 @@ let check_univars env expans kind exp ty_expected vars =
           t.desc <- Tunivar name;
           true
         | _ -> false)
+      vars
   in
   if List.length vars = List.length vars' then ()
   else
@@ -2425,7 +2427,7 @@ let check_absent_variant env =
 
 let duplicate_ident_types caselist env =
   let caselist =
-    Ext_list.filter caselist (fun {pc_lhs} -> contains_gadt env pc_lhs)
+    List.filter (fun {pc_lhs} -> contains_gadt env pc_lhs) caselist
   in
   Env.copy_types (all_idents_cases caselist) env
 
@@ -2886,8 +2888,9 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
       | Some (`Function as context) -> context
       | None ->
         if
-          Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) ->
-              txt = "let.unwrap")
+          List.exists
+            (fun ({txt}, _) -> txt = "let.unwrap")
+            sexp.pexp_attributes
         then `LetUnwrap
         else `Switch
     in

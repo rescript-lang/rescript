@@ -92,14 +92,16 @@ let commonjs_program ~output_dir f (x : J.deps_program) =
   let cxt =
     Js_dump_import_export.requires L.require (initial_scope x.program) f
       (* Not be emitted in require statements *)
-      (Ext_list.filter_map x.modules (fun x ->
+      (List.filter_map
+         (fun (x : J.module_id) ->
            match x.dynamic_import with
            | true -> None
            | false ->
              Some
                ( x.id,
                  Js_name_of_module_id.string_of_module_id x ~output_dir Commonjs,
-                 is_default x.kind )))
+                 is_default x.kind ))
+         x.modules)
   in
   program f cxt x.program
 
@@ -107,7 +109,8 @@ let esmodule_program ~output_dir fmt f (x : J.deps_program) =
   let cxt =
     Js_dump_import_export.imports (initial_scope x.program) f
       (* Not be emitted in import statements *)
-      (Ext_list.filter_map x.modules (fun x ->
+      (List.filter_map
+         (fun (x : J.module_id) ->
            match x.dynamic_import with
            | true -> None
            | false ->
@@ -117,7 +120,8 @@ let esmodule_program ~output_dir fmt f (x : J.deps_program) =
                  is_default x.kind,
                  match x.kind with
                  | External {import_attributes} -> import_attributes
-                 | _ -> None )))
+                 | _ -> None ))
+         x.modules)
   in
   let () = P.at_least_two_lines f in
   let cxt = Js_dump.statements true cxt f x.program.block in

@@ -29,12 +29,14 @@ let rec is_obj_literal (x : _ Flow_ast.Expression.t) : bool =
   | BigIntLiteral _ | RegExpLiteral _ | ModuleRefLiteral _ ->
     true
   | Unary {operator = Minus; argument} -> is_obj_literal argument
-  | Object {properties} -> Ext_list.for_all properties is_literal_kv
+  | Object {properties} -> List.for_all is_literal_kv properties
   | Array {elements} ->
-    Ext_list.for_all elements (fun x ->
+    List.for_all
+      (fun x ->
         match x with
-        | Expression x -> is_obj_literal x
+        | Flow_ast.Expression.Array.Expression x -> is_obj_literal x
         | _ -> false)
+      elements
   | _ -> false
 
 and is_literal_kv (x : _ Flow_ast.Expression.Object.property) =

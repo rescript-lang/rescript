@@ -98,7 +98,7 @@ let exn_block_as_obj ~(stack : bool) (el : J.expression list) (ext : J.tag_info)
           Ext_list.mapi_append el
             (fun i e -> (Js_op.Lit (field_name i), e))
             [(Js_op.Lit "Error", E.new_ (E.js_global "Error") [])]
-        else Ext_list.mapi el (fun i e -> (Js_op.Lit (field_name i), e))))
+        else List.mapi (fun i e -> (Js_op.Lit (field_name i), e)) el))
 
 let rec iter_lst cxt (f : P.t) ls element inter =
   match ls with
@@ -360,7 +360,7 @@ let params_match_call params args fn =
         {[function(x){return x(x)}]}
         here the function is also called `x`
      *)
-  | J.Id id -> not (Ext_list.exists params (fun x -> Ident.same x id))
+  | J.Id id -> not (List.exists (fun x -> Ident.same x id) params)
   | Qualified _ -> true
 
 type fn_exp_state =
@@ -542,7 +542,7 @@ and pp_one_case_clause :
 and loop_case_clauses :
     'a. cxt -> P.t -> (P.t -> 'a -> unit) -> ('a * J.case_clause) list -> cxt =
  fun cxt f pp_cond cases ->
-  Ext_list.fold_left cases cxt (fun acc x -> pp_one_case_clause acc f pp_cond x)
+  List.fold_left (fun acc x -> pp_one_case_clause acc f pp_cond x) cxt cases
 
 and vident cxt f (v : J.vident) =
   match v with
@@ -616,7 +616,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
         | Some children -> [(Js_op.Lit "children", E.array children)]
       in
       let props =
-        Ext_list.map props (fun (name, value) -> (Js_op.Lit name, value))
+        List.map (fun (name, value) -> (Js_op.Lit name, value)) props
       in
       let props =
         match (spread, props @ children_prop) with
@@ -896,10 +896,12 @@ and expression_desc cxt ~(level : int) f x : cxt =
         Ext_list.combine_array p.fields el (fun (i, opt) -> (Js_op.Lit i, opt))
       in
       let tails =
-        Ext_list.filter_map tails (fun ((f, optional), x) ->
+        List.filter_map
+          (fun ((f, optional), (x : J.expression)) ->
             match x.expression_desc with
             | Undefined _ when optional -> None
             | _ -> Some (f, x))
+          tails
       in
       match p.runtime with
       | Untagged _ -> tails
@@ -1104,8 +1106,10 @@ and print_jsx cxt f ~(tag : J.expression) ~(spread : J.expression option)
             P.string f "}";
             cxt);
         ])
-    @ Ext_list.map props (fun (name, value) ->
-        print_attribute (Ext_ident.unwrap_uppercase_exotic name) value)
+    @ List.map
+        (fun (name, value) ->
+          print_attribute (Ext_ident.unwrap_uppercase_exotic name) value)
+        props
   in
   let print_child _level cxt f (child : J.expression) =
     let bare = is_printable_jsx child in
@@ -1123,9 +1127,11 @@ and print_jsx cxt f ~(tag : J.expression) ~(spread : J.expression option)
       cxt
     | _ ->
       P.group f 1 (fun () ->
-          Ext_list.fold_left attributes cxt (fun cxt print_attribute ->
+          List.fold_left
+            (fun cxt print_attribute ->
               P.newline f;
-              print_attribute cxt))
+              print_attribute cxt)
+            cxt attributes)
   in
   if attributes <> [] then P.newline f;
   match children with

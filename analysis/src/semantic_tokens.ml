@@ -230,8 +230,10 @@ let command ~debug ~emitter ~source ~kind_file =
       (* Don't emit true or false *)
       Ast_iterator.default_iterator.pat iterator p
     | Ppat_record (cases, _, rest) ->
-      Ext_list.iter cases (fun {lid = label} ->
-          emitter |> emit_record_label ~label ~debug);
+      List.iter
+        (fun {Parsetree.lid = label} ->
+          emitter |> emit_record_label ~label ~debug)
+        cases;
       (match rest with
       | Some {rest_name = {txt = id; loc}; _} when is_lowercase_id id ->
         emitter |> emit_variable ~id ~debug ~loc
@@ -353,11 +355,13 @@ let command ~debug ~emitter ~source ~kind_file =
                  ~debug);
       Ast_iterator.default_iterator.expr iterator e
     | Pexp_record (cases, _) ->
-      Ext_list.filter_map cases (fun {lid} ->
+      List.filter_map
+        (fun {Parsetree.lid} ->
           match lid.txt with
           | Longident.Lident s when not (Utils.is_first_char_uppercase s) ->
             Some lid
           | _ -> None)
+        cases
       |> List.iter (fun label -> emitter |> emit_record_label ~label ~debug);
       Ast_iterator.default_iterator.expr iterator e
     | Pexp_field (_, label) | Pexp_setfield (_, label, _) ->

@@ -39,7 +39,7 @@ let rec remove_pure_sub_exp (x : t) : t option =
     None (* Can be refined later *)
   | Array_index (a, b) ->
     if is_pure_sub_exp a && is_pure_sub_exp b then None else Some x
-  | Array xs -> if Ext_list.for_all xs is_pure_sub_exp then None else Some x
+  | Array xs -> if List.for_all is_pure_sub_exp xs then None else Some x
   | Seq (a, b) -> (
     match (remove_pure_sub_exp a, remove_pure_sub_exp b) with
     | None, None -> None
@@ -406,7 +406,7 @@ let rec seq ?comment (e0 : t) (e1 : t) : t =
   | (Number _ | Var _ | Undefined _), _ -> e1
   | _ -> {expression_desc = Seq (e0, e1); comment; source_loc = None}
 
-let fuse_to_seq x xs = if xs = [] then x else Ext_list.fold_left xs x seq
+let fuse_to_seq x xs = if xs = [] then x else List.fold_left seq x xs
 
 let zero_int_literal : t =
   {

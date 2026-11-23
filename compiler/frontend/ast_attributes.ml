@@ -28,10 +28,12 @@ type t = attr list
 type attr_kind = Nothing | Meth_callback of attr
 
 let process_attributes_rev (attrs : t) : attr_kind * t =
-  Ext_list.fold_left attrs (Nothing, []) (fun (st, acc) (({txt}, _) as attr) ->
+  List.fold_left
+    (fun (st, acc) (({Location.txt}, _) as attr) ->
       match (txt, st) with
       | "this", (Nothing | Meth_callback _) -> (Meth_callback attr, acc)
       | _, _ -> (st, attr :: acc))
+    (Nothing, []) attrs
 
 let external_attrs =
   [|
@@ -76,14 +78,13 @@ let is_ffi_external (attrs : t) (prim_name : string) =
 
 let is_inline : attr -> bool = fun ({txt}, _) -> txt = "inline"
 
-let has_inline_payload (attrs : t) = Ext_list.find_first attrs is_inline
+let has_inline_payload (attrs : t) = List.find_opt is_inline attrs
 
 type derive_attr = {bs_deriving: Ast_payload.action list option} [@@unboxed]
 
 let process_derive_type (attrs : t) : derive_attr * t =
-  Ext_list.fold_left attrs
-    ({bs_deriving = None}, [])
-    (fun (st, acc) (({txt; loc}, payload) as attr) ->
+  List.fold_left
+    (fun (st, acc) (({Location.txt; loc}, payload) as attr) ->
       match txt with
       | "deriving" -> (
         match st.bs_deriving with
@@ -95,6 +96,8 @@ let process_derive_type (attrs : t) : derive_attr * t =
             acc )
         | Some _ -> Bs_syntaxerr.err loc Duplicated_bs_deriving)
       | _ -> (st, attr :: acc))
+    ({bs_deriving = None}, [])
+    attrs
 
 (* How an external's argument is encoded, from the one of [@string], [@int],
    [@ignore] and [@unwrap] it carries. They are alternatives, so more than one
@@ -109,13 +112,15 @@ let arg_encoding (attrs : t) =
   (* Collect all of @string/@int/@ignore/@unwrap so the conflict error can
      report every attribute involved, not just the first pair. *)
   let found : ([`String | `Int | `Ignore | `Unwrap] * _) list =
-    Ext_list.filter_map attrs (fun (({txt; _}, _) as attr) ->
+    List.filter_map
+      (fun (({Location.txt; _}, _) as attr) ->
         match txt with
         | "string" -> Some (`String, attr)
         | "int" -> Some (`Int, attr)
         | "ignore" -> Some (`Ignore, attr)
         | "unwrap" -> Some (`Unwrap, attr)
         | _ -> None)
+      attrs
   in
   match found with
   | [] -> `Nothing
@@ -131,13 +136,15 @@ let arg_encoding (attrs : t) =
    reported ahead of the duplicate it precedes. *)
 let single_as ~decode (attrs : t) =
   let st = ref None in
-  Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
+  List.iter
+    (fun (({Location.txt; loc}, payload) as attr) ->
       if txt = "as" then
         if !st = None then (
           let value = decode ~loc payload in
           Used_attributes.mark_used_attribute attr;
           st := Some value)
-        else raise (Ast_untagged_variants.Error (loc, Duplicated_bs_as)));
+        else raise (Ast_untagged_variants.Error (loc, Duplicated_bs_as)))
+    attrs;
   !st
 
 let as_string (attrs : t) : string option =
@@ -147,10 +154,12 @@ let as_string (attrs : t) : string option =
       | Some v -> v)
 
 let has_unwrap_attr (attrs : t) : bool =
-  Ext_list.exists attrs (fun ({txt}, _) ->
+  List.exists
+    (fun ({Location.txt}, _) ->
       match txt with
       | "let.unwrap" -> true
       | _ -> false)
+    attrs
 
 let as_int (attrs : t) =
   single_as attrs ~decode:(fun ~loc payload ->

@@ -18,7 +18,9 @@ let check_record_fields (fields1 : Types.label_declaration list)
   let add_violation v = violations := v :: !violations in
   let label_decl_sub (acc1, acc2) (ld2 : Types.label_declaration) =
     match
-      Ext_list.find_first fields1 (fun ld1 -> ld1.ld_id.name = ld2.ld_id.name)
+      List.find_opt
+        (fun (ld1 : Types.label_declaration) -> ld1.ld_id.name = ld2.ld_id.name)
+        fields1
     with
     | Some ld1 ->
       if ld1.ld_optional <> ld2.ld_optional then

@@ -271,10 +271,12 @@ let transl_constructor_arguments env closed = function
           (* Be defensive: treat as an object-typed tuple if somehow only spreads
              are present but not caught by the single-spread case. *)
           let fields =
-            Ext_list.filter_map l (fun ld ->
+            List.filter_map
+              (fun ld ->
                 match ld.pld_name.txt with
                 | "..." -> Some (Parsetree.Oinherit ld.pld_type)
                 | _ -> None)
+              l
           in
           match fields with
           | [] -> (Types.Cstr_record lbls', Cstr_record lbls)
@@ -290,7 +292,8 @@ let rewrite_optional_inline_record_fields = function
   | Pcstr_tuple _ as args -> args
   | Pcstr_record lds ->
     Pcstr_record
-      (Ext_list.map lds (fun ld ->
+      (List.map
+         (fun ld ->
            if ld.pld_optional then
              let typ = ld.pld_type in
              let typ =
@@ -302,7 +305,8 @@ let rewrite_optional_inline_record_fields = function
                }
              in
              {ld with pld_type = typ}
-           else ld))
+           else ld)
+         lds)
 
 let make_constructor env type_path type_params sargs sret_type =
   match sret_type with
@@ -475,11 +479,13 @@ let transl_declaration ~type_record_as_object env sdecl id =
          | (_, _, loc) :: _ ->
            Loc_report.prerr_warning loc Warnings.Constraint_on_gadt);
       let scstrs =
-        Ext_list.map scstrs (fun ({pcd_args} as cstr) ->
+        List.map
+          (fun ({pcd_args} as cstr) ->
             {
               cstr with
               pcd_args = rewrite_optional_inline_record_fields pcd_args;
             })
+          scstrs
       in
       let all_constrs = ref String_set.empty in
       List.iter
@@ -493,8 +499,9 @@ let transl_declaration ~type_record_as_object env sdecl id =
       List.iter
         (fun {pcd_name = {txt = constructor}; pcd_args; pcd_attributes} ->
           match
-            Ext_list.find_first pcd_attributes (fun ({txt}, _) ->
-                txt = Ast_untagged_variants.untagged)
+            List.find_opt
+              (fun ({txt}, _) -> txt = Ast_untagged_variants.untagged)
+              pcd_attributes
           with
           | Some ({loc}, _) ->
             raise
@@ -512,7 +519,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
         scstrs;
       let copy_tag_attr_from_decl attr =
         let tag_attrs =
-          Ext_list.filter sdecl.ptype_attributes (fun ({txt}, _) -> txt = "tag")
+          List.filter (fun ({txt}, _) -> txt = "tag") sdecl.ptype_attributes
         in
         if tag_attrs = [] then attr else tag_attrs @ attr
       in
@@ -646,13 +653,15 @@ let transl_declaration ~type_record_as_object env sdecl id =
         sdecl )
     | Ptype_record lbls_ -> (
       let optional_labels =
-        Ext_list.filter_map lbls_ (fun lbl ->
-            if lbl.pld_optional then Some lbl.pld_name.txt else None)
+        List.filter_map
+          (fun lbl -> if lbl.pld_optional then Some lbl.pld_name.txt else None)
+          lbls_
       in
       let lbls =
         if optional_labels = [] then lbls_
         else
-          Ext_list.map lbls_ (fun lbl ->
+          List.map
+            (fun lbl ->
               let typ = lbl.pld_type in
               let typ =
                 if lbl.pld_optional then
@@ -665,6 +674,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
                 else typ
               in
               {lbl with pld_type = typ})
+            lbls_
       in
       let lbls, lbls' =
         transl_labels ~record_name:sdecl.ptype_name.txt env true lbls
@@ -711,10 +721,12 @@ let transl_declaration ~type_record_as_object env sdecl id =
           (* Only a spread present: treat as object type (syntax ambiguity). *)
           type_record_as_object := true;
           let fields =
-            Ext_list.map lbls_ (fun ld ->
+            List.map
+              (fun ld ->
                 match ld.pld_name.txt with
                 | "..." -> Parsetree.Oinherit ld.pld_type
                 | _ -> Otag (ld.pld_name, ld.pld_attributes, ld.pld_type))
+              lbls_
           in
           let sdecl =
             {
@@ -1198,7 +1210,7 @@ let compute_variance_type env check (required, loc) decl tyl =
     (* Check propagation from constrained parameters *)
     let args = Btype.newgenty (Ttuple params) in
     let fvl = Ctype.free_variables args in
-    let fvl = Ext_list.filter fvl (fun v -> not (List.memq v params)) in
+    let fvl = List.filter (fun v -> not (List.memq v params)) fvl in
     (* If there are no extra variables there is nothing to do *)
     if fvl = [] then ()
     else
@@ -1487,7 +1499,7 @@ let name_recursion sdecl id decl =
 (* Translate a set of type declarations, mutually recursive or not *)
 let transl_type_decl env rec_flag sdecl_list =
   (* Add dummy types for fixed rows *)
-  let fixed_types = Ext_list.filter sdecl_list is_fixed_type in
+  let fixed_types = List.filter is_fixed_type sdecl_list in
   let sdecl_list =
     List.map
       (fun sdecl ->

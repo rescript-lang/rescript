@@ -66,9 +66,9 @@ let rec iter_on_config_str (x : Parsetree.structure) =
   | {pstr_desc = Pstr_attribute (({txt = "config"; loc}, payload) as attr)} :: _
     ->
     Used_attributes.mark_used_attribute attr;
-    Ext_list.iter
-      (Ast_payload.ident_or_record_as_config loc payload)
+    List.iter
       (table_dispatch !structural_config_table)
+      (Ast_payload.ident_or_record_as_config loc payload)
   | {pstr_desc = Pstr_attribute _} :: rest -> iter_on_config_str rest
   | _ :: _ -> ()
 
@@ -82,9 +82,9 @@ let rec iter_on_config_sig (x : Parsetree.signature) =
   | {psig_desc = Psig_attribute (({txt = "config"; loc}, payload) as attr)} :: _
     ->
     Used_attributes.mark_used_attribute attr;
-    Ext_list.iter
-      (Ast_payload.ident_or_record_as_config loc payload)
+    List.iter
       (table_dispatch !signature_config_table)
+      (Ast_payload.ident_or_record_as_config loc payload)
   | {psig_desc = Psig_attribute _} :: rest -> iter_on_config_sig rest
   | _ :: _ -> ()
 

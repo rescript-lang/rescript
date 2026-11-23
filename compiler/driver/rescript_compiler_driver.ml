@@ -525,11 +525,13 @@ let file_level_flags_handler (e : Parsetree.expression option) =
   | Some {pexp_desc = Pexp_array args; pexp_loc} -> (
     let args =
       Array.of_list
-        (Ext_list.map args (fun e ->
+        (List.map
+           (fun e ->
              match Ast_payload.semantic_string_of_expression e with
              | Some name -> name
              | _ ->
-               Loc_report.raise_errorf ~loc:e.pexp_loc "string literal expected"))
+               Loc_report.raise_errorf ~loc:e.pexp_loc "string literal expected")
+           args)
     in
     try
       Bsc_args.parse_exn ~start:0 ~argv:args (command_line_flags ())

@@ -464,8 +464,7 @@ let check_name_of_type t = ignore (name_of_type new_name t)
 
 let remove_names tyl =
   let tyl = List.map repr tyl in
-  names () :=
-    Ext_list.filter !(names ()) (fun (ty, _) -> not (List.memq ty tyl))
+  names () := List.filter (fun (ty, _) -> not (List.memq ty tyl)) !(names ())
 
 let visited_objects_key =
   Request_local.new_key (fun () -> ref ([] : type_expr list))
@@ -649,15 +648,18 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
         let row = row_repr row in
         let fields =
           if row.row_closed then
-            Ext_list.filter row.row_fields (fun (_, f) ->
-                row_field_repr f <> Rabsent)
+            List.filter
+              (fun (_, f) -> row_field_repr f <> Rabsent)
+              row.row_fields
           else row.row_fields
         in
         let present =
-          Ext_list.filter fields (fun (_, f) ->
+          List.filter
+            (fun (_, f) ->
               match row_field_repr f with
               | Rpresent _ -> true
               | _ -> false)
+            fields
         in
         let all_present = List.length present = List.length fields in
         match row.row_name with
@@ -718,7 +720,7 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
         Otyp_module (Path.name p, n, tree_of_typlist ?printing_context sch tyl)
     in
     if List.memq px !(delayed ()) then
-      delayed () := Ext_list.filter !(delayed ()) (( != ) px);
+      delayed () := List.filter (( != ) px) !(delayed ());
     if is_aliased px && aliasable ty then (
       check_name_of_type px;
       Otyp_alias (pr_typ (), name_of_type new_name px))

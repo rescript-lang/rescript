@@ -89,12 +89,14 @@ let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
         let lam =
           Lambda.prim ~primitive:(Pmakeblock (Blk_module runtime_fields))
             ~args:
-              (Ext_list.map2 pos_cc_list runtime_fields (fun (pos, cc) name ->
+              (List.map2
+                 (fun (pos, cc) name ->
                    apply_coercion loc Alias cc
                      (Lambda.prim
                         ~primitive:(Pfield (pos, Fld_module {name}))
                         ~args:[Lambda.var id]
-                        loc)))
+                        loc))
+                 pos_cc_list runtime_fields)
             loc
         in
         wrap_id_pos_list loc id_pos_list get_field_name lam)
@@ -338,8 +340,7 @@ and transl_structure loc fields cc rootpath final_env = function
                 else Blk_module runtime_fields))
           ~args:result loc
       and id_pos_list =
-        Ext_list.filter id_pos_list (fun (id, _, _) ->
-            not (Set_ident.mem id ids))
+        List.filter (fun (id, _, _) -> not (Set_ident.mem id ids)) id_pos_list
       in
       ( wrap_id_pos_list loc id_pos_list get_field_name lam,
         List.length pos_cc_list )
@@ -356,12 +357,14 @@ and transl_structure loc fields cc rootpath final_env = function
       in
       (* Recursve already excludes complex pattern bindings*)
       if is_top rootpath && rec_flag = Nonrecursive then
-        Ext_list.iter pat_expr_list (fun {vb_pat} ->
+        List.iter
+          (fun {vb_pat} ->
             match vb_pat.pat_desc with
             | Tpat_var _ | Tpat_alias _ -> ()
             | _ ->
               if not (Parmatch.irrefutable vb_pat) then
-                raise (Error (vb_pat.pat_loc, Fragile_pattern_in_toplevel)));
+                raise (Error (vb_pat.pat_loc, Fragile_pattern_in_toplevel)))
+          pat_expr_list;
       (Translcore.transl_let rec_flag pat_expr_list body, size)
     | Tstr_typext tyext ->
       let ids = List.map (fun ext -> ext.ext_id) tyext.tyext_constructors in

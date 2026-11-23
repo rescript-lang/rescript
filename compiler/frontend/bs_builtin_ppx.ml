@@ -170,17 +170,20 @@ let expr_mapper ~async_context (self : mapper) (e : Parsetree.expression) =
       async_context := async;
       let attrs = self.attributes self e.pexp_attributes in
       let params =
-        Ext_list.map params (fun (p : Parsetree.fun_param) ->
+        List.map
+          (fun (p : Parsetree.fun_param) ->
             {
               p with
               p_default = Option.map (self.expr self) p.p_default;
               p_pat = self.pat self p.p_pat;
             })
+          params
       in
       let body = self.expr self body in
       let newtypes =
-        Ext_list.map newtypes (fun (name, nt_attrs) ->
-            (name, self.attributes self nt_attrs))
+        List.map
+          (fun (name, nt_attrs) -> (name, self.attributes self nt_attrs))
+          newtypes
       in
       let mapped =
         Ast_helper.Exp.fun_ ~loc:e.pexp_loc ~attrs ~async ~newtypes params body
