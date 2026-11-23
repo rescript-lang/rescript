@@ -25,6 +25,10 @@
 val rewrite : Lambda.t Hash_ident.t -> Lambda.t -> Lambda.t
 (** [rewrite tbl lam] 
     Given a [tbl] to rewrite all bounded variables in [lam] 
+
+    The bound variables get fresh names, recorded in [tbl], and the static
+    exits caught in [lam] get fresh ids, which advances the counters of
+    [Lambda_exits]. Raises to exits caught outside [lam] keep their ids.
 *)
 
 (** refresh lambda to replace all bounded vars for new ones *)

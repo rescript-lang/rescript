@@ -1,0 +1,1 @@
+- Fix a function body or functor body copied more than once (an `@inline` function inlined at several call sites, or a functor applied several times) running another copy's branch of a `switch` with or-patterns or an `| exception` case.

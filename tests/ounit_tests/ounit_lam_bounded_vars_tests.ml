@@ -62,9 +62,108 @@ let test_assign_is_renamed _ =
       (Ident.same outer' outer)
   | _ -> OUnit.assert_failure "a let with two assignments"
 
+let rewrite lam = Lam_bounded_vars.rewrite (Hash_ident.create 4) lam
+
+let assert_exit msg expected actual =
+  OUnit.assert_equal ~printer:string_of_int ~msg expected actual
+
+let assert_fresh_exit msg original fresh =
+  OUnit.assert_bool msg (original <> fresh)
+
+(* Each copy of a catch has its own exit id, its raises follow, and the bound
+   variables of the handler are renamed. *)
+let test_exit_is_renamed_per_copy _ =
+  let exit = Lambda_exits.next_raise_count () in
+  let x = Ident.create "x" in
+  let lam =
+    Lambda.staticcatch
+      (Lambda.staticraise exit [int 1])
+      (exit, [x]) (Lambda.var x)
+  in
+  let check_copy lam =
+    match (lam : Lambda.t) with
+    | Lstaticcatch (Lstaticraise (raised, [_]), (caught, [x']), Lvar x_use) ->
+      assert_fresh_exit "the exit is renamed" exit caught;
+      assert_exit "its raise follows" caught raised;
+      OUnit.assert_bool "the handler's variable is renamed"
+        (not (Ident.same x' x));
+      OUnit.assert_bool "its use follows" (Ident.same x_use x');
+      caught
+    | _ -> OUnit.assert_failure "a catch of a raise with one argument"
+  in
+  let first = check_copy (rewrite lam) in
+  let second = check_copy (rewrite lam) in
+  assert_fresh_exit "the copies have different exits" first second
+
+(* A raise to an exit caught outside the term keeps its id. *)
+let test_outer_exit_is_kept _ =
+  let outer = Lambda_exits.next_raise_count () in
+  let exit = Lambda_exits.next_raise_count () in
+  let lam =
+    Lambda.staticcatch
+      (Lambda.seq (Lambda.staticraise outer []) (Lambda.staticraise exit []))
+      (exit, [])
+      (Lambda.staticraise outer [])
+  in
+  match rewrite lam with
+  | Lstaticcatch
+      ( Lsequence (Lstaticraise (in_body, []), Lstaticraise (raised, [])),
+        (caught, []),
+        Lstaticraise (in_handler, []) ) ->
+    assert_fresh_exit "the caught exit is renamed" exit caught;
+    assert_exit "its raise follows" caught raised;
+    assert_exit "the outer exit is kept in the body" outer in_body;
+    assert_exit "the outer exit is kept in the handler" outer in_handler
+  | _ -> OUnit.assert_failure "a catch of two raises"
+
+(* A catch scopes over its body only: in its handler the same id is the
+   enclosing catch's exit, or one caught outside the term. *)
+let test_exit_scopes_over_the_body_only _ =
+  let exit = Lambda_exits.next_raise_count () in
+  let raise_exit = Lambda.staticraise exit [] in
+  let inner = Lambda.staticcatch raise_exit (exit, []) raise_exit in
+  let lam = Lambda.staticcatch inner (exit, []) raise_exit in
+  match rewrite lam with
+  | Lstaticcatch
+      ( Lstaticcatch
+          ( Lstaticraise (in_inner_body, []),
+            (inner_caught, []),
+            Lstaticraise (in_inner_handler, []) ),
+        (outer_caught, []),
+        Lstaticraise (in_outer_handler, []) ) ->
+    assert_fresh_exit "the inner exit is renamed" exit inner_caught;
+    assert_fresh_exit "the outer exit is renamed" exit outer_caught;
+    assert_fresh_exit "the two catches have different exits" inner_caught
+      outer_caught;
+    assert_exit "a raise in the inner body goes to the inner catch" inner_caught
+      in_inner_body;
+    assert_exit "a raise in the inner handler goes to the outer catch"
+      outer_caught in_inner_handler;
+    assert_exit "a raise in the outer handler is left alone" exit
+      in_outer_handler
+  | _ -> OUnit.assert_failure "a catch in the body of a catch"
+
+(* Negative ids mark the exception cases of matching and stay negative. *)
+let test_negative_exit_stays_negative _ =
+  let exit = Lambda_exits.next_negative_raise_count () in
+  let lam =
+    Lambda.staticcatch (Lambda.staticraise exit []) (exit, []) (int 1)
+  in
+  match rewrite lam with
+  | Lstaticcatch (Lstaticraise (raised, []), (caught, []), Lconst _) ->
+    assert_fresh_exit "the exit is renamed" exit caught;
+    assert_exit "its raise follows" caught raised;
+    OUnit.assert_bool "the new id is negative" (caught < 0)
+  | _ -> OUnit.assert_failure "a catch of a raise"
+
 let suites =
   __FILE__
   >::: [
          "for_start_is_renamed_once" >:: test_for_start_is_renamed_once;
          "assign_is_renamed" >:: test_assign_is_renamed;
+         "exit_is_renamed_per_copy" >:: test_exit_is_renamed_per_copy;
+         "outer_exit_is_kept" >:: test_outer_exit_is_kept;
+         "exit_scopes_over_the_body_only"
+         >:: test_exit_scopes_over_the_body_only;
+         "negative_exit_stays_negative" >:: test_negative_exit_stays_negative;
        ]

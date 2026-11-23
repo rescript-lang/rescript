@@ -24,7 +24,9 @@
 
 (*
    Given an [map], rewrite all let bound variables into new variables, 
-   note that the [map] is changed
+   note that the [map] is changed.
+   The static exits caught in the term are given new ids as well, taken from
+   the counters of [Lambda_exits]; raises to exits caught outside it keep theirs.
    example    
    {[
      let a/112 = 3 in a/112      
@@ -67,6 +69,16 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
     Hash_ident.add map i (Lambda.var i');
     i'
   in
+  (* Static exits caught inside [lam] are renamed as well: once [lam] is
+     inlined more than once, the copies must not share an exit id, or
+     [Lam_pass_exits] substitutes one copy's handler into the other. Negative
+     ids keep their sign, which marks the exception cases of matching. *)
+  let exits = ref Map_int.empty in
+  let find_exit i =
+    match Map_int.find_opt i !exits with
+    | Some i' -> i'
+    | None -> i
+  in
   (* order matters, especially for let bindings *)
   let rec option_map op =
     match op with
@@ -94,10 +106,17 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
       let body = aux body in
       Lambda.function_ ~loc ~params ~body ~attr
     | Lstaticcatch (l1, (i, xs), l2) ->
+      let i' =
+        if i < 0 then Lambda_exits.next_negative_raise_count ()
+        else Lambda_exits.next_raise_count ()
+      in
+      let outer = !exits in
+      exits := Map_int.add i i' outer;
       let l1 = aux l1 in
+      exits := outer;
       let xs = List.map rebind xs in
       let l2 = aux l2 in
-      Lambda.staticcatch l1 (i, xs) l2
+      Lambda.staticcatch l1 (i', xs) l2
     | Lfor (ident, l1, l2, dir, l3) ->
       let ident = rebind ident in
       let l1 = aux l1 in
@@ -146,7 +165,7 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
     | Lstringswitch (l, sw, d) ->
       let l = aux l in
       Lambda.stringswitch l (Ext_list.map_snd sw aux) (option_map d)
-    | Lstaticraise (i, ls) -> Lambda.staticraise i (List.map aux ls)
+    | Lstaticraise (i, ls) -> Lambda.staticraise (find_exit i) (List.map aux ls)
     | Ltrywith (l1, v, l2) ->
       let l1 = aux l1 in
       let v = rebind v in
