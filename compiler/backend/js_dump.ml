@@ -816,7 +816,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
       ( Or,
         {expression_desc = Bin (EqEqEq, e1, {expression_desc = Undefined _})},
         {expression_desc = Bin (EqEqEq, e2, {expression_desc = Null})} )
-    when e1 = e2 ->
+    when e1 = e2 && Js_analyzer.no_side_effect_expression e1 ->
+    (* [e == null] evaluates [e] once, where the two checks may evaluate it
+       twice, so they are merged only for an [e] without side effects *)
     expression_desc cxt ~(level : int) f (Is_null_or_undefined e1)
   | Bin (op, e1, e2) ->
     let out, lft, rght = Js_op_util.op_prec op in

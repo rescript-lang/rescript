@@ -1,0 +1,1 @@
+- Fix `e === null || e === undefined` compiling to `e == null`, which evaluates `e` once, when `e` has side effects.
