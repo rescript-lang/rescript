@@ -135,14 +135,24 @@ let extra_for_cmt ~(iterator : Tast_iterator.iterator)
     extra_for_signature_items ~iterator items;
     extra_for_parts parts
 
+(* A use of a local declaration. A use of an applied functor's member is
+   recorded as a use of the declaration it copies: one in this file, or,
+   when the functor is in another file, that file's, as uses of the
+   functor's own members are, for references from it to find this one. *)
+let reference_to_stamp ~(env : Query_env.t) ~extra stamp tip loc =
+  (match Resolve_path.applied_origin ~env stamp tip with
+  | Some (Origin_global (module_name, path)) ->
+    add_external_reference ~extra module_name path tip loc
+  | Some (Origin_local origin) -> add_reference ~extra origin loc
+  | None -> add_reference ~extra stamp loc);
+  LocalReference (stamp, tip)
+
 let add_for_path ~env ~extra path lident loc typ tip =
   let ident_name = Longident.last lident in
   let ident_loc = Utils.end_of_location loc (String.length ident_name) in
   let loc_type =
     match Resolve_path.from_compiler_path ~env path with
-    | Stamp stamp ->
-      add_reference ~extra stamp ident_loc;
-      LocalReference (stamp, tip)
+    | Stamp stamp -> reference_to_stamp ~env ~extra stamp tip ident_loc
     | NotFound -> NotFound
     | Global (module_name, path) ->
       add_external_reference ~extra module_name path tip ident_loc;
@@ -153,9 +163,7 @@ let add_for_path ~env ~extra path lident loc typ tip =
         | Type -> Exported.find env.exported Exported.Type name
         | _ -> Exported.find env.exported Exported.Value name
       with
-      | Some stamp ->
-        add_reference ~extra stamp ident_loc;
-        LocalReference (stamp, tip)
+      | Some stamp -> reference_to_stamp ~env ~extra stamp tip ident_loc
       | None -> NotFound)
     | GlobalMod _ -> NotFound
   in
@@ -167,21 +175,30 @@ let add_for_path_parent ~env ~extra path loc =
     | GlobalMod module_name ->
       add_file_reference ~extra module_name loc;
       TopLevelModule module_name
-    | Stamp stamp ->
-      add_reference ~extra stamp loc;
-      LModule (LocalReference (stamp, Module))
+    | Stamp stamp -> LModule (reference_to_stamp ~env ~extra stamp Module loc)
     | NotFound -> LModule NotFound
     | Global (module_name, path) ->
       add_external_reference ~extra module_name path Module loc;
       LModule (GlobalReference (module_name, path, Module))
     | Exported (env, name) -> (
       match Exported.find env.exported Exported.Module name with
-      | Some stamp ->
-        add_reference ~extra stamp loc;
-        LModule (LocalReference (stamp, Module))
+      | Some stamp -> LModule (reference_to_stamp ~env ~extra stamp Module loc)
       | None -> LModule NotFound)
   in
   add_loc_item extra loc loc_type
+
+(* The type an applied functor's type copies, for the declarations of its
+   fields and constructors. *)
+let get_type_at_stamp ~env stamp =
+  let local stamp =
+    match Stamps.find_type env.Query_env.file.stamps stamp with
+    | Some declared_type -> `Local declared_type
+    | None -> `Not_found
+  in
+  match Resolve_path.applied_origin ~env stamp Type with
+  | Some (Origin_global (module_name, path)) -> `Global (module_name, path)
+  | Some (Origin_local origin) -> local origin
+  | None -> local stamp
 
 let get_type_at_path ~env path =
   match Resolve_path.from_compiler_path ~env path with
@@ -191,16 +208,8 @@ let get_type_at_path ~env path =
   | Exported (env, name) -> (
     match Exported.find env.exported Exported.Type name with
     | None -> `Not_found
-    | Some stamp -> (
-      let declared_type = Stamps.find_type env.file.stamps stamp in
-      match declared_type with
-      | Some declared_type -> `Local declared_type
-      | None -> `Not_found))
-  | Stamp stamp -> (
-    let declared_type = Stamps.find_type env.file.stamps stamp in
-    match declared_type with
-    | Some declared_type -> `Local declared_type
-    | None -> `Not_found)
+    | Some stamp -> get_type_at_stamp ~env stamp)
+  | Stamp stamp -> get_type_at_stamp ~env stamp
 
 let add_for_field ~env ~extra ~record_type ~field_type {Asttypes.txt; loc} =
   match (Shared.dig record_type).desc with

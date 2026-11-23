@@ -1,0 +1,26 @@
+Hover src/AppliedFunctorDocsUse.res 5:16
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "```rescript\n(array<string>, string) => array<string>\n```\n---\n Adds an element. "
+  }
+}
+
+Complete src/AppliedFunctorDocsUse.res 8:11
+pos_cursor:[8:11] pos_no_white:[8:10] Found expr:[8:3->8:11]
+Pexp_ident StrSet.a:[8:3->8:11]
+Completable: Cpath Value[StrSet, a]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[StrSet, a]
+Path StrSet.a
+[
+  {
+    "detail": "(array<string>, string) => array<string>",
+    "documentation": { "kind": "markdown", "value": " Adds an element. " },
+    "kind": 12,
+    "label": "add",
+    "tags": []
+  }
+]
+

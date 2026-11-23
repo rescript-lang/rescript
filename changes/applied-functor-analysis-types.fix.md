@@ -1,0 +1,1 @@
+- Hover and completion on a module created by applying a functor show the applied types, such as `array<int>`, instead of the functor body's `array<O.t>`.
