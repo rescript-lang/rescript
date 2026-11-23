@@ -1376,9 +1376,11 @@ let compare_int_aux (cmp : Lam_compat.comparison) (l : int) r =
   | Cle -> l <= r
   | Cge -> l >= r
 
-(* [compare] of these runtime modules is a total order that agrees with the JS
-   operators, so [compare a b <op> 0] is [a <op> b]. Not so for
-   [Primitive_float] (NaN) nor [Primitive_object] (structural). *)
+(* [compare] of these runtime modules agrees with the JS operators on
+   well-typed values, so [compare a b <op> 0] is [a <op> b]. Not so for
+   [Primitive_float] (NaN) nor [Primitive_object] (structural). Values that
+   JS cannot order, such as [null] and [undefined] constructors or a NaN typed
+   as an int, compare as greater at runtime and as unordered when folded. *)
 let compare_agrees_with_js_operators (module_id : J.module_id) =
   let name = Ident.name module_id.id in
   name = Primitive_modules.int
@@ -1389,6 +1391,7 @@ let compare_agrees_with_js_operators (module_id : J.module_id) =
 let rec int_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
   match (cmp, e0.expression_desc, e1.expression_desc) with
   | _, Number (Int {i = l}), Number (Int {i = r}) ->
+    (* [is_out] relies on the left constant being read as unsigned *)
     let l = Ext_int.int32_unsigned_to_int l in
     let r = Int32.to_int r in
     bool (compare_int_aux cmp l r)
@@ -1401,8 +1404,13 @@ let rec int_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
           [l; r],
           _ ),
       Number (Int {i = 0l}) )
-    when compare_agrees_with_js_operators module_id ->
-    int_comp cmp l r (* = 0 > 0 < 0 *)
+    when compare_agrees_with_js_operators module_id -> (
+    (* = 0 > 0 < 0 *)
+    match (l.expression_desc, r.expression_desc) with
+    | Number (Int {i = l}), Number (Int {i = r}) ->
+      (* both are signed here, unlike in the case above *)
+      bool (compare_int_aux cmp (Int32.to_int l) (Int32.to_int r))
+    | _ -> int_comp cmp l r)
   | (Ceq, Optional_block _, Undefined _ | Ceq, Undefined _, Optional_block _)
     when no_side_effect e0 && no_side_effect e1 ->
     false_

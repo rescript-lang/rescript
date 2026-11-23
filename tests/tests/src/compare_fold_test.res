@@ -38,5 +38,23 @@ describe(__MODULE__, () => {
     eq(__LOC__, compare(id("b"), id("a")) > 0, true)
     eq(__LOC__, compare(id(true), id(true)) == 0, true)
     eq(__LOC__, compare(id(2n), id(1n)) >= 0, true)
+    eq(__LOC__, compare(id(1), id(1)) != 0, false)
+    eq(__LOC__, compare(id(1), id(2)) <= 0, true)
+  })
+
+  test("negative int constants", () => {
+    eq(__LOC__, compare(-1, -1) == 0, true)
+    eq(__LOC__, compare(-5, 3) > 0, false)
+    eq(__LOC__, compare(-5, 3) < 0, true)
+    eq(__LOC__, compare(3, -5) > 0, true)
+    let k = -1
+    eq(__LOC__, compare(k, 0) <= 0, true)
+    eq(__LOC__, compare(-1, id(-1)) == 0, true)
+  })
+
+  test("floats that are not NaN", () => {
+    eq(__LOC__, compare(id(1.5), id(2.5)) < 0, true)
+    eq(__LOC__, compare(id(2.5), id(2.5)) == 0, true)
+    eq(__LOC__, compare(id(-0.5), id(-1.5)) > 0, true)
   })
 })

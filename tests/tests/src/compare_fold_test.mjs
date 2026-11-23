@@ -45,6 +45,21 @@ Mocha.describe("Compare_fold_test", () => {
     Test_utils.eq("File \"compare_fold_test.res\", line 38, characters 7-14", id("b") > id("a"), true);
     Test_utils.eq("File \"compare_fold_test.res\", line 39, characters 7-14", id(true) === id(true), true);
     Test_utils.eq("File \"compare_fold_test.res\", line 40, characters 7-14", id(2n) >= id(1n), true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 41, characters 7-14", id(1) !== id(1), false);
+    Test_utils.eq("File \"compare_fold_test.res\", line 42, characters 7-14", id(1) <= id(2), true);
+  });
+  Mocha.test("negative int constants", () => {
+    Test_utils.eq("File \"compare_fold_test.res\", line 46, characters 7-14", true, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 47, characters 7-14", false, false);
+    Test_utils.eq("File \"compare_fold_test.res\", line 48, characters 7-14", true, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 49, characters 7-14", true, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 51, characters 7-14", true, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 52, characters 7-14", -1 === id(-1), true);
+  });
+  Mocha.test("floats that are not NaN", () => {
+    Test_utils.eq("File \"compare_fold_test.res\", line 56, characters 7-14", Primitive_float.compare(id(1.5), id(2.5)) < 0, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 57, characters 7-14", Primitive_float.compare(id(2.5), id(2.5)) === 0, true);
+    Test_utils.eq("File \"compare_fold_test.res\", line 58, characters 7-14", Primitive_float.compare(id(-0.5), id(-1.5)) > 0, true);
   });
 });
 
