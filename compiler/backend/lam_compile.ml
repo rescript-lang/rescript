@@ -1797,6 +1797,7 @@ let compile output_prefix =
                   | None ->
                     ret.immutable_mask.(i) <- false;
                     let v = Ext_ident.create ("_" ^ param.name) in
+                    Js_ts_annot.rename ~from:param ~to_:v;
                     (v, Map_ident.add param v new_params)
                   | Some v -> (v, new_params)
                 in

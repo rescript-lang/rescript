@@ -105,15 +105,18 @@ let string_of_module_id (dep_module_id : Lam_module_ident.t)
           in
           pkg.pkg_rel_path // js_file
         | Package_found ({suffix} as dep_pkg), Package_found cur_pkg ->
-          let js_file =
-            Ext_namespace.js_name_of_modulename dep_module_id.id.name case
-              suffix
-          in
-
           if
             Js_packages_info.same_package_by_name current_package_info
               dep_package_info
           then
+            let suffix =
+              if Js_ts_annot.enabled () then Js_ts_annot.ts_suffix suffix
+              else suffix
+            in
+            let js_file =
+              Ext_namespace.js_name_of_modulename dep_module_id.id.name case
+                suffix
+            in
             Ext_path.node_rebase_file ~from:cur_pkg.rel_path
               ~to_:dep_pkg.rel_path js_file
             (* TODO: we assume that both [x] and [path] could only be relative path
@@ -122,7 +125,12 @@ let string_of_module_id (dep_module_id : Lam_module_ident.t)
           else if Js_packages_info.is_runtime_package dep_package_info then
             get_runtime_module_path dep_module_id current_package_info
               module_system
-          else dep_pkg.pkg_rel_path // js_file
+          else
+            let js_file =
+              Ext_namespace.js_name_of_modulename dep_module_id.id.name case
+                suffix
+            in
+            dep_pkg.pkg_rel_path // js_file
         | Package_script, Package_script -> (
           let js_file =
             Ext_namespace.js_name_of_modulename dep_module_id.id.name case

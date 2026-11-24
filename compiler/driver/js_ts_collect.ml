@@ -2,7 +2,25 @@
    function annotations and module type declarations from the typed tree
    using genType's translation, storing them in [Js_ts_annot]. *)
 
-let config () = {Gentype_config.default with everything = true}
+let current_package_layout () =
+  let info = Js_packages_state.get_packages_info () in
+  match Js_packages_info.query_package_infos info Esmodule with
+  | Package_found {rel_path; suffix} -> (rel_path, Js_ts_annot.ts_suffix suffix)
+  | _ -> (
+    match Js_packages_info.query_package_infos info Commonjs with
+    | Package_found {rel_path; suffix} ->
+      (rel_path, Js_ts_annot.ts_suffix suffix)
+    | _ -> ("", ".res.ts"))
+
+let config () =
+  let _, ts_suffix = current_package_layout () in
+  {
+    Gentype_config.default with
+    everything = true;
+    module_resolution = Bundler;
+    generated_file_extension = Some ts_suffix;
+    project_root = Ext_path.package_dir ();
+  }
 
 (* [option<t>] holds [undefined] for [None], and for [Some(v)] the value
    [Primitive_option.some(v)]: the frozen marker
@@ -156,6 +174,11 @@ let ts_of_signature ~env ~var type_env (type_exprs : Types.type_expr list) =
           acc (Type_vars.free t.type_))
       [] translations
   in
+  let deps =
+    List.concat_map
+      (fun (t : Translate_type_expr_from_types.translation) -> t.dependencies)
+      translations
+  in
   ( List.map
       (fun (t : Translate_type_expr_from_types.translation) ->
         type_to_string t.type_)
@@ -163,7 +186,8 @@ let ts_of_signature ~env ~var type_env (type_exprs : Types.type_expr list) =
     type_vars,
     List.map
       (fun (t : Translate_type_expr_from_types.translation) -> t.type_)
-      translations )
+      translations,
+    deps )
 
 let is_optional (p : Typedtree.function_param) =
   match p.fp_lbl with
@@ -263,10 +287,65 @@ let rec depth_assignments n =
    the deepest instance's, whose parameters admit every overload's. An
    optional argument then prints [p: undefined | t], one form for every
    overload. *)
-let collect_function (st : Js_ts_annot.state) type_env (id : Ident.t)
+let record_or_tuple_fields ~env (t : Types.type_expr) =
+  match (Ctype.expand_head_opt env t).desc with
+  | Ttuple ts -> Some ts
+  | Tconstr (path, args, _) -> (
+    match Env.find_type path env with
+    | {type_params; type_kind = Type_record (labels, _)}
+      when List.length type_params = List.length args -> (
+      let pairs = List.combine (List.map Ctype.repr type_params) args in
+      match
+        List.map
+          (fun (ld : Types.label_declaration) -> substitute pairs ld.ld_type)
+          labels
+      with
+      | fields -> Some fields
+      | exception Unsubstitutable -> None)
+    | _ -> None
+    | exception Not_found -> None)
+  | _ -> None
+
+let collect_locals (st : Js_ts_annot.state) ~deps type_env
+    (e : Typedtree.expression) =
+  let iter =
+    {
+      Tast_iterator.default_iterator with
+      value_binding =
+        (fun self vb ->
+          (match vb.vb_pat.pat_desc with
+          | Tpat_var (id, _) -> (
+            let env = vb.vb_expr.exp_env in
+            let ty = vb.vb_pat.pat_type in
+            let strings, type_vars, _, local_deps =
+              ts_of_signature ~env ~var:declaration_var type_env [ty]
+            in
+            if type_vars = [] then (
+              deps := local_deps @ !deps;
+              match strings with
+              | [s] -> Hashtbl.replace st.locals (Js_ts_annot.key_of id) s
+              | _ -> ());
+            match record_or_tuple_fields ~env ty with
+            | Some field_tys ->
+              let fstrings, fvars, _, fdeps =
+                ts_of_signature ~env ~var:declaration_var type_env field_tys
+              in
+              if fvars = [] then (
+                deps := fdeps @ !deps;
+                Hashtbl.replace st.sroa_fields (Js_ts_annot.key_of id)
+                  (Array.of_list fstrings))
+            | None -> ())
+          | _ -> ());
+          Tast_iterator.default_iterator.value_binding self vb);
+    }
+  in
+  iter.expr iter e
+
+let collect_function (st : Js_ts_annot.state) ~deps type_env (id : Ident.t)
     (e : Typedtree.expression) =
   match e.exp_desc with
   | Texp_function {params; body} ->
+    collect_locals st ~deps type_env body;
     Hashtbl.replace st.names id.name id.stamp;
     let env = e.exp_env in
     (* The type variables an option's encoding reaches: each is bounded. *)
@@ -286,7 +365,7 @@ let collect_function (st : Js_ts_annot.state) type_env (id : Ident.t)
       @ [body.exp_type]
     in
     let optionals, _ = trailing_optionals ~env ~var params in
-    let _ = ts_of_signature ~env ~var type_env (signature optionals) in
+    ignore (ts_of_signature ~env ~var type_env (signature optionals));
     let payload = !reached in
     let optionals =
       if payload = [] then optionals else List.map (fun _ -> false) optionals
@@ -303,9 +382,10 @@ let collect_function (st : Js_ts_annot.state) type_env (id : Ident.t)
             acc (Ctype.free_variables t))
         [] base
     in
-    let strings, type_vars, translated =
+    let strings, type_vars, translated, sig_deps =
       ts_of_signature ~env ~var type_env (base @ vars)
     in
+    deps := sig_deps @ !deps;
     let arity = List.length base in
     let types = List.filteri (fun i _ -> i < arity) strings in
     let translated_signature = List.filteri (fun i _ -> i < arity) translated in
@@ -343,7 +423,7 @@ let collect_function (st : Js_ts_annot.state) type_env (id : Ident.t)
             | None -> (v, fresh))
           named
       in
-      let strings, _, _ =
+      let strings, _, _, _ =
         ts_of_signature ~env ~var type_env (List.map (substitute pairs) base)
       in
       strings
@@ -384,14 +464,23 @@ let collect_function (st : Js_ts_annot.state) type_env (id : Ident.t)
       | _ -> assert false
     in
     bind params optionals types
-  | _ -> ()
+  | _ ->
+    let strings, type_vars, _, val_deps =
+      ts_of_signature ~env:e.exp_env ~var:declaration_var type_env [e.exp_type]
+    in
+    if type_vars = [] then (
+      deps := val_deps @ !deps;
+      match strings with
+      | [ty] -> Hashtbl.replace st.values (Js_ts_annot.key_of id) ty
+      | _ -> ())
 
 let is_type_declaration (item : Typedtree.structure_item) =
   match item.str_desc with
   | Tstr_type _ -> true
   | _ -> false
 
-let header_of_structure ~module_name (str : Typedtree.structure) =
+let header_of_structure ~module_name ~deps (str : Typedtree.structure) =
+  let rel_path, ts_suffix = current_package_layout () in
   let config =
     {
       (config ()) with
@@ -400,7 +489,10 @@ let header_of_structure ~module_name (str : Typedtree.structure) =
     }
   in
   let type_env = Type_env.root () in
-  let output_file_relative = module_name ^ ".res.ts" in
+  let output_file_relative =
+    if rel_path = "" then module_name ^ ts_suffix
+    else Filename.concat rel_path (module_name ^ ts_suffix)
+  in
   let resolver =
     Module_resolver.create_lazy_resolver ~config
       ~extensions:[".res"; ".shim.ts"] ~exclude_file:(fun _ -> false)
@@ -412,6 +504,16 @@ let header_of_structure ~module_name (str : Typedtree.structure) =
     |> Translation.combine
     |> Translation.add_type_declarations_from_module_equations ~type_env
   in
+  let extra_import_types =
+    Translation.translate_dependencies ~config ~output_file_relative ~resolver
+      deps
+  in
+  let translation =
+    {
+      translation with
+      import_types = translation.import_types @ extra_import_types;
+    }
+  in
   Emit_js.emit_translation_as_string ~config
     ~file_name:(Module_name.from_string_unsafe module_name)
     ~output_file_relative ~resolver
@@ -422,11 +524,16 @@ let collect ~module_name (str : Typedtree.structure) =
   let st = Js_ts_annot.current () in
   Hashtbl.reset st.params;
   Hashtbl.reset st.results;
+  Hashtbl.reset st.values;
+  Hashtbl.reset st.locals;
+  Hashtbl.reset st.sroa_fields;
   Hashtbl.reset st.generics;
   Hashtbl.reset st.overloads;
+  Hashtbl.reset st.param_origin;
   Hashtbl.reset st.names;
   let type_env = Type_env.root () in
-  (* Functions of nested modules are printed at the top level too. *)
+  let deps = ref [] in
+  (* Functions and values of nested modules are printed at the top level too. *)
   let rec items (str : Typedtree.structure) =
     List.iter
       (fun (item : Typedtree.structure_item) ->
@@ -435,7 +542,8 @@ let collect ~module_name (str : Typedtree.structure) =
           List.iter
             (fun (vb : Typedtree.value_binding) ->
               match vb.vb_pat.pat_desc with
-              | Tpat_var (id, _) -> collect_function st type_env id vb.vb_expr
+              | Tpat_var (id, _) ->
+                collect_function st ~deps type_env id vb.vb_expr
               | _ -> ())
             vbs
         | Tstr_module {mb_expr = {mod_desc = Tmod_structure s}} -> items s
@@ -443,4 +551,4 @@ let collect ~module_name (str : Typedtree.structure) =
       str.str_items
   in
   items str;
-  st.header <- header_of_structure ~module_name str
+  st.header <- header_of_structure ~module_name ~deps:!deps str

@@ -110,6 +110,7 @@ let replace_block ~assignable ~block ~info ~initializers body =
     if not (analyze block uses body) then None
     else
       let fields = fields_for_block block info field_count in
+      Js_ts_annot.sroa_replace ~block ~fields;
       let body = rewrite block fields uses body in
       Array.iteri
         (fun index use ->

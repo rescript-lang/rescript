@@ -263,6 +263,13 @@ let pp_var_declare cxt f id =
   P.string f L.let_;
   P.space f;
   let acxt = Ext_pp_scope.ident cxt f id in
+  (if Js_ts_annot.enabled () then
+     match Js_ts_annot.local_type id with
+     | Some ty ->
+       P.string f ":";
+       P.space f;
+       P.string f ty
+     | None -> ());
   semi f;
   acxt
 
@@ -528,7 +535,8 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
           param_body ();
           semi f
         | Name_top x ->
-          let export = Js_ts_annot.export_inline x in
+          let printed, _ = Ext_pp_scope.str_of_ident inner_cxt x in
+          let export = Js_ts_annot.export_inline x ~printed in
           (* [-bs-emit-ts]: the function's overloads, each a declaration
              without a body before the function, which carries its own
              signature. An overload takes no [async]. *)
@@ -1248,7 +1256,7 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
   match variable with
   | {ident = i; value = None; ident_info; _} ->
     if ident_info.used_stats = Dead_pure then cxt else pp_var_declare cxt f i
-  | {ident = name; value = Some e; ident_info = {used_stats; _}} -> (
+  | {ident = name; value = Some e; property; ident_info = {used_stats; _}} -> (
     match used_stats with
     | Dead_pure -> cxt
     | Dead_non_pure ->
@@ -1273,7 +1281,42 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
         semi f;
         cxt
       | _ ->
-        let cxt = pp_var_assign cxt f name in
+        let cxt =
+          if top && Js_ts_annot.enabled () then (
+            let is_const = property <> Variable in
+            let printed, _ = Ext_pp_scope.str_of_ident cxt name in
+            if is_const && Js_ts_annot.export_inline name ~printed then (
+              P.string f L.export;
+              P.space f);
+            P.string f (if is_const then L.const_ else L.let_);
+            P.space f;
+            let cxt = Ext_pp_scope.ident cxt f name in
+            (match Js_ts_annot.value_type name with
+            | Some ty ->
+              P.string f ":";
+              P.space f;
+              P.string f ty
+            | None -> ());
+            P.space f;
+            P.string f L.eq;
+            P.space f;
+            cxt)
+          else if Js_ts_annot.enabled () then
+            match (e.expression_desc, Js_ts_annot.local_type name) with
+            | Undefined _, Some ty ->
+              P.string f L.let_;
+              P.space f;
+              let cxt = Ext_pp_scope.ident cxt f name in
+              P.string f ":";
+              P.space f;
+              P.string f ty;
+              P.space f;
+              P.string f L.eq;
+              P.space f;
+              cxt
+            | _ -> pp_var_assign cxt f name
+          else pp_var_assign cxt f name
+        in
         let cxt = expression ~level:1 cxt f e in
         semi f;
         cxt))
