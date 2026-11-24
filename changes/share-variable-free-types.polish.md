@@ -1,0 +1,1 @@
+- Compile values with large object or polymorphic variant types faster and write much smaller `.cmt` and `.cmi` files for them, by sharing the parts of their types that contain no type variable instead of copying them at every use.
