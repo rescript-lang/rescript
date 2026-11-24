@@ -233,8 +233,28 @@ let rec worker_loop pool =
    minor heap makes busy compiler workers stall each other. On a JSX-heavy
    project with 7 workers, 4M words (32 MB per worker) instead of 2M cut the
    collections by ~30% and clean-build CPU by ~10%, for ~200 MB more peak
-   memory. 8M added memory for little more speed. *)
-let worker_minor_heap_words = 4 * 1024 * 1024
+   memory. 8M added memory for little more speed.
+
+   For experiments, RESCRIPT_WORKER_MINOR_HEAP sets another size in words,
+   optionally with a k or M suffix (e.g. 16M). *)
+let worker_minor_heap_words =
+  let default = 4 * 1024 * 1024 in
+  match Sys.getenv_opt "RESCRIPT_WORKER_MINOR_HEAP" with
+  | None | Some "" -> default
+  | Some value -> (
+    let number, multiplier =
+      match value.[String.length value - 1] with
+      | 'k' | 'K' -> (String.sub value 0 (String.length value - 1), 1024)
+      | 'm' | 'M' -> (String.sub value 0 (String.length value - 1), 1024 * 1024)
+      | _ -> (value, 1)
+    in
+    match int_of_string_opt number with
+    | Some words when words > 0 -> words * multiplier
+    | _ ->
+      raise
+        (Error
+           ("RESCRIPT_WORKER_MINOR_HEAP must be a positive number of words, \
+             optionally with k or M, got " ^ value)))
 
 (* The words that finished workers allocated. The runtime's own report at exit
    (OCAMLRUNPARAM=v=0x400) counts only the main domain, so the compiler
