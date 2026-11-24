@@ -115,9 +115,17 @@ let task request =
       else run ())
 
 let run_tasks ?trace_label ?poll ?on_complete tasks =
-  Process.run_tasks ?trace_label
-    ~max_jobs:(Compiler_execution_mode.configured_count ())
-    ?poll ?on_complete tasks
+  match
+    Process.run_tasks ?trace_label
+      ~max_jobs:(Compiler_execution_mode.configured_count ())
+      ?poll ?on_complete tasks
+  with
+  | results ->
+    Background_writer.flush ();
+    results
+  | exception exn ->
+    Background_writer.flush_quietly ();
+    raise exn
 
 let run_requests requests = requests |> List.map task |> run_tasks
 
@@ -137,8 +145,11 @@ let is_held path =
    process, such as an editor, has the file open without delete sharing; the
    file is then written in place, and a write that fails removes its partial
    file. *)
-let write_held path contents =
-  try File_util.write_file_atomic ~ensure_parent:false path contents
+let write_held_now ~path contents =
+  (* On the background writer, the build file store keeps serving the new
+     contents until they are on disk *)
+  let forget = not Background_writer.enabled in
+  try File_util.write_file_atomic ~ensure_parent:false ~forget path contents
   with Sys_error _ | Unix.Unix_error _ -> (
     try File_util.write_file path contents
     with Sys_error message ->
@@ -147,6 +158,9 @@ let write_held path contents =
         (Sys_error
            (if String_util.contains message path then message
             else path ^ ": " ^ message)))
+
+let write_held path contents =
+  Background_writer.write ~write:write_held_now path contents
 
 let parse_request ~artifact_dir ~(config : Config.t) path =
   let contents =
@@ -188,12 +202,15 @@ type compiler_artifact = Cmi | Required of string | Typed_tree of string
 (* A typed tree marks its module compiled, so it is published last. Not every
    compile writes one (-bs-no-bin-annot). *)
 let publish_typed_tree path =
-  match
-    Build_file_store.publish_held ~if_changed:false ~write:write_held path
-  with
+  (* Once published, it is only read by gentype, which then finds it on disk,
+     so it leaves the store once it is written *)
+  let evict () = Build_file_store.evict path in
+  let write path contents =
+    Background_writer.write ~write:write_held_now ~after:evict path contents
+  in
+  match Build_file_store.publish_held ~if_changed:false ~write path with
   | exception Not_found -> ()
-  (* Once published, it is only read by gentype, which then finds it on disk. *)
-  | _ -> Build_file_store.evict path
+  | _ -> if not Background_writer.enabled then evict ()
 
 (* The compiler wrote the other artifacts into the artifact directory:
    interfaces are held until now and written only when they changed, which

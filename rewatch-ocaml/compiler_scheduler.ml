@@ -392,8 +392,11 @@ let run ~poll ~warning_state ~compile_assets ~build_state ~candidates
                 None)
             | None, (Interface _ | Implementation _ | Post_build _ | Done)
             | Some _, (Start | Done) ->
-              raise (Project_context.Error "invalid compiler scheduler state")))
+              raise (Project_context.Error "invalid compiler scheduler state")));
+      (* Outputs are on disk before anything after the build reads them *)
+      Background_writer.flush ()
     with exn -> (
+      Background_writer.flush_quietly ();
       reconcile_unconsumed_publications ();
       match exn with
       | Module_failed -> ()

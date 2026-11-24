@@ -28,6 +28,9 @@ val set_worker_slot : int -> unit
 (** Puts the current domain's spans on the track of worker [slot] (from 0).
     Domains that never call it use the main track. *)
 
+val set_writer_track : unit -> unit
+(** Puts the current domain's spans on the track of the background writer. *)
+
 val span :
   name:string ->
   ?args:(string * Yojson.Basic.t) list ->

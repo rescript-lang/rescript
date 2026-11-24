@@ -25,6 +25,11 @@ let slot_key : int option Domain.DLS.key = Domain.DLS.new_key (fun () -> None)
 
 let set_worker_slot slot = Domain.DLS.set slot_key (Some slot)
 
+(* Far above any worker slot *)
+let writer_track = 1000
+
+let set_writer_track () = Domain.DLS.set slot_key (Some (writer_track - 1))
+
 let track () =
   match Domain.DLS.get slot_key with
   | None -> 0
@@ -38,7 +43,11 @@ let events : Yojson.Basic.t list ref = ref []
 let named_tracks = Hashtbl.create 16
 
 let track_names tid =
-  let name = if tid = 0 then "main" else Printf.sprintf "worker %d" tid in
+  let name =
+    if tid = 0 then "main"
+    else if tid = writer_track then "writer"
+    else Printf.sprintf "worker %d" tid
+  in
   let metadata name args =
     `Assoc
       [
