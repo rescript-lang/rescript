@@ -86,6 +86,7 @@ fi
 ./compile/21-rebuild-dependency-for-package-specs.sh &&
 ./compile/22-qualified-own-namespace-dependency.sh &&
 ./compile/23-root-source-dir-rebuild.sh &&
+./compile/25-invalid-compiler-flags.sh &&
 ./compile/14-no-testrepo-changes.sh &&
 ./compile/15-no-new-files.sh &&
 ./compile/16-snapshots-unchanged.sh &&
