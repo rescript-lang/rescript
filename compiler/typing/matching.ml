@@ -640,7 +640,7 @@ let rec what_is_cases cases =
   | _ -> assert false
 
 (* A few operations on default environments *)
-let as_matrix cases = get_mins le_pats (List.map (fun (ps, _) -> ps) cases)
+let as_matrix cases = get_mins_pats (List.map (fun (ps, _) -> ps) cases)
 
 let cons_default matrix raise_num default =
   match matrix with
