@@ -345,3 +345,52 @@ let tests =
       check
         (signal_is_ignored Sys.sigterm)
         "SIGTERM handler is restored after polling fallback failure")
+
+(* After a build, the native watcher snapshots the sources to find what changed
+   and then snapshots them again as the baseline for the next round. An edit
+   between the two must still reach a build. The injected [discover] runs
+   between them and edits B after the initial build edited C. *)
+let edit_between_snapshots_tests =
+  "watcher_edit_between_snapshots" >:: fun _context ->
+  Test_support.with_temp_dir "rewatch-watch-edit-between-snapshots-"
+    (fun root ->
+      Test_support.write_file
+        (Filename.concat root "rescript.json")
+        {|{"name":"edit-between-snapshots","sources":"src"}|};
+      let source name = Filename.concat (Filename.concat root "src") name in
+      let b = source "B.res" and c = source "C.res" in
+      Test_support.write_file b "let value = 1\n";
+      Test_support.write_file c "let value = 1\n";
+      let edit_b = ref false in
+      let discover ~root ~prod ~features ~filter =
+        if !edit_b then (
+          edit_b := false;
+          Test_support.write_file b "let value = 22\n");
+        Watch_scope.discover ~root ~prod ~features ~filter
+      in
+      let rebuilt = ref None in
+      (try
+         Watcher.For_test.run_with_discover ~discover ~root ~prod:false
+           ~features:None ~filter:None ~clear_screen:false ~show_progress:false
+           ~verbosity:0 ~build:(fun ~poll:_ ~changes ->
+             match changes with
+             | None ->
+               Test_support.write_file c "let value = 22\n";
+               edit_b := true;
+               Watcher.Succeeded
+             | Some changes ->
+               rebuilt := Some changes;
+               raise Exit)
+       with Exit -> ());
+      match !rebuilt with
+      | None -> assert_failure "the watcher never rebuilt"
+      | Some changes ->
+        let modified path =
+          List.exists
+            (fun (change : Watcher.change) ->
+              change.path = path && change.kind = Modified)
+            changes
+        in
+        check (modified c) "the rebuild reports the edit of C";
+        check (modified b)
+          "the rebuild reports the edit of B made between the snapshots")
