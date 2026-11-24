@@ -28,6 +28,7 @@
   rescript_compiler_driver
   rescript_compiler_build_identity
   js_implementation
+  js_ts_collect
   ext_file_extensions)
  (instrumentation
   (backend bisect_ppx))

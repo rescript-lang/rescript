@@ -53,6 +53,7 @@ type t = {
   no_stdlib: bool ref;
   no_export: bool ref;
   as_pp: bool ref;
+  emit_ts: bool ref;
   self_stack: string Stack.t;
 }
 
@@ -82,6 +83,7 @@ let create () =
     no_stdlib = ref false;
     no_export = ref false;
     as_pp = ref false;
+    emit_ts = ref false;
     self_stack = Stack.create ();
   }
 

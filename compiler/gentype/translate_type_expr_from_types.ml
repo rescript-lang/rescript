@@ -465,6 +465,46 @@ let process_variant row_fields =
   in
   row_fields |> loop ~no_payloads:[] ~payloads:[] ~unknowns:[]
 
+(* The runtime's representation of [Some(v)] when [v] is [undefined] or
+   itself a marker: a frozen object holding the nesting depth
+   (Primitive_option.marker), at the type [depth]. *)
+let nested_option_marker depth =
+  Object
+    ( Closed,
+      [
+        {
+          mutable_ = Immutable;
+          name_js = "BS_PRIVATE_NESTED_SOME_NONE";
+          optional = Mandatory;
+          type_ = depth;
+          doc_string = Doc_string.empty;
+        };
+      ] )
+
+(* The payload of an option as the option's representation holds it: the
+   payload's type, joined with the marker of each depth [Some(v)] can be, a
+   literal type, or [number] where the depth is not known. *)
+let some_type ~config (payload : Types.type_expr) type_ =
+  let joined markers =
+    Variant
+      {
+        inherits = type_ :: markers;
+        no_payloads = [];
+        payloads = [];
+        polymorphic = false;
+        tag = None;
+        unboxed = false;
+      }
+  in
+  match config.Config.option_payload_markers payload with
+  | Config.No_markers | Config.Depths [] -> type_
+  | Config.Depths depths ->
+    joined
+      (List.map
+         (fun d -> nested_option_marker (ident (string_of_int d)))
+         depths)
+  | Config.Any_depth -> joined [nested_option_marker number_t]
+
 let rec translate_arrow_type ~config ~type_vars_gen ~type_env
     (params : Types.arg list) (ret : Types.type_expr) =
   let rev_arg_deps, rev_args =
@@ -490,6 +530,7 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env
             let {dependencies; type_ = type1} =
               t1 |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
             in
+            let type1 = some_type ~config t1 type1 in
             ( List.rev_append dependencies rev_arg_deps,
               (OptLabel lbl_txt, type1) :: rev_args )))
       ([], []) params
@@ -534,6 +575,14 @@ and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
   | Tconstr (path, [{desc = Tlink te}], r) ->
     {type_expr with desc = Types.Tconstr (path, [te], r)}
     |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+  | Tconstr (path, [payload], _) when Path.same path Predef.path_option ->
+    let translation =
+      payload |> translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
+    in
+    {
+      translation with
+      type_ = Option (some_type ~config payload translation.type_);
+    }
   | Tconstr (path, type_params, _) ->
     let params_translation =
       type_params
