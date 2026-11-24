@@ -1,0 +1,157 @@
+References src/IncludeDeclarationsUse.res 1:28
+[
+  {
+    "range": {
+      "end": { "character": 30, "line": 1 },
+      "start": { "character": 28, "line": 1 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 32, "line": 97 },
+      "start": { "character": 30, "line": 97 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 21, "line": 97 },
+      "start": { "character": 19, "line": 97 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 19, "line": 62 },
+      "start": { "character": 17, "line": 62 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 14, "line": 62 },
+      "start": { "character": 12, "line": 62 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  },
+  {
+    "range": {
+      "end": { "character": 8, "line": 52 },
+      "start": { "character": 6, "line": 52 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarationsUse.res 5:38
+[
+  {
+    "range": {
+      "end": { "character": 41, "line": 5 },
+      "start": { "character": 38, "line": 5 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 18, "line": 5 },
+      "start": { "character": 15, "line": 5 }
+    },
+    "uri": "file:///IncludeDeclarationsLib.res"
+  },
+  {
+    "range": {
+      "end": { "character": 13, "line": 25 },
+      "start": { "character": 10, "line": 25 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarationsUse.res 7:50
+[
+  {
+    "range": {
+      "end": { "character": 52, "line": 7 },
+      "start": { "character": 50, "line": 7 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 15, "line": 9 },
+      "start": { "character": 13, "line": 9 }
+    },
+    "uri": "file:///IncludeDeclarationsLib.res"
+  },
+  {
+    "range": {
+      "end": { "character": 12, "line": 32 },
+      "start": { "character": 10, "line": 32 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarationsUse.res 9:39
+[
+  {
+    "range": {
+      "end": { "character": 43, "line": 9 },
+      "start": { "character": 39, "line": 9 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 10, "line": 10 },
+      "start": { "character": 6, "line": 10 }
+    },
+    "uri": "file:///IncludeDeclarationsLib.res"
+  },
+  {
+    "range": {
+      "end": { "character": 12, "line": 34 },
+      "start": { "character": 8, "line": 34 }
+    },
+    "uri": "file:///IncludeDeclarations.res"
+  }
+]
+
+References src/IncludeDeclarationsUse.res 11:37
+[
+  {
+    "range": {
+      "end": { "character": 39, "line": 11 },
+      "start": { "character": 37, "line": 11 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 10, "line": 14 },
+      "start": { "character": 8, "line": 14 }
+    },
+    "uri": "file:///IncludeDeclarationsUnpack.res"
+  }
+]
+
+References src/IncludeDeclarationsUse.res 13:50
+[
+  {
+    "range": {
+      "end": { "character": 52, "line": 13 },
+      "start": { "character": 50, "line": 13 }
+    },
+    "uri": "file:///IncludeDeclarationsUse.res"
+  },
+  {
+    "range": {
+      "end": { "character": 13, "line": 16 },
+      "start": { "character": 11, "line": 16 }
+    },
+    "uri": "file:///IncludeDeclarationsUnpack.res"
+  }
+]
+
