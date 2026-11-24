@@ -116,6 +116,16 @@ let complete_pool_task pool completion =
       Queue.add completion pool.completed_tasks);
   Child.notify_completion pool.notifier
 
+(* A task's result handler publishes what it produced (for compiler requests,
+   the files they wrote), so the build trace shows it as a span of its own *)
+let handle_result task result =
+  if Build_trace.enabled then
+    let start = Build_trace.now () in
+    Fun.protect
+      ~finally:(fun () -> Build_trace.span ~name:"publish" ~start ())
+      (fun () -> task.on_result result)
+  else task.on_result result
+
 let run_concurrent_task pool payload task run cancel =
   let active, cancel_now =
     Child.with_lock pool.mutex (fun () ->
@@ -127,7 +137,7 @@ let run_concurrent_task pool payload task run cancel =
   let completion =
     try
       if cancel_now then cancel ();
-      Task_completed (payload, task.on_result (run ()))
+      Task_completed (payload, handle_result task (run ()))
     with exn -> Task_failed (payload, exn)
   in
   Child.with_lock pool.mutex (fun () ->
@@ -180,7 +190,7 @@ let run_pool_task pool payload task =
           remove_active pool active;
           try
             Child.release_running child;
-            Task_completed (payload, task.on_result result)
+            Task_completed (payload, handle_result task result)
           with exn -> Task_failed (payload, exn))
         | Error exn -> (
           let termination =

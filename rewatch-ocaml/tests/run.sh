@@ -2460,6 +2460,11 @@ TRACE=$(native_path "$build_trace/trace.json") node -e '
       fail(`no ${phase} span in ${name}`);
     if (end(child("type checking")) > child("code generation").ts)
       fail(`type checking overlaps code generation in ${name}`);
+    // Its outputs are published after it on the same track
+    if (!spans.some(event =>
+        event.name === "publish" && event.tid === request.tid &&
+        event.ts >= end(request)))
+      fail(`no publish span after ${name}`);
   }
   if (!spans.some(event => event.name === "start task" && event.tid === 0))
     fail("no scheduler step spans");

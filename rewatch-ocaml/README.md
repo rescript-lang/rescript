@@ -114,7 +114,8 @@ Perfetto (ui.perfetto.dev) to see it as a timeline:
   and categorized by phase (`parse`, `interface`, `implementation`,
   `namespace`, `format`). Its arguments hold the words the request allocated and the
   garbage collections that ran meanwhile. Implementations have child spans for
-  type checking and code generation.
+  type checking and code generation. A `publish` span follows each request,
+  for publishing the files it wrote.
 
 A relative path is relative to the current directory. A command that records
 nothing, such as `rescript clean`, leaves the file alone. A watch session keeps

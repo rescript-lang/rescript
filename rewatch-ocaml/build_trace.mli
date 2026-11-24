@@ -9,7 +9,9 @@
     - a track per worker slot, with a span per compiler request, named after
       its input file, that holds the request's allocations and the garbage
       collections during it as arguments, and, for implementations, child
-      spans for type checking and code generation.
+      spans for type checking and code generation; after it, a [publish] span
+      for the task's result handler, which publishes what the request
+      wrote.
 
     Times are whole microseconds. A command that records nothing leaves the
     file alone.
