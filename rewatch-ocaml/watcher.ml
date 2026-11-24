@@ -11,8 +11,9 @@ type fallback = {
   snapshot: Watch_snapshot.entry list;
 }
 
-let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
-    ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock =
+let run_locked ~native_create ~discover ~report_native_fallback ~root ~prod
+    ~features ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock
+    =
   (* The exit status of the signal that requested the stop, or 0. *)
   let stop_requested = Atomic.make 0 in
   let stop signal =
@@ -179,12 +180,12 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
     if keep_running () then
       let current = Watch_snapshot.create digest_cache scope in
       if not (Watch_snapshot.equal current previous) then (
-        let build_scope = Watch_scope.discover ~root ~prod ~features ~filter in
+        let build_scope = discover ~root ~prod ~features ~filter in
         let before_build = Watch_snapshot.create digest_cache build_scope in
         let changes = Watch_snapshot.changes_between previous before_build in
         start_rebuild changes;
         build ~poll ~changes:(Some changes) |> finish_rebuild;
-        let new_scope = Watch_scope.discover ~root ~prod ~features ~filter in
+        let new_scope = discover ~root ~prod ~features ~filter in
         let after_build = Watch_snapshot.create digest_cache new_scope in
         let baseline =
           Watch_snapshot.reconciliation_baseline ~old_scope:build_scope
@@ -204,7 +205,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
   let fallback_to_polling message snapshot =
     report_native_fallback message;
     ignore (build ~poll ~changes:None);
-    let scope = Watch_scope.discover ~root ~prod ~features ~filter in
+    let scope = discover ~root ~prod ~features ~filter in
     polling_loop scope snapshot
   in
   let rec native_loop watcher (scope : Watch_scope.t) symlink_targets previous =
@@ -234,15 +235,18 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
   and native_reconcile watcher (scope : Watch_scope.t) previous =
     let current = Watch_snapshot.create digest_cache scope in
     if not (Watch_snapshot.equal current previous) then (
-      let changes = Watch_snapshot.changes_between previous current in
-      start_rebuild changes;
-      let build_scope = Watch_scope.discover ~root ~prod ~features ~filter in
+      let build_scope = discover ~root ~prod ~features ~filter in
       let before_build = Watch_snapshot.create digest_cache build_scope in
+      (* Report the changes up to the snapshot that becomes the next baseline.
+         An edit landing after [current] was taken is already part of
+         [before_build], so it would otherwise never be reported to a build. *)
+      let changes = Watch_snapshot.changes_between previous before_build in
+      start_rebuild changes;
       build ~poll ~changes:(Some changes) |> finish_rebuild;
       reconcile_scope watcher ~old_scope:build_scope ~before:before_build)
     else reconcile_scope watcher ~old_scope:scope ~before:current
   and reconcile_scope watcher ~(old_scope : Watch_scope.t) ~before =
-    let new_scope = Watch_scope.discover ~root ~prod ~features ~filter in
+    let new_scope = discover ~root ~prod ~features ~filter in
     match Watch_snapshot.create_with_symlink_paths digest_cache new_scope with
     | Watch_snapshot.Registration_failed {snapshot; message} ->
       let snapshot =
@@ -271,7 +275,7 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
          else "\nExiting... (lockfile removed)")
   in
   let watch () =
-    let scope = Watch_scope.discover ~root ~prod ~features ~filter in
+    let scope = discover ~root ~prod ~features ~filter in
     match Watch_snapshot.create_with_symlink_paths digest_cache scope with
     | Watch_snapshot.Registration_failed {snapshot; message} ->
       fallback_to_polling message snapshot
@@ -317,16 +321,19 @@ let run_locked ~native_create ~report_native_fallback ~root ~prod ~features
         report_exit ();
         stopped ())
 
-let run_with_native_create ~native_create ~report_native_fallback ~root ~prod
-    ~features ~filter ~clear_screen ~show_progress ~verbosity ~build =
+(* [native_create] and [discover] are replaced in tests *)
+let run_with_native_create ~native_create ~discover ~report_native_fallback
+    ~root ~prod ~features ~filter ~clear_screen ~show_progress ~verbosity ~build
+    =
   Build_lock.with_watch root
     ~running:
       (Printf.sprintf
          "Could not start ReScript build: A ReScript build is already running. \
           The process ID (PID) is %s") (fun watch_lock ->
       ignore (Config.load_root root);
-      run_locked ~native_create ~report_native_fallback ~root ~prod ~features
-        ~filter ~clear_screen ~show_progress ~verbosity ~build ~watch_lock)
+      run_locked ~native_create ~discover ~report_native_fallback ~root ~prod
+        ~features ~filter ~clear_screen ~show_progress ~verbosity ~build
+        ~watch_lock)
 
 let report_native_fallback message =
   prerr_endline
@@ -335,11 +342,15 @@ let report_native_fallback message =
 
 let run =
   run_with_native_create ~native_create:Native_watcher.create
-    ~report_native_fallback
+    ~discover:Watch_scope.discover ~report_native_fallback
 
 module For_test = struct
   let run_with_native_failure ~message ~on_fallback =
     run_with_native_create
       ~native_create:(fun ~paths:_ -> Error message)
-      ~report_native_fallback:on_fallback
+      ~discover:Watch_scope.discover ~report_native_fallback:on_fallback
+
+  let run_with_discover ~discover =
+    run_with_native_create ~native_create:Native_watcher.create ~discover
+      ~report_native_fallback
 end

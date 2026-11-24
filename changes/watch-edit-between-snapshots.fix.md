@@ -1,0 +1,1 @@
+- Fix watch mode sometimes ignoring a file saved right after a rebuild started.

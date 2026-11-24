@@ -28,4 +28,5 @@ let () =
            Unit_tests.tests;
            Warning_state_tests.tests;
            Watcher_tests.tests;
+           Watcher_tests.edit_between_snapshots_tests;
          ])

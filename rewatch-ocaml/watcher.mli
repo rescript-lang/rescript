@@ -17,6 +17,25 @@ module For_test : sig
     verbosity:int ->
     build:(poll:(unit -> unit) -> changes:change list option -> build_result) ->
     unit
+
+  val run_with_discover :
+    discover:
+      (root:string ->
+      prod:bool ->
+      features:string list option ->
+      filter:Source_filter.t option ->
+      Watch_scope.t) ->
+    root:string ->
+    prod:bool ->
+    features:string list option ->
+    filter:Source_filter.t option ->
+    clear_screen:bool ->
+    show_progress:bool ->
+    verbosity:int ->
+    build:(poll:(unit -> unit) -> changes:change list option -> build_result) ->
+    unit
+  (** {!run} with [discover] in place of [Watch_scope.discover], to change
+      files at the moments the watcher looks for them. *)
 end
 
 val run :
