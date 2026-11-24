@@ -50,6 +50,7 @@ let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =
     ~setpgid:Spawn.Pgid.new_process_group ()
 
 let null_device = "/dev/null"
+let set_file_permissions = Unix.fchmod
 
 let current_process_id = Unix.getpid
 let process_id process = process

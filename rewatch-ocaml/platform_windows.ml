@@ -160,6 +160,9 @@ let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =
 
 let null_device = "NUL"
 
+(* Unix.fchmod is not implemented on Windows. *)
+let set_file_permissions _descriptor _permissions = ()
+
 external current_process_id : unit -> int = "rewatch_windows_current_process_id"
 
 let process_id process = process.wait_id

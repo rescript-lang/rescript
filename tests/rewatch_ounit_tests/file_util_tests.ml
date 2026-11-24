@@ -9,8 +9,7 @@ let write_file path contents =
     ~finally:(fun () -> close_out_noerr channel)
     (fun () -> output_string channel contents)
 
-let tests =
-  "file_util_tests" >:: fun _context ->
+let general_tests _context =
   let root = Filename.temp_file "rewatch-file-util-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
@@ -139,3 +138,70 @@ let tests =
       check
         (not (Sys.file_exists first))
         "removing an existing or already-missing file should be idempotent")
+
+let temporary_files directory =
+  Sys.readdir directory |> Array.to_list
+  |> List.filter (String.starts_with ~prefix:File_util.atomic_write_prefix)
+
+let raises action =
+  try
+    action ();
+    false
+  with Sys_error _ | Unix.Unix_error _ -> true
+
+let atomic_write_tests _context =
+  Test_support.with_temp_dir "rewatch-atomic-write-" (fun root ->
+      let created = Test_support.path root "nested/created" in
+      File_util.write_file_atomic created "first";
+      assert_equal "first"
+        (File_util.read_file created)
+        ~msg:"an atomic write creates the file and its parent directories";
+      File_util.write_file_atomic ~ensure_parent:false created "";
+      assert_equal ""
+        (File_util.read_file created)
+        ~msg:"an atomic write replaces a file with empty contents";
+      let large =
+        String.init 200_000 (fun index -> Char.chr (index land 255))
+      in
+      File_util.write_file_atomic ~ensure_parent:false created large;
+      check
+        (File_util.read_file created = large)
+        "an atomic write publishes contents larger than one write chunk";
+      if not Sys.win32 then (
+        (* The umask applies when the temporary file is created, but artifacts
+           stay readable by everyone as before. *)
+        let previous = Unix.umask 0o077 in
+        Fun.protect
+          ~finally:(fun () -> ignore (Unix.umask previous))
+          (fun () ->
+            File_util.write_file_atomic ~ensure_parent:false created "masked");
+        assert_equal 0o644 (Unix.stat created).Unix.st_perm
+          ~printer:(Printf.sprintf "%o")
+          ~msg:"an atomic write publishes 0644 regardless of the umask");
+      check
+        (temporary_files (Filename.dirname created) = [])
+        "successful atomic writes leave no temporary file";
+      let missing_parent = Test_support.path root "missing/file" in
+      check
+        (raises (fun () ->
+             File_util.write_file_atomic ~ensure_parent:false missing_parent
+               "contents"))
+        "an atomic write into a missing directory fails";
+      let occupied = Filename.concat root "occupied" in
+      Unix.mkdir occupied 0o755;
+      Test_support.write_file (Filename.concat occupied "entry") "entry";
+      check
+        (raises (fun () ->
+             File_util.write_file_atomic ~ensure_parent:false occupied
+               "contents"))
+        "an atomic write over a directory fails";
+      check
+        (Sys.is_directory occupied)
+        "a failed atomic write leaves the destination in place";
+      check
+        (temporary_files root = [])
+        "a failed atomic write removes its temporary file")
+
+let tests =
+  "file_util_tests"
+  >::: ["general" >:: general_tests; "atomic_write" >:: atomic_write_tests]
