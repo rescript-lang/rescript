@@ -10,8 +10,7 @@
 (*                                                                     *)
 (***********************************************************************)
 
-let absname_key = Request_local.new_key (fun () -> ref false)
-let absname () = Domain.DLS.get absname_key
+let absname = Compile_request.absname
 exception Request_exit of int
 
 module Error_message_utils_support = struct
@@ -56,8 +55,6 @@ let set_abs_input_name sourcefile =
   in
   Loc_report.set_input_name sourcefile;
   sourcefile
-
-let setup_runtime_path path = Runtime_package.set_path path
 
 let process_file sourcefile ppf =
   (* The input name must identify the source when writing the binary AST. *)
@@ -178,11 +175,6 @@ let format_file input =
   | None -> Compiler_request_output.write_stdout_binary formatted
   | Some fname -> File_io.write_file fname formatted
 
-let set_color_option option =
-  match Clflags.parse_color_setting option with
-  | None -> ()
-  | Some setting -> (Clflags.current ()).color := Some setting
-
 (* The temporary file is made absolute: a relative temporary directory names a
    directory under the process's working directory, while a request resolves
    relative paths against its own. *)
@@ -208,316 +200,6 @@ let print_version_string () =
   Compiler_request_output.print_stdout bs_version_string;
   raise_notrace (Request_exit 0)
 
-let[@inline] set s : Bsc_args.spec = Unit (Unit_set s)
-let[@inline] clear s : Bsc_args.spec = Unit (Unit_clear s)
-let[@inline] string_call s : Bsc_args.spec = String (String_call s)
-let[@inline] string_optional_set s : Bsc_args.spec =
-  String (String_optional_set s)
-
-let[@inline] unit_call s : Bsc_args.spec = Unit (Unit_call s)
-let[@inline] string_list_add s : Bsc_args.spec = String (String_list_add s)
-
-let parse_source_map value =
-  (Js_config.current ()).source_map :=
-    match String.lowercase_ascii value with
-    | "linked" -> Linked
-    | "inline" -> Inline
-    | "hidden" -> Hidden
-    | "false" | "none" -> No_source_map
-    | value ->
-      Bsc_args.bad_arg
-        ("Unsupported sourceMap value: " ^ value
-       ^ ". Expected linked, inline, hidden, false, or none")
-
-let parse_bool_ref target value =
-  target :=
-    match String.lowercase_ascii value with
-    | "true" -> true
-    | "false" -> false
-    | value -> Bsc_args.bad_arg ("Expected true or false, got: " ^ value)
-
-(* mostly common used to list in the beginning to make search fast
-*)
-let command_line_flags () : (string * Bsc_args.spec * string) array =
-  [|
-    ( "-I",
-      string_list_add (Clflags.current ()).include_dirs,
-      "*internal* <dir>  Add <dir> to the list of include directories" );
-    ( "-w",
-      string_call (Warnings.parse_options false),
-      "<list>  Enable or disable warnings according to <list>:\n\
-       +<spec>   enable warnings in <spec>\n\
-       -<spec>   disable warnings in <spec>\n\
-       @<spec>   enable warnings in <spec> and treat them as errors\n\
-       <spec> can be:\n\
-       <num>             a single warning number\n\
-       <num1>..<num2>    a range of consecutive warning numbers\n\
-       default setting is " ^ Bsc_warnings.defaults_w );
-    ( "-o",
-      string_optional_set (Clflags.current ()).output_name,
-      "*internal* <file>  set output file name to <file>" );
-    ( "-bs-read-cmi",
-      unit_call (fun _ -> (Clflags.current ()).assume_no_mli := Mli_exists),
-      "*internal* Assume mli always exist " );
-    ( "-ppx",
-      string_list_add (Clflags.current ()).all_ppx,
-      "*internal* <command>  Pipe abstract syntax trees through preprocessor \
-       <command>" );
-    ( "-open",
-      string_list_add (Clflags.current ()).open_modules,
-      "*internal* <module>  Opens the module <module> before typing" );
-    ( "-bs-jsx",
-      string_call (fun i ->
-          if i <> "4" then Bsc_args.bad_arg ("Unsupported jsx version: " ^ i);
-          (Js_config.current ()).jsx_version :=
-            Js_config.jsx_version_of_int @@ int_of_string i),
-      "*internal* Set jsx version" );
-    ( "-bs-jsx-module",
-      string_call (fun i ->
-          let is_generic =
-            match i |> String.lowercase_ascii with
-            | "react" -> false
-            | _ -> true
-          in
-          (Js_config.current ()).jsx_module := Js_config.jsx_module_of_string i;
-          if is_generic then (Js_config.current ()).jsx_version := Some Jsx_v4),
-      "*internal* Set jsx module" );
-    ( "-bs-jsx-mode",
-      string_call ignore,
-      "*internal* Set jsx mode, this is no longer used and is a no-op." );
-    ( "-bs-jsx-preserve",
-      set (Clflags.current ()).jsx_preserve,
-      "*internal* Preserve jsx" );
-    ( "-bs-source-map",
-      string_call parse_source_map,
-      "*internal* Configure source map output" );
-    ( "-bs-source-map-sources-content",
-      string_call
-        (parse_bool_ref (Js_config.current ()).source_map_sources_content),
-      "*internal* Include original source text in source maps" );
-    ( "-bs-source-map-root",
-      string_call (fun value -> (Js_config.current ()).source_map_root := value),
-      "*internal* Set sourceRoot in source maps" );
-    ( "-bs-package-output",
-      string_call Js_packages_state.update_npm_package_path,
-      "*internal* Set npm-output-path: [opt_module]:path, for example: \
-       'lib/cjs', 'amdjs:lib/amdjs', 'es6:lib/es6' " );
-    ( "-bs-project-root",
-      string_call (fun s ->
-          (* Writers open paths under the root without resolving them against
-             the request's working directory, so make it absolute here. *)
-          let root = Ext_path.absolute_cwd_path s in
-          Ext_path.set_project_root root;
-          Gentype_config.project_root () := root),
-      "*internal* Set the project root directory" );
-    ( "-bs-ast",
-      unit_call (fun _ ->
-          (Js_config.current ()).binary_ast := true;
-          (Js_config.current ()).syntax_only := true),
-      "*internal* Generate binary .mli_ast and ml_ast and stop" );
-    ( "-bs-test-ast-conversion",
-      set (Js_config.current ()).test_ast_conversion,
-      "*internal* Roundtrip the parsed AST through Parsetree0 before continuing"
-    );
-    ( "-bs-syntax-only",
-      set (Js_config.current ()).syntax_only,
-      "*internal* Only check syntax" );
-    ("-bs-g", set (Js_config.current ()).debug, "Debug mode");
-    ( "-bs-package-name",
-      string_call Js_packages_state.set_package_name,
-      "*internal* Set package name, useful when you want to produce npm \
-       packages" );
-    ( "-bs-ns",
-      string_call Js_packages_state.set_package_map,
-      "*internal* Set package map, not only set package name but also use it \
-       as a namespace" );
-    ( "-as-pp",
-      unit_call (fun _ ->
-          (Js_config.current ()).as_pp := true;
-          (Js_config.current ()).syntax_only := true),
-      "*internal*As pp to interact with native tools" );
-    ( "-no-alias-deps",
-      set (Clflags.current ()).transparent_modules,
-      "*internal*Do not record dependencies for module aliases" );
-    ( "-bs-gentype",
-      set (Clflags.current ()).bs_gentype,
-      "*internal* Pass gentype command" );
-    ( "-bs-gentype-module",
-      string_call (fun s ->
-          Gentype_config.module_flag () := Gentype_config.module_of_string s),
-      "*internal* Set gentype module system: commonjs|esmodule" );
-    ( "-bs-gentype-module-resolution",
-      string_call (fun s ->
-          Gentype_config.module_resolution_flag ()
-          := Gentype_config.module_resolution_of_string s),
-      "*internal* Set gentype module resolution strategy: node|node16|bundler"
-    );
-    ( "-bs-gentype-export-interfaces",
-      set (Gentype_config.export_interfaces_flag ()),
-      "*internal* Emit gentype interface files" );
-    ( "-bs-gentype-generated-extension",
-      string_call (fun s ->
-          Gentype_config.generated_file_extension_flag () := Some s),
-      "*internal* Set gentype generated-file extension (e.g. .gen.tsx)" );
-    ( "-bs-gentype-suffix",
-      string_call (fun s -> Gentype_config.suffix_flag () := Some s),
-      "*internal* Set gentype import-path suffix (e.g. .bs.js, .mjs)" );
-    ( "-bs-gentype-shim",
-      string_call Gentype_config.add_shim,
-      "*internal* Register a gentype shim mapping: From=To (repeatable)" );
-    ( "-bs-gentype-debug",
-      string_call Debug.set_item,
-      "*internal* Enable a gentype debug category (repeatable): \
-       all|basic|codeItems|config|converter|dependencies|moduleResolution|notImplemented|translation|typeEnv|typeResolution"
-    );
-    ( "-bs-gentype-dep",
-      string_call Gentype_config.add_bs_dependency,
-      "*internal* Register a gentype bsb dependency (repeatable)" );
-    ( "-bs-gentype-source-dir",
-      string_call Gentype_config.add_source_dir,
-      "*internal* Register a gentype source directory relative to the project \
-       root (repeatable)" );
-    ( "-bs-gentype-dep-path",
-      string_call Gentype_config.add_dep_path,
-      "*internal* Register a gentype dependency install path: \
-       <name>=<absolute-path> (repeatable)" );
-    ( "-bs-gentype-bsb-project-root",
-      string_call (fun s -> Gentype_config.bsb_project_root () := s),
-      "*internal* Set gentype bsb project root (workspace root containing \
-       .sourcedirs.json)" );
-    (******************************************************************************)
-    ( "-nostdlib",
-      set (Js_config.current ()).no_stdlib,
-      "*internal* Don't use stdlib" );
-    ( "-color",
-      string_call set_color_option,
-      "*internal* Enable or disable colors in compiler messages\n\
-       The following settings are supported:\n\
-       auto    use heuristics to enable colors only if supported\n\
-       always  enable colors\n\
-       never   disable colors\n\
-       The default setting is 'always'\n\
-       The current heuristic for 'auto'\n\
-       checks that the TERM environment variable exists and is\n\
-       not empty or \"dumb\", and that isatty(stderr) holds." );
-    ( "-e",
-      string_call (fun s -> eval s ~suffix:Literals.suffix_res),
-      "(experimental) set the string to be evaluated in ReScript syntax" );
-    ( "-bs-cmi-only",
-      set (Js_config.current ()).cmi_only,
-      "*internal* Stop after generating cmi file" );
-    ( "-bs-cmi",
-      set (Js_config.current ()).force_cmi,
-      "*internal*  Not using cached cmi, always generate cmi" );
-    ( "-bs-cmj",
-      set (Js_config.current ()).force_cmj,
-      "*internal*  Not using cached cmj, always generate cmj" );
-    ( "-bs-no-version-header",
-      set (Js_config.current ()).no_version_header,
-      "*internal*Don't print version header" );
-    ( "-bs-no-builtin-ppx",
-      set (Js_config.current ()).no_builtin_ppx,
-      "*internal* Disable built-in ppx" );
-    ( "-bs-cross-module-opt",
-      set (Js_config.current ()).cross_module_inline,
-      "*internal* Enable cross module inlining(experimental), default(false)" );
-    ( "-bs-no-cross-module-opt",
-      clear (Js_config.current ()).cross_module_inline,
-      "*internal* Disable cross module inlining(experimental)" );
-    ( "-debug-ir",
-      set (Js_config.current ()).debug_ir,
-      "*internal* Dump compiler IR and enable Lambda invariant checks" );
-    ( "-check-lam",
-      set (Js_config.current ()).check_lam,
-      "*internal* Check Lambda invariants after optimization passes" );
-    ( "-bs-no-check-div-by-zero",
-      clear (Js_config.current ()).check_div_by_zero,
-      "*internal* unsafe mode, don't check div by zero and mod by zero" );
-    ( "-bs-noassertfalse",
-      set (Clflags.current ()).no_assert_false,
-      "*internal*  no code for assert false" );
-    ( "-noassert",
-      set (Clflags.current ()).noassert,
-      "*internal* Do not compile assertion checks" );
-    ( "-bs-loc",
-      set (Clflags.current ()).dump_location,
-      "*internal*  dont display location with -dtypedtree, -dparsetree" );
-    ( "-dtypedtree",
-      set (Clflags.current ()).dump_typedtree,
-      "*internal* debug typedtree" );
-    ( "-dparsetree",
-      set (Clflags.current ()).dump_parsetree,
-      "*internal* debug parsetree" );
-    ( "-drawlambda",
-      set (Clflags.current ()).dump_rawlambda,
-      "*internal* debug raw lambda" );
-    ( "-draw-coercions",
-      set (Clflags.current ()).dump_coercions,
-      "*internal* debug module coercions with raw internal types" );
-    ("-dsource", set (Clflags.current ()).dump_source, "*internal* print source");
-    ( "-reprint-source",
-      string_call reprint_source_file,
-      "*internal* transform the target ReScript file using PPXes provided, and \
-       print the transformed ReScript code to stdout" );
-    ("-format", string_call format_file, "*internal* Format as Res syntax");
-    ( "-only-parse",
-      set (Clflags.current ()).only_parse,
-      "*internal* stop after parsing" );
-    ( "-editor-mode",
-      unit_call (fun () ->
-          (Clflags.current ()).ignore_parse_errors := true;
-          (Js_config.current ()).cmi_only := true),
-      "*internal* Enable editor mode." );
-    ( "-ignore-parse-errors",
-      set (Clflags.current ()).ignore_parse_errors,
-      "*internal* continue after parse errors" );
-    ( "-verbose",
-      set (Clflags.current ()).verbose,
-      "*internal* Print calls to external commands" );
-    ( "-keep-locs",
-      set (Clflags.current ()).keep_locs,
-      "*internal* Keep locations in .cmi files" );
-    ( "-no-keep-locs",
-      clear (Clflags.current ()).keep_locs,
-      "*internal* Do not keep locations in .cmi files" );
-    ("-nopervasives", set (Clflags.current ()).nopervasives, "*internal*");
-    ( "-v",
-      unit_call print_version_string,
-      "Print compiler version and location of standard library and exit" );
-    ("-version", unit_call print_version_string, "Print version and exit");
-    ( "-absname",
-      set (absname ()),
-      "*internal* Show absolute filenames in error messages" );
-    ( "-enable-experimental",
-      string_call Experimental_features.enable_from_string,
-      "Enable experimental features: repeatable, e.g. -enable-experimental \
-       LetUnwrap" );
-    (* Not used, the build system did the expansion *)
-    ( "-bs-no-bin-annot",
-      clear (Clflags.current ()).binary_annotations,
-      "*internal* Disable binary annotations (by default on)" );
-    ( "-short-paths",
-      clear (Clflags.current ()).real_paths,
-      "*internal* Shorten paths in types" );
-    ("-unsafe", Unit_dummy, "*internal* No longer used and is a no-op.");
-    ( "-runtime-path",
-      string_call setup_runtime_path,
-      "*internal* Set the path of the runtime package (@rescript/runtime)" );
-    ( "-warn-help",
-      unit_call (fun () ->
-          Warnings.help_warnings ();
-          raise_notrace (Request_exit 0)),
-      "Show description of warning numbers" );
-    ( "-warn-error",
-      string_call (Warnings.parse_options true),
-      "<list>  Enable or disable error status for warnings according\n\
-       to <list>.  See option -w for the syntax of <list>.\n\
-       Default setting is " ^ Bsc_warnings.defaults_warn_error );
-    ( "-make-runtime",
-      unit_call Js_packages_state.make_runtime,
-      "*internal* make runtime library" );
-  |]
-
 type flag_error =
   | Unknown_flag of string
   | Missing_argument of string
@@ -527,20 +209,19 @@ type flag_error =
 (* Walks [flags] as the parser does, without applying them: some flags print,
    exit or compile a file. *)
 let check_flags ~reserved flags =
-  let table = command_line_flags () in
   let rec check = function
     | [] -> Ok ()
     | flag :: rest -> (
       if flag = "" || flag.[0] <> '-' then Error (Not_a_flag flag)
       else if List.mem flag reserved then Error (Reserved_flag flag)
       else
-        match Ext_spec.assoc3 table flag with
+        match Compile_request.takes_value flag with
         | None -> Error (Unknown_flag flag)
-        | Some (Bsc_args.Unit_dummy | Unit _) -> check rest
-        | Some (String _) -> (
+        | Some false -> check rest
+        | Some true -> (
           match rest with
           | [] -> Error (Missing_argument flag)
-          | _argument :: rest -> check rest))
+          | _value :: rest -> check rest))
   in
   check flags
 
@@ -559,11 +240,13 @@ let file_level_flags_handler (e : Parsetree.expression option) =
                Loc_report.raise_errorf ~loc:e.pexp_loc "string literal expected")
            args)
     in
-    try
-      Bsc_args.parse_exn ~start:0 ~argv:args (command_line_flags ())
-        (fun ~rev_args:_ -> ())
-        ~usage
-    with _ ->
+    match Compile_request.of_argv (Array.to_list args) with
+    | Ok {request; commands = []} -> (
+      try Compile_request.apply request
+      with Bsc_args.Bad _ ->
+        Loc_report.prerr_warning pexp_loc (Preprocessor "invalid flags for bsc")
+      )
+    | Ok _ | Error _ ->
       Loc_report.prerr_warning pexp_loc (Preprocessor "invalid flags for bsc"))
   | Some e -> Loc_report.raise_errorf ~loc:e.pexp_loc "string array expected"
 
@@ -614,12 +297,45 @@ let with_fresh_request_states ~cwd action =
                   Compiler_request_state.with_fresh ~cwd (fun () ->
                       leave_cached_interfaces_clean action)))))
 
+let usage_text () =
+  Bsc_args.usage_string ~usage (Compile_request.usage_entries ())
+
+let run_command (command : Compile_request.command) =
+  match command with
+  | Eval source -> eval source ~suffix:Literals.suffix_res
+  | Print_version -> print_version_string ()
+  | Warn_help ->
+    Warnings.help_warnings ();
+    raise_notrace (Request_exit 0)
+  | Format file -> format_file file
+  | Reprint_source file -> reprint_source_file file
+  | Help -> raise_notrace (Bsc_args.Help (usage_text ()))
+
+let run_command_line argv =
+  let argv = Array.to_list argv |> List.tl in
+  match Compile_request.of_argv argv with
+  | Error error ->
+    let message =
+      match error with
+      | Unknown_flag flag ->
+        "Unknown option \"" ^ flag ^ "\".\n" ^ usage_text ()
+      | Missing_value flag ->
+        "Option \"" ^ flag ^ "\" needs an argument.\n" ^ usage_text ()
+      | Invalid_flag_value {message} -> message
+    in
+    Bsc_args.bad_arg message
+  | Ok {request; commands; arguments} ->
+    if List.mem Compile_request.Help commands then run_command Help;
+    Compile_request.apply request;
+    List.iter run_command commands;
+    anonymous ~rev_args:(List.rev arguments)
+
 let run_argv ?run_external ~capture ~cwd argv =
   with_fresh_request_states ~cwd (fun () ->
       start_request ();
       let execute () =
         try
-          Bsc_args.parse_exn ~argv (command_line_flags ()) anonymous ~usage;
+          run_command_line argv;
           0
         with
         | Request_exit code -> code

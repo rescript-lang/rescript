@@ -39,6 +39,7 @@ let suites =
       Ounit_typeopt_tests.suites;
       Ounit_gentype_tests.suites;
       Ounit_compiler_request_tests.suites;
+      Ounit_compile_request_tests.suites;
       Ounit_find_in_path_tests.suites;
       Ounit_build_file_store_tests.suites;
       Ounit_deferred_signature_tests.suites;

@@ -25,6 +25,7 @@
   (:standard -open Rescript_ast -open Rescript_printer -open Rescript_parser))
  (wrapped false)
  (modules
+  compile_request
   rescript_compiler_driver
   rescript_compiler_build_identity
   js_implementation
