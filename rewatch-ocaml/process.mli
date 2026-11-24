@@ -38,14 +38,17 @@ type failure_action =
   | Continue_independent_work
 
 val run_dependency_graph :
+  ?trace_label:string ->
   ?max_jobs:int ->
   ?on_failure:(exn -> failure_action) ->
   ?poll:(unit -> unit) ->
   'a work list ->
   next:('a -> result option -> task option) ->
   unit
+(** [trace_label] names the graph in the build trace ({!Build_trace}). *)
 
 val run_tasks :
+  ?trace_label:string ->
   ?max_jobs:int ->
   ?poll:(unit -> unit) ->
   ?on_complete:(int -> unit) ->

@@ -110,6 +110,7 @@ let compiler_common_arguments ~project_root ~(config : Config.t) ~runtime
   @ compiler_flags ~watch config
   @ gentype_dependency_args
   @ ["-bs-package-name"; config.name; "-bs-project-root"; project_root]
+  @ if No_artifacts.enabled then ["-bs-no-bin-annot"] else []
 
 let compiler_arguments_with_common ~(config : Config.t) ~common_args
     ~module_name ~source_kind ~has_interface ~path =

@@ -36,15 +36,5 @@ let unmarshal contents offset =
   then raise End_of_file
   else Marshal.from_string contents offset
 
-let rev_lines_of_chann chan =
-  let rec loop acc chan =
-    match input_line chan with
-    | line -> loop (line :: acc) chan
-    | exception End_of_file ->
-      close_in chan;
-      acc
-  in
-  loop [] chan
-
 let write_file f content =
   Build_file_store.write (Compiler_request_state.resolve_path f) content

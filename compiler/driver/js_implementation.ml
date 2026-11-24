@@ -134,6 +134,7 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
           (Loc_report.get_input_name ())
           outputprefix modulename env ast
       in
+      Compile_phase_hook.typing_finished ();
       let typedtree_coercion = (typedtree, coercion) in
       print_if ppf (Clflags.current ()).dump_typedtree
         Printtyped.implementation_with_coercion typedtree_coercion;
@@ -183,10 +184,16 @@ let make_structure_item ~ns cunit : Parsetree.structure_item =
 *)
 let implementation_map ppf sourcefile =
   let () = (Js_config.current ()).cmj_only := true in
-  let ichan = open_in_bin (Compiler_request_state.resolve_path sourcefile) in
-  seek_in ichan (Ext_digest.length + 1);
-  let list_of_modules = File_io.rev_lines_of_chann ichan in
-  close_in ichan;
+  (* Read through the build file store, which may keep the map in memory
+     only. *)
+  let contents = File_io.load_file sourcefile in
+  let header = Ext_digest.length + 1 in
+  let list_of_modules =
+    if String.length contents <= header then []
+    else
+      String.sub contents header (String.length contents - header)
+      |> String.split_on_char '\n' |> List.rev
+  in
   let ns = Ext_filename.module_name (Filename.remove_extension sourcefile) in
   let ml_ast =
     List.fold_left

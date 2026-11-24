@@ -59,17 +59,48 @@ val set_held_writes : (string -> bool) -> unit
     this way, so that one is written to disk only after its compile succeeded,
     and only when it changed. Install it before requests run. *)
 
+val set_memory_only : (string -> bool) -> unit
+(** While the store is enabled, the paths the predicate selects (by their
+    {!key}) live in memory only: writes and {!publish_held} keep them instead
+    of writing them to disk, a read of one that was never written finds
+    nothing instead of reading the disk, and {!with_build} keeps them for the
+    next build instead of emptying them. Each has a modification time, given
+    when it is written or published changed, which {!modified} reads. A build
+    system that writes no artifacts installs it before its first build. *)
+
+val modified : string -> float option
+(** [modified path] is the modification time of [path] when it is kept in
+    memory only. *)
+
+val set_modified : string -> float -> unit
+(** [set_modified path time] dates [path], kept in memory only, back or
+    forward, like [Unix.utimes]. *)
+
+val touch : string -> unit
+(** [touch path] gives [path] a new modification time, keeping it in memory
+    only, empty unless it was kept already. *)
+
+val memory_files : unit -> (string * float) list
+(** The keys and modification times of the paths kept in memory only. *)
+
 val publish_held :
   if_changed:bool -> write:(string -> string -> unit) -> string -> bool
 (** [publish_held ~if_changed ~write path] calls [write path contents] with the
     held contents of [path], keeps them for later reads, and returns whether it
     wrote them. With [if_changed], it writes them only when they differ from
     the file on disk, so that an unchanged file keeps its modification time.
-    Raises [Not_found] when nothing is held for [path]. *)
+    Raises [Not_found] when nothing is held for [path]. A path kept in memory only is
+    kept instead of written, and keeps its modification time when unchanged. *)
 
 val forget : string -> unit
 (** [forget path] drops everything known about [path]. Call it after changing
-    [path] other than through {!write}. *)
+    [path] other than through {!write}. For a path kept in memory only, it
+    drops the held contents, and the file kept before them stays, like a file
+    on disk. *)
+
+val remove : string -> unit
+(** [remove path] drops everything known about [path], a file kept in memory
+    only included. Call it when removing [path] from disk. *)
 
 val cached : string -> string option
 (** [cached path] is the kept contents of [path], without reading the disk. *)

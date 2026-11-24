@@ -46,6 +46,10 @@ let read_file path =
 let read path =
   match Build_file_store.cached path with
   | Some contents -> of_contents contents |> Option.value ~default:damaged
+  (* An AST kept in memory only is cached; one on disk is from another
+     build. *)
+  | None when No_artifacts.enabled ->
+    raise (Unix.Unix_error (Unix.ENOENT, "open", path))
   | None -> (
     try read_file path
     with Unix.Unix_error (error, operation, "") ->

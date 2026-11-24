@@ -27,10 +27,33 @@ let state_extension = function
   | ".ast" | ".iast" | ".cmi" | ".cmt" -> true
   | _ -> false
 
-let read_directory directory =
+(* The names of the artifacts kept in memory, by directory. *)
+let memory_names directories =
+  let wanted = Hashtbl.create (List.length directories) in
+  List.iter
+    (fun directory ->
+      Hashtbl.replace wanted (Build_file_store.key directory) directory)
+    directories;
+  let names = Hashtbl.create (List.length directories) in
+  Build_file_store.memory_files ()
+  |> List.iter (fun (key, _) ->
+      match Hashtbl.find_opt wanted (Filename.dirname key) with
+      | Some directory ->
+        Hashtbl.replace names directory
+          (Filename.basename key
+          :: (Hashtbl.find_opt names directory |> Option.value ~default:[]))
+      | None -> ());
+  names
+
+let read_directory ~memory_names directory =
   let names =
-    try File_util.directory_entries directory
-    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> []
+    match memory_names with
+    | Some names ->
+      Hashtbl.find_opt names directory
+      |> Option.value ~default:[] |> List.sort String.compare
+    | None -> (
+      try File_util.directory_entries directory
+      with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> [])
   in
   let files =
     names
@@ -42,20 +65,27 @@ let read_directory directory =
   in
   (files, state_names)
 
+(* When the artifact at [path] last changed, if it exists: from the store when
+   artifacts live in memory, else one [stat]. *)
+let modification_time path =
+  if No_artifacts.enabled then Build_file_store.modified path
+  else
+    match Unix.stat path with
+    | metadata when metadata.Unix.st_kind = Unix.S_DIR -> None
+    | metadata -> Some metadata.Unix.st_mtime
+    | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
+
 (* Runs on any domain: one [stat] per artifact, and a header read per AST. *)
 let read_state_entry directory name =
   let path = Filename.concat directory name in
-  try
-    let metadata = Unix.stat path in
-    if metadata.Unix.st_kind = Unix.S_DIR then None
-    else
+  modification_time path
+  |> Option.map (fun modified ->
       let header =
         match Filename.extension name with
         | ".ast" | ".iast" -> ast_header path
         | _ -> None
       in
-      Some (({path; modified = metadata.Unix.st_mtime}, name), header)
-  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
+      (({path; modified}, name), header))
 
 let module_key name =
   name |> Filename.remove_extension |> String.capitalize_ascii
@@ -79,10 +109,14 @@ let create directories =
       cmt_by_module = Hashtbl.create 64;
     }
   in
+  let directories = List.sort_uniq String.compare directories in
+  let memory_names =
+    if No_artifacts.enabled then Some (memory_names directories) else None
+  in
   let directories =
-    directories
-    |> List.sort_uniq String.compare
-    |> List.map (fun directory -> (directory, read_directory directory))
+    List.map
+      (fun directory -> (directory, read_directory ~memory_names directory))
+      directories
   in
   (* A large project has thousands of artifacts, and reading them one after
      another was most of a small rebuild. *)
@@ -147,15 +181,16 @@ let cmi state key = Hashtbl.find_opt state.cmi_by_module key
 let cmt state key = Hashtbl.find_opt state.cmt_by_module key
 
 let replace_from_path table key path =
-  try
-    Hashtbl.replace table key {path; modified = (Unix.stat path).Unix.st_mtime}
-  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) ->
-    Hashtbl.remove table key
+  match modification_time path with
+  | Some modified -> Hashtbl.replace table key {path; modified}
+  | None -> Hashtbl.remove table key
 
 let refresh_cmi state ~key ~path =
   replace_from_path state.cmi_by_module key path
 
+(* Without typed trees, an empty one in memory marks the module compiled. *)
 let refresh_cmt state ~key ~path =
+  if No_artifacts.enabled then Build_file_store.touch path;
   replace_from_path state.cmt_by_module key path
 
 let refresh_ast state ~source ~path =

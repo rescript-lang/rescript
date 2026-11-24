@@ -100,13 +100,22 @@ let task request =
   Process.concurrent_task
     ~cancel:(fun () -> Atomic.set cancelled true)
     (fun () ->
-      run_in_process
-        ~poll:(fun () ->
-          if Atomic.get cancelled then raise (Process.Interrupted 15))
-        request)
+      let run () =
+        run_in_process
+          ~poll:(fun () ->
+            if Atomic.get cancelled then raise (Process.Interrupted 15))
+          request
+      in
+      if Build_trace.enabled then
+        let phase, input = compiler_phase request.args in
+        let phase =
+          if List.mem "-format" request.args then "format" else phase
+        in
+        Build_trace.compiler_request ~phase ~input run
+      else run ())
 
-let run_tasks ?poll ?on_complete tasks =
-  Process.run_tasks
+let run_tasks ?trace_label ?poll ?on_complete tasks =
+  Process.run_tasks ?trace_label
     ~max_jobs:(Compiler_execution_mode.configured_count ())
     ?poll ?on_complete tasks
 
@@ -172,7 +181,7 @@ let run_parses ?poll ?on_complete parses =
               (Build_artifacts.ast_path ~artifact_dir path)
           else if result.stderr = "" then publish_parse ~artifact_dir path;
           result))
-  |> run_tasks ?poll ?on_complete
+  |> run_tasks ~trace_label:"parse" ?poll ?on_complete
 
 type compiler_artifact = Cmi | Required of string | Typed_tree of string
 
@@ -240,18 +249,22 @@ let namespace_task ~runtime ~artifact_dir ~entry ~package_dirty ~force namespace
     Buffer.contents buffer
   in
   let previous_contents =
-    try Some (File_util.read_file mlmap)
-    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
+    if No_artifacts.enabled then Build_file_store.read mlmap
+    else
+      try Some (File_util.read_file mlmap)
+      with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
   in
   let mlmap_changed = previous_contents <> Some contents in
   if mlmap_changed then
-    File_util.write_file_atomic ~ensure_parent:false mlmap contents;
+    if No_artifacts.enabled then Build_file_store.write mlmap contents
+    else File_util.write_file_atomic ~ensure_parent:false mlmap contents;
   let typed_tree = Filename.concat artifact_dir (namespace ^ ".cmt") in
   let outputs_current =
     ["cmi"; "cmj"; "cmt"]
     |> List.for_all (fun extension ->
-        File_util.is_regular_file
-          (Filename.concat artifact_dir (namespace ^ "." ^ extension)))
+        let path = Filename.concat artifact_dir (namespace ^ "." ^ extension) in
+        if No_artifacts.enabled then Build_file_store.exists path
+        else File_util.is_regular_file path)
   in
   if not (force || package_dirty || mlmap_changed || not outputs_current) then
     None
@@ -274,8 +287,9 @@ let namespace_task ~runtime ~artifact_dir ~entry ~package_dirty ~force namespace
                     "-color";
                     "always";
                     "-no-alias-deps";
-                    Filename.basename mlmap;
-                  ];
+                  ]
+                  @ (if No_artifacts.enabled then ["-bs-no-bin-annot"] else [])
+                  @ [Filename.basename mlmap];
                 cwd = artifact_dir;
               };
           publish =
