@@ -58,8 +58,10 @@ let ast_path ~artifact_dir source =
    copy, and a later compile of this build or of the watch session may still
    read it. (A time of 0 would mean now to Unix.utimes.) *)
 let invalidate_ast path =
-  try Unix.utimes path 1. 1.
-  with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ()
+  if No_artifacts.enabled then Build_file_store.set_modified path 1.
+  else
+    try Unix.utimes path 1. 1.
+    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ()
 
 let remove_public_outputs (config : Config.t) implementation_paths =
   List.iter

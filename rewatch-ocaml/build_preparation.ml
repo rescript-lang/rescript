@@ -35,6 +35,11 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
       ~package_output_specs:
         (Compiler_info.package_output_specs workspace_config)
   in
+  if No_artifacts.enabled then
+    List.iter
+      (fun (package : Package_plan.t) ->
+        No_artifacts.register_artifact_dir package.artifact_dir)
+      package_plans;
   let previous_compile_assets =
     package_plans
     |> List.map (fun (package : Package_plan.t) -> package.artifact_dir)
@@ -116,8 +121,13 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         let package_context =
           Compiler_info.for_package compiler_context package.compile_config
         in
+        (* Without artifacts on disk, no earlier compiler's artifacts need
+           cleaning, and the process starts with none in memory. *)
         let cleanup =
-          if Compiler_info.needs_clean package_context package.config then (
+          if
+            (not No_artifacts.enabled)
+            && Compiler_info.needs_clean package_context package.config
+          then (
             remove_previous_spec_outputs package package_context;
             let cleanup = cleanup_stale package in
             Compiler_info.clean_package package.config;
@@ -128,7 +138,8 @@ let run ~(root_config : Config.t) ~prod ~features ~warn_error ~filter ~watch
         File_util.ensure_dir package.artifact_dir;
         (* Recorded once the package matches this compiler, so that a failed
            or interrupted build does not clean it again. *)
-        Compiler_info.write_package package_context package.config;
+        if not No_artifacts.enabled then
+          Compiler_info.write_package package_context package.config;
         (package, cleanup))
       package_plans
   in

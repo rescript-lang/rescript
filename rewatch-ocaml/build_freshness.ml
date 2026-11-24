@@ -18,6 +18,8 @@ let source_is_not_older_than_ast compile_assets ~root ~source_mtimes path =
   let artifact_modified =
     match Compile_assets.ast compile_assets absolute with
     | Some ast -> Some ast.modified
+    (* Every AST in memory is indexed. *)
+    | None when No_artifacts.enabled -> None
     | None ->
       let ast =
         Build_artifacts.ast_path

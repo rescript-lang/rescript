@@ -76,6 +76,7 @@
   package_build
   clean
   compile_assets
+  no_artifacts
   build_state
   native_watcher
   watch_scope

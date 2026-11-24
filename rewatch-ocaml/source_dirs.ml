@@ -30,7 +30,7 @@ let write ~root ~dirs ~packages ~build_roots =
   File_util.write_file_atomic ~ensure_parent:false path
     (Yojson.Safe.to_string json)
 
-let write_build ~(root_config : Config.t) session =
+let write_build_files ~(root_config : Config.t) session =
   let packages =
     Build_session.package_plan_values session
     |> List.of_seq
@@ -85,3 +85,8 @@ let write_build ~(root_config : Config.t) session =
     |> List.sort String.compare
   in
   write ~root:root_config.root ~dirs ~packages:package_roots ~build_roots
+
+(* Editor tooling reads this file, and has no artifacts to read without
+   them. *)
+let write_build ~(root_config : Config.t) session =
+  if not No_artifacts.enabled then write_build_files ~root_config session

@@ -249,18 +249,22 @@ let namespace_task ~runtime ~artifact_dir ~entry ~package_dirty ~force namespace
     Buffer.contents buffer
   in
   let previous_contents =
-    try Some (File_util.read_file mlmap)
-    with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
+    if No_artifacts.enabled then Build_file_store.read mlmap
+    else
+      try Some (File_util.read_file mlmap)
+      with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> None
   in
   let mlmap_changed = previous_contents <> Some contents in
   if mlmap_changed then
-    File_util.write_file_atomic ~ensure_parent:false mlmap contents;
+    if No_artifacts.enabled then Build_file_store.write mlmap contents
+    else File_util.write_file_atomic ~ensure_parent:false mlmap contents;
   let typed_tree = Filename.concat artifact_dir (namespace ^ ".cmt") in
   let outputs_current =
     ["cmi"; "cmj"; "cmt"]
     |> List.for_all (fun extension ->
-        File_util.is_regular_file
-          (Filename.concat artifact_dir (namespace ^ "." ^ extension)))
+        let path = Filename.concat artifact_dir (namespace ^ "." ^ extension) in
+        if No_artifacts.enabled then Build_file_store.exists path
+        else File_util.is_regular_file path)
   in
   if not (force || package_dirty || mlmap_changed || not outputs_current) then
     None
@@ -283,8 +287,9 @@ let namespace_task ~runtime ~artifact_dir ~entry ~package_dirty ~force namespace
                     "-color";
                     "always";
                     "-no-alias-deps";
-                    Filename.basename mlmap;
-                  ];
+                  ]
+                  @ (if No_artifacts.enabled then ["-bs-no-bin-annot"] else [])
+                  @ [Filename.basename mlmap];
                 cwd = artifact_dir;
               };
           publish =

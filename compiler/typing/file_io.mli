@@ -29,6 +29,4 @@ val unmarshal : string -> int -> 'a
     [contents]. Raises [End_of_file] when [contents] ends before the value
     does, as when a killed build cut a file short. *)
 
-val rev_lines_of_chann : in_channel -> string list
-
 val write_file : string -> string -> unit

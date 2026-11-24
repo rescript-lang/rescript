@@ -9,8 +9,13 @@
    So an entry changes only when it is written through the store, and the
    store is emptied before each build. *)
 
-(* What the disk holds for a path, as far as the build has read it. *)
-type on_disk = Read of string | Missing | Unknown
+(* What the disk holds for a path, as far as the build has read it. A path
+   kept in memory only (see {!set_memory_only}) holds what [Kept] says. *)
+type on_disk =
+  | Read of string
+  | Missing
+  | Unknown
+  | Kept of {contents: string; modified: float}
 
 type entry =
   | Contents of string
@@ -18,6 +23,9 @@ type entry =
   | Absent
   | Held of {contents: string; on_disk: on_disk}
       (** Written by a request, not on disk until {!publish_held}. *)
+  | Memory of {contents: string; modified: float}
+      (** A file kept in memory only, with the time it was last changed. It
+          outlives builds. *)
 
 (* [enabled] and [generation] are read without the lock: only [with_build]
    changes them, before a build's requests start and after they finish. *)
@@ -61,11 +69,43 @@ let set_disk_reader reader = Atomic.set disk_reader reader
 let held_writes = Atomic.make (fun (_ : string) -> false)
 let set_held_writes held = Atomic.set held_writes held
 
+(* Which paths live in memory only. [None] keeps every path on disk. *)
+let memory_only : (string -> bool) option Atomic.t = Atomic.make None
+let set_memory_only predicate = Atomic.set memory_only (Some predicate)
+
+let is_memory_only key =
+  match Atomic.get memory_only with
+  | None -> false
+  | Some predicate -> predicate key
+
+(* Modification times of files kept in memory. They increase strictly, so two
+   changes in a row are told apart like on a file system with fine times. *)
+let last_stamp = ref 0.
+
+let stamp () =
+  let now = Unix.gettimeofday () in
+  let next = if now > !last_stamp then now else !last_stamp +. 1e-6 in
+  last_stamp := next;
+  next
+
 let enabled () = state.enabled
 let generation () = state.generation
 
 let empty () =
-  state.entries <- Hashtbl.create 4096;
+  (match Atomic.get memory_only with
+  | None -> state.entries <- Hashtbl.create 4096
+  | Some _ ->
+    (* Files kept in memory stay, and held contents end as if forgotten.
+       Everything read from disk is read again, since it may have changed
+       since. *)
+    Hashtbl.filter_map_inplace
+      (fun _ entry ->
+        match entry with
+        | Memory _ -> Some entry
+        | Held {on_disk = Kept {contents; modified}; _} ->
+          Some (Memory {contents; modified})
+        | Contents _ | Exists | Absent | Held _ -> None)
+      state.entries);
   state.generation <- state.generation + 1
 
 let with_build f =
@@ -144,8 +184,10 @@ let read ?(keep = true) path =
   else
     let key = key path in
     match find key with
-    | Some (Contents contents | Held {contents; _}) -> Some contents
+    | Some (Contents contents | Held {contents; _} | Memory {contents; _}) ->
+      Some contents
     | Some Absent -> None
+    | None when is_memory_only key -> None
     | Some Exists | None ->
       let contents = (Atomic.get disk_reader) path in
       record key
@@ -159,8 +201,9 @@ let exists path =
   else
     let key = key path in
     match find key with
-    | Some (Contents _ | Exists | Held _) -> true
+    | Some (Contents _ | Exists | Held _ | Memory _) -> true
     | Some Absent -> false
+    | None when is_memory_only key -> false
     | None ->
       let exists = Sys.file_exists path in
       record key (if exists then Exists else Absent);
@@ -185,9 +228,16 @@ let write ?(keep = true) path contents =
           | Some (Contents contents) -> Read contents
           | Some Absent -> Missing
           | Some (Held {on_disk; _}) -> on_disk
+          | Some (Memory {contents; modified}) -> Kept {contents; modified}
+          | None when is_memory_only key -> Missing
           | Some Exists | None -> Unknown
         in
         Hashtbl.replace state.entries key (Held {contents; on_disk}))
+  else if state.enabled && is_memory_only (key path) then
+    let key = key path in
+    locked (fun () ->
+        Hashtbl.replace state.entries key
+          (Memory {contents; modified = stamp ()}))
   else
     match write_to_disk path contents with
     | () ->
@@ -205,10 +255,24 @@ let evict path =
     locked (fun () ->
         match Hashtbl.find_opt state.entries key with
         | Some (Contents _) -> Hashtbl.replace state.entries key Exists
-        (* Held contents exist nowhere else. *)
-        | Some (Exists | Absent | Held _) | None -> ())
+        (* Held contents and files kept in memory exist nowhere else. *)
+        | Some (Exists | Absent | Held _ | Memory _) | None -> ())
 
 let forget path =
+  if state.enabled then
+    let key = key path in
+    locked (fun () ->
+        match Hashtbl.find_opt state.entries key with
+        (* Like dropping held contents of a file on disk: the file kept
+           before the write is what reads see again. *)
+        | Some (Held {on_disk = Kept {contents; modified}; _}) ->
+          Hashtbl.replace state.entries key (Memory {contents; modified})
+        (* The only copy, as the file on disk is for other paths. *)
+        | Some (Memory _) -> ()
+        | Some (Contents _ | Exists | Absent | Held _) | None ->
+          Hashtbl.remove state.entries key)
+
+let remove path =
   if state.enabled then
     locked (fun () -> Hashtbl.remove state.entries (key path))
 
@@ -216,25 +280,66 @@ let cached path =
   if not state.enabled then None
   else
     match find (key path) with
-    | Some (Contents contents | Held {contents; _}) -> Some contents
+    | Some (Contents contents | Held {contents; _} | Memory {contents; _}) ->
+      Some contents
     | Some (Exists | Absent) | None -> None
+
+let modified path =
+  if not state.enabled then None
+  else
+    match find (key path) with
+    | Some (Memory {modified; _}) -> Some modified
+    | Some (Contents _ | Exists | Absent | Held _) | None -> None
+
+let set_modified path modified =
+  if state.enabled then
+    let key = key path in
+    locked (fun () ->
+        match Hashtbl.find_opt state.entries key with
+        | Some (Memory {contents; _}) ->
+          Hashtbl.replace state.entries key (Memory {contents; modified})
+        | Some (Contents _ | Exists | Absent | Held _) | None -> ())
+
+let touch path =
+  if state.enabled then
+    let key = key path in
+    locked (fun () ->
+        let contents =
+          match Hashtbl.find_opt state.entries key with
+          | Some (Memory {contents; _}) -> contents
+          | Some (Contents _ | Exists | Absent | Held _) | None -> ""
+        in
+        Hashtbl.replace state.entries key
+          (Memory {contents; modified = stamp ()}))
+
+let memory_files () =
+  locked (fun () ->
+      Hashtbl.fold
+        (fun key entry files ->
+          match entry with
+          | Memory {modified; _} -> (key, modified) :: files
+          | Contents _ | Exists | Absent | Held _ -> files)
+        state.entries [])
 
 let publish_held ~if_changed ~write path =
   let key = key path in
   match find key with
   | Some (Held {contents; on_disk}) ->
-    let changed =
-      (not if_changed)
-      ||
-      let on_disk =
-        match on_disk with
-        | Read on_disk -> Some on_disk
-        | Missing -> None
-        | Unknown -> (Atomic.get disk_reader) path
-      in
-      on_disk <> Some contents
+    let previous =
+      match on_disk with
+      | Read on_disk -> Some on_disk
+      | Kept {contents; _} -> Some contents
+      | Missing -> None
+      | Unknown -> (Atomic.get disk_reader) path
     in
-    if changed then write path contents;
-    record key (Contents contents);
+    let changed = (not if_changed) || previous <> Some contents in
+    (match on_disk with
+    | Kept {modified; _} when not changed ->
+      record key (Memory {contents; modified})
+    | _ when is_memory_only key ->
+      record key (Memory {contents; modified = locked stamp})
+    | Read _ | Missing | Unknown | Kept _ ->
+      if changed then write path contents;
+      record key (Contents contents));
     changed
-  | Some (Contents _ | Exists | Absent) | None -> raise Not_found
+  | Some (Contents _ | Exists | Absent | Memory _) | None -> raise Not_found

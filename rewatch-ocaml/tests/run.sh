@@ -2475,3 +2475,35 @@ TRACE=$(native_path "$build_trace/trace.json") node -e '
   if (!events.some(event => event.ph === "M" && event.name === "thread_name"))
     fail("no track names");
 '
+
+# RESCRIPT_NO_ARTIFACTS=1 keeps the artifacts in memory: a clean build writes
+# the same JavaScript, here of a namespace and of a dependency, and no artifact
+# files.
+javascript_outputs() {
+  (cd "$1" && find . -type f \( -name '*.js' -o -name '*.mjs' \) | sort |
+    while read -r output; do
+      printf '%s %s\n' "$output" "$(cksum <"$output")"
+    done)
+}
+for fixture in namespace dependency; do
+  normal_build="$work/no-artifacts-$fixture-normal"
+  memory_build="$work/no-artifacts-$fixture"
+  cp -R "$root/rewatch-ocaml/tests/$fixture" "$normal_build"
+  if [ "$fixture" = dependency ]; then
+    mkdir -p "$normal_build/node_modules"
+    cp -R "$root/rewatch-ocaml/tests/shared-dep" \
+      "$normal_build/node_modules/dep"
+  fi
+  cp -R "$normal_build" "$memory_build"
+  "$port" build "$normal_build" >/dev/null 2>&1
+  env RESCRIPT_NO_ARTIFACTS=1 "$port" build "$memory_build" \
+    >"$memory_build.log" 2>&1
+  javascript_outputs "$normal_build" >"$normal_build.outputs"
+  javascript_outputs "$memory_build" >"$memory_build.outputs"
+  test -s "$memory_build.outputs"
+  cmp "$normal_build.outputs" "$memory_build.outputs"
+  test -z "$(find "$memory_build" -type f \( -name '*.ast' -o -name '*.iast' \
+    -o -name '*.cmi' -o -name '*.cmj' -o -name '*.cmt' -o -name '*.cmti' \
+    -o -name '*.mlmap' -o -name 'compiler-info.json' \
+    -o -name '.sourcedirs.json' \))"
+done

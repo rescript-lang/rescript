@@ -130,7 +130,7 @@ let modification_time path =
   stat_opt path |> Option.map (fun metadata -> metadata.Unix.st_mtime)
 
 let remove_file path =
-  Build_file_store.forget path;
+  Build_file_store.remove path;
   try Unix.unlink path
   with Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ()
 
@@ -141,7 +141,7 @@ let rec remove_tree path =
     |> List.iter (fun name -> remove_tree (Filename.concat path name));
     Unix.rmdir path
   | _ ->
-    Build_file_store.forget path;
+    Build_file_store.remove path;
     Unix.unlink path
   | exception Unix.Unix_error ((Unix.ENOENT | Unix.ENOTDIR), _, _) -> ()
 

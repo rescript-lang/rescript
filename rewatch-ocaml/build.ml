@@ -432,6 +432,7 @@ let run_with_warning_state ~poll ~warning_state ~request ~no_timing ~verbosity
     (fun ~release:release_build_lock ->
       Build_attempt.protect attempt (fun () ->
           Build_file_store.set_held_writes Compiler_process.is_held;
+          No_artifacts.install ();
           Build_file_store.with_build (fun () ->
               try execute ~release_build_lock
               with Parse_failure output -> report_parse_failure output)));
