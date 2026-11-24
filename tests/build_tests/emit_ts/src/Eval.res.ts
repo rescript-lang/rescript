@@ -25,7 +25,7 @@ export type valueOrNote = number | string;
 
 export function lookup(env: binding[], target: string): (undefined | number) {
   let found: (undefined | number) = undefined;
-  let i = 0;
+  let i: number = 0;
   while (i < env.length && found === undefined) {
     let b = env[i];
     if (b !== undefined && b.name === target) {

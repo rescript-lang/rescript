@@ -1302,8 +1302,10 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
             P.space f;
             cxt)
           else if Js_ts_annot.enabled () then
-            match (e.expression_desc, Js_ts_annot.local_type name) with
-            | Undefined _, Some ty ->
+            match
+              (property, e.expression_desc, Js_ts_annot.local_type name)
+            with
+            | Variable, _, Some ty | _, Undefined _, Some ty ->
               P.string f L.let_;
               P.space f;
               let cxt = Ext_pp_scope.ident cxt f name in
