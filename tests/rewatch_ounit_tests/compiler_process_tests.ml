@@ -21,7 +21,8 @@ let publication_tests _context =
       in_build (fun () ->
           let namespace_task =
             Compiler_process.namespace_task ~runtime:"unused" ~artifact_dir
-              ~entry:None ~package_dirty:true ~force:false "Ns" []
+              ~entry:None ~package_dirty:true ~force:false ~dev_namespace:None
+              "Ns" []
             |> Option.get
           in
           (* The compiler wrote an interface, but no implementation. *)
@@ -50,7 +51,7 @@ let publication_tests _context =
         ["cmi"; "cmj"; "cmt"];
       let task ~package_dirty ~force =
         Compiler_process.namespace_task ~runtime:"unused" ~artifact_dir
-          ~entry:None ~package_dirty ~force "Ns" []
+          ~entry:None ~package_dirty ~force ~dev_namespace:None "Ns" []
       in
       check
         (Option.is_some (task ~package_dirty:false ~force:false))
