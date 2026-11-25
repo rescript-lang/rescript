@@ -35,15 +35,18 @@ type arg_expression = Splice0 | Splice1 of E.t | Splice2 of E.t * E.t
    a getter. A JS property read does not count: a [@get] external is there to
    run a getter, and a [@val] or [@module] value with [@scope], or a [@val]
    with a dotted name such as ["window.ev"], is a property read as well,
-   which cannot be told from it. Array elements and conditionals of such
-   arguments, and their fields, count too, though [is_okay_to_duplicate]
-   leaves them out: here the alternative is a temporary, a statement that
-   also binds the arguments to its left that have side effects. *)
+   which cannot be told from it. Array elements at a constant index and
+   conditionals of such arguments, and their fields, count too, though
+   [is_okay_to_duplicate] leaves them out: here the alternative is a
+   temporary, a statement that also binds the arguments to its left that
+   have side effects. An element at another index does not: it cannot be
+   told from a property read by a key, as from a [@get_index] external such
+   as [Dict.getUnsafe]. *)
 let eval_as_event_in_place (arg : J.expression) =
   let rec duplicable (e : J.expression) =
     match e.expression_desc with
     | Static_index (e, _, Some _) -> duplicable e
-    | Array_index (a, b) -> duplicable a && duplicable b
+    | Array_index (a, {expression_desc = Number (Int _)}) -> duplicable a
     | Cond (a, b, c) -> duplicable a && duplicable b && duplicable c
     | _ -> Js_analyzer.is_okay_to_duplicate ~property_reads:false e
   in

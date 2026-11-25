@@ -7,8 +7,9 @@ external testAsync: (string, unit => promise<unit>) => unit = "test"
 // A polymorphic variant argument of an external is evaluated once, in its
 // place among the arguments. An event-style argument is passed as its tag and
 // its payload, so an argument with side effects is read from a temporary, as
-// is a JS property read such as a @get getter or a @val with a dotted name,
-// while a JS global is read in place, like a value of a JS module. An @as or
+// is a JS property read such as a @get getter, a @val with a dotted name or a
+// read by a key such as Dict.getUnsafe, while a JS global is read in place,
+// like a value of a JS module. An @as or
 // @int dispatch is a function that switches on the argument and is called
 // with it, so the argument, an await in it included, is evaluated where it
 // is. Like any argument, it is read from a temporary only if an argument after
@@ -130,6 +131,12 @@ let makeSource: unit => source = %raw(`() => ({
 
 @get external current: source => [#click(int => string) | #keydown(int => string)] = "current"
 @get external reads: source => int = "reads"
+
+@get_index
+external currentByKey: (source, string) => [#click(int => string) | #keydown(int => string)] = ""
+
+external sourceAsDict: source => dict<[#click(int => string) | #keydown(int => string)]> =
+  "%identity"
 
 @val
 external globalEvent: [#click(int => string) | #keydown(int => string)] = "polyvarExternalArgEvent"
@@ -389,6 +396,12 @@ describe(__MODULE__, () => {
     on(t, current(s))
     onAs(t, current(s))
     eq(__LOC__, 2, reads(s))
+    // A property read by a key, as from @get_index or Dict.getUnsafe, is read
+    // once as well
+    on(t, currentByKey(s, "current"))
+    on(t, s->sourceAsDict->Dict.getUnsafe("current"))
+    on(t, s->sourceAsDict->Dict.getUnsafe(opaque("current")))
+    eq(__LOC__, 5, reads(s))
     // A JS global is read in place, for the tag and for the payload
     let globalReads = defineGlobalEvent()
     on(t, globalEvent)
@@ -404,6 +417,9 @@ describe(__MODULE__, () => {
       [
         "keydown keydown 1",
         "keydown! keydown 1",
+        "keydown keydown 1",
+        "keydown keydown 1",
+        "keydown keydown 1",
         "click click 1",
         "click! click 1",
         "keydown keydown 1",
@@ -514,7 +530,8 @@ describe(__MODULE__, () => {
     eq(__LOC__, 3, n.contents)
     eq(__LOC__, ["event", "event", "event"], log)
 
-    // An argument without side effects stays in the condition
+    // An element at an index that is not a constant is bound inside the loop,
+    // after the await, since it cannot be told from a property read by a key
     let events = [opaque(#click(click)), opaque(#keydown(keydown))]
     let i = ref(0)
     while (
