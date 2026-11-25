@@ -1,0 +1,1 @@
+- Fix a record spread `{...base, field: value}`, or a JSX spread `<C {...base} field={value} />`, copying a mutable field of `base` after `value` was evaluated, so that an assignment made by `value` showed up in the copy.

@@ -1052,6 +1052,43 @@ let fields_by_position fields =
   Array.iter (fun (lbl, _, exp) -> written.(lbl.lbl_pos) <- Some exp) fields;
   List.init (Array.length lbl_all) (fun i -> (lbl_all.(i), written.(i)))
 
+(* The values of the fields of a record built by copying those of [init] one by
+   one, in position order, and the bindings to evaluate before them, last one
+   first. [transl] translates the value the literal writes for a label, or is
+   [None] to leave the field out, and [read] reads a label of [init]. The
+   values are evaluated in position order, so a mutable field after an override
+   that can assign it is bound first. *)
+let copied_fields fields ~transl ~read =
+  let may_assign = ref false in
+  let defs = ref [] in
+  let values =
+    List.filter_map
+      (fun ((lbl : label_description), written) ->
+        match written with
+        | Some expr ->
+          let lam = transl lbl expr in
+          Option.iter
+            (fun lam ->
+              if not (Lambda_effects.no_side_effects lam) then
+                may_assign := true)
+            lam;
+          Option.map (fun lam -> (lbl, lam)) lam
+        | None -> (
+          let lam = read lbl in
+          match lbl.lbl_mut with
+          | Mutable when !may_assign ->
+            let id = Ident.create lbl.lbl_name in
+            defs := (id, lam) :: !defs;
+            Some (lbl, var id)
+          | Mutable | Immutable -> Some (lbl, lam)))
+      (fields_by_position fields)
+  in
+  (values, !defs)
+
+(* Bindings listed last one first *)
+let bind_strict defs body =
+  List.fold_left (fun body (id, lam) -> let_ Strict id lam body) body defs
+
 (* How [transl_record] builds a record: by copying the fields of [init] one
    by one (or with no [init] at all), or by taking a shallow copy of [init]
    and setting the other fields. JSX props follow the same rule. A shallow
@@ -1597,9 +1634,7 @@ and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
       defs := (id, lam) :: !defs;
       var id
   in
-  let bind_protected defs body =
-    List.fold_left (fun body (id, lam) -> let_ Strict id lam body) body !defs
-  in
+  let bind_protected defs body = bind_strict !defs body in
   let rec build_apply lam args = function
     | (None, optional) :: l ->
       let defs = ref [] in
@@ -1716,9 +1751,9 @@ and transl_jsx_element loc
     ({jsx_name; jsx_ffi; jsx_multi; jsx_fragment; jsx_tag; jsx_props; jsx_key} :
       jsx_call) =
   let init_id = Ident.create "init" in
-  let init, spread, fields, children =
+  let init, spread, defs, fields, children =
     match jsx_props with
-    | Jsx_props_spread props -> (None, Some (transl_exp props), [], None)
+    | Jsx_props_spread props -> (None, Some (transl_exp props), [], [], None)
     | Jsx_props_record {fields; init; copy_fields; children} ->
       (* An optional prop that is statically [undefined] can be left out,
          unless it overrides a prop of the spread *)
@@ -1728,27 +1763,26 @@ and transl_jsx_element loc
       in
       let written (lbl : label_description) value =
         if lbl.lbl_name = "children" && Option.is_some children then None
-        else field lbl (transl_exp value)
+        else Some (transl_exp value)
       in
-      let fields =
+      let defs, fields =
         match init with
         | Some _ when copy_fields ->
           (* the props the literal leaves out are copied from [init] *)
-          fields_by_position fields
-          |> List.filter_map (fun ((lbl : label_description), value) ->
-              match value with
-              | Some value -> written lbl value
-              | None ->
-                field lbl
-                  (prim
-                     ~primitive:
-                       (Pfield
-                          (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))
-                     ~args:[var init_id]
-                     loc))
+          let read (lbl : label_description) =
+            prim
+              ~primitive:
+                (Pfield (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name))
+              ~args:[var init_id]
+              loc
+          in
+          let values, defs = copied_fields fields ~transl:written ~read in
+          (defs, List.filter_map (fun (lbl, value) -> field lbl value) values)
         | _ ->
-          Array.to_list fields
-          |> List.filter_map (fun (lbl, _, value) -> written lbl value)
+          ( [],
+            Array.to_list fields
+            |> List.filter_map (fun (lbl, _, value) ->
+                Option.bind (written lbl value) (field lbl)) )
       in
       let children = Option.map transl_list children in
       let init, spread =
@@ -1757,7 +1791,7 @@ and transl_jsx_element loc
         | Some init when copy_fields -> (Some (transl_exp init), None)
         | Some init -> (None, Some (transl_exp init))
       in
-      (init, spread, fields, children)
+      (init, spread, defs, fields, children)
   in
   let lam =
     prim
@@ -1783,7 +1817,7 @@ and transl_jsx_element loc
   in
   match init with
   | None -> lam
-  | Some init -> let_ Strict init_id init lam
+  | Some init -> let_ Strict init_id init (bind_strict defs lam)
 
 and transl_record loc env fields repres opt_init_expr =
   (* The runtime shape of the record: each field's runtime name, and whether
@@ -1809,27 +1843,40 @@ and transl_record loc env fields repres opt_init_expr =
       (* Allocate new record with given fields (and remaining fields
          taken from init_expr if any *)
       let init_id = Ident.create "init" in
-      let ll =
-        List.mapi
-          (fun i (lbl, value) ->
-            match (value, opt_init_expr) with
-            | Some expr, _ -> transl_exp expr
-            (* an optional field the literal leaves out *)
-            | None, None -> const const_shape_none
-            | None, Some _ ->
-              let access =
-                match repres with
-                | Record_regular | Record_array ->
-                  Pfield (i, Lambda.fld_record lbl.lbl_runtime_name)
-                | Record_inlined _ ->
-                  Pfield (i, Lambda.fld_record_inline lbl.lbl_runtime_name)
-                | Record_unboxed _ -> assert false
-                | Record_extension ->
-                  Pfield
-                    (i + 1, Lambda.fld_record_extension lbl.lbl_runtime_name)
-              in
-              prim ~primitive:access ~args:[var init_id] loc)
-          (fields_by_position fields)
+      let ll, defs =
+        match opt_init_expr with
+        | None ->
+          ( List.map
+              (fun (_, value) ->
+                match value with
+                | Some expr -> transl_exp expr
+                (* an optional field the literal leaves out *)
+                | None -> const const_shape_none)
+              (fields_by_position fields),
+            [] )
+        | Some _ ->
+          let read lbl =
+            let access =
+              match repres with
+              | Record_regular | Record_array ->
+                Pfield (lbl.lbl_pos, Lambda.fld_record lbl.lbl_runtime_name)
+              | Record_inlined _ ->
+                Pfield
+                  (lbl.lbl_pos, Lambda.fld_record_inline lbl.lbl_runtime_name)
+              | Record_unboxed _ -> assert false
+              | Record_extension ->
+                Pfield
+                  ( lbl.lbl_pos + 1,
+                    Lambda.fld_record_extension lbl.lbl_runtime_name )
+            in
+            prim ~primitive:access ~args:[var init_id] loc
+          in
+          let values, defs =
+            copied_fields fields
+              ~transl:(fun _ expr -> Some (transl_exp expr))
+              ~read
+          in
+          (List.map snd values, defs)
       in
       let mut =
         if Array.exists (fun lbl -> lbl.lbl_mut = Mutable) lbl_all then Mutable
@@ -1911,7 +1958,8 @@ and transl_record loc env fields repres opt_init_expr =
       in
       match opt_init_expr with
       | None -> lam
-      | Some init_expr -> let_ Strict init_id (transl_exp init_expr) lam
+      | Some init_expr ->
+        let_ Strict init_id (transl_exp init_expr) (bind_strict defs lam)
     else
       (* Take a shallow copy of the init record, then mutate the fields
          of the copy *)
