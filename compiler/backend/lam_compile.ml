@@ -342,9 +342,13 @@ and evaluate_all_now ~assignable (xs : J.expression list) :
   (List.concat blocks, xs)
 
 (* Whether evaluating [e] runs no code: it has no side effects and reads no JS
-   property, which may run a getter. A record field counts. *)
+   property, which may run a getter. A record field counts, and so does a copy
+   of a record. *)
 let runs_no_code (e : J.expression) =
-  Js_analyzer.is_okay_to_duplicate ~property_reads:false e
+  Js_analyzer.is_okay_to_duplicate ~property_reads:false
+    (match e.expression_desc with
+    | Object [Record_spread record] -> record
+    | _ -> e)
 
 (* Whether [block] only defines variables as values that run no code, as a
    temporary bound to a record field does *)
@@ -399,6 +403,17 @@ let sequence_arguments ?(method_callee = false) ~assignable
         args (last, [], [])
     in
     (code, values)
+
+(* The compiled arguments of a [Pjsx] whose props copy the spread, which comes
+   after the tag: the spread becomes the copy [{...spread}], so that
+   [sequence_arguments] takes the copy before later statements that may change
+   the spread. [Lam_compile_primitive] merges a copy left in place with the
+   other props. *)
+let copy_jsx_spread (args : (J.block * J.expression) list) =
+  match args with
+  | tag :: (block, spread) :: rest ->
+    tag :: (block, E.obj ~dup:spread []) :: rest
+  | [] | [_] -> assert false
 
 let compile output_prefix =
   (* When compiling a read from another module, a nested source path like
@@ -1970,6 +1985,14 @@ let compile output_prefix =
       compile_primitive_default
         ~hold:(Lam_compile_external_call.hold_args arg_types)
         primitive args loc
+    | {
+     primitive = Pjsx {jsx_spread = true; jsx_props; jsx_children} as primitive;
+     args;
+     loc;
+    }
+      when jsx_props <> [] || Option.is_some jsx_children ->
+      (* A lone spread is passed itself, not a copy of it *)
+      compile_primitive_default ~hold:copy_jsx_spread primitive args loc
     | {primitive; args; loc} -> compile_primitive_default primitive args loc
   and collect_dup_overrides (copy_id : Ident.t) (lam : Lambda.t)
       (acc : (Lambda.set_field_dbg_info * Lambda.t) list) :

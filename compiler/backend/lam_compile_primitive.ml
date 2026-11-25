@@ -635,7 +635,10 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       let spread, rest =
         if jsx_spread then
           match rest with
-          | spread :: rest -> (Some spread, rest)
+          | {expression_desc = Object [Record_spread spread]} :: rest
+          | spread :: rest ->
+            (* see [Lam_compile.copy_jsx_spread] *)
+            (Some spread, rest)
           | [] -> assert false
         else (None, rest)
       in

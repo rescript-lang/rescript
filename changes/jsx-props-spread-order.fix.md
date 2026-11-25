@@ -1,0 +1,1 @@
+- Fix evaluation order for a JSX props spread `<Foo {...base} b={value} />`: the base is copied before a later prop, child or key that needs statements (such as a `try`) is evaluated, so its mutations of the base no longer show up in the props.
