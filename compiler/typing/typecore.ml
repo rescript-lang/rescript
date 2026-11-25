@@ -2088,7 +2088,9 @@ let rec is_nonexpansive exp =
   | Texp_variant (_, arg) -> is_nonexpansive_opt arg
   | Texp_record {fields; extended_expression} -> (
     Array.for_all (fun (_, _, exp) -> is_nonexpansive exp) fields
-    && is_nonexpansive_opt extended_expression
+    (* A source whose fields are all overridden is evaluated and dropped, like
+       the first expression of a sequence *)
+    && (writes_all_labels fields || is_nonexpansive_opt extended_expression)
     &&
     (* The literal allocates every field of the record: written, copied from
        the spread, or left out *)
@@ -3169,22 +3171,13 @@ and type_expect_ ?deprecated_context ~context ?(recarg = Rejected)
       Array.iter unify_kept lbl.lbl_all;
       Some {exp with exp_type = ty_exp}
     in
-    let num_fields =
-      match lbl_exp_list with
-      | [] -> assert false
-      | (_, lbl, _, _) :: _ -> Array.length lbl.lbl_all
-    in
-    let opt_exp =
-      if List.length lid_sexp_list = num_fields then (
-        Loc_report.prerr_warning loc Warnings.Useless_record_with;
-        None)
-      else opt_exp
-    in
     let representation =
       let _, {lbl_repres}, _, _ = List.hd lbl_exp_list in
       lbl_repres
     in
     let fields = record_fields lbl_exp_list in
+    if writes_all_labels fields then
+      Loc_report.prerr_warning loc Warnings.Useless_record_with;
     re
       {
         exp_desc =

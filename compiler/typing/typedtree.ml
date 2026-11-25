@@ -559,3 +559,11 @@ let rec alpha_pat env p =
 
 let mkloc = Location.mkloc
 let mknoloc = Location.mknoloc
+
+let writes_all_labels
+    (fields : (label_description * Longident.t loc * expression) array) =
+  match fields with
+  | [||] -> false
+  | _ ->
+    let lbl, _, _ = fields.(0) in
+    Array.length fields = Array.length lbl.lbl_all

@@ -230,6 +230,9 @@ and expression_desc =
             one, and is otherwise an optional field set to [None]. The
             record's other labels are in [lbl_all] of any written label.
 
+            When the literal writes every field (see [writes_all_labels]), E0
+            is evaluated only for its side effects.
+
             If the type is { l1: t1; l2: t2 }, the expression
             { E0 with t2=P2 } is represented as
             Texp_record
@@ -594,3 +597,7 @@ val mknoloc : 'a -> 'a Asttypes.loc
 val mkloc : 'a -> Location.t -> 'a Asttypes.loc
 
 val pat_bound_idents : pattern -> Ident.t list
+
+val writes_all_labels :
+  (Types.label_description * Longident.t loc * expression) array -> bool
+(** Whether the [fields] of a [Texp_record] hold every label of the record *)
