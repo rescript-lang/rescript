@@ -116,6 +116,16 @@ let complete_pool_task pool completion =
       Queue.add completion pool.completed_tasks);
   Child.notify_completion pool.notifier
 
+(* A task's result handler publishes what it produced (for compiler requests,
+   the files they wrote), so the build trace shows it as a span of its own *)
+let handle_result task result =
+  if Build_trace.enabled then
+    let start = Build_trace.now () in
+    Fun.protect
+      ~finally:(fun () -> Build_trace.span ~name:"publish" ~start ())
+      (fun () -> task.on_result result)
+  else task.on_result result
+
 let run_concurrent_task pool payload task run cancel =
   let active, cancel_now =
     Child.with_lock pool.mutex (fun () ->
@@ -127,7 +137,7 @@ let run_concurrent_task pool payload task run cancel =
   let completion =
     try
       if cancel_now then cancel ();
-      Task_completed (payload, task.on_result (run ()))
+      Task_completed (payload, handle_result task (run ()))
     with exn -> Task_failed (payload, exn)
   in
   Child.with_lock pool.mutex (fun () ->
@@ -180,7 +190,7 @@ let run_pool_task pool payload task =
           remove_active pool active;
           try
             Child.release_running child;
-            Task_completed (payload, task.on_result result)
+            Task_completed (payload, handle_result task result)
           with exn -> Task_failed (payload, exn))
         | Error exn -> (
           let termination =
@@ -263,7 +273,8 @@ let create_worker_pool ~max_jobs notifier =
      on the runtime lock. A worker records an escaped exception instead of
      letting it escape [Domain.join], so [stop_worker_pool] joins every worker
      before re-raising the first error. *)
-  let run_worker () =
+  let run_worker slot () =
+    Build_trace.set_worker_slot slot;
     Gc.set {(Gc.get ()) with minor_heap_size = worker_minor_heap_words};
     (try worker_loop pool
      with exn ->
@@ -274,7 +285,7 @@ let create_worker_pool ~max_jobs notifier =
   in
   let rec start_workers remaining =
     if remaining > 0 then (
-      let worker = Domain.spawn run_worker in
+      let worker = Domain.spawn (run_worker (max_jobs - remaining)) in
       pool.workers <- worker :: pool.workers;
       start_workers (remaining - 1))
   in
@@ -388,8 +399,9 @@ let with_worker_pool ~max_jobs notifier action =
     in
     raise exn
 
-let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
-    works ~next =
+let run_dependency_graph_with_notifier ~trace_label ~max_jobs ~on_failure ~poll
+    notifier works ~next =
+  let trace_start = if Build_trace.enabled then Build_trace.now () else 0. in
   let graph =
     Graph.create_index works
       ~name:(fun work -> work.key)
@@ -440,13 +452,24 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
         if remaining = 0 then Queue.add dependency leaves)
   done;
   let ready = ref Work_ready.empty in
+  (* The size of [ready], for the build trace *)
+  let ready_count = ref 0 in
   let add_ready work =
-    ready := Work_ready.add (Hashtbl.find priorities work.key, work.key) !ready
+    ready := Work_ready.add (Hashtbl.find priorities work.key, work.key) !ready;
+    incr ready_count
   in
   List.iter
     (fun work -> if Hashtbl.find pending work.key = 0 then add_ready work)
     works;
   let in_flight = ref 0 in
+  (* With RESCRIPT_TRACE: a span for one scheduler step on the main track,
+     then the tasks that are ready and running after it *)
+  let trace_step ~name work started =
+    if Build_trace.enabled then (
+      Build_trace.span ~name ~args:[("key", `String work.key)] ~start:started ();
+      Build_trace.counters ~name:("tasks: " ^ trace_label)
+        [("ready", !ready_count); ("running", !in_flight)])
+  in
   let stopped = ref false in
   let errors = ref [] in
   let record_error work exn =
@@ -473,7 +496,9 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
       match Work_ready.min_elt_opt !ready with
       | None -> ()
       | Some ((_, key) as ready_key) ->
+        let started = if Build_trace.enabled then Build_trace.now () else 0. in
         ready := Work_ready.remove ready_key !ready;
+        decr ready_count;
         let work = Graph.find_node graph key in
         (try
            match next work.value None with
@@ -482,6 +507,7 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
              submit_pool_task pool work task;
              incr in_flight
          with exn -> record_error work exn);
+        trace_step ~name:"start task" work started;
         fill pool
   in
   let rec schedule pool =
@@ -502,22 +528,32 @@ let run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
         else ()
     else
       let completion = await_pool_completion ~poll pool in
+      let started = if Build_trace.enabled then Build_trace.now () else 0. in
       decr in_flight;
       (match completion with
-      | Task_failed (work, exn) -> record_error work exn
-      | Task_completed (work, result) -> (
-        try
-          match next work.value (Some result) with
-          | Some task ->
-            submit_pool_task pool work task;
-            incr in_flight
-          | None -> complete work
-        with exn -> record_error work exn));
+      | Task_failed (work, exn) ->
+        record_error work exn;
+        trace_step ~name:"take failure" work started
+      | Task_completed (work, result) ->
+        (try
+           match next work.value (Some result) with
+           | Some task ->
+             submit_pool_task pool work task;
+             incr in_flight
+           | None -> complete work
+         with exn -> record_error work exn);
+        trace_step ~name:"take result" work started);
       schedule pool
   in
-  with_worker_pool ~max_jobs:(min max_jobs count) notifier schedule
+  Fun.protect
+    ~finally:(fun () ->
+      Build_trace.span ~name:trace_label
+        ~args:[("tasks", `Int count); ("max_jobs", `Int max_jobs)]
+        ~start:trace_start ())
+    (fun () ->
+      with_worker_pool ~max_jobs:(min max_jobs count) notifier schedule)
 
-let run_dependency_graph ?(max_jobs = default_max_jobs)
+let run_dependency_graph ?(trace_label = "tasks") ?(max_jobs = default_max_jobs)
     ?(on_failure =
       function
       | Interrupted _ -> Abort_immediately
@@ -527,11 +563,11 @@ let run_dependency_graph ?(max_jobs = default_max_jobs)
   | [] -> ()
   | _ ->
     with_completion_notifier ~poll (fun ~poll notifier ->
-        run_dependency_graph_with_notifier ~max_jobs ~on_failure ~poll notifier
-          works ~next)
+        run_dependency_graph_with_notifier ~trace_label ~max_jobs ~on_failure
+          ~poll notifier works ~next)
 
-let run_tasks ?(max_jobs = default_max_jobs) ?poll ?(on_complete = fun _ -> ())
-    tasks =
+let run_tasks ?trace_label ?(max_jobs = default_max_jobs) ?poll
+    ?(on_complete = fun _ -> ()) tasks =
   let tasks = Array.of_list tasks in
   let results = Array.make (Array.length tasks) None in
   let works =
@@ -545,7 +581,8 @@ let run_tasks ?(max_jobs = default_max_jobs) ?poll ?(on_complete = fun _ -> ())
            })
          tasks)
   in
-  run_dependency_graph ~max_jobs ?poll works ~next:(fun index result ->
+  run_dependency_graph ?trace_label ~max_jobs ?poll works
+    ~next:(fun index result ->
       match result with
       | None -> Some tasks.(index)
       | Some result ->

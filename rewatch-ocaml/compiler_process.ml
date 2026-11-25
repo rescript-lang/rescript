@@ -100,13 +100,22 @@ let task request =
   Process.concurrent_task
     ~cancel:(fun () -> Atomic.set cancelled true)
     (fun () ->
-      run_in_process
-        ~poll:(fun () ->
-          if Atomic.get cancelled then raise (Process.Interrupted 15))
-        request)
+      let run () =
+        run_in_process
+          ~poll:(fun () ->
+            if Atomic.get cancelled then raise (Process.Interrupted 15))
+          request
+      in
+      if Build_trace.enabled then
+        let phase, input = compiler_phase request.args in
+        let phase =
+          if List.mem "-format" request.args then "format" else phase
+        in
+        Build_trace.compiler_request ~phase ~input run
+      else run ())
 
-let run_tasks ?poll ?on_complete tasks =
-  Process.run_tasks
+let run_tasks ?trace_label ?poll ?on_complete tasks =
+  Process.run_tasks ?trace_label
     ~max_jobs:(Compiler_execution_mode.configured_count ())
     ?poll ?on_complete tasks
 
@@ -172,7 +181,7 @@ let run_parses ?poll ?on_complete parses =
               (Build_artifacts.ast_path ~artifact_dir path)
           else if result.stderr = "" then publish_parse ~artifact_dir path;
           result))
-  |> run_tasks ?poll ?on_complete
+  |> run_tasks ~trace_label:"parse" ?poll ?on_complete
 
 type compiler_artifact = Cmi | Required of string | Typed_tree of string
 

@@ -1,0 +1,1 @@
+- Write a timeline of the build, viewable in Perfetto, to the file that `RESCRIPT_TRACE` names.

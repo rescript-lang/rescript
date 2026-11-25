@@ -46,6 +46,7 @@
   termination_signals
   traversal_coverage
   process_child
+  build_trace
   process
   source
   package_plan
