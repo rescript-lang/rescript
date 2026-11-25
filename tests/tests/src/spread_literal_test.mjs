@@ -69,7 +69,7 @@ Mocha.describe("Spread_literal_test", () => {
     log.contents = /* [] */0;
     let arr = Primitive_array.spread([
       [note("a", 1)],
-      note("b", [2]),
+      [...note("b", [2])],
       [note("c", 3)]
     ]);
     let lst = Primitive_list.spread([
