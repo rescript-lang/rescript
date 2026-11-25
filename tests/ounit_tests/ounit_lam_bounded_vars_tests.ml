@@ -33,5 +33,38 @@ let test_for_start_is_renamed_once _ =
       (Hash_ident.length map)
   | _ -> OUnit.assert_failure "a for loop with a let in its start"
 
+let r = Ident.create "r"
+
+let outer = Ident.create "outer"
+
+(* [let r = 1; r = r; outer = r]: an assignment to a bound variable and one to
+   a variable bound outside *)
+let assignments =
+  Lambda.let_ Variable r (int 1)
+    (Lambda.seq
+       (Lambda.assign r (Lambda.var r))
+       (Lambda.assign outer (Lambda.var r)))
+
+(* An assignment follows its variable's fresh name, as a read does. *)
+let test_assign_is_renamed _ =
+  match Lam_bounded_vars.rewrite (Hash_ident.create 4) assignments with
+  | Llet
+      ( Variable,
+        r',
+        _,
+        Lsequence
+          (Lassign (assigned, Lvar r_use), Lassign (outer', Lvar r_use_2)) ) ->
+    OUnit.assert_bool "the variable is renamed" (not (Ident.same r' r));
+    OUnit.assert_bool "its assignment follows" (Ident.same assigned r');
+    OUnit.assert_bool "its first use follows" (Ident.same r_use r');
+    OUnit.assert_bool "its second use follows" (Ident.same r_use_2 r');
+    OUnit.assert_bool "a variable bound outside keeps its name"
+      (Ident.same outer' outer)
+  | _ -> OUnit.assert_failure "a let with two assignments"
+
 let suites =
-  __FILE__ >::: ["for_start_is_renamed_once" >:: test_for_start_is_renamed_once]
+  __FILE__
+  >::: [
+         "for_start_is_renamed_once" >:: test_for_start_is_renamed_once;
+         "assign_is_renamed" >:: test_assign_is_renamed;
+       ]
