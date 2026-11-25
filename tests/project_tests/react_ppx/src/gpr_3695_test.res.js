@@ -7,7 +7,7 @@ let React = {};
 let Test = {};
 
 function test(className) {
-  return Foo;
+  return Foo(className);
 }
 
 export {

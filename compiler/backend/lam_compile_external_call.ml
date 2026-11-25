@@ -316,9 +316,15 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types ~(prim_name : string)
     | EffectCall _ | NeedValue _ -> ()
   in
   match (kind, module_) with
-  | Decl_val _, Some Module_itself when decl.effective_arity = 0 ->
-    (* the module itself, as a value *)
-    external_var (module_itself_name ())
+  | Decl_val _, Some Module_itself when decl.effective_arity = 0 -> (
+    (* the module itself, as a value. A call applies it to the arguments of a
+       function type that the external does not spell out, as a global value
+       is applied below. With [@ignore] arguments only, it stays the module:
+       they are not passed, and their effects are statements of their own. *)
+    let e = external_var (module_itself_name ()) in
+    match (arg_types, args) with
+    | [], _ :: _ -> E.call ~info:Js_call_info.na_full_call e args
+    | _ -> e)
   | Decl_val _, Some Module_itself ->
     (* the module itself, called as a function *)
     let fn = external_var (module_itself_name ()) in
