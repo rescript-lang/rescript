@@ -53,65 +53,79 @@ function toBigBlockIf(b) {
   }
 }
 
+function toBigBlockIfPayload(b, n) {
+  if (b) {
+    return {
+      TAG: "First",
+      _0: n
+    };
+  } else {
+    return {
+      TAG: "Second",
+      _0: n
+    };
+  }
+}
+
 Mocha.describe("Block_arm_merge_test", () => {
   Mocha.test("switch arms returning constructors of coerced types", () => {
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 48, characters 7-14", {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 52, characters 7-14", {
       TAG: "First",
       _0: 1
     }, {
       TAG: "First",
       _0: 1
     });
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 49, characters 7-14", {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 53, characters 7-14", {
       TAG: "Second",
       _0: 1
     }, {
       TAG: "Second",
       _0: 1
     });
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 50, characters 7-14", toBigBlock(id("X")), {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 54, characters 7-14", toBigBlock(id("X")), {
       TAG: "First",
       _0: 1
     });
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 51, characters 7-14", toBigBlock(id("Y")), {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 55, characters 7-14", toBigBlock(id("Y")), {
       TAG: "Second",
       _0: 1
     });
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 52, characters 7-14", toBigBlock(id("Z")), {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 56, characters 7-14", toBigBlock(id("Z")), {
       TAG: "First",
       _0: 1
     });
   });
   Mocha.test("switch arms returning records of coerced types", () => {
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 56, characters 7-14", {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 60, characters 7-14", {
       x: 1,
       y: 2
     }, {
       y: 2,
       x: 1
     });
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 57, characters 7-14", toYx(id("X")), {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 61, characters 7-14", toYx(id("X")), {
       y: 1,
       x: 2
     });
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 58, characters 7-14", toYx(id("Y")), {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 62, characters 7-14", toYx(id("Y")), {
       y: 2,
       x: 1
     });
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 59, characters 7-14", toYx(id("Z")), {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 63, characters 7-14", toYx(id("Z")), {
       y: 1,
       x: 2
     });
   });
   Mocha.test("if branches returning constructors of coerced types", () => {
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 63, characters 7-14", {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 67, characters 7-14", {
       TAG: "First",
       _0: 1
     }, {
       TAG: "First",
       _0: 1
     });
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 64, characters 7-14", {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 68, characters 7-14", {
       TAG: "Second",
       _0: 1
     }, {
@@ -119,7 +133,7 @@ Mocha.describe("Block_arm_merge_test", () => {
       _0: 1
     });
     let b = id(true);
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 65, characters 7-14", b ? ({
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 69, characters 7-14", b ? ({
         TAG: "First",
         _0: 1
       }) : ({
@@ -130,13 +144,37 @@ Mocha.describe("Block_arm_merge_test", () => {
       _0: 1
     });
     let b$1 = id(false);
-    Test_utils.eq("File \"block_arm_merge_test.res\", line 66, characters 7-14", b$1 ? ({
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 70, characters 7-14", b$1 ? ({
         TAG: "First",
         _0: 1
       }) : ({
         TAG: "Second",
         _0: 1
       }), {
+      TAG: "Second",
+      _0: 1
+    });
+  });
+  Mocha.test("if branches returning constructors with a payload that isn't a constant", () => {
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 74, characters 7-14", {
+      TAG: "First",
+      _0: 1
+    }, {
+      TAG: "First",
+      _0: 1
+    });
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 75, characters 7-14", {
+      TAG: "Second",
+      _0: 1
+    }, {
+      TAG: "Second",
+      _0: 1
+    });
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 76, characters 7-14", toBigBlockIfPayload(id(true), id(1)), {
+      TAG: "First",
+      _0: 1
+    });
+    Test_utils.eq("File \"block_arm_merge_test.res\", line 77, characters 7-14", toBigBlockIfPayload(id(false), id(1)), {
       TAG: "Second",
       _0: 1
     });
@@ -148,5 +186,6 @@ export {
   toBigBlock,
   toYx,
   toBigBlockIf,
+  toBigBlockIfPayload,
 }
 /*  Not a pure module */
