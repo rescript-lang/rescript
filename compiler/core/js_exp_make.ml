@@ -1507,50 +1507,55 @@ let rec is_out ?comment (e : t) (range : t) : t =
     is_out ?comment e range
   | _, _ -> int_comp ?comment Cgt (int32_lsr e zero_int_literal) range
 
-let rec float_add ?comment (e1 : t) (e2 : t) =
+(* [op i j] of two int literals, or [None] when [e1] and [e2] aren't int
+   literals or the exact result does not fit in an int32. A float operation
+   must not wrap, so it only folds when the exact result is representable as
+   an int literal. *)
+let exact_int32 (op : int64 -> int64 -> int64) (e1 : t) (e2 : t) : int32 option
+    =
   match (e1.expression_desc, e2.expression_desc) with
-  | Number (Int {i; _}), Number (Int {i = j; _}) -> int ?comment (Int32.add i j)
-  | _, Number (Int {i = j; c}) when j < 0l ->
-    float_minus ?comment e1
-      {e2 with expression_desc = Number (Int {i = Int32.neg j; c})}
-  | ( Bin (Plus, a1, {expression_desc = Number (Int {i = k; _})}),
-      Number (Int {i = j; _}) ) ->
-    {comment; expression_desc = Bin (Plus, a1, int (Int32.add k j))}
-  (* bin ?comment Plus a1 (int (k + j)) *)
-  (* TODO remove commented code  ?? *)
-  (* | Bin(Plus, a0 , ({expression_desc = Number (Int a1)}  )), *)
-  (*     Bin(Plus, b0 , ({expression_desc = Number (Int b1)}  )) *)
-  (*   ->  *)
-  (*   bin ?comment Plus a1 (int (a1 + b1)) *)
+  | Number (Int {i}), Number (Int {i = j}) ->
+    let exact = op (Int64.of_int32 i) (Int64.of_int32 j) in
+    let wrapped = Int64.to_int32 exact in
+    if Int64.equal (Int64.of_int32 wrapped) exact then Some wrapped else None
+  | _ -> None
 
-  (* | _, Bin(Plus,  b0, ({expression_desc = Number _}  as v)) *)
-  (*   -> *)
-  (*     bin ?comment Plus (bin ?comment Plus e1 b0) v *)
-  (* | Bin(Plus, a1 , ({expression_desc = Number _}  as v)), _ *)
-  (* | Bin(Plus, ({expression_desc = Number _}  as v),a1), _ *)
-  (*   ->  *)
-  (*     bin ?comment Plus (bin ?comment Plus a1 e2 ) v  *)
-  (* | Number _, _ *)
-  (*   ->  *)
-  (*     bin ?comment Plus  e2 e1 *)
-  | _ -> {comment; expression_desc = Bin (Plus, e1, e2)}
+let rec float_add ?comment (e1 : t) (e2 : t) =
+  match exact_int32 Int64.add e1 e2 with
+  | Some r -> int ?comment r
+  | None -> (
+    match e2.expression_desc with
+    | Number (Int {i = j; c}) when j < 0l && j <> Int32.min_int ->
+      float_minus ?comment e1
+        {e2 with expression_desc = Number (Int {i = Int32.neg j; c})}
+    | _ -> {comment; expression_desc = Bin (Plus, e1, e2)})
 
 (* bin ?comment Plus e1 e2 *)
 (* associative is error prone due to overflow *)
 and float_minus ?comment (e1 : t) (e2 : t) : t =
-  match (e1.expression_desc, e2.expression_desc) with
-  | Number (Int {i; _}), Number (Int {i = j; _}) -> int ?comment (Int32.sub i j)
-  | _ -> {comment; expression_desc = Bin (Minus, e1, e2)}
+  match exact_int32 Int64.sub e1 e2 with
+  | Some r -> int ?comment r
+  | None -> {comment; expression_desc = Bin (Minus, e1, e2)}
 (* bin ?comment Minus e1 e2 *)
 
 let unchecked_int32_add ?comment e1 e2 = float_add ?comment e1 e2
-let int32_add ?comment e1 e2 = to_int32 (float_add ?comment e1 e2)
+
+(* Int addition wraps, so literals always fold here, and adding [min_int] is
+   the same as subtracting it. *)
+let int32_add ?comment (e1 : t) (e2 : t) =
+  match (e1.expression_desc, e2.expression_desc) with
+  | Number (Int {i}), Number (Int {i = j}) -> int ?comment (Int32.add i j)
+  | _, Number (Int {i}) when i = Int32.min_int ->
+    to_int32 (float_minus ?comment e1 e2)
+  | _ -> to_int32 (float_add ?comment e1 e2)
 
 let offset e1 (offset : int) =
   if offset = 0 then e1 else int32_add e1 (small_int offset)
 
-let int32_minus ?comment e1 e2 : J.expression =
-  to_int32 (float_minus ?comment e1 e2)
+let int32_minus ?comment (e1 : t) (e2 : t) : J.expression =
+  match (e1.expression_desc, e2.expression_desc) with
+  | Number (Int {i}), Number (Int {i = j}) -> int ?comment (Int32.sub i j)
+  | _ -> to_int32 (float_minus ?comment e1 e2)
 
 let unchecked_int32_minus ?comment e1 e2 : J.expression =
   float_minus ?comment e1 e2
