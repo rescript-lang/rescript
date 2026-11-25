@@ -9,8 +9,11 @@ val write_file : string -> string -> unit
 val append_file : string -> string -> unit
 val directory_entries : string -> string list
 
-val write_file_atomic : ?ensure_parent:bool -> string -> string -> unit
-(** Writes a file next to its destination and renames it into place. *)
+val write_file_atomic :
+  ?ensure_parent:bool -> ?forget:bool -> string -> string -> unit
+(** Writes a file next to its destination and renames it into place. Unless
+    [forget] is false, the build file store forgets what it knew about the
+    path first. *)
 
 val atomic_write_prefix : string
 (** The name prefix of the files {!write_file_atomic} renames into place; one

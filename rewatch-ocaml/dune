@@ -47,6 +47,7 @@
   traversal_coverage
   process_child
   build_trace
+  background_writer
   process
   source
   package_plan

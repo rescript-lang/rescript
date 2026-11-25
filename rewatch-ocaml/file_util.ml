@@ -102,7 +102,7 @@ let directory_entries path =
 
 let atomic_write_prefix = ".rewatch-write-"
 
-let write_file_atomic ?(ensure_parent = true) path contents =
+let write_file_atomic ?(ensure_parent = true) ?(forget = true) path contents =
   if ensure_parent then ensure_dir (Filename.dirname path);
   let candidate =
     Filename.temp_file ~temp_dir:(Filename.dirname path) atomic_write_prefix
@@ -116,7 +116,7 @@ let write_file_atomic ?(ensure_parent = true) path contents =
     (fun () ->
       Unix.chmod candidate 0o644;
       write_file candidate contents;
-      Build_file_store.forget path;
+      if forget then Build_file_store.forget path;
       Sys.rename candidate path;
       published := true)
 

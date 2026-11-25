@@ -1,0 +1,1 @@
+- Add an opt-in background writer for build outputs (`RESCRIPT_BACKGROUND_WRITES=1`), to measure whether writing files off the compiler workers speeds up builds.
