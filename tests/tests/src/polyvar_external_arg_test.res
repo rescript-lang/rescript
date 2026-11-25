@@ -445,6 +445,18 @@ describe(__MODULE__, () => {
     )
   })
 
+  test("array elements read as event-style arguments", () => {
+    let t = makeTarget()
+    let events = [opaque(#click(click)), opaque(#keydown(keydown))]
+    // An element at a constant index is read in place, for the tag and for the
+    // payload. One at another index is read from a temporary, since it cannot
+    // be told from a property read by a key.
+    on(t, events->Array.getUnsafe(0))
+    let i = opaque(1)
+    on(t, events->Array.getUnsafe(i))
+    eq(__LOC__, ["click click 1", "keydown keydown 1"], calls(t))
+  })
+
   testAsync("awaited arguments", async () => {
     let t = makeTarget()
     let log = []
