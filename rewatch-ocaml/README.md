@@ -102,6 +102,26 @@ the main domain. With `REWATCH_REPORT_WORKER_ALLOCATIONS` set, the build also
 prints `worker_allocated_words: <n>`, the words its workers allocated, which
 the compiler benchmarks (`scripts/compilerBenchmarks.js`) add to it.
 
+With `RESCRIPT_TRACE=<file>`, the build writes a trace of what each domain did
+to the file when it exits, in the Chrome trace event format. Open it in
+Perfetto (ui.perfetto.dev) to see it as a timeline:
+
+- The main track has a span per dependency graph (`parse`, `compile`,
+  `namespaces`, `format`) and per scheduler step, and counters for the tasks
+  that are ready and running. Gaps on the worker tracks while tasks are ready
+  are time lost to scheduling.
+- Each worker track has a span per compiler request, named after its input file
+  and categorized by phase (`parse`, `interface`, `implementation`,
+  `namespace`, `format`). Its arguments hold the words the request allocated and the
+  garbage collections that ran meanwhile. Implementations have child spans for
+  type checking and code generation. A `publish` span follows each request,
+  for publishing the files it wrote.
+
+A relative path is relative to the current directory. A command that records
+nothing, such as `rescript clean`, leaves the file alone. A watch session keeps
+its events in memory and writes them when it stops; a killed process writes
+nothing. The format is for people and may change.
+
 The driver gives each request fresh compiler state (flags, warnings, caches,
 predefined types, identifier counters) and restores it on every exit, so
 requests on different domains don't interfere and repeated requests produce

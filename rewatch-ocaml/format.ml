@@ -153,7 +153,7 @@ let format_files ?poll ~check files =
          with Error message -> failures := (path, message) :: !failures);
       None
   in
-  Process.run_dependency_graph
+  Process.run_dependency_graph ~trace_label:"format"
     ~max_jobs:(Compiler_execution_mode.configured_count ())
     ?poll works ~next;
   List.iter

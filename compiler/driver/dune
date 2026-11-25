@@ -27,6 +27,7 @@
  (modules
   rescript_compiler_driver
   rescript_compiler_build_identity
+  compile_phase_hook
   js_implementation
   ext_file_extensions)
  (instrumentation
