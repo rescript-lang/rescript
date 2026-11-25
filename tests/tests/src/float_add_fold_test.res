@@ -47,7 +47,7 @@ describe(__MODULE__, () => {
     eq(__LOC__, Float.fromInt(0) -. (Float.fromInt(0) -. a) +. id(1.0), 4.0)
     eq(__LOC__, a, 3.0)
     eq(__LOC__, Float.fromInt(0) -. -0x1.8p3, 12.0)
-    eq(__LOC__, Float.fromInt(0) -. (Obj.magic(-5n): float), (Obj.magic(5n): float))
+    eq(__LOC__, -.(Obj.magic(-5n): float), (Obj.magic(5n): float))
   })
 
   test("negating a negative operand printed without its wrapper", () => {

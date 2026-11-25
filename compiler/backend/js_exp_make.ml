@@ -517,9 +517,9 @@ let bool v = if v then true_ else false_
 let float f : t =
   {expression_desc = Number (Float {f}); comment = None; source_loc = None}
 
-let zero_float_lit : t =
+let negative_zero_float_lit : t =
   {
-    expression_desc = Number (Float {f = "0."});
+    expression_desc = Number (Float {f = "-0."});
     comment = None;
     source_loc = None;
   }
@@ -1640,6 +1640,9 @@ let int32_minus (e1 : t) (e2 : t) : J.expression =
   match (e1.expression_desc, e2.expression_desc) with
   | Number (Int {i}), Number (Int {i = j}) -> int (Int32.sub i j)
   | _ -> to_int32 (float_minus e1 e2)
+
+(* Not [0. - e], which is [0] and not [-0] when [e] is [0] *)
+let float_neg e = float_minus negative_zero_float_lit e
 
 let float_div e1 e2 = bin Div e1 e2
 let float_pow e1 e2 = bin Pow e1 e2

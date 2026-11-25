@@ -191,7 +191,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   | Pnegint ->
     (* #977 *)
     E.int32_minus E.zero_int_literal (Ext_list.singleton_exn args)
-  | Pnegfloat -> E.float_minus E.zero_float_lit (Ext_list.singleton_exn args)
+  | Pnegfloat -> E.float_neg (Ext_list.singleton_exn args)
   | Pnegbigint ->
     E.bigint_op Minus E.zero_bigint_literal (Ext_list.singleton_exn args)
   (* Negate boxed int end*)

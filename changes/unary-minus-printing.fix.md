@@ -1,0 +1,1 @@
+- Fix `0. -. x` and `Float.fromInt(0) -. x` giving `-0` instead of `0` when `x` is `0.`, and a syntax error in the generated JavaScript for `**` as the operand of a float negation, `~~~` on a bigint, `typeof` or `await`.
