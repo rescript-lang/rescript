@@ -267,6 +267,26 @@ let translate_scoped_access scopes obj =
   | [] -> obj
   | x :: xs -> Ext_list.fold_left xs (E.dot obj x) E.dot
 
+(* The string parts of a tagged template as template source, when the call can
+   be written as one: every part is a string literal and there is one more of
+   them than values. A call written in function form, [tag(strings, values)],
+   may pass any array of strings. *)
+let tagged_template_parts (strings : exprs) (values : exprs) : exprs option =
+  let part (e : E.t) =
+    match e.expression_desc with
+    | Str {txt; delim = DStarJ | DBackQuotes} ->
+      Some (E.str ~delim:DBackQuotes (Js_dump_string.escaped_to_template txt))
+    | Str {txt; delim = DNone} ->
+      Some (E.str ~delim:DBackQuotes (Js_dump_string.string_to_template txt))
+    | _ -> None
+  in
+  let parts = List.filter_map part strings in
+  if
+    Ext_list.same_length parts strings
+    && List.length parts = List.length values + 1
+  then Some parts
+  else None
+
 let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
     arg_types (ffi : External_ffi_types.external_spec)
     (args : J.expression list) ~dynamic_import =
@@ -278,13 +298,20 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
       translate_scoped_module_val external_module_name name scopes
         ~dynamic_import
     in
-    match args with
-    | [
-     {expression_desc = Array (strings, _); _};
-     {expression_desc = Array (values, _); _};
-    ] ->
-      E.tagged_template fn strings values
-    | _ ->
+    let parts_and_values =
+      match args with
+      | [
+       {expression_desc = Array (strings, _); _};
+       {expression_desc = Array (values, _); _};
+      ] ->
+        Option.map
+          (fun parts -> (parts, values))
+          (tagged_template_parts strings values)
+      | _ -> None
+    in
+    match parts_and_values with
+    | Some (parts, values) -> E.tagged_template fn parts values
+    | None ->
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
       add_eff eff

@@ -149,6 +149,32 @@ let escape_to_string s =
   escape_to_buffer buf s;
   Ext_buffer.contents buf
 
+let escaped_to_template s =
+  let l = String.length s in
+  let buf = Ext_buffer.create (l * 2) in
+  let rec loop i =
+    if i < l then
+      match s.[i] with
+      | '\\' when i + 1 < l ->
+        buf +> String.sub s i 2;
+        loop (i + 2)
+      | '`' ->
+        buf +> "\\`";
+        loop (i + 1)
+      | '$' when i + 1 < l && s.[i + 1] = '{' ->
+        buf +> "\\${";
+        loop (i + 2)
+      | c ->
+        buf +> Array.unsafe_get array_str1 (Char.code c);
+        loop (i + 1)
+  in
+  loop 0;
+  Ext_buffer.contents buf
+
+let string_to_template s =
+  let quoted = escape_to_string s in
+  escaped_to_template (String.sub quoted 1 (String.length quoted - 2))
+
 let pp_string f s = P.string f (escape_to_string s)
 (* let _best_string_quote s =
    let simple = ref 0 in

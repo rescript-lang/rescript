@@ -19,6 +19,7 @@
 - Integer patterns that alias the same int32 value (e.g. `0xFFFF_FFFF` and `-1`) may now produce unused-case warnings. https://github.com/rescript-lang/rescript/pull/8717 https://github.com/rescript-lang/rescript/pull/8858
 - Fix constant folding of a `switch` picking the wrong case for `@as(int)` constructors and for coerced variants. https://github.com/rescript-lang/rescript/pull/9318
 - Fix constant folding of comparisons between `@as(int)` constructors and other constructors, and merging of switch arms returning them. https://github.com/rescript-lang/rescript/pull/9319
+- Fix a tagged template call whose result is unused being removed, so its tag function never ran, the payload of a `@string` variant argument being evaluated twice, and `@taggedTemplate` externals called with non-literal strings crashing the compiler. https://github.com/rescript-lang/rescript/pull/TODO
 
 #### :nail_care: Polish
 

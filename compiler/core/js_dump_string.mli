@@ -27,4 +27,12 @@
 *)
 val escape_to_string : string -> string
 
+val escaped_to_template : string -> string
+(** Template literal source, without the backticks, for text whose characters
+    are already escaped as in a JS string or template literal. Escapes the
+    backticks and [${] that would end the template or start a value. *)
+
+val string_to_template : string -> string
+(** Template literal source, without the backticks, for a plain string. *)
+
 val pp_string : Ext_pp.t -> string -> unit
