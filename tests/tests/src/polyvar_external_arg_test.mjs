@@ -310,13 +310,14 @@ Mocha.describe("Polyvar_external_arg_test", () => {
   Mocha.test("a closure created next to an @int argument does not keep it alive", async () => {
     Nodev8.setFlagsFromString("--expose-gc");
     let gc = Nodevm.runInNewContext("gc");
+    Nodev8.setFlagsFromString("--no-expose-gc");
     let t = makeTarget();
     let match = keepClosure(t);
     await nextTask();
     gc();
-    Test_utils.ok("File \"polyvar_external_arg_test.res\", line 293, characters 7-14", match[0].deref() === undefined);
-    Test_utils.ok("File \"polyvar_external_arg_test.res\", line 294, characters 7-14", match[1]() === t);
-    return Test_utils.eq("File \"polyvar_external_arg_test.res\", line 295, characters 7-14", ["10"], t.calls);
+    Test_utils.ok("File \"polyvar_external_arg_test.res\", line 296, characters 7-14", match[0].deref() === undefined);
+    Test_utils.ok("File \"polyvar_external_arg_test.res\", line 297, characters 7-14", match[1]() === t);
+    return Test_utils.eq("File \"polyvar_external_arg_test.res\", line 298, characters 7-14", ["10"], t.calls);
   });
   Mocha.test("the effects of unit and @ignore arguments after @string and @int arguments", () => {
     let t = makeTarget();
@@ -396,7 +397,7 @@ Mocha.describe("Polyvar_external_arg_test", () => {
         }
       })(tmp$6)
     };
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 316, characters 6-13", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 319, characters 6-13", [
       "mode",
       "unit",
       "level",
@@ -411,18 +412,18 @@ Mocha.describe("Polyvar_external_arg_test", () => {
       "level field",
       "unit"
     ], log);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 334, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 337, characters 7-14", [
       "dark-mode",
       "10",
       "0",
       "10",
       "0"
     ], t.calls);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 336, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 339, characters 7-14", [
       "mode",
       "level"
     ], Object.keys(options));
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 337, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 340, characters 7-14", [
       10,
       "dark-mode"
     ], [
@@ -442,7 +443,7 @@ Mocha.describe("Polyvar_external_arg_test", () => {
       VAL: keydown
     });
     t.on(tmp.NAME, tmp.VAL);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 344, characters 7-14", ["click click 1"], t.calls);
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 347, characters 7-14", ["click click 1"], t.calls);
   });
   Mocha.test("the arguments around @string and @int arguments run in order", () => {
     let t = makeTarget();
@@ -485,7 +486,7 @@ Mocha.describe("Polyvar_external_arg_test", () => {
         }
       })(mark("mode field", opaque("dark")))
     };
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 362, characters 6-13", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 365, characters 6-13", [
       "first",
       "mode",
       "second",
@@ -495,11 +496,11 @@ Mocha.describe("Polyvar_external_arg_test", () => {
       "level field",
       "mode field"
     ], log);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 366, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 369, characters 7-14", [
       "a light-mode b",
       "c 10 d"
     ], t.calls);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 367, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 370, characters 7-14", [
       0,
       "dark-mode"
     ], [
@@ -525,13 +526,13 @@ Mocha.describe("Polyvar_external_arg_test", () => {
       VAL: keydown
     }));
     t.onBefore(tmp$2.NAME, tmp$2.VAL, mark("fourth", "b"));
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 379, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 382, characters 7-14", [
       "first",
       "second",
       "third",
       "fourth"
     ], log);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 380, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 383, characters 7-14", [
       "a click click 1",
       "keydown keydown 1 b"
     ], t.calls);
@@ -550,7 +551,7 @@ Mocha.describe("Polyvar_external_arg_test", () => {
           return "keydown!";
       }
     })(tmp$1.NAME), tmp$1.VAL);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 388, characters 7-14", 2, s.reads);
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 391, characters 7-14", 2, s.reads);
     let globalReads = defineGlobalEvent();
     t.on(polyvarExternalArgEvent.NAME, polyvarExternalArgEvent.VAL);
     t.on((x => {
@@ -561,14 +562,14 @@ Mocha.describe("Polyvar_external_arg_test", () => {
           return "keydown!";
       }
     })(polyvarExternalArgEvent.NAME), polyvarExternalArgEvent.VAL);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 393, characters 7-14", 4, globalReads());
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 396, characters 7-14", 4, globalReads());
     let scopedReads = defineScopedEvent();
     let tmp$2 = polyvarExternalArgScope.event;
     t.on(tmp$2.NAME, tmp$2.VAL);
     let tmp$3 = polyvarExternalArgScope.event;
     t.on(tmp$3.NAME, tmp$3.VAL);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 398, characters 7-14", 2, scopedReads());
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 400, characters 6-13", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 401, characters 7-14", 2, scopedReads());
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 403, characters 6-13", [
       "keydown keydown 1",
       "keydown! keydown 1",
       "click click 1",
@@ -609,7 +610,7 @@ Mocha.describe("Polyvar_external_arg_test", () => {
           return "keydown!";
       }
     })(lastEvent.contents.NAME), lastEvent.contents.VAL);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 423, characters 6-13", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 426, characters 6-13", [
       "click click 1",
       "keydown! keydown 1",
       "keydown keydown 1",
@@ -664,14 +665,14 @@ Mocha.describe("Polyvar_external_arg_test", () => {
           return 10;
       }
     })(Primitive_option.valFromOption(await mark("optional", Promise.resolve(opaque("high"))))));
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 441, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 444, characters 7-14", [
       "event",
       "dispatch",
       "mode",
       "level",
       "optional"
     ], log);
-    return Test_utils.eq("File \"polyvar_external_arg_test.res\", line 442, characters 7-14", [
+    return Test_utils.eq("File \"polyvar_external_arg_test.res\", line 445, characters 7-14", [
       "keydown keydown 1",
       "click! click 1",
       "light-mode",
@@ -710,7 +711,7 @@ Mocha.describe("Polyvar_external_arg_test", () => {
           return 10;
       }
     })((await Promise.resolve("high"))));
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 466, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 469, characters 7-14", [
       "first",
       "mode",
       "second",
@@ -718,7 +719,7 @@ Mocha.describe("Polyvar_external_arg_test", () => {
       "level",
       "fourth"
     ], log);
-    return Test_utils.eq("File \"polyvar_external_arg_test.res\", line 467, characters 7-14", [
+    return Test_utils.eq("File \"polyvar_external_arg_test.res\", line 470, characters 7-14", [
       "a dark-mode b",
       "c 0 d",
       "10"
@@ -761,8 +762,8 @@ Mocha.describe("Polyvar_external_arg_test", () => {
         ]);
       };
     };
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 495, characters 7-14", 3, i);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 496, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 498, characters 7-14", 3, i);
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 499, characters 7-14", [
       [
         1,
         1
@@ -772,7 +773,7 @@ Mocha.describe("Polyvar_external_arg_test", () => {
         1
       ]
     ], seen);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 497, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 500, characters 7-14", [
       "event",
       "event",
       "event"
@@ -800,8 +801,8 @@ Mocha.describe("Polyvar_external_arg_test", () => {
       }
       n = n + 1 | 0;
     };
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 511, characters 7-14", 3, n);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 512, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 514, characters 7-14", 3, n);
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 515, characters 7-14", [
       "event",
       "event",
       "event"
@@ -820,7 +821,7 @@ Mocha.describe("Polyvar_external_arg_test", () => {
     while (await Promise.resolve(true) && i < events.length && t.has(events[i].NAME, events[i].VAL)) {
       i = i + 1 | 0;
     };
-    return Test_utils.eq("File \"polyvar_external_arg_test.res\", line 524, characters 7-14", 1, i);
+    return Test_utils.eq("File \"polyvar_external_arg_test.res\", line 527, characters 7-14", 1, i);
   });
   Mocha.test("awaited fields of an object-creating external", async () => {
     let log = [];
@@ -868,20 +869,20 @@ Mocha.describe("Polyvar_external_arg_test", () => {
       })(tmp$1);
     }
     let optional = tmp;
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 543, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 546, characters 7-14", [
       "level",
       "mode",
       "level",
       "mode"
     ], log);
-    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 544, characters 7-14", [
+    Test_utils.eq("File \"polyvar_external_arg_test.res\", line 547, characters 7-14", [
       10,
       "dark-mode"
     ], [
       options.level,
       options.mode
     ]);
-    return Test_utils.eq("File \"polyvar_external_arg_test.res\", line 545, characters 7-14", [
+    return Test_utils.eq("File \"polyvar_external_arg_test.res\", line 548, characters 7-14", [
       0,
       "light-mode"
     ], [

@@ -283,8 +283,11 @@ describe(__MODULE__, () => {
   })
 
   testAsync("a closure created next to an @int argument does not keep it alive", async () => {
+    // Only the new context gets gc, as with Jest's leak detection: the flag is
+    // reset for the tests that run after this one in the same process
     setV8Flags("--expose-gc")
     let gc = runInNewContext("gc")
+    setV8Flags("--no-expose-gc")
     let t = makeTarget()
     let (levels, keep) = keepClosure(t)
     // A WeakRef keeps its target until the end of the current task
