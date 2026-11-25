@@ -38,6 +38,7 @@ type t = {
   mutable column: int; (* only when we print newline, we print the indent *)
   track_positions: bool;
       (* [line] and [column] are only maintained for source maps *)
+  mutable no_in: bool; (* see {!in_operator_forbidden} *)
 }
 
 let update_position t s =
@@ -83,6 +84,7 @@ let from_channel ?(track_positions = false) chan =
     line = 0;
     column = 0;
     track_positions;
+    no_in = false;
   }
 
 let from_buffer ?(track_positions = false) buf =
@@ -95,6 +97,7 @@ let from_buffer ?(track_positions = false) buf =
     line = 0;
     column = 0;
     track_positions;
+    no_in = false;
   }
 
 (* If we have [newline] in [s],
@@ -148,22 +151,36 @@ let group t i action =
 
 let vgroup = group
 
+let with_no_in t no_in action =
+  if t.no_in = no_in then action ()
+  else
+    let old = t.no_in in
+    t.no_in <- no_in;
+    Ext_pervasives.finally ~clean:(fun _ -> t.no_in <- old) () action
+
+let for_init t action = with_no_in t true action
+
+let in_operator_forbidden t = t.no_in
+
+(* The [in] operator is allowed again inside any kind of brackets *)
+let enclosed t action = with_no_in t false action
+
 let paren t action =
   string t "(";
-  let v = action () in
+  let v = enclosed t action in
   string t ")";
   v
 
 let brace fmt u =
   string fmt "{";
   (* break1 fmt ; *)
-  let v = u () in
+  let v = enclosed fmt u in
   string fmt "}";
   v
 
 let bracket fmt u =
   string fmt "[";
-  let v = u () in
+  let v = enclosed fmt u in
   string fmt "]";
   v
 
@@ -172,7 +189,7 @@ let brace_vgroup st n action =
   let v =
     vgroup st n (fun _ ->
         newline st;
-        let v = action () in
+        let v = enclosed st action in
         v)
   in
   force_newline st;
@@ -184,7 +201,7 @@ let bracket_vgroup st n action =
   let v =
     vgroup st n (fun _ ->
         newline st;
-        let v = action () in
+        let v = enclosed st action in
         v)
   in
   force_newline st;
@@ -198,7 +215,7 @@ let paren_vgroup st n action =
   let v =
     group st n (fun _ ->
         newline st;
-        let v = action () in
+        let v = enclosed st action in
         v)
   in
   newline st;

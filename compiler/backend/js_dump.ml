@@ -842,7 +842,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | In (prop, obj) ->
     (* Binds like the other relational operators *)
     let out, lft, rght = Js_op_util.op_prec InstanceOf in
-    P.cond_paren_group f (level > out) (fun _ ->
+    P.cond_paren_group f
+      (level > out || P.in_operator_forbidden f)
+      (fun _ ->
         let cxt = expression ~level:lft cxt f prop in
         P.string f " in ";
         expression ~level:rght cxt f obj)
@@ -1403,6 +1405,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
                 let ctx =
                   P.paren_group f 1 (fun _ ->
                       let cxt, new_id =
+                        P.for_init f @@ fun () ->
                         match
                           (for_ident_expression, finish.expression_desc)
                         with

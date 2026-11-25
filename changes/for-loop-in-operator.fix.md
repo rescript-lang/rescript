@@ -1,0 +1,1 @@
+- Fix invalid JavaScript for a `for` loop whose start or end uses the `in` operator, as from `Dict.has`.

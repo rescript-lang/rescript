@@ -64,6 +64,15 @@ val bracket_group : t -> int -> (unit -> 'a) -> 'a
 
 val bracket_vgroup : t -> int -> (unit -> 'a) -> 'a
 
+val for_init : t -> (unit -> 'a) -> 'a
+(** Prints the initializer of a [for] loop header with [in_operator_forbidden]
+    set, up to the next brackets. *)
+
+val in_operator_forbidden : t -> bool
+(** Whether a bare [in] operator is a syntax error at the current position: in
+    the initializer of a [for] loop header, JavaScript allows [in] only inside
+    parentheses, brackets or braces. *)
+
 val newline : t -> unit
 
 val at_least_two_lines : t -> unit
