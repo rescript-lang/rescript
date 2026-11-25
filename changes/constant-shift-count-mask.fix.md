@@ -1,0 +1,1 @@
+- Make shifts by a constant count of 32 or more give the result JS computes: constant folds now use only the low 5 bits of the count, and `x >>> 32` keeps its `| 0`.
