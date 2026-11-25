@@ -874,17 +874,32 @@ let simple_copy t = copy t
 
 let gadt_env env = if Env.has_local_constraints env then Some env else None
 
-let instance ?partial env sch =
-  with_copy_session (fun () ->
-      let env = gadt_env env in
-      let partial =
-        match partial with
-        | None -> None
-        | Some keep -> Some (compute_univars sch, keep)
-      in
-      copy ?env ?partial sch)
+(* Whether [copy] returns the representative [ty] as it is: it is neither
+   generic nor marked by an enclosing copy session. Instantiating such a node
+   needs no copy session of its own. *)
+let is_own_instance ty =
+  ty.level <> generic_level
+  &&
+  match ty.desc with
+  | Tsubst _ -> false
+  | _ -> true
 
-let instance_def sch = with_copy_session (fun () -> copy sch)
+let instance ?partial env sch =
+  let root = repr sch in
+  if Option.is_none partial && is_own_instance root then root
+  else
+    with_copy_session (fun () ->
+        let env = gadt_env env in
+        let partial =
+          match partial with
+          | None -> None
+          | Some keep -> Some (compute_univars sch, keep)
+        in
+        copy ?env ?partial sch)
+
+let instance_def sch =
+  let root = repr sch in
+  if is_own_instance root then root else with_copy_session (fun () -> copy sch)
 
 let instance_list env schl =
   with_copy_session (fun () ->
