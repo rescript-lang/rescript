@@ -1,0 +1,1 @@
+- Fix missing parentheses in the generated JavaScript around the `in` operator (as from `Dict.has`) and its operands, around a sequence used as the start of a `for` loop, and around a sequence iterated by `for...of`.
