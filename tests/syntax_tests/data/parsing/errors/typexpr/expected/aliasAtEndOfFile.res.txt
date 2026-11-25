@@ -1,0 +1,10 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/aliasAtEndOfFile.res:3:1
+
+  1 │ type t = int as '
+  2 │ 
+
+  A type param consists of a singlequote followed by a name like `'a` or `'A`
+
+type nonrec t = int as '

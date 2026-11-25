@@ -745,7 +745,8 @@ let parse_ident ~msg ~start_pos p =
     (token_txt, mk_loc start_pos (Parser.position p))
   | _token ->
     Parser.err ~start_pos p (Diagnostics.message msg);
-    Parser.next p;
+    (* [Parser.next] can't move past the end of the file: [type t = int as '] *)
+    Parser.next_unsafe p;
     ("", mk_loc start_pos (Parser.position p))
 
 let parse_hash_ident ~start_pos p =

@@ -1,0 +1,1 @@
+- Fix a parser crash when a name is missing at the end of a file, as in `type t = int as '`.
