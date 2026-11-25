@@ -1063,9 +1063,10 @@ let prim ~primitive:(prim : primitive) ~args loc : t =
       | Pandint -> int_ (Int32.logand aa bb)
       | Porint -> int_ (Int32.logor aa bb)
       | Pxorint -> int_ (Int32.logxor aa bb)
-      | Plslint -> int_ (Int32.shift_left aa (Int32.to_int bb))
-      | Plsrint -> int_ (Int32.shift_right_logical aa (Int32.to_int bb))
-      | Pasrint -> int_ (Int32.shift_right aa (Int32.to_int bb))
+      (* JS shifts use only the low 5 bits of the count *)
+      | Plslint -> int_ (Int32.shift_left aa (Int32.to_int bb land 31))
+      | Plsrint -> int_ (Int32.shift_right_logical aa (Int32.to_int bb land 31))
+      | Pasrint -> int_ (Int32.shift_right aa (Int32.to_int bb land 31))
       | _ -> default ())
     | Psequand, Const_js_false, (Const_js_true | Const_js_false) -> lambda_false
     | Psequand, Const_js_true, Const_js_true -> lambda_true

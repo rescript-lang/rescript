@@ -1480,8 +1480,9 @@ let rec int32_bor (e1 : J.expression) (e2 : J.expression) : J.expression =
   | Bin (Lsr, e1, {expression_desc = Number (Int {i = 0l}); _}), _ ->
     int32_bor e1 e2
   | Bin (Lsr, _, {expression_desc = Number (Int {i}); _}), Number (Int {i = 0l})
-    when i > 0l ->
-    (* a >>> 3 | 0 -> a >>> 3 *)
+    when Int32.logand i 31l <> 0l ->
+    (* a >>> 3 | 0 -> a >>> 3. JS uses only the low 5 bits of the count, so
+       a >>> 32 is a >>> 0, which is unsigned and still needs the | 0 *)
     e1
   | ( Bin (Bor, e1, {expression_desc = Number (Int {i = 0l}); _}),
       Number (Int {i = 0l}) ) ->
@@ -1581,7 +1582,8 @@ let js_comp cmp e0 e1 = bin (Lam_compile_util.jsop_of_float_comp cmp) e0 e1
 
 let rec int32_lsr ?comment (e1 : J.expression) (e2 : J.expression) :
     J.expression =
-  let aux i1 i = int (Int32.shift_right_logical i1 i) in
+  (* JS shifts use only the low 5 bits of the count *)
+  let aux i1 i = int (Int32.shift_right_logical i1 (i land 31)) in
   match (e1.expression_desc, e2.expression_desc) with
   | Number (Int {i = i1}), Number (Int {i = i2}) -> aux i1 (Int32.to_int i2)
   | Bin (Lsr, _, _), Number (Int {i = 0l}) ->
@@ -1654,7 +1656,8 @@ let int32_lsl (e1 : J.expression) (e2 : J.expression) : J.expression =
   match (e1, e2) with
   | ( {expression_desc = Number (Int {i = i0})},
       {expression_desc = Number (Int {i = i1})} ) ->
-    int (Int32.shift_left i0 (Int32.to_int i1))
+    (* JS shifts use only the low 5 bits of the count *)
+    int (Int32.shift_left i0 (Int32.to_int i1 land 31))
   | _ ->
     {comment = None; source_loc = None; expression_desc = Bin (Lsl, e1, e2)}
 
