@@ -116,10 +116,11 @@ let rec eq_approx (x : t) (y : t) =
     match y with
     | Const_pointer iy -> ix = iy
     | _ -> false)
-  | Const_block (ix, _, ixs) -> (
+  | Const_block (ix, tag_info_x, ixs) -> (
     match y with
-    | Const_block (iy, _, iys) ->
-      ix = iy && Ext_list.for_all2_no_exn ixs iys eq_approx
+    | Const_block (iy, tag_info_y, iys) ->
+      ix = iy && tag_info_x = tag_info_y
+      && Ext_list.for_all2_no_exn ixs iys eq_approx
     | _ -> false)
   | Const_some ix -> (
     match y with

@@ -222,10 +222,14 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
     match y0 with
     | Optional_block (a1, b1) -> b0 = b1 && eq_expression a0 a1
     | _ -> false)
-  | Caml_block (ls0, flag0, tag0, _) -> (
+  | Caml_block (ls0, flag0, tag0, tag_info0) -> (
     match y0 with
-    | Caml_block (ls1, flag1, tag1, _) ->
+    | Caml_block (ls1, flag1, tag1, tag_info1) ->
+      (* [tag_info] gives the constructor name and record field names a block
+         is printed with, which blocks with the same [tag] can differ in, as
+         in [Lam_constant.eq_approx]. *)
       eq_expression_list ls0 ls1 && flag0 = flag1 && eq_expression tag0 tag1
+      && tag_info0 = tag_info1
     | _ -> false)
   | Length _ | Is_null_or_undefined _ | String_append _ | Typeof _ | Js_not _
   | Js_bnot _ | In _ | Cond _ | FlatCall _ | New _ | Fun _ | Raw_js_code _
