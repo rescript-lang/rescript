@@ -1030,6 +1030,8 @@ let rec scan scanner =
         next scanner;
         let offset = scanner.offset in
         let offset16 = scanner.offset16 in
+        let line_offset = scanner.line_offset in
+        let lnum = scanner.lnum in
         let codepoint, length =
           Res_utf8.decode_code_point scanner.offset scanner.src
             (String.length scanner.src)
@@ -1044,9 +1046,14 @@ let rec scan scanner =
           next scanner;
           Token.Codepoint {c = codepoint; original = contents})
         else (
+          (* Not a codepoint: back to the character after the quote. The
+             skipped character can be a line break, so the line moves back
+             too. *)
           scanner.ch <- ch;
           scanner.offset <- offset;
           scanner.offset16 <- offset16;
+          scanner.line_offset <- line_offset;
+          scanner.lnum <- lnum;
           SingleQuote))
     | '!' -> (
       match (peek scanner, peek2 scanner) with

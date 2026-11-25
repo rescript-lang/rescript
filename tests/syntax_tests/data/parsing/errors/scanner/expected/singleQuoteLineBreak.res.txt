@@ -1,0 +1,26 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/singleQuoteLineBreak.res:2:11
+
+  1 │ // A lone quote before a line break keeps the line numbers of what follo
+    │ ws
+  2 │ let x = y '
+  3 │ let z = 1
+  4 │ let w = )
+
+  I'm not sure what to parse here when looking at "'".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/singleQuoteLineBreak.res:4:8-9
+
+  2 │ let x = y '
+  3 │ let z = 1
+  4 │ let w = )
+  5 │ 
+
+  This let-binding misses an expression
+
+let x = y
+let z = 1
+let w = [%rescript.exprhole ]
