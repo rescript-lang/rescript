@@ -78,7 +78,6 @@ let filename_from_loc (pstr_loc : Location.t) =
   let file_name = String.capitalize_ascii file_name in
   file_name
 
-(* Build a string representation of a module name with segments separated by $ *)
 (* An async component's code runs in the inner [make]; the generated wrapper
    only returns its promise. A directive ('use cache', 'use server') has to sit
    on the async function, so it stays on [make]. A sync wrapper has [make]
@@ -88,6 +87,7 @@ let split_directive_attrs ~async attrs =
   if async then List.partition (fun ({txt}, _) -> txt <> "directive") attrs
   else (attrs, [])
 
+(* Build a string representation of a module name with segments separated by $ *)
 let make_module_name file_name nested_modules fn_name =
   let full_module_name =
     match (file_name, nested_modules, fn_name) with
