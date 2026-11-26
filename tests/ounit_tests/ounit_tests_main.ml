@@ -16,6 +16,7 @@ let suites =
       Ounit_untagged_dispatch_tests.suites;
       Ounit_lambda_traverse_tests.suites;
       Ounit_partial_application_tests.suites;
+      Ounit_record_copy_tests.suites;
       Ounit_deep_flatten_tests.suites;
       Ounit_exits_tests.suites;
       Ounit_lam_size_tests.suites;
