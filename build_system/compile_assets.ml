@@ -17,11 +17,16 @@ let ast_header path =
 let cleanup_extensions =
   [".cmi"; ".cmj"; ".cmt"; ".cmti"; ".ast"; ".iast"; ".mlmap"]
 
+(* A killed build of ReScript 13.0.0-alpha.8 or earlier may have left temporary
+   files under this prefix. *)
+let legacy_atomic_write_prefix = ".rewatch-write-"
+
 (* Compiler artifacts, and files a build killed while it published one left
    behind. *)
 let is_managed_basename basename =
   List.exists (Filename.check_suffix basename) cleanup_extensions
   || String.starts_with ~prefix:File_util.atomic_write_prefix basename
+  || String.starts_with ~prefix:legacy_atomic_write_prefix basename
 
 let state_extension = function
   | ".ast" | ".iast" | ".cmi" | ".cmt" -> true

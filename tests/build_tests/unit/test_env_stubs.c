@@ -3,7 +3,7 @@
 #include <caml/mlvalues.h>
 #include <stdlib.h>
 
-CAMLprim value rewatch_test_unsetenv(value name) {
+CAMLprim value build_system_test_unsetenv(value name) {
   CAMLparam1(name);
 #ifdef _WIN32
   int result = _putenv_s(String_val(name), "");

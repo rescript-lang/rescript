@@ -16,7 +16,7 @@ j["experimental-features"]={LetUnwrap:true};
 fs.writeFileSync("rescript.json", JSON.stringify(j,null,2));
 '
 
-stdout=$(rewatch compiler-args packages/file-casing/src/Consume.res 2>/dev/null)
+stdout=$(rescript compiler-args packages/file-casing/src/Consume.res 2>/dev/null)
 if [ $? -ne 0 ]; then
   mv rescript.json.bak rescript.json
   error "Error grabbing compiler args with experimental-features enabled"

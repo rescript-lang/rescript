@@ -6,7 +6,7 @@ cd ../../testrepo
 bold "Test: It should clean a single project"
 
 # First we build the entire monorepo
-error_output=$(rewatch build 2>&1)
+error_output=$(rescript build 2>&1)
 if [ $? -eq 0 ];
 then
   success "Built monorepo"

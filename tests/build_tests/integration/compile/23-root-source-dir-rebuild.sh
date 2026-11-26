@@ -5,7 +5,7 @@ source "../utils.sh"
 
 bold "Test: Modules of source dir \".\" are not rebuilt when nothing changed"
 
-fixtures=$(mktemp -d 2>/dev/null || mktemp -d -t rewatch-root-source-dir)
+fixtures=$(mktemp -d 2>/dev/null || mktemp -d -t build-system-root-source-dir)
 trap "rm -rf '$fixtures'" EXIT
 
 # "." spells its modules "./Root.res" unless the build system drops the
@@ -19,7 +19,7 @@ check_layout() {
 
   cat > "$fixture/rescript.json" <<JSON
 {
-  "name": "rewatch-root-source-dir-$name",
+  "name": "build-system-root-source-dir-$name",
   "sources": [{ "dir": "." }, { "dir": "ui" }],
   "package-specs": { "module": "esmodule", "in-source": $in_source },
   "suffix": ".mjs"

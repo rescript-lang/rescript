@@ -294,7 +294,7 @@ let captured_binary_output_tests _context =
    long-lived build process does not keep it open. *)
 let failed_decoding_closes_files_tests _context =
   if Sys.file_exists "/proc/self/fd" then
-    with_temp_dir "rewatch-driver-decoding-" (fun root ->
+    with_temp_dir "compiler-request-decoding-" (fun root ->
         let truncated = Filename.concat root "Truncated" in
         write_file truncated "abc";
         let open_files () = Array.length (Sys.readdir "/proc/self/fd") in
@@ -313,7 +313,7 @@ let failed_decoding_closes_files_tests _context =
    from the whole file, and a file without one fails to load like one cut
    short by a killed build. *)
 let ast_header_tests _context =
-  with_temp_dir "rewatch-driver-ast-header-" (fun root ->
+  with_temp_dir "compiler-request-ast-header-" (fun root ->
       let block = "\nBelt\nJs\n" in
       let length = Bytes.create 4 in
       Bytes.set_int32_be length 0 (Int32.of_int (String.length block));
@@ -396,7 +396,7 @@ let failed_writing_closes_files_tests _context =
 (* GenType finds a module's source relative to the request's working
    directory, not the host process's. *)
 let gentype_source_lookup_tests _context =
-  with_temp_dir "rewatch-driver-gentype-source-" (fun root ->
+  with_temp_dir "compiler-request-gentype-source-" (fun root ->
       write_file (Filename.concat root "src/A.res") "let a = 1\n";
       let position = {Lexing.dummy_pos with pos_fname = "src/A.res"} in
       let item : Typedtree.structure_item =
@@ -776,7 +776,7 @@ let input_name_isolation_tests _context =
   assert_equal process_cwd (Sys.getcwd ())
 
 let request_root_io_isolation_tests _context =
-  with_temp_dir "rewatch-request-root-io-" (fun root ->
+  with_temp_dir "compiler-request-root-io-" (fun root ->
       let first = Filename.concat root "first" in
       let second = Filename.concat root "second" in
       ensure_dir first;
@@ -1013,7 +1013,7 @@ let expect_code expected result =
    capturing output in temporary files: it compiles even when it can't create
    any. *)
 let standalone_output_tests _context =
-  with_temp_dir "rewatch-driver-standalone-" (fun root ->
+  with_temp_dir "compiler-request-standalone-" (fun root ->
       let temp = Filename.concat root "tmp" in
       Unix.mkdir temp 0o555;
       write root "Plain.res" "let plain = 1\n";
@@ -1045,7 +1045,7 @@ let standalone_output_tests _context =
 (* A relative project root names a directory under the request's working
    directory, not the host process's, for the JavaScript writer too. *)
 let relative_project_root_tests _context =
-  with_temp_dir "rewatch-driver-relative-root-" (fun root ->
+  with_temp_dir "compiler-request-relative-root-" (fun root ->
       write root "Relative.res" "let relative = 1\n";
       let argv =
         [
@@ -1076,8 +1076,8 @@ let relative_project_root_tests _context =
    directory, which names a directory under the host's working directory, the
    file is still found and removed when the request runs elsewhere. *)
 let eval_relative_temp_dir_tests _context =
-  with_temp_dir "rewatch-driver-eval-root-" (fun root ->
-      with_temp_dir "rewatch-driver-eval-host-" (fun host ->
+  with_temp_dir "compiler-request-eval-root-" (fun root ->
+      with_temp_dir "compiler-request-eval-host-" (fun host ->
           let temp = Filename.concat host "tmp" in
           Unix.mkdir temp 0o755;
           let previous_cwd = Sys.getcwd () in
@@ -1115,7 +1115,7 @@ let eval_relative_temp_dir_tests _context =
             "the -e source file is removed"))
 
 let recovery_tests _context =
-  with_temp_dir "rewatch-driver-recovery-" (fun root ->
+  with_temp_dir "compiler-request-recovery-" (fun root ->
       write root "Parse.res" "let value = 1\n";
       let _, initial = run root "Parse.res" in
       expect_code 0 initial;
@@ -1140,7 +1140,7 @@ let recovery_tests _context =
       expect_code 0 repaired)
 
 let ppx_recovery_tests _context =
-  with_temp_dir "rewatch-driver-ppx-" (fun root ->
+  with_temp_dir "compiler-request-ppx-" (fun root ->
       write root "Ppx.res" "let value = 1\n";
       let argv =
         [
@@ -1153,7 +1153,7 @@ let ppx_recovery_tests _context =
           "-bs-package-output";
           "commonjs:.:.js";
           "-ppx";
-          "rewatch-test-ppx";
+          "compiler-request-test-ppx";
           "-verbose";
         ]
       in
@@ -1181,13 +1181,13 @@ let ppx_recovery_tests _context =
       in
       expect_code 0 repaired;
       check
-        (contains_text repaired.stderr "+ rewatch-test-ppx")
+        (contains_text repaired.stderr "+ compiler-request-test-ppx")
         "direct verbose output is returned through the request boundary")
 
 (* The PPX bridge renames a PPX's [ocaml.warning] to [warning], so source
    spelled that way must be rejected before an external PPX sees it. *)
 let ppx_removed_ocaml_spelling_tests _context =
-  with_temp_dir "rewatch-driver-ppx-ocaml-" (fun root ->
+  with_temp_dir "compiler-request-ppx-ocaml-" (fun root ->
       let identity_ppx command =
         let quote = if String.contains command '\'' then '\'' else '"' in
         match String.split_on_char quote command with
@@ -1237,7 +1237,7 @@ let ppx_removed_ocaml_spelling_tests _context =
       expect_code 0 (run "Bare.res"))
 
 let control_flow_and_output_tests _context =
-  with_temp_dir "rewatch-driver-control-" (fun root ->
+  with_temp_dir "compiler-request-control-" (fun root ->
       let process_cwd = Sys.getcwd () in
       write root "Good.res" "let value = 1\n";
       write root "Broken.res" "let value =\n";
@@ -1279,7 +1279,7 @@ let control_flow_and_output_tests _context =
       assert_equal process_cwd (Sys.getcwd ()))
 
 let state_boundary_tests _context =
-  with_temp_dir "rewatch-driver-state-" (fun root ->
+  with_temp_dir "compiler-request-state-" (fun root ->
       write root "Warning.res"
         "let rec notActuallyRecursive = () => 42\n\n\
          let _ = notActuallyRecursive()\n";
@@ -1341,7 +1341,7 @@ let state_boundary_tests _context =
    expansions behind. They are keyed by path, and paths into other compilation
    units compare by name, so a later request must not find this [Lib.t]. *)
 let ctype_memo_reset_tests _context =
-  with_temp_dir "rewatch-driver-ctype-" (fun root ->
+  with_temp_dir "compiler-request-ctype-" (fun root ->
       write root "Lib.res" "type t = int\n";
       expect_code 0 (snd (run root "Lib.res"));
       let memorized = Btype.For_test.memorized_abbrev_count () in
@@ -1356,7 +1356,7 @@ let ctype_memo_reset_tests _context =
         "the expansion environment does not outlive its request")
 
 let package_and_load_path_isolation_tests _context =
-  with_temp_dir "rewatch-driver-load-roots-" (fun root ->
+  with_temp_dir "compiler-request-load-roots-" (fun root ->
       let first = Filename.concat root "first" in
       let second = Filename.concat root "second" in
       ensure_dir first;
@@ -1378,7 +1378,7 @@ let package_and_load_path_isolation_tests _context =
         (compile first "first-package" ~extra:["-I"; first] "Consumer.res"))
 
 let generated_name_isolation_tests _context =
-  with_temp_dir "rewatch-driver-generated-names-" (fun root ->
+  with_temp_dir "compiler-request-generated-names-" (fun root ->
       write root "First.res" "%%private(let hidden = 1)\nlet value = hidden\n";
       write root "Other.res"
         "%%private(let first = 1)\n%%private(let second = first + 1)\n";
@@ -1440,7 +1440,7 @@ let generated_name_isolation_tests _context =
       Lambda_exits.reset ())
 
 let interface_namespace_and_load_path_tests _context =
-  with_temp_dir "rewatch-driver-artifacts-" (fun root ->
+  with_temp_dir "compiler-request-artifacts-" (fun root ->
       write root "Api.resi" "let value: int\n";
       let _, intf = run root "Api.resi" in
       expect_code 0 intf;
@@ -1466,7 +1466,7 @@ let interface_namespace_and_load_path_tests _context =
         ["cmi"; "cmj"; "cmt"])
 
 let concurrent_diagnostic_recovery_tests _context =
-  with_temp_dir "rewatch-driver-errors-" (fun root ->
+  with_temp_dir "compiler-request-errors-" (fun root ->
       let first = Filename.concat root "first" in
       let second = Filename.concat root "second" in
       ensure_dir first;
@@ -1502,7 +1502,7 @@ let concurrent_diagnostic_recovery_tests _context =
       expect_code 0 (second_request ()))
 
 let concurrent_jsx_diagnostic_tests _context =
-  with_temp_dir "rewatch-driver-jsx-errors-" (fun root ->
+  with_temp_dir "compiler-request-jsx-errors-" (fun root ->
       let source module_name =
         "@@config({flags: [\"-bs-jsx\", \"4\"]})\n\nmodule " ^ module_name
         ^ " = {\n\
@@ -1555,7 +1555,7 @@ let concurrent_jsx_diagnostic_tests _context =
 
 (* Exercise concurrent compiler requests without the process-worker boundary. *)
 let concurrent_request_isolation_tests _context =
-  with_temp_dir "rewatch-driver-domains-" (fun root ->
+  with_temp_dir "compiler-request-domains-" (fun root ->
       let first = Filename.concat root "first" in
       let second = Filename.concat root "second" in
       ensure_dir first;
@@ -1591,7 +1591,7 @@ let concurrent_request_isolation_tests _context =
             "commonjs:.:.js";
             "-bs-no-version-header";
             "-ppx";
-            "rewatch-test-ppx";
+            "compiler-request-test-ppx";
           ]
           @ extra
         in
@@ -1658,7 +1658,7 @@ let concurrent_request_isolation_tests _context =
         "a concurrent parser without -absname retains its relative source path")
 
 let concurrent_async_context_tests _context =
-  with_temp_dir "rewatch-driver-async-domains-" (fun root ->
+  with_temp_dir "compiler-request-async-domains-" (fun root ->
       let runtime = Runtime_package.get_path () in
       let runtime_artifacts = Filename.concat runtime "lib/rescript" in
       let async_source =

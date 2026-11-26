@@ -1,7 +1,7 @@
 open OUnit2
 
 let check condition message = assert_bool message condition
-let with_temp_dir = Test_support.with_temp_dir "rewatch-build-files-"
+let with_temp_dir = Test_support.with_temp_dir "build-system-build-files-"
 
 let ast_contents ~dependencies ~source =
   let dependency_block = "\n" ^ String.concat "\n" dependencies ^ "\n" in

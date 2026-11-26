@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: Watcher ignores changes outside source dirs"
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -16,13 +16,13 @@ else
 fi
 
 # Start watcher and capture output
-rewatch_bg watch > rewatch.log 2>&1 &
+rescript_bg watch > rescript.log 2>&1 &
 success "Watcher Started"
 
 # Wait for initial build to complete
 if ! wait_for_file "./src/Test.mjs" 40; then
   error "Initial build did not complete"
-  cat rewatch.log
+  cat rescript.log
   exit_watcher
   exit 1
 fi
@@ -47,7 +47,7 @@ EOF
 # Wait for the probe file to be compiled (proves watcher is responsive)
 if ! wait_for_file "./src/WatchProbe.mjs" 40; then
   error "Watcher did not respond to source change (probe file not compiled)"
-  cat rewatch.log
+  cat rescript.log
   rm -rf ./random-dir ./another-dir ./src/WatchProbe.res
   exit_watcher
   exit 1
@@ -79,7 +79,7 @@ if ! exit_watcher; then
   exit 1
 fi
 
-rm -f rewatch.log
+rm -f rescript.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
 then

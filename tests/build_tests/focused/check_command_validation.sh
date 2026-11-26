@@ -11,7 +11,7 @@ unset CLICOLOR_FORCE
 root=$(CDPATH= cd -- "$(dirname "$0")/../../.." && pwd)
 rescript=${1:-$root/_build/default/build_system/rescript.exe}
 rescript=$(realpath "$rescript")
-work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-command-validation-XXXXXX")
+work=$(mktemp -d "${TMPDIR:-/tmp}/build-system-command-validation-XXXXXX")
 # Compiler diagnostics contain canonical paths. Resolve platform aliases such
 # as macOS's /var -> /private/var before deriving paths used for comparison.
 work=$(realpath "$work")
@@ -768,10 +768,10 @@ if ! grep -F -- '--after-build command cannot be empty' \
 fi
 # The shell reports the missing program; the build fails with its status.
 run_case after-build-missing-program reject build --after-build \
-  rewatch-command-that-does-not-exist "$project"
+  build-system-command-that-does-not-exist "$project"
 if ! grep -F -- '--after-build command failed' \
     "$work/rescript.err" >/dev/null || \
-  ! grep -F 'rewatch-command-that-does-not-exist' \
+  ! grep -F 'build-system-command-that-does-not-exist' \
     "$work/rescript.err" >/dev/null; then
   echo "Missing --after-build program did not produce a contextual error" >&2
   dump_output

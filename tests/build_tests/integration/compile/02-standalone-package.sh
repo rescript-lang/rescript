@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: Standalone package can build via rescript from package folder"
 
-rewatch clean &> /dev/null
+rescript clean &> /dev/null
 
 pushd ./packages/standalone > /dev/null
 error_output=$("$RESCRIPT_EXECUTABLE" build 2>&1)

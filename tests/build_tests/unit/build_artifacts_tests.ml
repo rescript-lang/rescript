@@ -4,7 +4,7 @@ let check condition message = assert_bool message condition
 
 let write_file = Test_support.write_file
 
-let with_temp_dir = Test_support.with_temp_dir "rewatch-build-artifacts-"
+let with_temp_dir = Test_support.with_temp_dir "build-system-build-artifacts-"
 
 let cleanup_stale ~artifact_files ~ast_sources ?(present_source_files = [])
     ?(on_removed_module = ignore) ~root config modules =
@@ -56,6 +56,9 @@ let tests =
       let leftover =
         Filename.concat artifact_dir (File_util.atomic_write_prefix ^ "1a2b.tmp")
       in
+      let legacy_leftover =
+        Filename.concat artifact_dir ".rewatch-write-3c4d.tmp"
+      in
       let kept =
         List.map
           (Filename.concat artifact_dir)
@@ -71,7 +74,7 @@ let tests =
       write_file config_path {|{"name":"cleanup"}|};
       List.iter
         (fun path -> write_file path "contents")
-        (unexpected :: leftover :: kept);
+        (unexpected :: leftover :: legacy_leftover :: kept);
       let config = Config.load_root root in
       let inventory = Compile_assets.create [artifact_dir] in
       ignore
@@ -81,6 +84,9 @@ let tests =
       check
         (not (Sys.file_exists leftover))
         "a file a killed build was writing is removed";
+      check
+        (not (Sys.file_exists legacy_leftover))
+        "a file a killed build of an older version was writing is removed";
       check
         (not (Sys.file_exists unexpected))
         "an artifact of no current module is removed";

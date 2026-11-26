@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: Warnings from non-recompiled modules persist in watch mode"
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -16,12 +16,12 @@ else
 fi
 
 # Start watcher and capture stderr (where warnings are printed)
-rewatch_bg watch > /dev/null 2> rewatch-stderr.log &
+rescript_bg watch > /dev/null 2> rescript-stderr.log &
 
 # Wait for initial compilation to produce the warning
-if ! wait_for_pattern rewatch-stderr.log "unused value unusedValue" 60; then
+if ! wait_for_pattern rescript-stderr.log "unused value unusedValue" 60; then
   error "Initial build does not show warning from ModuleA.res"
-  cat rewatch-stderr.log
+  cat rescript-stderr.log
   exit_watcher
   exit 1
 fi
@@ -31,27 +31,27 @@ success "Initial build shows warning from ModuleA.res"
 printf '// trigger recompile\n' >> ./packages/watch-warnings/src/B.res
 
 # Wait for the warning to appear a second time (from the incremental build)
-if ! wait_for_pattern_count rewatch-stderr.log "unused value unusedValue" 2 40; then
-  warning_count=$(grep -c "unused value unusedValue" rewatch-stderr.log || echo "0")
+if ! wait_for_pattern_count rescript-stderr.log "unused value unusedValue" 2 40; then
+  warning_count=$(grep -c "unused value unusedValue" rescript-stderr.log || echo "0")
   error "Warning from ModuleA.res was lost after recompiling B.res (count: $warning_count)"
-  cat rewatch-stderr.log
+  cat rescript-stderr.log
   exit_watcher
   printf 'let world = () => Console.log("world")\n' > ./packages/watch-warnings/src/B.res
   exit 1
 fi
 
-warning_count=$(grep -c "unused value unusedValue" rewatch-stderr.log)
+warning_count=$(grep -c "unused value unusedValue" rescript-stderr.log)
 success "Warning from ModuleA.res persists after recompiling B.res (count: $warning_count)"
 
 # Restore B.res
-warning_count_before_restore=$(grep -c "unused value unusedValue" rewatch-stderr.log 2>/dev/null || true)
+warning_count_before_restore=$(grep -c "unused value unusedValue" rescript-stderr.log 2>/dev/null || true)
 warning_count_before_restore=${warning_count_before_restore:-0}
 printf 'let world = () => Console.log("world")\n' > ./packages/watch-warnings/src/B.res
 
-if ! wait_for_pattern_count rewatch-stderr.log "unused value unusedValue" \
+if ! wait_for_pattern_count rescript-stderr.log "unused value unusedValue" \
   "$((warning_count_before_restore + 1))" 20; then
   error "Watcher did not finish rebuilding after restoring B.res"
-  cat rewatch-stderr.log
+  cat rescript-stderr.log
   exit_watcher
   exit 1
 fi
@@ -62,7 +62,7 @@ fi
 
 # A new invocation has no retained in-memory warning state, so the watcher must
 # leave a freshness marker that causes the warning-producing module to run.
-next_output=$(rewatch build 2>&1)
+next_output=$(rescript build 2>&1)
 next_status=$?
 if [ "$next_status" -eq 0 ] \
   && printf '%s\n' "$next_output" | grep -q "unused value unusedValue"; then
@@ -74,7 +74,7 @@ else
 fi
 
 # Clean up log file
-rm -f rewatch-stderr.log
+rm -f rescript-stderr.log
 
 # Verify no leftover changes
 if git diff --exit-code ./packages/watch-warnings > /dev/null 2>&1;

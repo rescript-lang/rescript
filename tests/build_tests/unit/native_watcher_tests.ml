@@ -3,7 +3,7 @@ open OUnit2
 let check condition message = assert_bool message condition
 
 let temporary_directory () =
-  let path = Filename.temp_file "rewatch-native-watcher-" "" in
+  let path = Filename.temp_file "build-system-native-watcher-" "" in
   Sys.remove path;
   Unix.mkdir path 0o700;
   Unix.realpath path

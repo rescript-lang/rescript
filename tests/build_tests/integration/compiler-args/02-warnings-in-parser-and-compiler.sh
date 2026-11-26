@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: warnings/error flags appear in both parser_args and compiler_args (namespace-casing)"
 
-stdout=$(rewatch compiler-args packages/namespace-casing/src/Consume.res 2>/dev/null)
+stdout=$(rescript compiler-args packages/namespace-casing/src/Consume.res 2>/dev/null)
 if [ $? -ne 0 ]; then
   error "Error grabbing compiler args for packages/namespace-casing/src/Consume.res"
   exit 1

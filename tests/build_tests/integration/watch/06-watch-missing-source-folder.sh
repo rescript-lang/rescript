@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: Watcher reports missing source folders"
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -26,13 +26,13 @@ node -e "
 "
 
 # Start watcher and capture output (use -vv to get error logs)
-rewatch_bg watch -vv > rewatch.log 2>&1 &
+rescript_bg watch -vv > rescript.log 2>&1 &
 success "Watcher Started"
 
 # Wait for initial build to complete
 if ! wait_for_file "./src/Test.mjs" 40; then
   error "Initial build did not complete"
-  cat rewatch.log
+  cat rescript.log
   if ! exit_watcher; then
     exit 1
   fi
@@ -42,11 +42,11 @@ fi
 success "Initial build completed"
 
 # Check that the error about the missing folder was logged
-if grep -q 'source folder "nonexistent-folder"' rewatch.log; then
+if grep -q 'source folder "nonexistent-folder"' rescript.log; then
   success "Missing source folder error was reported"
 else
   error "Missing source folder error was NOT reported"
-  cat rewatch.log
+  cat rescript.log
   if ! exit_watcher; then
     exit 1
   fi
@@ -56,7 +56,7 @@ fi
 
 # Exit the watcher before restoring the config to avoid a race condition
 # where the config change triggers a full rebuild that runs concurrently
-# with the subsequent `rewatch build`.
+# with the subsequent `rescript build`.
 if ! exit_watcher; then
   exit 1
 fi
@@ -64,10 +64,10 @@ fi
 # Restore dep01's rescript.json
 git restore --worktree -- "$DEP01_CONFIG"
 
-# Rebuild to regenerate any artifacts that were removed by `rewatch clean`
+# Rebuild to regenerate any artifacts that were removed by `rescript clean`
 # but not rebuilt due to the modified config (e.g. Dep01.mjs).
-rewatch build > /dev/null 2>&1
-rm -f rewatch.log
+rescript build > /dev/null 2>&1
+rm -f rescript.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
 then

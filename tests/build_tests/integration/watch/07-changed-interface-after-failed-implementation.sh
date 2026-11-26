@@ -5,7 +5,7 @@ source "../utils.sh"
 
 bold "Test: A changed interface dirties dependents after its implementation fails"
 
-fixture=$(mktemp -d 2>/dev/null || mktemp -d -t rewatch-failed-implementation)
+fixture=$(mktemp -d 2>/dev/null || mktemp -d -t build-system-failed-implementation)
 cleanup() {
   cd "$fixture" || return
   exit_watcher
@@ -22,7 +22,7 @@ trap cleanup EXIT
 mkdir -p "$fixture/src"
 cat > "$fixture/rescript.json" <<'EOF'
 {
-  "name": "rewatch-failed-implementation",
+  "name": "build-system-failed-implementation",
   "sources": { "dir": "src" },
   "package-specs": { "module": "esmodule", "in-source": true },
   "suffix": ".mjs"
@@ -40,7 +40,7 @@ let number: int = Provider.value
 EOF
 
 cd "$fixture" || exit 1
-RESCRIPT_COMPILER_DOMAINS=1 "$RESCRIPT_EXECUTABLE" watch > rewatch.log 2>&1 &
+RESCRIPT_COMPILER_DOMAINS=1 "$RESCRIPT_EXECUTABLE" watch > rescript.log 2>&1 &
 watch_pid=$!
 compiler_log=lib/rescript/.compiler.log
 
@@ -53,9 +53,9 @@ wait_for_changed_compiler_log() {
   poll 60 compiler_log_changed "$1"
 }
 
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 60; then
+if ! wait_for_pattern_count rescript.log "Finished .*compilation" 1 60; then
   error "Initial watch build did not finish"
-  cat rewatch.log >&2
+  cat rescript.log >&2
   exit 1
 fi
 cp "$compiler_log" initial.compiler.log
@@ -65,12 +65,12 @@ cp "$compiler_log" initial.compiler.log
 printf 'let value: string\n' > src/Provider.resi
 if ! wait_for_changed_compiler_log initial.compiler.log; then
   error "Watch did not finish the failing interface-change build"
-  cat rewatch.log >&2
+  cat rescript.log >&2
   exit 1
 fi
 if ! grep -q "Provider.res" "$compiler_log"; then
   error "Changed interface did not expose the implementation error"
-  cat rewatch.log >&2
+  cat rescript.log >&2
   exit 1
 fi
 cp "$compiler_log" failed.compiler.log
@@ -87,12 +87,12 @@ printf 'let value = "recovered"\n' > src/Provider.next
 mv src/Provider.next src/Provider.res
 if ! wait_for_changed_compiler_log failed.compiler.log; then
   error "Watch did not finish the recovery build"
-  cat rewatch.log >&2
+  cat rescript.log >&2
   exit 1
 fi
 if ! grep -q "Consumer.res" "$compiler_log"; then
   error "Consumer was not recompiled against the changed interface"
-  cat rewatch.log >&2
+  cat rescript.log >&2
   exit 1
 fi
 

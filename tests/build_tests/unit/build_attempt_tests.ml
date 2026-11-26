@@ -65,7 +65,7 @@ let pending_work_is_drained_once _context =
   assert_equal [] (Build_attempt.take_compile_candidates attempt)
 
 let log_finalization_runs_once _context =
-  Test_support.with_temp_dir "rewatch-attempt-log" (fun root ->
+  Test_support.with_temp_dir "build-system-attempt-log" (fun root ->
       let attempt = create_full () in
       File_util.ensure_dir (Build_artifacts.artifact_dir root);
       Compiler_log.initialize root;

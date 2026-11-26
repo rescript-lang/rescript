@@ -6,7 +6,7 @@ import * as path from "node:path";
 import { runtimePath } from "#cli/runtime";
 import { setup } from "#dev/process";
 
-// Set runtime path for rewatch to find
+// Set runtime path for the build system to find
 process.env.RESCRIPT_RUNTIME = runtimePath;
 
 const { execBuild, execClean } = setup(import.meta.dirname);

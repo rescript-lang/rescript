@@ -130,7 +130,7 @@ type cmt_scan_entry = {
 }
 (** Read explicit `.cmt/.cmti` scan plan from `.sourcedirs.json`.
 
-    This is a v2 extension produced by `rewatch` to support monorepos without requiring
+    This is a v2 extension produced by the build system to support monorepos without requiring
     reanalyze-side package resolution.
 
     The scan plan is a list of build roots (`<pkg>/lib/rescript`) relative to the project root,

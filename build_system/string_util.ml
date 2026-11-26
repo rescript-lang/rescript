@@ -1,4 +1,4 @@
-(* OCaml 5.5 provides [String.includes], but Rewatch also supports OCaml 5.0.
+(* OCaml 5.5 provides [String.includes], but the build system also supports OCaml 5.0.
    The affixes checked here are short markers, so this allocation-free scan
    keeps the compatibility implementation simpler than a general-purpose
    substring-search algorithm. *)

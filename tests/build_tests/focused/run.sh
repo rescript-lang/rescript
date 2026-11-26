@@ -1233,7 +1233,7 @@ if $file_symlinks_supported; then
     cat "$symlink_source/watch.log" >&2
     exit 1
   fi
-  symlink_replacement=$(mktemp "${TMPDIR:-/tmp}/rewatch-symlink-target.XXXXXX")
+  symlink_replacement=$(mktemp "${TMPDIR:-/tmp}/build-system-symlink-target.XXXXXX")
   printf 'let value = 3\n' >"$symlink_replacement"
   mv "$symlink_replacement" "$symlink_source/shared/Source.js"
   if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 3'; then

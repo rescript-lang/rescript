@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: Watcher triggers full rebuild on rescript.json change"
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -16,29 +16,29 @@ else
 fi
 
 # Start watcher and capture all output
-rewatch_bg watch > rewatch.log 2>&1 &
+rescript_bg watch > rescript.log 2>&1 &
 success "Watcher Started"
 
 # Wait for initial build to complete
 if ! wait_for_file "./src/Test.mjs" 40; then
   error "Initial build did not complete"
-  cat rewatch.log
+  cat rescript.log
   exit_watcher
   exit 1
 fi
 success "Initial build completed"
 
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 60; then
+if ! wait_for_pattern_count rescript.log "Finished .*compilation" 1 60; then
   error "Initial build did not settle"
-  cat rewatch.log
+  cat rescript.log
   exit_watcher
   exit 1
 fi
-completed_builds=$(grep -c "Finished .*compilation" rewatch.log 2>/dev/null || true)
+completed_builds=$(grep -c "Finished .*compilation" rescript.log 2>/dev/null || true)
 completed_builds=${completed_builds:-0}
 wait_for_next_build() {
   completed_builds=$((completed_builds + 1))
-  wait_for_pattern_count rewatch.log "Finished .*compilation" \
+  wait_for_pattern_count rescript.log "Finished .*compilation" \
     "$completed_builds" 30
 }
 
@@ -54,7 +54,7 @@ wait_for_tracked_outputs() {
 replace "s/.mjs/.res.mjs/g" rescript.json
 if ! wait_for_next_build; then
   error "Configuration rebuild did not settle"
-  cat rewatch.log
+  cat rescript.log
   replace "s/.res.mjs/.mjs/g" rescript.json
   exit_watcher
   exit 1
@@ -70,7 +70,7 @@ if wait_for_file "./src/Test.res.mjs" 40 && wait_for_next_build; then
   success "Full rebuild triggered by rescript.json change (new suffix applied)"
 else
   error "No rebuild detected after rescript.json change"
-  cat rewatch.log
+  cat rescript.log
   replace "s/.res.mjs/.mjs/g" rescript.json
   git restore --worktree -- ./src/Test.res
   exit_watcher
@@ -80,7 +80,7 @@ fi
 # The rebuild for the new suffix removes the output with the previous one.
 if ! wait_for_file_gone "./src/Test.mjs" 20; then
   error "Previous suffix output was not removed after config change"
-  cat rewatch.log
+  cat rescript.log
   replace "s/.res.mjs/.mjs/g" rescript.json
   git restore --worktree -- ./src/Test.res
   exit_watcher
@@ -92,7 +92,7 @@ if [ -f lib/rescript/watch.lock ]; then
   success "Watcher still running after config change"
 else
   error "Watcher crashed after config change"
-  cat rewatch.log
+  cat rescript.log
   replace "s/.res.mjs/.mjs/g" rescript.json
   git restore --worktree -- ./src/Test.res
   exit 1
@@ -129,7 +129,7 @@ if ! exit_watcher; then
 fi
 
 git restore --worktree -- ./src/Test.res
-rm -f rewatch.log
+rm -f rescript.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
 then

@@ -30,7 +30,7 @@
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
 
-static void rewatch_windows_enable_vt_for_handle(DWORD stream)
+static void rescript_windows_enable_vt_for_handle(DWORD stream)
 {
   HANDLE handle = GetStdHandle(stream);
   DWORD mode;
@@ -40,15 +40,15 @@ static void rewatch_windows_enable_vt_for_handle(DWORD stream)
   }
 }
 
-CAMLprim value rewatch_windows_enable_virtual_terminal_processing(value unit)
+CAMLprim value rescript_windows_enable_virtual_terminal_processing(value unit)
 {
   CAMLparam1(unit);
-  rewatch_windows_enable_vt_for_handle(STD_OUTPUT_HANDLE);
-  rewatch_windows_enable_vt_for_handle(STD_ERROR_HANDLE);
+  rescript_windows_enable_vt_for_handle(STD_OUTPUT_HANDLE);
+  rescript_windows_enable_vt_for_handle(STD_ERROR_HANDLE);
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value rewatch_windows_directory_identity(value path_value)
+CAMLprim value rescript_windows_directory_identity(value path_value)
 {
   CAMLparam1(path_value);
   CAMLlocal1(identity_value);
@@ -80,7 +80,7 @@ CAMLprim value rewatch_windows_directory_identity(value path_value)
   CAMLreturn(identity_value);
 }
 
-struct rewatch_windows_job {
+struct rescript_windows_job {
   HANDLE handle;
   HANDLE stdin_handle;
   HANDLE stdout_handle;
@@ -91,10 +91,10 @@ struct rewatch_windows_job {
   WCHAR *cwd;
 };
 
-#define Job_val(v) ((struct rewatch_windows_job *)Data_custom_val(v))
+#define Job_val(v) ((struct rescript_windows_job *)Data_custom_val(v))
 
-static void rewatch_windows_release_launch_resources(
-  struct rewatch_windows_job *job)
+static void rescript_windows_release_launch_resources(
+  struct rescript_windows_job *job)
 {
   if (job->stdin_handle != NULL) CloseHandle(job->stdin_handle);
   if (job->stdout_handle != NULL) CloseHandle(job->stdout_handle);
@@ -112,19 +112,19 @@ static void rewatch_windows_release_launch_resources(
   job->cwd = NULL;
 }
 
-static void rewatch_windows_finalize_job(value job_value)
+static void rescript_windows_finalize_job(value job_value)
 {
-  struct rewatch_windows_job *job = Job_val(job_value);
-  rewatch_windows_release_launch_resources(job);
+  struct rescript_windows_job *job = Job_val(job_value);
+  rescript_windows_release_launch_resources(job);
   if (job->handle != NULL) {
     CloseHandle(job->handle);
     job->handle = NULL;
   }
 }
 
-static const struct custom_operations rewatch_windows_job_operations = {
-  "rescript.rewatch.windows_job",
-  rewatch_windows_finalize_job,
+static const struct custom_operations rescript_windows_job_operations = {
+  "rescript.build_system.windows_job",
+  rescript_windows_finalize_job,
   custom_compare_default,
   custom_hash_default,
   custom_serialize_default,
@@ -150,7 +150,7 @@ static BOOL terminate_unowned_process(PROCESS_INFORMATION *process,
   return terminated;
 }
 
-CAMLprim value rewatch_windows_spawn_owned(value env_value,
+CAMLprim value rescript_windows_spawn_owned(value env_value,
                                             value cwd_value,
                                             value program_value,
                                             value command_line_value,
@@ -164,15 +164,15 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   CAMLlocal2(job_value, process_value);
   STARTUPINFOEXW startup;
   PROCESS_INFORMATION process;
-  struct rewatch_windows_job *job;
+  struct rescript_windows_job *job;
   HANDLE job_handle;
   BOOL created;
   HANDLE inherited_handles[3];
   SIZE_T attribute_list_size = 0;
   DWORD error;
 
-  job_value = caml_alloc_custom(&rewatch_windows_job_operations,
-                                sizeof(struct rewatch_windows_job), 0, 1);
+  job_value = caml_alloc_custom(&rescript_windows_job_operations,
+                                sizeof(struct rescript_windows_job), 0, 1);
   job = Job_val(job_value);
   job->handle = NULL;
   job->stdin_handle = NULL;
@@ -196,7 +196,7 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
       !duplicate_standard_handle(stdout_value, &job->stdout_handle) ||
       !duplicate_standard_handle(stderr_value, &job->stderr_handle)) {
     error = GetLastError();
-    rewatch_windows_release_launch_resources(job);
+    rescript_windows_release_launch_resources(job);
     caml_win32_maperr(error);
     uerror("DuplicateHandle", Nothing);
   }
@@ -217,14 +217,14 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
     int size = caml_win32_multi_byte_to_wide_char(
       String_val(contents), length, NULL, 0);
     if (size <= 0) {
-      rewatch_windows_release_launch_resources(job);
-      caml_failwith("rewatch: invalid child environment encoding");
+      rescript_windows_release_launch_resources(job);
+      caml_failwith("rescript: invalid child environment encoding");
     }
     job->environment = caml_stat_alloc(size * sizeof(WCHAR));
     if (caml_win32_multi_byte_to_wide_char(String_val(contents), length,
                                            job->environment, size) != size) {
-      rewatch_windows_release_launch_resources(job);
-      caml_failwith("rewatch: invalid child environment encoding");
+      rescript_windows_release_launch_resources(job);
+      caml_failwith("rescript: invalid child environment encoding");
     }
   }
 
@@ -232,7 +232,7 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   startup.lpAttributeList =
     HeapAlloc(GetProcessHeap(), 0, attribute_list_size);
   if (startup.lpAttributeList == NULL) {
-    rewatch_windows_release_launch_resources(job);
+    rescript_windows_release_launch_resources(job);
     caml_win32_maperr(ERROR_NOT_ENOUGH_MEMORY);
     uerror("HeapAlloc", Nothing);
   }
@@ -241,7 +241,7 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
     error = GetLastError();
     HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
     startup.lpAttributeList = NULL;
-    rewatch_windows_release_launch_resources(job);
+    rescript_windows_release_launch_resources(job);
     caml_win32_maperr(error);
     uerror("InitializeProcThreadAttributeList", Nothing);
   }
@@ -253,7 +253,7 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
     DeleteProcThreadAttributeList(startup.lpAttributeList);
     HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
     startup.lpAttributeList = NULL;
-    rewatch_windows_release_launch_resources(job);
+    rescript_windows_release_launch_resources(job);
     caml_win32_maperr(error);
     uerror("UpdateProcThreadAttribute", Nothing);
   }
@@ -263,7 +263,7 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
     error = GetLastError();
     DeleteProcThreadAttributeList(startup.lpAttributeList);
     HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
-    rewatch_windows_release_launch_resources(job);
+    rescript_windows_release_launch_resources(job);
     caml_win32_maperr(error);
     uerror("CreateJobObject", Nothing);
   }
@@ -287,7 +287,7 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   if (!created) {
     DeleteProcThreadAttributeList(startup.lpAttributeList);
     HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
-    rewatch_windows_release_launch_resources(job);
+    rescript_windows_release_launch_resources(job);
     CloseHandle(job->handle);
     job->handle = NULL;
     caml_win32_maperr(error);
@@ -296,7 +296,7 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
 
   DeleteProcThreadAttributeList(startup.lpAttributeList);
   HeapFree(GetProcessHeap(), 0, startup.lpAttributeList);
-  rewatch_windows_release_launch_resources(job);
+  rescript_windows_release_launch_resources(job);
 
   if (!AssignProcessToJobObject(job->handle, process.hProcess)) {
     error = GetLastError();
@@ -339,19 +339,19 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   CAMLreturn(process_value);
 }
 
-CAMLprim value rewatch_windows_spawn_owned_byte(value *arguments,
+CAMLprim value rescript_windows_spawn_owned_byte(value *arguments,
                                                  int argument_count)
 {
   (void)argument_count;
-  return rewatch_windows_spawn_owned(arguments[0], arguments[1], arguments[2],
+  return rescript_windows_spawn_owned(arguments[0], arguments[1], arguments[2],
                                      arguments[3], arguments[4], arguments[5],
                                      arguments[6]);
 }
 
-CAMLprim value rewatch_windows_terminate_process_job(value job_value)
+CAMLprim value rescript_windows_terminate_process_job(value job_value)
 {
   CAMLparam1(job_value);
-  struct rewatch_windows_job *job = Job_val(job_value);
+  struct rescript_windows_job *job = Job_val(job_value);
   JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits;
   HANDLE handle;
 
@@ -374,10 +374,10 @@ CAMLprim value rewatch_windows_terminate_process_job(value job_value)
   CAMLreturn(Val_false);
 }
 
-CAMLprim value rewatch_windows_close_process_job(value job_value)
+CAMLprim value rescript_windows_close_process_job(value job_value)
 {
   CAMLparam1(job_value);
-  struct rewatch_windows_job *job = Job_val(job_value);
+  struct rescript_windows_job *job = Job_val(job_value);
   HANDLE handle = job->handle;
 
   if (handle != NULL) {
@@ -390,7 +390,7 @@ CAMLprim value rewatch_windows_close_process_job(value job_value)
   CAMLreturn(Val_unit);
 }
 
-CAMLprim value rewatch_windows_current_process_id(value unit_value)
+CAMLprim value rescript_windows_current_process_id(value unit_value)
 {
   (void)unit_value;
   return Val_long(GetCurrentProcessId());
@@ -398,19 +398,19 @@ CAMLprim value rewatch_windows_current_process_id(value unit_value)
 
 #else
 
-CAMLprim value rewatch_windows_enable_virtual_terminal_processing(value unit)
+CAMLprim value rescript_windows_enable_virtual_terminal_processing(value unit)
 {
   (void)unit;
   caml_invalid_argument("Windows virtual terminal support is unavailable");
 }
 
-CAMLprim value rewatch_windows_directory_identity(value path_value)
+CAMLprim value rescript_windows_directory_identity(value path_value)
 {
   (void)path_value;
   caml_invalid_argument("Windows directory identities are unavailable");
 }
 
-CAMLprim value rewatch_windows_spawn_owned(value env_value,
+CAMLprim value rescript_windows_spawn_owned(value env_value,
                                             value cwd_value,
                                             value program_value,
                                             value command_line_value,
@@ -428,28 +428,28 @@ CAMLprim value rewatch_windows_spawn_owned(value env_value,
   caml_invalid_argument("Windows process jobs are unavailable");
 }
 
-CAMLprim value rewatch_windows_spawn_owned_byte(value *arguments,
+CAMLprim value rescript_windows_spawn_owned_byte(value *arguments,
                                                  int argument_count)
 {
   (void)argument_count;
-  return rewatch_windows_spawn_owned(arguments[0], arguments[1], arguments[2],
+  return rescript_windows_spawn_owned(arguments[0], arguments[1], arguments[2],
                                      arguments[3], arguments[4], arguments[5],
                                      arguments[6]);
 }
 
-CAMLprim value rewatch_windows_terminate_process_job(value job_value)
+CAMLprim value rescript_windows_terminate_process_job(value job_value)
 {
   (void)job_value;
   caml_invalid_argument("Windows process jobs are unavailable");
 }
 
-CAMLprim value rewatch_windows_close_process_job(value job_value)
+CAMLprim value rescript_windows_close_process_job(value job_value)
 {
   (void)job_value;
   caml_invalid_argument("Windows process jobs are unavailable");
 }
 
-CAMLprim value rewatch_windows_current_process_id(value unit_value)
+CAMLprim value rescript_windows_current_process_id(value unit_value)
 {
   (void)unit_value;
   caml_invalid_argument("Windows process IDs are unavailable");

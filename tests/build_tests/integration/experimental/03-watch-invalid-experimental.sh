@@ -14,7 +14,7 @@ cfg["experimental-features"] = ["LetUnwrap"];
 fs.writeFileSync("rescript.json", JSON.stringify(cfg, null, 2));
 '
 
-out=$(rewatch watch 2>&1)
+out=$(rescript watch 2>&1)
 status=$?
 
 mv rescript.json.bak rescript.json

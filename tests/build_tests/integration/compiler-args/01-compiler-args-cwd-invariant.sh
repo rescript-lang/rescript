@@ -6,10 +6,10 @@ cd ../../testrepo
 bold "Test: It should not matter where we grab the compiler-args for a file"
 
 # Capture stdout for both invocations
-stdout_root=$(rewatch compiler-args packages/file-casing/src/Consume.res 2>/dev/null)
+stdout_root=$(rescript compiler-args packages/file-casing/src/Consume.res 2>/dev/null)
 stdout_pkg=$(cd packages/file-casing && "$RESCRIPT_EXECUTABLE" compiler-args src/Consume.res 2>/dev/null)
 
-error_output=$(rewatch compiler-args packages/file-casing/src/Consume.res 2>&1)
+error_output=$(rescript compiler-args packages/file-casing/src/Consume.res 2>&1)
 if [ $? -ne 0 ]; then
   error "Error grabbing compiler args for packages/file-casing/src/Consume.res"
   printf "%s\n" "$error_output" >&2

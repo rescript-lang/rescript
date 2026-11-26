@@ -20,7 +20,7 @@ let write_ast path ~dependencies ~source =
       output_char channel '\n';
       output_value channel "Belt_HashSet\nBelt\n")
 
-let with_temp_dir = Test_support.with_temp_dir "rewatch-compile-assets-"
+let with_temp_dir = Test_support.with_temp_dir "build-system-compile-assets-"
 
 let tests =
   "compile_assets_tests" >:: fun _context ->

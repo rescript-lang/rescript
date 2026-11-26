@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: Warnings persist after atomic-save rename of unrelated module"
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -25,9 +25,9 @@ wait_for_changed_completed_log() {
 
 COMPILER_LOG="./packages/watch-warnings/lib/rescript/.compiler.log"
 B_FILE="./packages/watch-warnings/src/B.res"
-WATCH_STDOUT="rewatch-stdout.log"
-WATCH_STDERR="rewatch-stderr.log"
-TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/rewatch-watch-warning-atomic-save.XXXXXX")"
+WATCH_STDOUT="rescript-stdout.log"
+WATCH_STDERR="rescript-stderr.log"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/build-system-watch-warning-atomic-save.XXXXXX")"
 INITIAL_LOG="$TMP_DIR/initial.compiler.log"
 BACKUP_B="$TMP_DIR/B.res.bak"
 
@@ -44,7 +44,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-rewatch_bg watch > "$WATCH_STDOUT" 2> "$WATCH_STDERR" &
+rescript_bg watch > "$WATCH_STDOUT" 2> "$WATCH_STDERR" &
 
 if ! wait_for_pattern "$COMPILER_LOG" "unused value unusedValue" 60 || ! wait_for_pattern "$COMPILER_LOG" "#Done(" 60; then
   error "Initial build did not finish with warning from ModuleA.res in $COMPILER_LOG"

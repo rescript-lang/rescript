@@ -16,7 +16,7 @@ let tests =
     && Watch_scope.is_control_file_name "bsconfig.json"
     && Watch_scope.is_control_file_name "package.json")
     "configuration and package identity files trigger control-file rebuilds";
-  Test_support.with_temp_dir "rewatch-watch-scope-metadata-" (fun root ->
+  Test_support.with_temp_dir "build-system-watch-scope-metadata-" (fun root ->
       Test_support.write_file
         (Filename.concat root "rescript.json")
         {|{"name":"root","sources":"src"}|};
@@ -27,7 +27,8 @@ let tests =
       check
         (Watch_scope.path_in_scope scope (Filename.concat root "package.json"))
         "malformed package metadata remains in recoverable watch scope");
-  Test_support.with_temp_dir "rewatch-hoisted-dependency-scope-" (fun repo ->
+  Test_support.with_temp_dir "build-system-hoisted-dependency-scope-"
+    (fun repo ->
       let app = Test_support.path repo "packages/app" in
       Test_support.write_file
         (Filename.concat app "rescript.json")
@@ -61,7 +62,7 @@ let tests =
                   (Platform.canonicalize_path path.directory))
            scope.paths)
         "the ancestor's node_modules is watched shallowly");
-  Test_support.with_temp_dir "rewatch-missing-source-scope-" (fun root ->
+  Test_support.with_temp_dir "build-system-missing-source-scope-" (fun root ->
       Unix.mkdir (Filename.concat root "node_modules") 0o755;
       Test_support.write_file
         (Filename.concat root "rescript.json")
@@ -152,7 +153,7 @@ let tests =
        (Watch_snapshot.changes_are_incremental
           [Watch_snapshot.{path = "rescript.json"; kind = Modified}]))
     "polling control-file changes use full-rebuild presentation";
-  Test_support.with_temp_dir "rewatch-snapshot-update-" (fun root ->
+  Test_support.with_temp_dir "build-system-snapshot-update-" (fun root ->
       let source = Filename.concat root "A.res" in
       Test_support.write_file source "let value = 1\n";
       let digest_cache = Watch_snapshot.create_digest_cache () in
@@ -203,7 +204,7 @@ let tests =
         (Watch_snapshot.update_entries digest_cache previous modified
         = Updated previous)
         "a transient snapshot read failure preserves the rebuild baseline");
-  Test_support.with_temp_dir "rewatch-snapshot-racy-" (fun root ->
+  Test_support.with_temp_dir "build-system-snapshot-racy-" (fun root ->
       let root = Unix.realpath root in
       Test_support.write_file
         (Filename.concat root "rescript.json")
@@ -248,7 +249,7 @@ let tests =
         ~printer:(Option.value ~default:"None")
         (Some "cached")
         (cached ~hashed_at:(stat.st_mtime +. 10.)));
-  let root = Filename.temp_file "rewatch-watcher-lifecycle-" "" in
+  let root = Filename.temp_file "build-system-watcher-lifecycle-" "" in
   Sys.remove root;
   Unix.mkdir root 0o700;
   let root = Unix.realpath root in
@@ -352,7 +353,7 @@ let tests =
    between them and edits B after the initial build edited C. *)
 let edit_between_snapshots_tests =
   "watcher_edit_between_snapshots" >:: fun _context ->
-  Test_support.with_temp_dir "rewatch-watch-edit-between-snapshots-"
+  Test_support.with_temp_dir "build-system-watch-edit-between-snapshots-"
     (fun root ->
       Test_support.write_file
         (Filename.concat root "rescript.json")

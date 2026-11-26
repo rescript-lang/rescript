@@ -6,7 +6,7 @@ cd ../../testrepo
 bold "Test: Should clean dev-dependencies of monorepo"
 
 # First we build the entire monorepo
-error_output=$(rewatch build 2>&1)
+error_output=$(rescript build 2>&1)
 if [ $? -eq 0 ];
 then
   success "Built monorepo"
@@ -17,7 +17,7 @@ else
 fi
 
 # Clean entire monorepo
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 clean_status=$?
 if [ $clean_status -ne 0 ];
 then

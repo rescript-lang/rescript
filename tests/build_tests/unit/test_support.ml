@@ -1,6 +1,6 @@
 let contains_text = String_util.contains
 
-external unsetenv : string -> unit = "rewatch_test_unsetenv"
+external unsetenv : string -> unit = "build_system_test_unsetenv"
 
 let write_file path contents =
   File_util.ensure_dir (Filename.dirname path);

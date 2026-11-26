@@ -5,15 +5,15 @@ cd ../../testrepo
 
 bold "Test: Rename file with interface should trigger error"
 
-rewatch clean &> /dev/null
-rewatch build &> /dev/null
+rescript clean &> /dev/null
+rescript build &> /dev/null
 
 mv ./packages/main/src/ModuleWithInterface.res ./packages/main/src/ModuleWithInterface2.res
-rewatch build &> ../integration/snapshots/rename-file-with-interface.txt
+rescript build &> ../integration/snapshots/rename-file-with-interface.txt
 normalize_paths ../integration/snapshots/rename-file-with-interface.txt
 mv ./packages/main/src/ModuleWithInterface2.res ./packages/main/src/ModuleWithInterface.res
 
-rewatch build &> /dev/null
+rescript build &> /dev/null
 
 # Check snapshot
 if git diff --exit-code ../integration/snapshots/rename-file-with-interface.txt &> /dev/null;

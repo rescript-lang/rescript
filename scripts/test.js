@@ -75,7 +75,7 @@ if (mochaTest) {
   const beltPackageDir = path.join(projectDir, "packages/@rescript/belt");
   const beltTestDir = path.join(projectDir, "tests/belt_tests");
 
-  // No need to clean beforehand, rewatch detects changes to the compiler binary
+  // No need to clean beforehand, the build system detects changes to the compiler binary
   // and rebuilds automatically in that case.
   await execBuild([], {
     cwd: compilerTestDir,

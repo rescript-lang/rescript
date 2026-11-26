@@ -14,7 +14,7 @@ let in_build action =
     (fun () -> Build_file_store.with_build action)
 
 let publication_tests _context =
-  Test_support.with_temp_dir "rewatch-compiler-process-" (fun root ->
+  Test_support.with_temp_dir "build-system-compiler-process-" (fun root ->
       let artifact_dir = Filename.concat root "lib/rescript" in
       let path extension = Filename.concat artifact_dir ("Ns." ^ extension) in
       File_util.ensure_dir artifact_dir;
@@ -41,7 +41,7 @@ let publication_tests _context =
             assert_failure
               "namespace publication must report a changed CMI when a later \
                artifact is missing"));
-  Test_support.with_temp_dir "rewatch-namespace-retry-" (fun root ->
+  Test_support.with_temp_dir "build-system-namespace-retry-" (fun root ->
       let artifact_dir = Filename.concat root "lib/rescript" in
       let path extension = Filename.concat artifact_dir ("Ns." ^ extension) in
       File_util.ensure_dir artifact_dir;
@@ -90,7 +90,7 @@ let publication_tests _context =
    unchanged interface keeps the modification time its dependents compare
    with, and releases from the build file store what nothing reads again. *)
 let publication_releases_files_tests _context =
-  Test_support.with_temp_dir "rewatch-publication-store-" (fun root ->
+  Test_support.with_temp_dir "build-system-publication-store-" (fun root ->
       Test_support.write_file
         (Filename.concat root "rescript.json")
         {|{"name":"publish","sources":"src","package-specs":{"module":"commonjs","in-source":true},"suffix":".js"}|};
@@ -201,7 +201,7 @@ let publication_releases_files_tests _context =
    artifact directory makes the rename fail while the file stays writable. *)
 let in_place_fallback_tests _context =
   if (not Sys.win32) && Unix.getuid () <> 0 then
-    Test_support.with_temp_dir "rewatch-publication-fallback-" (fun root ->
+    Test_support.with_temp_dir "build-system-publication-fallback-" (fun root ->
         let artifact_dir = Filename.concat root "lib/rescript" in
         let ast = Filename.concat artifact_dir "A.ast" in
         Test_support.write_file ast "previous AST";
@@ -227,7 +227,7 @@ let in_place_fallback_tests _context =
    then does not leave behind an AST whose warnings the next build skips. A
    parse that failed leaves the previous AST. *)
 let parse_publication_tests _context =
-  Test_support.with_temp_dir "rewatch-parse-publication-" (fun root ->
+  Test_support.with_temp_dir "build-system-parse-publication-" (fun root ->
       Test_support.write_file
         (Filename.concat root "rescript.json")
         {|{"name":"parse","sources":"src","package-specs":{"module":"commonjs","in-source":true},"suffix":".js"}|};
@@ -326,7 +326,8 @@ let check_ppx_gone marker =
       "the domain PPX process is gone when the request returns"
 
 let domain_ppx_cancellation_test _context =
-  Test_support.with_temp_dir "rewatch-domain-ppx-cancellation-" (fun root ->
+  Test_support.with_temp_dir "build-system-domain-ppx-cancellation-"
+    (fun root ->
       let marker = Filename.concat root "ppx-started" in
       let job = waiting_ppx_request root marker in
       let started = Unix.gettimeofday () in
@@ -352,7 +353,7 @@ let domain_ppx_cancellation_test _context =
 (* An exception that escapes the compiler fails only its own request: the
    module fails with exit status 2 and the exception in its output. *)
 let escaped_exception_test _context =
-  Test_support.with_temp_dir "rewatch-escaped-exception-" (fun root ->
+  Test_support.with_temp_dir "build-system-escaped-exception-" (fun root ->
       let marker = Filename.concat root "ppx-started" in
       let raised = ref false in
       let poll () =
@@ -371,7 +372,7 @@ let escaped_exception_test _context =
       check_ppx_gone marker)
 
 let domain_execution_test _context =
-  Test_support.with_temp_dir "rewatch-domain-execution-" (fun root ->
+  Test_support.with_temp_dir "build-system-domain-execution-" (fun root ->
       let previous_count = Sys.getenv_opt "RESCRIPT_COMPILER_DOMAINS" in
       let previous_legacy_count = Sys.getenv_opt "REWATCH_COMPILER_DOMAINS" in
       Fun.protect

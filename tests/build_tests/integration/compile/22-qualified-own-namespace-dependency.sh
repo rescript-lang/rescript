@@ -5,14 +5,14 @@ source "../utils.sh"
 
 bold "Test: A module reached only through its own namespace is a dependency"
 
-fixture=$(mktemp -d 2>/dev/null || mktemp -d -t rewatch-qualified-own-namespace)
+fixture=$(mktemp -d 2>/dev/null || mktemp -d -t build-system-qualified-own-namespace)
 trap "rm -rf '$fixture'" EXIT
 
 mkdir -p "$fixture/src"
 
 cat > "$fixture/rescript.json" <<'JSON'
 {
-  "name": "rewatch-qualified-own-namespace",
+  "name": "build-system-qualified-own-namespace",
   "namespace": "Ns",
   "sources": { "dir": "src" },
   "package-specs": { "module": "esmodule", "in-source": true },

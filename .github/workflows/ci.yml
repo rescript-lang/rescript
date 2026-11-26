@@ -67,7 +67,7 @@ jobs:
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
             node-target: linux-x64
             dune-profile: static
-            skip_rewatch_integration_tests: true
+            skip_build_system_integration_tests: true
 
     runs-on: ${{matrix.os}}
 
@@ -226,8 +226,8 @@ jobs:
         run: make -C tests/gentype_tests/typescript-react-example clean test
         shell: bash
 
-      - name: Run rewatch snapshot tests
-        if: ${{ !matrix.skip_rewatch_integration_tests }}
+      - name: Run build system snapshot tests
+        if: ${{ !matrix.skip_build_system_integration_tests }}
         timeout-minutes: 20
         run: |
           . tests/build_tests/focused/process_watchdog.sh
@@ -239,7 +239,7 @@ jobs:
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
-      - name: Run rewatch interactive output tests
+      - name: Run build system interactive output tests
         # Terminal rendering depends on the host OS, not the CPU architecture.
         # Use the faster ARM runners for one Linux and one macOS check. Windows
         # does not provide a reliable native equivalent of the `script` PTY.
@@ -250,15 +250,15 @@ jobs:
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
-      - name: Run rewatch verbose output tests
-        if: ${{ !matrix.skip_rewatch_integration_tests }}
+      - name: Run build system verbose output tests
+        if: ${{ !matrix.skip_build_system_integration_tests }}
         timeout-minutes: 10
         run: |
           bash tests/build_tests/focused/check_verbose_output.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
-      - name: Run rewatch unit tests
+      - name: Run build system unit tests
         timeout-minutes: 10
         run: |
           opam exec -- dune build tests/build_tests/unit/build_system_tests_main.exe
@@ -272,8 +272,8 @@ jobs:
       # three and a half minutes. The canonical suite fails when another
       # process runs its executable as it starts, so it runs a copy. Its
       # output is shown once both are done.
-      - name: Run rewatch focused integration and canonical tests
-        if: ${{ !matrix.skip_rewatch_integration_tests }}
+      - name: Run build system focused integration and canonical tests
+        if: ${{ !matrix.skip_build_system_integration_tests }}
         timeout-minutes: 30
         run: |
           bin=packages/@rescript/${{ matrix.node-target }}/bin

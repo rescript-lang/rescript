@@ -24,7 +24,7 @@ cd "$fixture"
 
 fail_test() {
   error "$1"
-  cat rewatch.log >&2
+  cat rescript.log >&2
   exit 1
 }
 
@@ -46,20 +46,20 @@ const path = require("path");
 fs.appendFileSync("outputs.log", path.basename(process.argv[2]) + "\n");
 JS
 
-rewatch watch > rewatch.log 2>&1 &
+rescript watch > rescript.log 2>&1 &
 watch_pid=$!
-wait_for_pattern rewatch.log "Finished initial compilation" 60 ||
+wait_for_pattern rescript.log "Finished initial compilation" 60 ||
   fail_test "Initial watch build did not finish"
 
 previous_output='Test.mjs'
 iteration=0
 for invalid_config in '{"name":' '{"name":"watch-recovery","jsx":{"version":3}}'; do
   iteration=$((iteration + 1))
-  completed=$(grep -c "Finished compilation" rewatch.log || true)
-  errors=$(grep -c 'Could not initialize build\|invalid JSON\|jsx.version' rewatch.log || true)
+  completed=$(grep -c "Finished compilation" rescript.log || true)
+  errors=$(grep -c 'Could not initialize build\|invalid JSON\|jsx.version' rescript.log || true)
   printf '%s\n' "$invalid_config" > rescript.next
   mv rescript.next rescript.json
-  wait_for_pattern_count rewatch.log 'Could not initialize build\|invalid JSON\|jsx.version' "$((errors + 1))" 30 ||
+  wait_for_pattern_count rescript.log 'Could not initialize build\|invalid JSON\|jsx.version' "$((errors + 1))" 30 ||
     fail_test "Watcher did not report the invalid config"
 
   # Record emitted files across recovery, even if a later cleanup removes them.
@@ -78,7 +78,7 @@ config.suffix = `.recovered${process.argv[2]}.mjs`;
 fs.writeFileSync("rescript.next", JSON.stringify(config));
 JS
   mv rescript.next rescript.json
-  wait_for_pattern_count rewatch.log "Finished compilation" "$((completed + 1))" 30 ||
+  wait_for_pattern_count rescript.log "Finished compilation" "$((completed + 1))" 30 ||
     fail_test "Watcher did not recover after restoring a valid config"
   wait_for_pattern "src/Test.recovered$iteration.mjs" "watch-recovery-marker-$iteration" 20 ||
     fail_test "Recovered watcher did not compile the edited source with the new suffix"

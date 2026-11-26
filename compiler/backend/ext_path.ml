@@ -107,7 +107,7 @@ let absolute_cwd_path s = absolute_path (lazy (Compiler_request_state.cwd ())) s
    | File x -> File (absolute_path cwd x )
    | Dir x -> Dir (absolute_path cwd x) *)
 
-(** Populated by [-bs-project-root]. The build system (rewatch) or
+(** Populated by [-bs-project-root]. The build system (rescript) or
     [cli/bsc.js] is responsible for supplying it; the compiler no longer
     reads [rescript.json] itself. *)
 let get_project_root () = (Compiler_request_state.current ()).project_root

@@ -13,7 +13,7 @@ let wait_for_release_job root =
   let executable = Unix.realpath Sys.executable_name in
   Process.{program = executable; args = ["--wait-for-release"; root]; cwd = "."}
 
-let with_temp_dir = Test_support.with_temp_dir "rewatch-scheduler-"
+let with_temp_dir = Test_support.with_temp_dir "build-system-scheduler-"
 
 let with_single_domain action =
   let previous = Sys.getenv_opt "RESCRIPT_COMPILER_DOMAINS" in

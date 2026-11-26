@@ -5,21 +5,21 @@ source "../utils.sh"
 
 bold "Test: Compiler warnings preserve UTF-8 when wrapping source lines"
 
-fixture=$(mktemp -d 2>/dev/null || mktemp -d -t rewatch-utf8-warning)
+fixture=$(mktemp -d 2>/dev/null || mktemp -d -t build-system-utf8-warning)
 trap "rm -rf '$fixture'" EXIT
 
 mkdir -p "$fixture/src"
 
 cat > "$fixture/package.json" <<'EOF'
 {
-  "name": "rewatch-utf8-warning",
+  "name": "build-system-utf8-warning",
   "version": "0.0.1"
 }
 EOF
 
 cat > "$fixture/rescript.json" <<'EOF'
 {
-  "name": "rewatch-utf8-warning",
+  "name": "build-system-utf8-warning",
   "sources": { "dir": "src" },
   "warnings": { "number": "+27" }
 }
@@ -33,7 +33,7 @@ let _g = 1
 EOF
 
 cd "$fixture"
-compiler_output=$(rewatch build 2>&1)
+compiler_output=$(rescript build 2>&1)
 build_status=$?
 
 if [ $build_status -ne 0 ]; then
