@@ -15,9 +15,6 @@
 
 (* System configuration *)
 
-val version : string
-(** The compiler version, as in package.json. *)
-
 val header : string
 (** The first line of every generated JavaScript file. *)
 

@@ -202,7 +202,7 @@ let eval (s : string) ~suffix =
 
 (* let (//) = Filename.concat *)
 
-let bs_version_string = "ReScript " ^ Config.version
+let bs_version_string = "ReScript " ^ Rescript_version.version
 
 let print_version_string () =
   Compiler_request_output.print_stdout bs_version_string;

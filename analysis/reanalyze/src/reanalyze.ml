@@ -337,7 +337,7 @@ let parse_argv (argv : string array) : string option =
   let cmt_root_ref = ref None in
   (* CLI override for transitive mode (overrides rescript.json if provided). *)
   let transitive_override : bool option ref = ref None in
-  let usage = "reanalyze version " ^ Version.version in
+  let usage = "reanalyze version " ^ Rescript_version.version in
   let version_and_exit () =
     print_endline usage;
     exit 0

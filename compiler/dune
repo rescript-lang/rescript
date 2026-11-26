@@ -9,7 +9,8 @@
  playground
  sync
  syntax_cli
- typing)
+ typing
+ version)
 
 (env
  (release

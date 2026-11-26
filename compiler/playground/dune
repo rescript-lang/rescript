@@ -14,4 +14,5 @@
   rescript_parser
   typing
   gentype
-  js_of_ocaml))
+  js_of_ocaml
+  rescript_version))

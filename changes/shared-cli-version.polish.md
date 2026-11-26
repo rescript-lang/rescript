@@ -1,0 +1,1 @@
+- `rescript-tools --version` and `rescript-tools reanalyze -version` report the ReScript version instead of their own stale numbers.

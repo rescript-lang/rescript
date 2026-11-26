@@ -39,4 +39,5 @@
   gentype
   rescript_printer
   rescript_parser
+  rescript_version
   unix))

@@ -4,4 +4,4 @@
   (:standard -open Rescript_ast))
  (instrumentation
   (backend bisect_ppx))
- (libraries reactive yojson typing str unix))
+ (libraries reactive yojson typing str unix rescript_version))

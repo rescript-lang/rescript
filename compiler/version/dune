@@ -1,0 +1,6 @@
+; The ReScript version, shared by every executable: bsc, the playground, the
+; build system (rescript), rescript-tools and reanalyze. yarn.config.cjs keeps it
+; equal to package.json.
+
+(library
+ (name rescript_version))
