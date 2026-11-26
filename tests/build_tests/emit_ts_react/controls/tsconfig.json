@@ -1,0 +1,10 @@
+{
+  "extends": "../contracts/verification-tsconfig.json",
+  "include": ["*.ts", "../contracts/jsx-runtime.d.ts"],
+  "compilerOptions": {
+    "paths": {
+      "react": ["./react.d.ts"],
+      "react/jsx-runtime": ["../contracts/jsx-runtime.d.ts"]
+    }
+  }
+}

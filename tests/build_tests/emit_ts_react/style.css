@@ -1,0 +1,88 @@
+:root {
+  color: #16251e;
+  background: #f2f6f1;
+  font:
+    16px / 1.5 system-ui,
+    sans-serif;
+}
+
+main {
+  max-width: 38rem;
+  margin: 6vh auto;
+  padding: clamp(1rem, 4vw, 2rem);
+  background: white;
+  border: 1px solid #d1ddd1;
+  border-radius: 1rem;
+}
+
+h1 {
+  margin-block: 0 1rem;
+  font-size: 2rem;
+}
+
+input,
+button {
+  box-sizing: border-box;
+  color: inherit;
+  font: inherit;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #829c88;
+  border-radius: 0.45rem;
+  background: white;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  background: #ecf3ec;
+}
+
+button[aria-pressed="true"] {
+  color: white;
+  background: #24583f;
+}
+
+label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+label input {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar,
+li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toolbar {
+  margin-block: 0.75rem;
+}
+
+ul {
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+li {
+  padding-block: 0.65rem;
+  border-top: 1px solid #d1ddd1;
+}
+
+li span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+li.done span {
+  color: #465b50;
+  text-decoration: line-through;
+}

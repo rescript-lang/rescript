@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": [],
+    "paths": {
+      "react/jsx-runtime": ["./jsx-runtime.d.ts"]
+    }
+  },
+  "include": [
+    "../src/app/*.res.ts",
+    "../src/forwarding/*.res.ts",
+    "./jsx-runtime.d.ts"
+  ]
+}
