@@ -1,0 +1,1 @@
+- Drop the `test`, `test-build` and `test-ocaml` scripts from `package.json`; the Makefile targets (`make test`, `make test-build`) are the entry points.
