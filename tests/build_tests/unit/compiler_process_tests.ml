@@ -372,27 +372,30 @@ let escaped_exception_test _context =
 
 let domain_execution_test _context =
   Test_support.with_temp_dir "rewatch-domain-execution-" (fun root ->
-      let previous_count = Sys.getenv_opt "REWATCH_COMPILER_DOMAINS" in
+      let previous_count = Sys.getenv_opt "RESCRIPT_COMPILER_DOMAINS" in
+      let previous_legacy_count = Sys.getenv_opt "REWATCH_COMPILER_DOMAINS" in
       Fun.protect
         ~finally:(fun () ->
-          restore_environment "REWATCH_COMPILER_DOMAINS" previous_count)
+          restore_environment "RESCRIPT_COMPILER_DOMAINS" previous_count;
+          restore_environment "REWATCH_COMPILER_DOMAINS" previous_legacy_count)
         (fun () ->
           List.iter
             (fun (cpus, workers) ->
               assert_equal workers
                 (Compiler_execution_mode.recommended_domain_count cpus))
             [(1, 1); (2, 1); (4, 3); (8, 7); (10, 8); (16, 8)];
+          Test_support.unsetenv "RESCRIPT_COMPILER_DOMAINS";
           Test_support.unsetenv "REWATCH_COMPILER_DOMAINS";
           assert_equal
             (Compiler_execution_mode.recommended_domain_count
                (Domain.recommended_domain_count ()))
             (Compiler_execution_mode.configured_count ());
           let count =
-            if Sys.getenv_opt "REWATCH_TEST_DOMAIN_CONCURRENCY" = Some "1" then
+            if Sys.getenv_opt "RESCRIPT_TEST_DOMAIN_CONCURRENCY" = Some "1" then
               2
             else 1
           in
-          Unix.putenv "REWATCH_COMPILER_DOMAINS" (string_of_int count);
+          Unix.putenv "RESCRIPT_COMPILER_DOMAINS" (string_of_int count);
           assert_equal count (Compiler_execution_mode.configured_count ());
           List.iter
             (fun name ->
@@ -453,7 +456,7 @@ let domain_execution_test _context =
             "the PPX transformed request still writes JavaScript";
           List.iter
             (fun value ->
-              Unix.putenv "REWATCH_COMPILER_DOMAINS" value;
+              Unix.putenv "RESCRIPT_COMPILER_DOMAINS" value;
               check
                 (try
                    ignore (Compiler_execution_mode.configured_count ());
@@ -461,11 +464,37 @@ let domain_execution_test _context =
                  with Process.Error _ -> true)
                 ("domain count " ^ value ^ " is reported as invalid"))
             ["0"; "-1"; "abc"];
-          Unix.putenv "REWATCH_COMPILER_DOMAINS"
+          Unix.putenv "RESCRIPT_COMPILER_DOMAINS"
             (string_of_int (Compiler_execution_mode.max_domain_count + 1));
           assert_equal Compiler_execution_mode.max_domain_count
             (Compiler_execution_mode.configured_count ())
-            ~msg:"domain counts are capped at the scheduler bound"))
+            ~msg:"domain counts are capped at the scheduler bound";
+          let message () =
+            try
+              ignore (Compiler_execution_mode.configured_count ());
+              ""
+            with Process.Error message -> message
+          in
+          Unix.putenv "RESCRIPT_COMPILER_DOMAINS" "abc";
+          check
+            (String.starts_with ~prefix:"RESCRIPT_COMPILER_DOMAINS "
+               (message ()))
+            "an invalid count names the variable that holds it";
+          Test_support.unsetenv "RESCRIPT_COMPILER_DOMAINS";
+          Unix.putenv "REWATCH_COMPILER_DOMAINS" "1";
+          assert_equal 1
+            (Compiler_execution_mode.configured_count ())
+            ~msg:"the deprecated REWATCH_COMPILER_DOMAINS is still read";
+          Unix.putenv "REWATCH_COMPILER_DOMAINS" "abc";
+          check
+            (String.starts_with ~prefix:"REWATCH_COMPILER_DOMAINS " (message ()))
+            "an invalid deprecated count names the deprecated variable";
+          Unix.putenv "RESCRIPT_COMPILER_DOMAINS" "2";
+          assert_equal 2
+            (Compiler_execution_mode.configured_count ())
+            ~msg:
+              "RESCRIPT_COMPILER_DOMAINS takes precedence over the deprecated \
+               name"))
 
 let tests =
   "compiler_process_tests"

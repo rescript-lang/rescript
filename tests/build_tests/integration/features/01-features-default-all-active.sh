@@ -7,9 +7,9 @@ bold "Test: with no --features flag, all feature-tagged source dirs are compiled
 
 pushd ./packages/with-features > /dev/null
 
-"$REWATCH_EXECUTABLE" clean &> /dev/null
+"$RESCRIPT_EXECUTABLE" clean &> /dev/null
 
-error_output=$("$REWATCH_EXECUTABLE" build 2>&1)
+error_output=$("$RESCRIPT_EXECUTABLE" build 2>&1)
 if [ $? -ne 0 ];
 then
   error "Default build should succeed"
@@ -36,5 +36,5 @@ else
   exit 1
 fi
 
-"$REWATCH_EXECUTABLE" clean &> /dev/null
+"$RESCRIPT_EXECUTABLE" clean &> /dev/null
 popd > /dev/null

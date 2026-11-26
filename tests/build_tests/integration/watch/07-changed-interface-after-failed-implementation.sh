@@ -40,7 +40,7 @@ let number: int = Provider.value
 EOF
 
 cd "$fixture" || exit 1
-REWATCH_COMPILER_DOMAINS=1 "$REWATCH_EXECUTABLE" watch > rewatch.log 2>&1 &
+RESCRIPT_COMPILER_DOMAINS=1 "$RESCRIPT_EXECUTABLE" watch > rewatch.log 2>&1 &
 watch_pid=$!
 compiler_log=lib/rescript/.compiler.log
 

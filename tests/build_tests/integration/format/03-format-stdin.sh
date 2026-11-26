@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: It should format from stdin"
 
-error_output=$(echo "let x = 1" | "$REWATCH_EXECUTABLE" format --stdin .res)
+error_output=$(echo "let x = 1" | "$RESCRIPT_EXECUTABLE" format --stdin .res)
 if [ $? -eq 0 ];
 then
     success "Stdin formatted successfully"

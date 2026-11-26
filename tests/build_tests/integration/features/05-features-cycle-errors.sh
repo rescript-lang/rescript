@@ -7,7 +7,7 @@ bold "Test: a cycle in the features map produces a clear error"
 
 pushd ./packages/with-features > /dev/null
 
-"$REWATCH_EXECUTABLE" clean &> /dev/null
+"$RESCRIPT_EXECUTABLE" clean &> /dev/null
 
 cp rescript.json rescript.json.bak
 cat > rescript.json <<'JSON'
@@ -30,7 +30,7 @@ cat > rescript.json <<'JSON'
 }
 JSON
 
-error_output=$("$REWATCH_EXECUTABLE" build --features a 2>&1)
+error_output=$("$RESCRIPT_EXECUTABLE" build --features a 2>&1)
 status=$?
 
 mv rescript.json.bak rescript.json
@@ -49,5 +49,5 @@ else
   exit 1
 fi
 
-"$REWATCH_EXECUTABLE" clean &> /dev/null
+"$RESCRIPT_EXECUTABLE" clean &> /dev/null
 popd > /dev/null

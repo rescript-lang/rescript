@@ -68,7 +68,7 @@ let run = function
    report at exit only counts the main domain's allocations, and the compiler
    runs on worker domains. *)
 let report_worker_allocations () =
-  if Option.is_some (Sys.getenv_opt "REWATCH_REPORT_WORKER_ALLOCATIONS") then
+  if Option.is_some (Sys.getenv_opt "RESCRIPT_REPORT_WORKER_ALLOCATIONS") then
     at_exit (fun () ->
         Printf.eprintf "worker_allocated_words: %d\n%!"
           (Process.worker_allocated_words ()))

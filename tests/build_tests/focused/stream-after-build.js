@@ -5,7 +5,7 @@ if (releaseFile === undefined) {
   throw new Error("Expected the release-file path as the first argument");
 }
 
-console.log("REWATCH_AFTER_BUILD_READY");
+console.log("RESCRIPT_AFTER_BUILD_READY");
 const timer = setInterval(() => {
   if (fs.existsSync(releaseFile)) {
     clearInterval(timer);

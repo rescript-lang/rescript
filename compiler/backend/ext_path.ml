@@ -121,5 +121,5 @@ let package_dir () =
   | None ->
     Ext_fmt.failwithf ~loc:__LOC__
       "bsc was invoked without -bs-project-root; cannot determine the package \
-       root. Pass -bs-project-root <dir> or invoke bsc via rewatch / \
+       root. Pass -bs-project-root <dir> or invoke bsc through rescript or \
        cli/bsc.js."

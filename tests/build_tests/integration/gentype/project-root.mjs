@@ -5,8 +5,8 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {bsc_exe} from "../../../../cli/common/bins.js";
 
-const executable = process.env.REWATCH_EXECUTABLE;
-assert(executable, "REWATCH_EXECUTABLE must be set");
+const executable = process.env.RESCRIPT_EXECUTABLE;
+assert(executable, "RESCRIPT_EXECUTABLE must be set");
 
 const executablePath = executable.endsWith(".exe") ? executable : `${executable}.exe`;
 const commandShim = executable.endsWith(".cmd") ? executable : `${executable}.cmd`;
@@ -31,14 +31,14 @@ function runBuild(buildDirectory) {
     [
       "/d",
       "/c",
-      'cd /d "%REWATCH_TEST_PROJECT%" && "%REWATCH_TEST_EXECUTABLE%" build',
+      'cd /d "%RESCRIPT_TEST_PROJECT%" && "%RESCRIPT_TEST_EXECUTABLE%" build',
     ],
     {
       encoding: "utf8",
       env: {
         ...process.env,
-        REWATCH_TEST_EXECUTABLE: resolvedExecutable,
-        REWATCH_TEST_PROJECT: buildDirectory,
+        RESCRIPT_TEST_EXECUTABLE: resolvedExecutable,
+        RESCRIPT_TEST_PROJECT: buildDirectory,
       },
       timeout: 30_000,
       windowsVerbatimArguments: true,
@@ -56,10 +56,10 @@ function getBuildDirectory(projectDir) {
   const expandedPath = realpathSync.native(projectDir);
   const result = spawnSync(
     process.env.ComSpec ?? "cmd.exe",
-    ["/d", "/c", 'for %I in ("%REWATCH_TEST_PROJECT%") do @echo %~sI'],
+    ["/d", "/c", 'for %I in ("%RESCRIPT_TEST_PROJECT%") do @echo %~sI'],
     {
       encoding: "utf8",
-      env: {...process.env, REWATCH_TEST_PROJECT: expandedPath},
+      env: {...process.env, RESCRIPT_TEST_PROJECT: expandedPath},
       windowsVerbatimArguments: true,
     },
   );

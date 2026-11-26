@@ -6,7 +6,7 @@ cd ../../testrepo
 bold "Test: It should clean dependencies from node_modules"
 
 # Build a package with external dependencies
-error_output=$(cd packages/with-dev-deps && "$REWATCH_EXECUTABLE" build 2>&1)
+error_output=$(cd packages/with-dev-deps && "$RESCRIPT_EXECUTABLE" build 2>&1)
 if [ $? -eq 0 ];
 then
   success "Built with-dev-deps"
@@ -17,7 +17,7 @@ else
 fi
 
 # Then we clean a single project
-error_output=$(cd packages/with-dev-deps && "$REWATCH_EXECUTABLE" clean 2>&1)
+error_output=$(cd packages/with-dev-deps && "$RESCRIPT_EXECUTABLE" clean 2>&1)
 clean_status=$?
 if [ $clean_status -ne 0 ];
 then

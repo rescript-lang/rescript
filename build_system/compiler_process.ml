@@ -32,7 +32,7 @@ let compiler_phase args =
 let call_log_mutex = Mutex.create ()
 
 let log_compiler_request (request : request) =
-  match Sys.getenv_opt "REWATCH_COMPILER_CALL_LOG" with
+  match Sys.getenv_opt "RESCRIPT_COMPILER_CALL_LOG" with
   | None -> ()
   | Some path ->
     let phase, input = compiler_phase request.args in

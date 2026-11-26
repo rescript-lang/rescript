@@ -131,7 +131,7 @@ export function parseAllocatedWords(stderr) {
   if (!match) return undefined;
   // The build system compiles on worker domains, whose allocations the
   // runtime leaves out; it reports them itself when asked to
-  // (REWATCH_REPORT_WORKER_ALLOCATIONS).
+  // (RESCRIPT_REPORT_WORKER_ALLOCATIONS).
   const workers = /^worker_allocated_words: (\d+)$/m.exec(stderr);
   return Number(match[1]) + (workers ? Number(workers[1]) : 0);
 }
@@ -693,8 +693,8 @@ function countBuild(rescript, dir, inputs) {
   return {
     ...measureRun(rescript, ["build"], dir, false, {
       env: {
-        REWATCH_COMPILER_DOMAINS: "1",
-        REWATCH_REPORT_WORKER_ALLOCATIONS: "1",
+        RESCRIPT_COMPILER_DOMAINS: "1",
+        RESCRIPT_REPORT_WORKER_ALLOCATIONS: "1",
       },
     }),
     inputs,

@@ -16,14 +16,14 @@ let wait_for_release_job root =
 let with_temp_dir = Test_support.with_temp_dir "rewatch-scheduler-"
 
 let with_single_domain action =
-  let previous = Sys.getenv_opt "REWATCH_COMPILER_DOMAINS" in
+  let previous = Sys.getenv_opt "RESCRIPT_COMPILER_DOMAINS" in
   Fun.protect
     ~finally:(fun () ->
       match previous with
-      | Some value -> Unix.putenv "REWATCH_COMPILER_DOMAINS" value
-      | None -> Test_support.unsetenv "REWATCH_COMPILER_DOMAINS")
+      | Some value -> Unix.putenv "RESCRIPT_COMPILER_DOMAINS" value
+      | None -> Test_support.unsetenv "RESCRIPT_COMPILER_DOMAINS")
     (fun () ->
-      Unix.putenv "REWATCH_COMPILER_DOMAINS" "1";
+      Unix.putenv "RESCRIPT_COMPILER_DOMAINS" "1";
       action ())
 
 let source name =

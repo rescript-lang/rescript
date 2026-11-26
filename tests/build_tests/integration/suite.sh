@@ -5,20 +5,20 @@ set -e
 unset CLICOLOR_FORCE
 
 if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 <rewatch executable>"
+  echo "Usage: $0 <rescript executable>"
   exit 1
 fi
 
-REWATCH_EXECUTABLE="$(realpath "$1")"
-export REWATCH_EXECUTABLE
+RESCRIPT_EXECUTABLE="$(realpath "$1")"
+export RESCRIPT_EXECUTABLE
 
 # Make sure we are in the right directory
 cd $(dirname $0)
 
-if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ]]; then
-  echo "Using rewatch CLI script: $REWATCH_EXECUTABLE"
+if [[ "$RESCRIPT_EXECUTABLE" == */cli/rescript.js ]]; then
+  echo "Using rescript CLI script: $RESCRIPT_EXECUTABLE"
 else
-  echo "Using rewatch executable: $REWATCH_EXECUTABLE"
+  echo "Using rescript executable: $RESCRIPT_EXECUTABLE"
   eval $(node ./get_bin_paths.js)
   export RESCRIPT_RUNTIME
   echo Using runtime path: $RESCRIPT_RUNTIME
@@ -27,10 +27,10 @@ fi
 source ./utils.sh
 
 bold "Check for stale rescript processes"
-STALE_PIDS=$(ps aux | grep "$REWATCH_EXECUTABLE" | grep -v grep | awk '{print $2}')
+STALE_PIDS=$(ps aux | grep "$RESCRIPT_EXECUTABLE" | grep -v grep | awk '{print $2}')
 if [ -n "$STALE_PIDS" ]; then
   error "Found stale rescript processes using this executable:"
-  ps aux | grep "$REWATCH_EXECUTABLE" | grep -v grep
+  ps aux | grep "$RESCRIPT_EXECUTABLE" | grep -v grep
   exit 1
 fi
 success "No stale rescript processes found"

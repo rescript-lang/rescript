@@ -17,7 +17,7 @@ else
 fi
 
 # Then we clean a single project
-error_output=$(cd packages/file-casing && "$REWATCH_EXECUTABLE" clean 2>&1)
+error_output=$(cd packages/file-casing && "$RESCRIPT_EXECUTABLE" clean 2>&1)
 clean_status=$?
 if [ $clean_status -ne 0 ];
 then

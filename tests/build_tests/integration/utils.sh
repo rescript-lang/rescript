@@ -2,8 +2,8 @@
 success() { echo -e "- ✅ \033[32m$1\033[0m"; }
 error() { echo -e "- 🛑 \033[31m$1\033[0m"; }
 bold() { echo -e "\033[1m$1\033[0m"; }
-rewatch() { $REWATCH_EXECUTABLE $@; }
-rewatch_bg() { nohup $REWATCH_EXECUTABLE $@; }
+rewatch() { $RESCRIPT_EXECUTABLE $@; }
+rewatch_bg() { nohup $RESCRIPT_EXECUTABLE $@; }
 
 # Detect if running on Windows
 is_windows() {

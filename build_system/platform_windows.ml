@@ -64,7 +64,7 @@ type command = {env: Spawn.Env.t option; program: string; args: string list}
 [@@live]
 
 let post_build_command ~command ~output =
-  let variable = "REWATCH_JS_POST_BUILD_FILE" in
+  let variable = "RESCRIPT_JS_POST_BUILD_FILE" in
   let prefix = String.lowercase_ascii (variable ^ "=") in
   let environment =
     Unix.environment () |> Array.to_list
