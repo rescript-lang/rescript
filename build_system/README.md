@@ -93,8 +93,7 @@ there directly; dependencies are on its include path as their
 Independent parse and compile requests run on a bounded pool of OCaml domains.
 The pool has `min(8, max(1, CPUs - 1))` workers; set `RESCRIPT_COMPILER_DOMAINS`
 to choose another count: a positive integer, lowered to the machine's limit of
-`max(12, min(32, CPUs))`. The deprecated name `REWATCH_COMPILER_DOMAINS` is
-still read when `RESCRIPT_COMPILER_DOMAINS` is unset. The main domain schedules dependencies;
+`max(12, min(32, CPUs))`. The main domain schedules dependencies;
 workers run compiler requests and publish what they produce.
 
 The runtime's allocation report at exit (`OCAMLRUNPARAM=v=0x400`) only counts
