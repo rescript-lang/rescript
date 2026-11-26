@@ -9,7 +9,7 @@ repository root.
 - A change in observable behavior (output, exit status, generated files,
   configuration handling) needs a test, and a changelog fragment when users
   can notice it.
-- Only update the snapshots in `rewatch/tests` and `build_system/tests` for an
+- Only update the snapshots in `tests/build_tests/integration` and `tests/build_tests/focused` for an
   intended output change, never just to make a failing test pass.
 
 ## Platforms
@@ -19,7 +19,7 @@ repository root.
   `platform_windows.ml`. Don't add Unix-only calls (signals, process groups,
   `select` on pipes, symlink assumptions) to shared modules.
 - The Windows backend is type-checked on every platform through
-  `tests/rewatch_ounit_tests`, but its process code only runs on Windows CI.
+  `tests/build_tests/unit`, but its process code only runs on Windows CI.
 
 ## Processes and state
 
@@ -32,10 +32,10 @@ repository root.
 
 ## Testing
 
-- Unit tests: `dune runtest tests/rewatch_ounit_tests`.
+- Unit tests: `dune runtest tests/build_tests/unit`.
 - Focused end-to-end tests:
-  `sh build_system/tests/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"`.
-- Integration suite: `make test-rewatch`. Run it for any change to build
+  `sh tests/build_tests/focused/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"`.
+- Integration suite: `make test-build`. Run it for any change to build
   behavior.
 - Add a test for every bug fix. Prefer the integration suite in
-  `rewatch/tests`. Poll for observable conditions instead of sleeping.
+  `tests/build_tests/integration`. Poll for observable conditions instead of sleeping.

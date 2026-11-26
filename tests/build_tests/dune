@@ -1,0 +1,4 @@
+; Only the unit tests are OCaml; the other directories hold JavaScript and
+; ReScript test projects.
+
+(dirs unit)

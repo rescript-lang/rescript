@@ -230,12 +230,12 @@ jobs:
         if: ${{ !matrix.skip_rewatch_integration_tests }}
         timeout-minutes: 20
         run: |
-          . build_system/tests/process_watchdog.sh
+          . tests/build_tests/focused/process_watchdog.sh
           start_process_watchdog
-          bash build_system/tests/check_canonical_test_coverage.sh
-          bash build_system/tests/check_config_acceptance.sh \
+          bash tests/build_tests/focused/check_canonical_test_coverage.sh
+          bash tests/build_tests/focused/check_config_acceptance.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
-          bash build_system/tests/check_command_validation.sh \
+          bash tests/build_tests/focused/check_command_validation.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
@@ -246,7 +246,7 @@ jobs:
         if: matrix.node-target == 'linux-arm64' || matrix.node-target == 'darwin-arm64'
         timeout-minutes: 15
         run: |
-          bash build_system/tests/check_interactive_output.sh \
+          bash tests/build_tests/focused/check_interactive_output.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
@@ -254,20 +254,20 @@ jobs:
         if: ${{ !matrix.skip_rewatch_integration_tests }}
         timeout-minutes: 10
         run: |
-          bash build_system/tests/check_verbose_output.sh \
+          bash tests/build_tests/focused/check_verbose_output.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
       - name: Run rewatch unit tests
         timeout-minutes: 10
         run: |
-          opam exec -- dune build tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe
+          opam exec -- dune build tests/build_tests/unit/build_system_tests_main.exe
           # Run the executable directly so a stuck test leaves live progress;
           # dune otherwise buffers the test output until the action exits.
-          opam exec -- ./_build/default/tests/rewatch_ounit_tests/rewatch_ounit_tests_main.exe -runner sequential
+          opam exec -- ./_build/default/tests/build_tests/unit/build_system_tests_main.exe -runner sequential
         shell: bash
 
-      # The canonical suite works in rewatch/testrepo and the focused one in
+      # The canonical suite works in tests/build_tests/testrepo and the focused one in
       # directories of its own, so they run side by side; each takes one to
       # three and a half minutes. The canonical suite fails when another
       # process runs its executable as it starts, so it runs a copy. Its
@@ -281,11 +281,11 @@ jobs:
           mkdir -p tmp
           cp -R "$bin" tmp/canonical-bin
           canonical_log=tmp/canonical-tests.log
-          ./rewatch/tests/suite.sh tmp/canonical-bin/rescript.exe >"$canonical_log" 2>&1 &
+          ./tests/build_tests/integration/suite.sh tmp/canonical-bin/rescript.exe >"$canonical_log" 2>&1 &
           canonical=$!
 
           focused_status=0
-          sh build_system/tests/run.sh "$bin/rescript.exe" || focused_status=$?
+          sh tests/build_tests/focused/run.sh "$bin/rescript.exe" || focused_status=$?
           canonical_status=0
           wait "$canonical" || canonical_status=$?
 

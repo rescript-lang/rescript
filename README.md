@@ -99,7 +99,7 @@ ReScript uses multiple licenses in this monorepo:
 - `syntax/`: MIT, except `syntax/ast/`: LGPL-3.0-or-later
 - `packages/@rescript/runtime/`: MIT
 - `packages/@rescript/belt/`: MIT
-- `rewatch/`: MIT
+- `tests/build_tests/integration/`, `tests/build_tests/testrepo/` and `docs/build_system/`: MIT
 
 See the repository license index in [`LICENSE`](LICENSE) and full license texts in [`COPYING.LESSER`](COPYING.LESSER) and [`LICENSE.MIT`](LICENSE.MIT).
 

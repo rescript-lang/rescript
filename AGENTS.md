@@ -47,7 +47,7 @@ need the relevant guidance from each.
   optimization and JavaScript generation
 - [`analysis/README.md`](analysis/README.md) for editor analysis
 - [`build_system/README.md`](build_system/README.md) for the build system
-  and [`rewatch/README.md`](rewatch/README.md) for its integration suite
+  and [`tests/build_tests/README.md`](tests/build_tests/README.md) for its integration suite
 - [`tools/README.md`](tools/README.md) for `rescript-tools`
 
 ## Coding guidelines
@@ -108,7 +108,7 @@ on `master`. CI runs on every PR in the stack.
 For compiler or standard-library changes, run `make test`. For syntax changes,
 also run `make test-syntax`; use `make test-syntax-roundtrip` when parsing or
 printing changes. Other focused suites are `make test-gentype`,
-`make test-analysis`, `make test-tools`, and `make test-rewatch` (build
+`make test-analysis`, `make test-tools`, and `make test-build` (build
 system).
 
 ### Testing Requirements

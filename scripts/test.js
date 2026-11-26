@@ -11,6 +11,7 @@ import {
   ounitTestBin,
   projectDir,
   projectTestDir,
+  testDir,
 } from "#dev/paths";
 
 import {
@@ -158,7 +159,7 @@ if (buildTest) {
   let hasError = false;
 
   for (const suiteDir of suites) {
-    const suite = path.basename(suiteDir);
+    const suite = path.relative(testDir, suiteDir).replaceAll("\\", "/");
     console.log(`Doing ${suite}`);
 
     for (const file of fs.readdirSync(suiteDir)) {

@@ -11,7 +11,7 @@
     "compiler",
     "lib_dev",
     "node_modules",
-    "rewatch",
+    "docs/build_system",
     "scripts",
     "tests",
     "docs/changelog",
