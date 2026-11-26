@@ -50,6 +50,9 @@
   "scripts": {
     "test": "node scripts/test.js -all",
     "test-build": "node scripts/test.js -build",
+    "todo:build": "yarn workspace emit-ts-react-todo build",
+    "todo:check": "yarn workspace emit-ts-react-todo test:tscert",
+    "todo:dev": "yarn workspace emit-ts-react-todo dev",
     "test-ocaml": "node scripts/test.js -ounit",
     "test-release-plan": "node --test scripts/releasePlan.test.js",
     "test-compiler-benchmarks": "node --test scripts/compilerBenchmarks.test.js",
@@ -113,6 +116,7 @@
     "tests/analysis_tests/**",
     "tests/docstring_tests",
     "tests/belt_tests",
+    "tests/build_tests/emit_ts_react",
     "tests/gentype_tests/**",
     "tests/tests",
     "tests/tools_tests",

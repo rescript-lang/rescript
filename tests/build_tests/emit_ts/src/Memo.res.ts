@@ -3,7 +3,7 @@
 import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
 
 export function find(xs: number[], k: number): (undefined | number) {
-  return xs.find(x => x === k);
+  return xs.find((x: number) => x === k);
 }
 
 export function cached(cache: {[id: string]: (undefined | number)}, xs: number[], k: number): (undefined | number) {

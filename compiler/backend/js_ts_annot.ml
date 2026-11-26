@@ -20,6 +20,8 @@ type param = {
 type state = {
   params: (key, param) Hashtbl.t;  (** parameter ident -> its annotation *)
   results: (key, string) Hashtbl.t;  (** top-level function -> result type *)
+  no_mutation: (key, unit) Hashtbl.t;
+      (** function bindings whose result states a no-mutation claim *)
   values: (key, string) Hashtbl.t;
       (** top-level non-function binding -> its type *)
   locals: (key, string) Hashtbl.t;
@@ -48,6 +50,7 @@ let fresh () =
   {
     params = Hashtbl.create 16;
     results = Hashtbl.create 16;
+    no_mutation = Hashtbl.create 4;
     values = Hashtbl.create 16;
     locals = Hashtbl.create 16;
     sroa_fields = Hashtbl.create 16;
@@ -78,6 +81,10 @@ let ts_suffix suffix =
 let debug = Sys.getenv_opt "RESCRIPT_EMIT_TS_DEBUG" <> None
 
 let header () = (current ()).header
+
+let needs_tscert_effects () = Hashtbl.length (current ()).no_mutation > 0
+
+let has_no_mutation_claim id = Hashtbl.mem (current ()).no_mutation (key_of id)
 
 (* A top-level function's overloads: each its parameters' types by their
    idents and its result type. *)
@@ -148,6 +155,7 @@ let rename ~(from : Ident.t) ~(to_ : Ident.t) =
     in
     copy st.params;
     copy st.results;
+    copy st.no_mutation;
     copy st.values;
     copy st.locals;
     copy st.sroa_fields;

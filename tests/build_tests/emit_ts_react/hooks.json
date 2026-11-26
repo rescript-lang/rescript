@@ -1,0 +1,9 @@
+{
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": false,
+      "correctness": { "useHookAtTopLevel": "error" }
+    }
+  }
+}

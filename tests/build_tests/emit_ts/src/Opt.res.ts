@@ -11,7 +11,7 @@ export function orZero(o: (undefined | number)): number {
 }
 
 export function double(o: (undefined | number)): (undefined | number) {
-  return Stdlib_Option.map(o, n => (n << 1));
+  return Stdlib_Option.map(o, (n: number) => (n << 1));
 }
 
 export function firstPositive(a: number, b: number): (undefined | number) {

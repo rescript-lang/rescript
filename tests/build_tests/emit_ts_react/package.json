@@ -1,0 +1,23 @@
+{
+  "name": "emit-ts-react-todo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build-app.mjs",
+    "dev": "node dev.mjs",
+    "test": "node input.js",
+    "test:tscert": "node check-tscert.mjs"
+  },
+  "dependencies": {
+    "@rescript/react": "workspace:^",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@cristianoc/tscert": "https://pkg.pr.new/cristianoc/TScert/@cristianoc/tscert@4b24519fecc6fc6733812431fd6b1037d5336eee",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "typescript": "6.0.3",
+    "vite": "^8.0.14"
+  }
+}

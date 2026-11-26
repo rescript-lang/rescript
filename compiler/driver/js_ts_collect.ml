@@ -342,9 +342,21 @@ let collect_locals (st : Js_ts_annot.state) ~deps type_env
   iter.expr iter e
 
 let collect_function (st : Js_ts_annot.state) ~deps type_env (id : Ident.t)
-    (e : Typedtree.expression) =
+    (vb : Typedtree.value_binding) =
+  let e = vb.vb_expr in
   match e.exp_desc with
   | Texp_function {params; body} ->
+    let no_mutation =
+      List.exists
+        (fun ((name : string Location.loc), _) ->
+          name.txt = "tscert.noMutation")
+        vb.vb_attributes
+    in
+    if no_mutation then
+      Hashtbl.replace st.no_mutation (Js_ts_annot.key_of id) ();
+    let annotate_result result =
+      if no_mutation then "Modifies<{}, " ^ result ^ ">" else result
+    in
     collect_locals st ~deps type_env body;
     Hashtbl.replace st.names id.name id.stamp;
     let env = e.exp_env in
@@ -441,7 +453,7 @@ let collect_function (st : Js_ts_annot.state) ~deps type_env (id : Ident.t)
                (fun strings ->
                  let rec split params strings =
                    match (params, strings) with
-                   | [], [result] -> ([], result)
+                   | [], [result] -> ([], annotate_result result)
                    | (p : Typedtree.function_param) :: params, ty :: strings ->
                      let typed, result = split params strings in
                      ((Js_ts_annot.key_of p.fp_param, ty) :: typed, result)
@@ -455,7 +467,8 @@ let collect_function (st : Js_ts_annot.state) ~deps type_env (id : Ident.t)
     let rec bind params optionals types =
       match (params, optionals, types) with
       | [], [], [result] ->
-        Hashtbl.replace st.results (Js_ts_annot.key_of id) result
+        Hashtbl.replace st.results (Js_ts_annot.key_of id)
+          (annotate_result result)
       | ( (p : Typedtree.function_param) :: params,
           optional :: optionals,
           ty :: types ) ->
@@ -524,6 +537,7 @@ let collect ~module_name (str : Typedtree.structure) =
   let st = Js_ts_annot.current () in
   Hashtbl.reset st.params;
   Hashtbl.reset st.results;
+  Hashtbl.reset st.no_mutation;
   Hashtbl.reset st.values;
   Hashtbl.reset st.locals;
   Hashtbl.reset st.sroa_fields;
@@ -533,6 +547,41 @@ let collect ~module_name (str : Typedtree.structure) =
   Hashtbl.reset st.names;
   let type_env = Type_env.root () in
   let deps = ref [] in
+  (* JSX wrappers are local bindings in the typed tree, but can print as
+     top-level functions after optimization. Collect their signatures using
+     the same identifiers as ordinary function declarations. *)
+  let functions =
+    {
+      Tast_iterator.default_iterator with
+      expr =
+        (fun self e ->
+          (match e.exp_desc with
+          | Texp_function {params; _} ->
+            List.iter
+              (fun (p : Typedtree.function_param) ->
+                let key = Js_ts_annot.key_of p.fp_param in
+                if not (Hashtbl.mem st.params key) then
+                  let strings, vars, _, param_deps =
+                    ts_of_signature ~env:e.exp_env ~var:declaration_var type_env
+                      [p.fp_pat.pat_type]
+                  in
+                  match (strings, vars) with
+                  | [ty], [] ->
+                    deps := param_deps @ !deps;
+                    Hashtbl.replace st.params key {ty; optional = false}
+                  | _ -> ())
+              params
+          | _ -> ());
+          Tast_iterator.default_iterator.expr self e);
+      value_binding =
+        (fun self vb ->
+          (match (vb.vb_pat.pat_desc, vb.vb_expr.exp_desc) with
+          | Tpat_var (id, _), Texp_function _ ->
+            collect_function st ~deps type_env id vb
+          | _ -> ());
+          Tast_iterator.default_iterator.value_binding self vb);
+    }
+  in
   (* Functions and values of nested modules are printed at the top level too. *)
   let rec items (str : Typedtree.structure) =
     List.iter
@@ -543,7 +592,8 @@ let collect ~module_name (str : Typedtree.structure) =
             (fun (vb : Typedtree.value_binding) ->
               match vb.vb_pat.pat_desc with
               | Tpat_var (id, _) ->
-                collect_function st ~deps type_env id vb.vb_expr
+                collect_function st ~deps type_env id vb;
+                functions.expr functions vb.vb_expr
               | _ -> ())
             vbs
         | Tstr_module {mb_expr = {mod_desc = Tmod_structure s}} -> items s

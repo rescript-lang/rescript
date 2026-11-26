@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["react"]
+  },
+  "include": ["src/app/*.res.ts", "src/trusted/*.ts"]
+}
