@@ -138,10 +138,27 @@ let esmodule_program ~output_dir fmt f (x : J.deps_program) =
 let pp_deps_program ~(output_prefix : string)
     (kind : Js_packages_info.module_system) (program : J.deps_program)
     (f : Ext_pp.t) =
-  !((Js_config.current ()).directives)
-  |> List.iter (fun prim ->
-      P.string f prim;
-      P.newline f);
+  let directives = !((Js_config.current ()).directives) in
+  let line text =
+    P.string f text;
+    P.newline f
+  in
+  let directives =
+    if Js_ts_annot.enabled () && Js_ts_annot.needs_tscert_effects () then (
+      (* TypeScript reads reference directives before the first statement. A
+         hashbang, when present, must still be the first line. *)
+      let rest =
+        match directives with
+        | first :: rest when String.starts_with ~prefix:"#!" first ->
+          line first;
+          rest
+        | _ -> directives
+      in
+      line "/// <reference types=\"@cristianoc/tscert/effects\" />";
+      rest)
+    else directives
+  in
+  List.iter line directives;
   if not !((Js_config.current ()).no_version_header) then (
     P.string f Config.header;
     P.newline f);

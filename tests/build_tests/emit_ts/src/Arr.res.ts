@@ -12,11 +12,11 @@ export function sumFrom(xs: number[], i: number): number {
 }
 
 export function squares(xs: number[]): number[] {
-  return xs.map(x => x * x | 0);
+  return xs.map((x: number) => x * x | 0);
 }
 
 export function total(xs: number[]): number {
-  return Stdlib_Array.reduce(xs, 0, (acc, x) => acc + x | 0);
+  return Stdlib_Array.reduce(xs, 0, (acc: number, x: number) => acc + x | 0);
 }
 
 export function sumOfSquares(xs: number[]): number {

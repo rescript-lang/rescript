@@ -124,7 +124,7 @@ export function addTodo(state: appState, title: string, priority: priority): app
 }
 
 export function toggleTodo(state: appState, id: number): appState {
-  let todos = state.todos.map(t => {
+  let todos = state.todos.map((t: todo) => {
     if (t.id === id) {
       return {
         id: t.id,
@@ -147,7 +147,7 @@ export function editTodo(state: appState, id: number, title: string): appState {
   if (clean.length === 0) {
     return state;
   }
-  let todos = state.todos.map(t => {
+  let todos = state.todos.map((t: todo) => {
     if (t.id === id) {
       return {
         id: t.id,
@@ -166,7 +166,7 @@ export function editTodo(state: appState, id: number, title: string): appState {
 }
 
 export function cyclePriority(state: appState, id: number): appState {
-  let todos = state.todos.map(t => {
+  let todos = state.todos.map((t: todo) => {
     if (t.id === id) {
       return {
         id: t.id,
@@ -185,7 +185,7 @@ export function cyclePriority(state: appState, id: number): appState {
 }
 
 export function deleteTodo(state: appState, id: number): appState {
-  let todos = state.todos.filter(t => t.id !== id);
+  let todos = state.todos.filter((t: todo) => t.id !== id);
   return {
     nextId: state.nextId,
     todos: todos
@@ -193,7 +193,7 @@ export function deleteTodo(state: appState, id: number): appState {
 }
 
 export function clearCompleted(state: appState): appState {
-  let todos = state.todos.filter(t => !t.done);
+  let todos = state.todos.filter((t: todo) => !t.done);
   return {
     nextId: state.nextId,
     todos: todos
@@ -201,8 +201,8 @@ export function clearCompleted(state: appState): appState {
 }
 
 export function toggleAll(state: appState): appState {
-  let hasActive = state.todos.some(t => !t.done);
-  let todos = state.todos.map(t => ({
+  let hasActive = state.todos.some((t: todo) => !t.done);
+  let todos = state.todos.map((t: todo) => ({
     id: t.id,
     title: t.title,
     done: hasActive,
@@ -216,7 +216,7 @@ export function toggleAll(state: appState): appState {
 
 export function visibleTodos(todos: todo[], filter: filter, query: string): todo[] {
   let q = query.trim().toLowerCase();
-  return todos.filter(t => {
+  return todos.filter((t: todo) => {
     let matchesFilter: boolean;
     switch (filter) {
       case "All" :
@@ -259,7 +259,7 @@ export function countTodos(todos: todo[]): counts {
 }
 
 export function findTodo(todos: todo[], id: number): (undefined | todo) {
-  return todos.find(t => t.id === id);
+  return todos.find((t: todo) => t.id === id);
 }
 
 /* No side effect */

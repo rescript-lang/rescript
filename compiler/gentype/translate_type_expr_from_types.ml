@@ -391,6 +391,8 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     {dependencies = []; type_ = Emit_type.type_any}
   | ["ReactEvent"; "Mouse"; "t"], [] ->
     {dependencies = []; type_ = Emit_type.type_react_event_mouse_t}
+  | ["JsxEvent"; "Mouse"; "t"], [] ->
+    {dependencies = []; type_ = ident ~builtin:true "React.MouseEvent"}
   | ( ( ["React"; "element"]
       | ["Pervasives"; "Jsx"; "element"]
       | ["Jsx"; "element"] ),

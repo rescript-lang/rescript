@@ -399,6 +399,12 @@ let default_fn_exp_state = No_name {single_arg = false}
 *)
 let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
     ~fn_state (l : Ident.t list) (b : J.block) (env : Js_fun_env.t) : cxt =
+  let has_effect_claim =
+    match fn_state with
+    | Name_top id when Js_ts_annot.enabled () ->
+      Js_ts_annot.has_no_mutation_claim id
+    | _ -> false
+  in
   match b with
   | [
    {
@@ -420,9 +426,10 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
             would otherwise see, defers the name's resolution to call time, and
             keeps it from capturing a local of the same name. Never for an
             async function or one with a directive, which must stay a
-            function, see [Lambda.lfunction_can_be_inlined]. *)
+            function, see [Lambda.lfunction_can_be_inlined]. An explicit
+            effect claim also needs the function's emitted signature. *)
          (not is_method) && (not async) && directive = None
-         && params_match_call l ls v -> (
+         && (not has_effect_claim) && params_match_call l ls v -> (
     match fn_state with
     | Name_top i | Name_non_top i ->
       let cxt = pp_var_assign cxt f i in
@@ -488,6 +495,11 @@ let rec pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
           match (l, ts_top) with
           | l, Some x ->
             P.string f (Js_ts_annot.type_params x);
+            P.paren_group f 1 (fun _ -> annotated_parameter_list inner_cxt f l)
+          | l, None
+            when Js_ts_annot.enabled ()
+                 && List.exists (fun id -> Js_ts_annot.param_type id <> None) l
+            ->
             P.paren_group f 1 (fun _ -> annotated_parameter_list inner_cxt f l)
           | [single], None when arrow -> Ext_pp_scope.ident inner_cxt f single
           | l, None ->
