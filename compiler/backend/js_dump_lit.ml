@@ -35,6 +35,8 @@ let arrow = "=>"
 
 let let_ = "let"
 
+let const_ = "const"
+
 let return = "return"
 
 (* let eq = "=" *)

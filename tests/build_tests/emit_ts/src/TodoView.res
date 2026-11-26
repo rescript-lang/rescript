@@ -1,0 +1,413 @@
+let escapeHtml = (text: string): string => {
+  let out = ref("")
+  for i in 0 to String.length(text) - 1 {
+    let c = String.charAt(text, i)
+    let escaped = switch c {
+    | "&" => "&amp;"
+    | "<" => "&lt;"
+    | ">" => "&gt;"
+    | "\"" => "&quot;"
+    | "'" => "&#39;"
+    | _ => c
+    }
+    out := out.contents ++ escaped
+  }
+  out.contents
+}
+
+let priorityLabel = (p: TodoModel.priority): string =>
+  switch p {
+  | Low => "Low"
+  | Medium => "Med"
+  | High => "High"
+  }
+
+let priorityClass = (p: TodoModel.priority): string =>
+  switch p {
+  | Low => "prio-low"
+  | Medium => "prio-med"
+  | High => "prio-high"
+  }
+
+let renderTodoItem = (t: TodoModel.todo): string => {
+  let idStr = Int.toString(t.id)
+  let rowClass = t.done ? "todo-item is-done" : "todo-item"
+  let checkMark = t.done ? "&#10003;" : ""
+  let titleEsc = escapeHtml(t.title)
+  let prioCls = priorityClass(t.priority)
+  let prioLbl = priorityLabel(t.priority)
+  "<li class=\"" ++
+  rowClass ++
+  "\" data-id=\"" ++
+  idStr ++
+  "\">" ++
+  "<button type=\"button\" class=\"check-btn\" title=\"Toggle complete\" onclick=\"post('/todos/" ++
+  idStr ++
+  "/toggle')\">" ++
+  checkMark ++
+  "</button>" ++
+  "<span class=\"todo-title\" ondblclick=\"editItem(" ++
+  idStr ++
+  ", this)\">" ++
+  titleEsc ++
+  "</span>" ++
+  "<button type=\"button\" class=\"prio-pill " ++
+  prioCls ++
+  "\" title=\"Click to cycle priority\" onclick=\"post('/todos/" ++
+  idStr ++
+  "/priority')\">" ++
+  prioLbl ++
+  "</button>" ++
+  "<button type=\"button\" class=\"icon-btn\" title=\"Edit title\" onclick=\"editFromBtn(" ++
+  idStr ++
+  ", this)\">&#9998;</button>" ++
+  "<button type=\"button\" class=\"icon-btn del-btn\" title=\"Delete\" onclick=\"del('/todos/" ++
+  idStr ++
+  "')\">&#10005;</button>" ++ "</li>"
+}
+
+let renderFilterTab = (
+  label: string,
+  count: int,
+  target: TodoModel.filter,
+  current: TodoModel.filter,
+  query: string,
+): string => {
+  let activeCls = target == current ? "tab is-active" : "tab"
+  let fStr = TodoModel.filterToString(target)
+  let qPart =
+    String.length(String.trim(query)) > 0 ? "&amp;q=" ++ escapeHtml(String.trim(query)) : ""
+  "<a class=\"" ++
+  activeCls ++
+  "\" href=\"/?filter=" ++
+  fStr ++
+  qPart ++
+  "\">" ++
+  label ++
+  " <span class=\"tab-count\">" ++
+  Int.toString(count) ++ "</span></a>"
+}
+
+let styles = `
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #e6484f;
+    --accent-hover: #cf353c;
+    --done: #10b981;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 36px 16px;
+  }
+  .shell {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #065f46;
+    background: #d1fae5;
+    border: 1px solid #a7f3d0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.06);
+    overflow: hidden;
+  }
+  .add-form {
+    display: flex;
+    gap: 8px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    background: #fcfcfd;
+  }
+  .add-input {
+    flex: 1;
+    font-size: 15px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+  }
+  .add-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(230,72,79,0.12); }
+  .prio-select {
+    font-size: 13px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+  }
+  .add-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .add-btn:hover { background: var(--accent-hover); }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tabs { display: flex; gap: 6px; }
+  .tab {
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 7px;
+  }
+  .tab:hover { background: #f3f4f6; color: var(--text); }
+  .tab.is-active { background: #111827; color: #fff; }
+  .tab-count {
+    font-size: 11px;
+    opacity: 0.75;
+    margin-left: 2px;
+  }
+  .search-form { display: flex; gap: 6px; align-items: center; }
+  .search-input {
+    font-size: 13px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    width: 160px;
+    outline: none;
+  }
+  .search-input:focus { border-color: #9ca3af; }
+  .todo-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .todo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s ease;
+  }
+  .todo-item:hover { background: #fafafa; }
+  .todo-item:last-child { border-bottom: none; }
+  .check-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid #d1d5db;
+    background: #fff;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .todo-item.is-done .check-btn {
+    background: var(--done);
+    border-color: var(--done);
+  }
+  .todo-title {
+    flex: 1;
+    font-size: 15px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .todo-item.is-done .todo-title {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+  .prio-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .prio-low { background: #e5e7eb; color: #374151; }
+  .prio-med { background: #fef3c7; color: #92400e; }
+  .prio-high { background: #fee2e2; color: #991b1b; }
+  .icon-btn {
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    font-size: 14px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover { background: #f3f4f6; color: var(--text); }
+  .del-btn:hover { background: #fee2e2; color: #b91c1c; }
+  .empty {
+    padding: 36px 16px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: #fcfcfd;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .footer-actions { display: flex; gap: 8px; }
+  .ghost-btn {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+  .ghost-btn:hover { background: #f3f4f6; }
+  .note {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+  }
+`
+
+let clientScript = `
+  function addItem(e) {
+    e.preventDefault();
+    var input = document.getElementById("new-title");
+    var prio = document.getElementById("new-prio").value;
+    var title = input.value.trim();
+    if (!title) return;
+    fetch("/todos", { method: "POST", body: prio + "|" + title }).then(function () {
+      location.reload();
+    });
+  }
+  function post(url, body) {
+    fetch(url, { method: "POST", body: body || "" }).then(function () {
+      location.reload();
+    });
+  }
+  function del(url) {
+    fetch(url, { method: "DELETE" }).then(function () {
+      location.reload();
+    });
+  }
+  function editItem(id, span) {
+    var next = prompt("Edit task title:", span.textContent || "");
+    if (next !== null && next.trim().length > 0) {
+      post("/todos/" + id + "/edit", next.trim());
+    }
+  }
+  function editFromBtn(id, btn) {
+    var li = btn.closest("li");
+    var span = li && li.querySelector(".todo-title");
+    if (span) editItem(id, span);
+  }
+`
+
+let renderPage = (state: TodoModel.appState, filter: TodoModel.filter, query: string): string => {
+  let counts = TodoModel.countTodos(state.todos)
+  let shown = TodoModel.visibleTodos(state.todos, filter, query)
+  let listBody = if Array.length(shown) == 0 {
+    "<div class=\"empty\">No tasks match this view.</div>"
+  } else {
+    "<ul class=\"todo-list\">" ++ Array.join(Array.map(shown, renderTodoItem), "") ++ "</ul>"
+  }
+  let tabs =
+    renderFilterTab("All", counts.total, All, filter, query) ++
+    renderFilterTab("Active", counts.active, Active, filter, query) ++
+    renderFilterTab("Completed", counts.completed, Completed, filter, query)
+  let itemWord = counts.active == 1 ? "item" : "items"
+  let qEsc = escapeHtml(String.trim(query))
+  let filterInput =
+    "<input type=\"hidden\" name=\"filter\" value=\"" ++ TodoModel.filterToString(filter) ++ "\">"
+  "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">" ++
+  "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" ++
+  "<title>ReScript + TScert Todo</title><style>" ++
+  styles ++
+  "</style></head><body><div class=\"shell\">" ++
+  "<header class=\"header\"><h1>Tasks</h1>" ++
+  "<span class=\"badge\">&#10003; ReScript &rarr; TScert verified</span></header>" ++
+  "<main class=\"card\">" ++
+  "<form class=\"add-form\" onsubmit=\"addItem(event)\">" ++
+  "<input id=\"new-title\" class=\"add-input\" type=\"text\" placeholder=\"What needs to be done?\" autocomplete=\"off\">" ++
+  "<select id=\"new-prio\" class=\"prio-select\" aria-label=\"Priority\">" ++
+  "<option value=\"low\">Low</option><option value=\"medium\" selected>Medium</option><option value=\"high\">High</option>" ++
+  "</select>" ++
+  "<button class=\"add-btn\" type=\"submit\">Add</button>" ++
+  "</form>" ++
+  "<div class=\"toolbar\">" ++
+  "<nav class=\"tabs\">" ++
+  tabs ++
+  "</nav>" ++
+  "<form class=\"search-form\" method=\"GET\" action=\"/\">" ++
+  filterInput ++
+  "<input class=\"search-input\" type=\"search\" name=\"q\" value=\"" ++
+  qEsc ++
+  "\" placeholder=\"Search...\">" ++
+  "</form>" ++
+  "</div>" ++
+  listBody ++
+  "<footer class=\"footer\">" ++
+  "<span>" ++
+  Int.toString(counts.active) ++
+  " " ++
+  itemWord ++
+  " left</span>" ++
+  "<div class=\"footer-actions\">" ++
+  "<button type=\"button\" class=\"ghost-btn\" onclick=\"post('/todos/toggle-all')\">Toggle all</button>" ++
+  "<button type=\"button\" class=\"ghost-btn\" onclick=\"post('/todos/clear-completed')\">Clear completed</button>" ++
+  "</div></footer></main>" ++
+  "<p class=\"note\">Double-click a task to edit &middot; Click priority pill to cycle &middot; Pure ReScript core verified by TScert</p>" ++
+  "</div><script>" ++
+  clientScript ++ "</script></body></html>"
+}

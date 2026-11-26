@@ -101,6 +101,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
             }
           else
             let newid = Ident.rename original_export_id in
+            Js_ts_annot.rename ~from:original_export_id ~to_:newid;
             let kind : Lambda.let_kind = Alias in
             Lam_util.alias_ident_or_global meta newid id NA;
             {
@@ -128,6 +129,7 @@ let handle_exports (meta : Lam_stats.t) (lambda_exports : Lambda.t list)
                of size 4 instead of 2
             *)
           let newid = Ident.rename original_export_id in
+          Js_ts_annot.rename ~from:original_export_id ~to_:newid;
           (let arity = Lam_arity_analysis.get_arity meta lam in
            if not (Lam_arity.first_arity_na arity) then
              Hash_ident.add meta.ident_tbl newid
