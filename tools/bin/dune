@@ -9,6 +9,6 @@
  (modes byte exe)
  ; The main module that will become the binary.
  (name main)
- (libraries ast0 tools)
+ (libraries ast0 tools rescript_version)
  (instrumentation
   (backend bisect_ppx)))

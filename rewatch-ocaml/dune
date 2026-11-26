@@ -30,7 +30,6 @@
  (name rewatch_ocaml_lib)
  (wrapped true)
  (modules
-  rewatch_version
   string_util
   strict_json
   source_filter
@@ -89,7 +88,17 @@
   output
   build
   format)
- (libraries unix threads yojson str spawn cmdliner luv re.perl driver)
+ (libraries
+  unix
+  threads
+  yojson
+  str
+  spawn
+  cmdliner
+  luv
+  re.perl
+  driver
+  rescript_version)
  (foreign_stubs
   (language c)
   (names windows_job_stubs)))

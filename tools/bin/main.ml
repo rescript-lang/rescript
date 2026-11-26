@@ -53,7 +53,7 @@ let log_and_exit = function
     Printf.eprintf "%s\n" log;
     exit 1
 
-let version = Version.version
+let version = Rescript_version.version
 
 let main () =
   match Sys.argv |> Array.to_list |> List.tl with

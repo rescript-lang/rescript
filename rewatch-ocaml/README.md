@@ -32,9 +32,8 @@ Builds and `rescript format` use the embedded compiler. The `bsc.exe` next to
 tooling looks for the platform binaries.
 
 Linux release builds use dune's `static` profile, so the published executable
-does not depend on the runner's libc. The version lives in
-`rewatch_version.ml` and is kept in sync with the compiler by
-`yarn constraints --fix`.
+does not depend on the runner's libc. Its version comes from the shared
+`rescript_version` library (`compiler/version/`).
 
 ## Layout
 

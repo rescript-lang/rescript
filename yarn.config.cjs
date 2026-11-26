@@ -69,7 +69,6 @@ async function enforceCompilerMeta({ Yarn }) {
 
   const { compilerVersionFile } = await import("#dev/paths");
   await enforceMlVersionFile(compilerVersionFile);
-  await enforceMlVersionFile("rewatch-ocaml/rewatch_version.ml");
 }
 
 module.exports = defineConfig({

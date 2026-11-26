@@ -284,7 +284,7 @@ let root =
       ]
     in
     Cmd.info "rescript" ~exits
-      ~version:("rescript " ^ Rewatch_version.version)
+      ~version:("rescript " ^ Rescript_version.version)
       ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
   in
   let commands = [build; watch; clean; format; compiler_args; help] in
