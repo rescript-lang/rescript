@@ -8,7 +8,7 @@ dependency discovery in hoisted and non-hoisted layouts. Do not update both
 dependencies to the same version without replacing that coverage.
 
 These published packages are not the compiler and runtime under test. When the
-suite runs a native Rewatch executable, `tests/suite.sh` sets
+suite runs a native Rewatch executable, `../integration/suite.sh` sets
 `RESCRIPT_RUNTIME` to the runtime built from the current repository, and the
 executable has the compiler built in. The `rescript` packages installed here primarily provide a
 realistic package-manager dependency tree; the version printed from

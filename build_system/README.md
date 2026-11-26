@@ -184,12 +184,12 @@ sh tests/build_tests/focused/run.sh "$PWD/packages/@rescript/<platform>/bin/resc
 make test-build                        # integration suite in tests/build_tests/integration
 ```
 
-The scripts in `tests/check_*.sh` check configuration acceptance, command
-validation, and verbose and interactive output, partly against snapshots in
-`tests/snapshots/`. Run them with `UPDATE_SNAPSHOTS=1` to rewrite the
-snapshots after an intended output change.
-`tests/check_canonical_test_coverage.sh` ensures that every integration test
-script is run by `tests/build_tests/integration/suite.sh`.
+The scripts in `tests/build_tests/focused/check_*.sh` check configuration
+acceptance, command validation, and verbose and interactive output, partly
+against snapshots in `tests/build_tests/focused/snapshots/`. Run them with
+`UPDATE_SNAPSHOTS=1` to rewrite the snapshots after an intended output change.
+`tests/build_tests/focused/check_canonical_test_coverage.sh` ensures that every
+integration test script is run by `tests/build_tests/integration/suite.sh`.
 
 ## Packaging
 
