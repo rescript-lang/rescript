@@ -3,6 +3,7 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 import * as Nodeassert from "node:assert";
+import * as Record_rest_hidden_rest from "./record_rest_hidden_rest.mjs";
 
 function writeAfterRest(a) {
   let {x: __unused0, ...rest} = a;
@@ -664,6 +665,15 @@ Mocha.describe("Record_rest_source_test", () => {
         y: 2
       },
       1
+    ]);
+  });
+  Mocha.test("a field exported without the rest next to it", () => {
+    Nodeassert.deepStrictEqual([
+      Record_rest_hidden_rest.x,
+      Record_rest_hidden_rest.sumTo(3)
+    ], [
+      1,
+      6
     ]);
   });
   Mocha.test("a constructor without variables next to a rest", () => {

@@ -59,8 +59,19 @@ let mark_dead_code (js : J.program) : J.program =
             match vd.value with
             | None -> ()
             | Some x -> self.expression self x)
-          | _ -> (
+          | _ ->
             let ({ident; ident_info; value; _} : J.variable_declaration) = vd in
+            (* A record rest declaration also binds the fields it destructures,
+               which share its [ident_info]: it is used or exported when one of
+               them is. *)
+            let field_idents =
+              match value with
+              | Some {expression_desc = Record_rest (fields, _)} ->
+                List.filter_map
+                  (fun (field : J.record_rest_field) -> field.record_rest_ident)
+                  fields
+              | _ -> []
+            in
             let pure =
               match value with
               | None -> true
@@ -69,8 +80,11 @@ let mark_dead_code (js : J.program) : J.program =
                 Js_analyzer.no_side_effect_expression x
             in
             let () =
-              if Set_ident.mem ident js.export_set then
-                Js_op_util.update_used_stats ident_info Exported
+              if
+                List.exists
+                  (fun ident -> Set_ident.mem ident js.export_set)
+                  (ident :: field_idents)
+              then Js_op_util.update_used_stats ident_info Exported
             in
             let () =
               match Hash_ident.find_opt ident_use_stats ident with
@@ -89,15 +103,7 @@ let mark_dead_code (js : J.program) : J.program =
                 Js_op_util.update_used_stats ident_info
                   (if pure then Scanning_pure else Scanning_non_pure)
             in
-            match value with
-            | Some {expression_desc = Record_rest (fields, _)} ->
-              fields
-              |> List.iter (fun (field : J.record_rest_field) ->
-                  match field.record_rest_ident with
-                  | None -> ()
-                  | Some ident ->
-                    add_binding_info ident_use_stats ident_info ident)
-            | _ -> ()));
+            List.iter (add_binding_info ident_use_stats ident_info) field_idents);
     }
   in
   mark_dead.program mark_dead js;

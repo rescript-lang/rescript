@@ -371,6 +371,10 @@ describe(__MODULE__, () => {
     deepStrictEqual((wildcardField(a), reads()), ({y: 2}, 1))
   })
 
+  test("a field exported without the rest next to it", () => {
+    deepStrictEqual((Record_rest_hidden_rest.x, Record_rest_hidden_rest.sumTo(3)), (1, 6))
+  })
+
   test("a constructor without variables next to a rest", () => {
     deepStrictEqual(constructorField({maybeName: Some("a"), other: 1}), ("named", {other: 1}))
     deepStrictEqual(constructorField({maybeName: None, other: 1}), ("unnamed", {other: 1}))
