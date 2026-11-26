@@ -204,6 +204,19 @@ let clearOrder = () => order->Array.splice(~start=0, ~remove=Array.length(order)
 
 let simpleOverride = (base: r) => {...base, b: id(9)}
 
+@val external hasOwn: ('a, string) => bool = "Object.hasOwn"
+@val external getPrototypeOf: 'a => 'b = "Object.getPrototypeOf"
+@val external objectPrototype: 'a = "Object.prototype"
+
+type proto<'a> = {name: string, @as("__proto__") proto?: 'a}
+
+let protoOverride = (base: proto<'a>, value: 'a) => {
+  ...base,
+  proto: try id(value) catch {
+  | _ => value
+  },
+}
+
 describe(__MODULE__, () => {
   test("an override that mutates the base", () => {
     eq(__LOC__, mutateInOverride({a: 1, b: 2}).a, 1)
@@ -283,6 +296,18 @@ describe(__MODULE__, () => {
     | Empty => ok(__LOC__, false)
     }
   )
+
+  test("an override of a field named __proto__ is an own property", () => {
+    let withInt = protoOverride({name: "int"}, 5)
+    ok(__LOC__, hasOwn(withInt, "__proto__"))
+    eq(__LOC__, withInt.proto, Some(5))
+    let withObject = protoOverride({name: "object"}, {"z": 1})
+    ok(__LOC__, hasOwn(withObject, "__proto__"))
+    eq(__LOC__, withObject.proto, Some({"z": 1}))
+    ok(__LOC__, getPrototypeOf(withObject) === objectPrototype)
+    let overridden = protoOverride({name: "own", proto: 1}, 2)
+    eq(__LOC__, overridden.proto, Some(2))
+  })
 
   test("an exception's record", () =>
     switch exceptionRecord(Extension({a: 1, b: 2})) {

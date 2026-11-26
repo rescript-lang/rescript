@@ -401,6 +401,13 @@ let sequence_arguments ?(method_callee = false) ~assignable
     in
     (code, values)
 
+let set_field_name (fld_info : Lambda.set_field_dbg_info) =
+  match fld_info with
+  | Fld_record_set name
+  | Fld_record_inline_set name
+  | Fld_record_extension_set name ->
+    name
+
 let compile output_prefix =
   (* When compiling a read from another module, a nested source path like
      Other.A.B.make reaches this point as nested module-field reads:
@@ -2039,15 +2046,8 @@ let compile output_prefix =
         then
           let props =
             List.map
-              (fun (_, (fld_info : Lambda.set_field_dbg_info), _, _, value) ->
-                let name =
-                  match fld_info with
-                  | Fld_record_set name
-                  | Fld_record_inline_set name
-                  | Fld_record_extension_set name ->
-                    name
-                in
-                (Js_op.Lit name, value))
+              (fun (_, fld_info, _, _, value) ->
+                (Js_op.Lit (set_field_name fld_info), value))
               overrides
           in
           let blocks =
@@ -2080,15 +2080,24 @@ let compile output_prefix =
                the statements of every override have run, so they could mutate
                the base before the copy. Copy first, then set each field. *)
             let copy = E.var id in
+            (* Each override is an own property of the copy, as it is of the
+               literal. Assigning a field makes one, except for [__proto__]
+               when [init] has no own [__proto__]: the assignment runs the
+               setter the copy inherits from [Object.prototype], which sets
+               the prototype of the copy, or does nothing. *)
+            let set_field fld_info i value =
+              match set_field_name fld_info with
+              | "__proto__" -> E.define_own_property copy "__proto__" value
+              | _ ->
+                Js_of_lam_block.set_field fld_info copy (Int32.of_int i) value
+            in
             let assignments =
               List.concat_map
                 (fun (i, fld_info, set_loc, (output : Js_output.t), value) ->
                   output.block
                   @ [
                       S.exp
-                        (with_source_loc set_loc
-                           (Js_of_lam_block.set_field fld_info copy
-                              (Int32.of_int i) value));
+                        (with_source_loc set_loc (set_field fld_info i value));
                     ])
                 overrides
             in

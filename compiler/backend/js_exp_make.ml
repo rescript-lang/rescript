@@ -761,6 +761,21 @@ let obj ?dup properties : t =
 let obj_entries entries : t =
   {expression_desc = Object entries; comment = None; source_loc = None}
 
+let define_own_property (e : t) (name : string) (value : t) : t =
+  call ~info:Js_call_info.ml_full_call
+    (dot (js_global "Object") "defineProperty")
+    [
+      e;
+      str name;
+      obj
+        [
+          (Js_op.Lit "value", value);
+          (Js_op.Lit "writable", true_);
+          (Js_op.Lit "enumerable", true_);
+          (Js_op.Lit "configurable", true_);
+        ];
+    ]
+
 let rec triple_equal ?comment (e0 : t) (e1 : t) : t =
   match (e0.expression_desc, e1.expression_desc) with
   | ( (Null | Undefined _),

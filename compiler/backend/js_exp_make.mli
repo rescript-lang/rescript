@@ -284,6 +284,11 @@ val obj : ?dup:J.expression -> J.property_map -> t
 
 val obj_entries : J.object_entry list -> t
 
+val define_own_property : t -> string -> t -> t
+(** [Object.defineProperty(e, name, {value, ...})]: defines [name] as an own
+    data property of [e], as a property of an object literal does, where an
+    assignment would run a setter that [e] inherits *)
+
 val true_ : t
 
 val false_ : t
