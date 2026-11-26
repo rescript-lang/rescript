@@ -6,7 +6,7 @@ implementation lives in [`build_system/`](../../build_system/README.md).
 | Directory | Tests |
 | --- | --- |
 | [`integration/`](integration) | The integration suite: shell scripts that build, clean and watch [`testrepo/`](testrepo/README.md) and compare snapshots |
-| [`focused/`](focused) | Focused end-to-end scripts with their own small projects (`run.sh` and the `check_*.sh` scripts) |
+| [`isolated/`](isolated) | End-to-end scripts that each copy a small project of their own (`run.sh` and the `check_*.sh` scripts) |
 | [`projects/`](projects) | One small project per directory, each checked by its `input.js` |
 | [`unit/`](unit) | OUnit tests of the build system's modules |
 
@@ -27,7 +27,7 @@ Run commands from the repository root:
 ```sh
 make test-build                                  # integration suite
 dune runtest tests/build_tests/unit              # unit tests
-sh tests/build_tests/focused/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"
+sh tests/build_tests/isolated/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"
 node scripts/test.js -build                      # projects (with project_tests and error_tests)
 ```
 

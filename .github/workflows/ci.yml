@@ -230,12 +230,12 @@ jobs:
         if: ${{ !matrix.skip_build_system_integration_tests }}
         timeout-minutes: 20
         run: |
-          . tests/build_tests/focused/process_watchdog.sh
+          . tests/build_tests/isolated/process_watchdog.sh
           start_process_watchdog
-          bash tests/build_tests/focused/check_canonical_test_coverage.sh
-          bash tests/build_tests/focused/check_config_acceptance.sh \
+          bash tests/build_tests/isolated/check_integration_test_coverage.sh
+          bash tests/build_tests/isolated/check_config_acceptance.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
-          bash tests/build_tests/focused/check_command_validation.sh \
+          bash tests/build_tests/isolated/check_command_validation.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
@@ -246,7 +246,7 @@ jobs:
         if: matrix.node-target == 'linux-arm64' || matrix.node-target == 'darwin-arm64'
         timeout-minutes: 15
         run: |
-          bash tests/build_tests/focused/check_interactive_output.sh \
+          bash tests/build_tests/isolated/check_interactive_output.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
@@ -254,7 +254,7 @@ jobs:
         if: ${{ !matrix.skip_build_system_integration_tests }}
         timeout-minutes: 10
         run: |
-          bash tests/build_tests/focused/check_verbose_output.sh \
+          bash tests/build_tests/isolated/check_verbose_output.sh \
             packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
         shell: bash
 
@@ -267,40 +267,40 @@ jobs:
           opam exec -- ./_build/default/tests/build_tests/unit/build_system_tests_main.exe -runner sequential
         shell: bash
 
-      # The canonical suite works in tests/build_tests/testrepo and the focused one in
-      # directories of its own, so they run side by side; each takes one to
-      # three and a half minutes. The canonical suite fails when another
-      # process runs its executable as it starts, so it runs a copy. Its
-      # output is shown once both are done.
-      - name: Run build system focused integration and canonical tests
+      # The integration suite works in tests/build_tests/testrepo and the
+      # isolated one in directories of its own, so they run side by side; each
+      # takes one to three and a half minutes. The integration suite fails when
+      # another process runs its executable as it starts, so it runs a copy.
+      # Its output is shown once both are done.
+      - name: Run build system integration and isolated tests
         if: ${{ !matrix.skip_build_system_integration_tests }}
         timeout-minutes: 30
         run: |
           bin=packages/@rescript/${{ matrix.node-target }}/bin
-          rm -rf tmp/canonical-bin
+          rm -rf tmp/integration-bin
           mkdir -p tmp
-          cp -R "$bin" tmp/canonical-bin
-          canonical_log=tmp/canonical-tests.log
-          ./tests/build_tests/integration/suite.sh tmp/canonical-bin/rescript.exe >"$canonical_log" 2>&1 &
-          canonical=$!
+          cp -R "$bin" tmp/integration-bin
+          integration_log=tmp/integration-tests.log
+          ./tests/build_tests/integration/suite.sh tmp/integration-bin/rescript.exe >"$integration_log" 2>&1 &
+          integration=$!
 
-          focused_status=0
-          sh tests/build_tests/focused/run.sh "$bin/rescript.exe" || focused_status=$?
-          canonical_status=0
-          wait "$canonical" || canonical_status=$?
+          isolated_status=0
+          sh tests/build_tests/isolated/run.sh "$bin/rescript.exe" || isolated_status=$?
+          integration_status=0
+          wait "$integration" || integration_status=$?
 
-          if [ "$canonical_status" -eq 0 ]; then
-            echo "::group::Canonical tests"
-            cat "$canonical_log"
+          if [ "$integration_status" -eq 0 ]; then
+            echo "::group::Integration tests"
+            cat "$integration_log"
             echo "::endgroup::"
           else
-            cat "$canonical_log"
-            echo "::error::The canonical tests failed with status $canonical_status"
+            cat "$integration_log"
+            echo "::error::The integration tests failed with status $integration_status"
           fi
-          if [ "$focused_status" -ne 0 ]; then
-            echo "::error::The focused integration tests failed with status $focused_status"
+          if [ "$isolated_status" -ne 0 ]; then
+            echo "::error::The isolated tests failed with status $isolated_status"
           fi
-          [ "$focused_status" -eq 0 ] && [ "$canonical_status" -eq 0 ]
+          [ "$isolated_status" -eq 0 ] && [ "$integration_status" -eq 0 ]
         shell: bash
 
       - name: Build playground compiler

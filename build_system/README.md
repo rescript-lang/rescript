@@ -180,15 +180,15 @@ Windows CI.
 
 ```sh
 dune runtest tests/build_tests/unit    # unit tests
-sh tests/build_tests/focused/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"   # focused end-to-end tests
+sh tests/build_tests/isolated/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"   # isolated end-to-end tests
 make test-build                        # integration suite in tests/build_tests/integration
 ```
 
-The scripts in `tests/build_tests/focused/check_*.sh` check configuration
+The scripts in `tests/build_tests/isolated/check_*.sh` check configuration
 acceptance, command validation, and verbose and interactive output, partly
-against snapshots in `tests/build_tests/focused/snapshots/`. Run them with
+against snapshots in `tests/build_tests/isolated/snapshots/`. Run them with
 `UPDATE_SNAPSHOTS=1` to rewrite the snapshots after an intended output change.
-`tests/build_tests/focused/check_canonical_test_coverage.sh` ensures that every
+`tests/build_tests/isolated/check_integration_test_coverage.sh` ensures that every
 integration test script is run by `tests/build_tests/integration/suite.sh`.
 
 ## Packaging

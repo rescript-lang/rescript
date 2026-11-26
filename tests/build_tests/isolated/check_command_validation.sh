@@ -556,14 +556,14 @@ line_count_stays() {
 }
 
 run_build_output_case redirected-success 0 \
-  "$root/tests/build_tests/focused/basic" redirected
+  "$root/tests/build_tests/isolated/basic" redirected
 run_build_output_case redirected-compile-error 1 \
-  "$root/tests/build_tests/focused/failure" redirected
+  "$root/tests/build_tests/isolated/failure" redirected
 run_build_output_case redirected-parse-error 1 \
   "$work/redirected-parse-fixture" redirected
 run_multiple_parse_errors_case
 run_build_output_case redirected-warning 0 \
-  "$root/tests/build_tests/focused/warning-replay" redirected
+  "$root/tests/build_tests/isolated/warning-replay" redirected
 run_build_output_case redirected-config-diagnostics 0 \
   "$work/redirected-config-diagnostics" redirected
 run_build_output_case forced-color-config-diagnostics 0 \
@@ -576,10 +576,10 @@ if [ -s "$work/rescript.out" ] || [ -s "$work/rescript.err" ]; then
   exit 1
 fi
 run_build_output_case quiet-compile-error 1 \
-  "$root/tests/build_tests/focused/failure" quiet
+  "$root/tests/build_tests/isolated/failure" quiet
 run_build_output_case quiet-parse-error 1 "$work/redirected-parse-fixture" quiet
 run_build_output_case quiet-warning 0 \
-  "$root/tests/build_tests/focused/warning-replay" quiet
+  "$root/tests/build_tests/isolated/warning-replay" quiet
 
 run_case build-subcommand-version accept build --version
 run_case short-help accept -h

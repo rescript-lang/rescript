@@ -63,7 +63,7 @@ cp -R "$work/project" "$work/after-build"
 cp -R "$work/project" "$work/watch"
 cp -R "$work/project" "$work/initial-failure-watch"
 printf 'let value = (\n' >"$work/initial-failure-watch/src/A.res"
-cp -R "$root/tests/build_tests/focused/basic" "$work/partial-initial-failure-watch"
+cp -R "$root/tests/build_tests/isolated/basic" "$work/partial-initial-failure-watch"
 printf 'let answer: int = "not an int"\n' \
   >"$work/partial-initial-failure-watch/src/B.res"
 cp -R "$work/project" "$work/warning-watch"
