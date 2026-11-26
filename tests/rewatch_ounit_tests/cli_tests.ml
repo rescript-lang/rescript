@@ -35,6 +35,43 @@ let watch_options arguments =
 let tests =
   "cli_tests" >:: fun _context ->
   check
+    (parse ["lsp"; "--stdio"] = Cli.Lsp)
+    "lsp selects the stdio language server";
+  check (rejects ["lsp"]) "lsp requires --stdio";
+  List.iter
+    (fun arguments ->
+      check (parse arguments = Cli.Lsp) "lsp accepts the client process ID")
+    [
+      ["lsp"; "--stdio"; "--clientProcessId"; "123"];
+      ["lsp"; "--clientProcessId=123"; "--stdio"];
+    ];
+  check
+    (rejects ["lsp"; "--clientProcessId"; "123"])
+    "a client process ID does not replace --stdio";
+  check
+    (rejects ["lsp"; "--stdio"; "--clientProcessId"])
+    "the client process ID requires a value";
+  List.iter
+    (fun value ->
+      check
+        (rejects ["lsp"; "--stdio"; "--clientProcessId=" ^ value])
+        "lsp rejects invalid client process IDs")
+    ["abc"; "0"; "-1"; "1.5"; "999999999999999999999999999999999999"];
+  List.iter
+    (fun flag ->
+      check
+        (rejects ["lsp"; "--stdio"; flag])
+        "lsp rejects verbosity options after the command";
+      check
+        (rejects [flag; "lsp"; "--stdio"])
+        "lsp rejects verbosity options before the command")
+    ["--quiet"; "-q"; "--verbose"; "-v"; "-vv"];
+  check (shows_help ["lsp"; "--help"]) "lsp displays command help";
+  check (shows_help ["help"; "lsp"]) "help recognizes lsp";
+  check (shows_version ["lsp"; "--version"]) "lsp accepts the global version";
+  check (rejects ["lsp"; "--socket"]) "lsp rejects unsupported transports";
+  check (rejects ["lsp"; "project"]) "lsp does not accept a build folder";
+  check
     (match parse [] with
     | Cli.Build _ -> true
     | _ -> false)

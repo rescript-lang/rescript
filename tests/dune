@@ -1,1 +1,1 @@
-(dirs ounit_tests rewatch_ounit_tests syntax_tests)
+(dirs ounit_tests rewatch_ounit_tests syntax_tests lsp_tests lsp_unit_tests)

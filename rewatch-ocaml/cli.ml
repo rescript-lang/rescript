@@ -4,6 +4,7 @@ type command =
   | Watch of build_options
   | Format of format_input
   | Compiler_args of {verbosity: int; path: string}
+  | Lsp
 
 and build_options = {
   verbosity: int;
@@ -217,6 +218,38 @@ let compiler_args_term =
   let+ verbosity = verbosity and+ path in
   Compiler_args {verbosity; path}
 
+let lsp_term =
+  let stdio =
+    Arg.(
+      required
+      & vflag None
+          [
+            ( Some Lsp,
+              info ["stdio"] ~doc:"Use standard input/output (required)." );
+          ])
+  in
+  let client_process_id =
+    let parse value =
+      match int_of_string_opt value with
+      | Some pid when pid > 0 -> Ok pid
+      | Some _ | None ->
+        Error (`Msg "client process ID must be a positive integer")
+    in
+    let converter = Arg.conv (parse, Stdlib.Format.pp_print_int) in
+    Arg.(
+      value
+      & opt (some converter) None
+      & info ["clientProcessId"] ~docv:"PID"
+          ~doc:
+            "Accept a client process ID for editor compatibility. The server \
+             does not monitor this process.")
+  in
+  let+ command = stdio and+ client_process_id in
+  (* Some editors append this argument automatically. It is accepted only for
+     launch compatibility; shutdown and exit still follow the LSP lifecycle. *)
+  ignore client_process_id;
+  command
+
 let exits =
   [
     Cmd.Exit.info 0 ~doc:"on success.";
@@ -270,6 +303,11 @@ let root =
       (command_info "help" "Print this message or command help.")
       help_term
   in
+  let lsp =
+    Cmd.make
+      (command_info "lsp" "Start the ReScript language server over stdio.")
+      lsp_term
+  in
   let info =
     let man =
       [
@@ -287,7 +325,7 @@ let root =
       ~version:("rescript " ^ Rescript_version.version)
       ~doc:"Fast, Simple, Fully Typed JavaScript from the Future" ~man
   in
-  let commands = [build; watch; clean; format; compiler_args; help] in
+  let commands = [build; watch; clean; format; compiler_args; lsp; help] in
   (* Options before a command name make Cmdliner read the name as the folder of
      the default build, so [rescript -v watch] would build a folder named
      watch. *)

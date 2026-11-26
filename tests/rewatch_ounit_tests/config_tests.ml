@@ -45,6 +45,32 @@ let with_config_file test _context =
       let path = Filename.concat root "rescript.json" in
       test ~root ~path)
 
+let in_memory_decoding_tests =
+  with_config_file (fun ~root ~path ->
+      let contents =
+        {|{"name":"@example/app","namespace":true,"dependencies":[{"name":"dep","features":["native"]}],"package-specs":{"module":"esmodule","suffix":".mjs"}}|}
+      in
+      let decoded = Config.of_string ~path ~root contents in
+      check (not (Sys.file_exists path)) "decoding does not read the filesystem";
+      write_file path contents;
+      check
+        (decoded = Config.load path)
+        "in-memory and filesystem decoding use the same schema and defaults";
+      let invalid = {|{"name":"first","name":"second"}|} in
+      let error f =
+        try
+          ignore (f ());
+          assert_failure "Expected a configuration error"
+        with Config.Error message -> message
+      in
+      let decoded_error =
+        error (fun () -> Config.of_string ~path ~root invalid)
+      in
+      write_file path invalid;
+      check
+        (decoded_error = error (fun () -> Config.load path))
+        "configuration errors are identical regardless of the I/O backend")
+
 let loading_tests =
   with_config_file (fun ~root ~path ->
       let missing_path = Filename.concat root "missing.json" in
@@ -922,6 +948,7 @@ let tests =
   >::: [
          "strict_json" >:: strict_json_tests;
          "loading" >:: loading_tests;
+         "in_memory_decoding" >:: in_memory_decoding_tests;
          "gentype_discovery" >:: gentype_discovery_tests;
          "validation" >:: validation_tests;
          "compiler_jobs" >:: compiler_job_tests;

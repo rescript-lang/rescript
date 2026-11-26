@@ -56,11 +56,22 @@ let run_command ~poll = function
     Format.run_files ~poll ~verbosity ~check paths
   | Cli.Compiler_args {verbosity; path} ->
     print_endline (Compiler_args_command.run ~verbosity path)
+  | Cli.Lsp ->
+    Eio_main.run (fun env ->
+        let fs = Eio.Stdenv.fs env in
+        let input = Eio.Stdenv.stdin env in
+        let output = Eio.Stdenv.stdout env in
+        Rescript_language_server.listen ~input ~output ~fs)
   | Cli.Clean {verbosity; folder; prod} ->
     Clean.run ~poll ~verbosity ~folder ~prod
 
 let run = function
   | Cli.Watch _ as command -> run_command ~poll:(fun () -> ()) command
+  | Cli.Lsp as command ->
+    (* The Eio server does not poll the build's termination callback. Keep the
+       standalone server's signal behavior instead of swallowing termination
+       signals in the build-only handlers. *)
+    run_command ~poll:(fun () -> ()) command
   | command ->
     with_termination_handlers (fun ~poll -> run_command ~poll command)
 

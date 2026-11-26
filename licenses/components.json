@@ -69,7 +69,7 @@
     "opam": "lsp",
     "source": "https://github.com/ocaml/ocaml-lsp",
     "license": "ISC",
-    "scope": "rescript-editor-analysis and rescript-tools"
+    "scope": "rescript, rescript-editor-analysis and rescript-tools"
   },
   {
     "name": "Jsonrpc",
@@ -98,6 +98,140 @@
     "source": "https://erratique.ch/software/cmarkit",
     "license": "ISC",
     "scope": "rescript-tools"
+  },
+  {
+    "name": "Eio",
+    "opam": "eio",
+    "source": "https://github.com/ocaml-multicore/eio",
+    "license": "ISC",
+    "scope": "language-server I/O in rescript"
+  },
+  {
+    "name": "Eio main",
+    "opam": "eio_main",
+    "source": "https://github.com/ocaml-multicore/eio",
+    "license": "ISC",
+    "scope": "language-server event loop in rescript"
+  },
+  {
+    "name": "Eio POSIX backend",
+    "opam": "eio_posix",
+    "source": "https://github.com/ocaml-multicore/eio",
+    "license": "ISC",
+    "scope": "POSIX language-server backend in rescript",
+    "platforms": ["darwin", "linux"]
+  },
+  {
+    "name": "Eio Linux backend",
+    "opam": "eio_linux",
+    "source": "https://github.com/ocaml-multicore/eio",
+    "license": "ISC",
+    "scope": "Linux language-server backend in rescript",
+    "platforms": ["linux"]
+  },
+  {
+    "name": "OCaml uring",
+    "opam": "uring",
+    "source": "https://github.com/ocaml-multicore/ocaml-uring",
+    "license": "ISC AND MIT",
+    "scope": "io_uring support for Eio in rescript",
+    "platforms": ["linux"],
+    "notes": "Includes vendored liburing, distributed under its MIT license.",
+    "licenseFiles": ["licenses/ocaml/liburing.txt"]
+  },
+  {
+    "name": "Iomux",
+    "opam": "iomux",
+    "source": "https://github.com/ocaml-multicore/ocaml-iomux",
+    "license": "ISC",
+    "scope": "runtime dependency of Eio POSIX",
+    "platforms": ["darwin", "linux"]
+  },
+  {
+    "name": "Fmt",
+    "opam": "fmt",
+    "source": "https://erratique.ch/software/fmt",
+    "license": "ISC",
+    "scope": "runtime dependency of Eio"
+  },
+  {
+    "name": "Mtime",
+    "opam": "mtime",
+    "source": "https://erratique.ch/software/mtime",
+    "license": "ISC",
+    "scope": "runtime dependency of Eio"
+  },
+  {
+    "name": "domain-local-await",
+    "opam": "domain-local-await",
+    "source": "https://github.com/ocaml-multicore/domain-local-await",
+    "license": "ISC",
+    "scope": "runtime dependency of Eio"
+  },
+  {
+    "name": "thread-table",
+    "opam": "thread-table",
+    "source": "https://github.com/ocaml-multicore/thread-table",
+    "license": "ISC",
+    "scope": "runtime dependency of domain-local-await"
+  },
+  {
+    "name": "Optint",
+    "opam": "optint",
+    "source": "https://github.com/mirage/optint",
+    "license": "ISC",
+    "scope": "runtime dependency of Eio"
+  },
+  {
+    "name": "Psq",
+    "opam": "psq",
+    "source": "https://github.com/pqwy/psq",
+    "license": "ISC",
+    "scope": "runtime dependency of Eio"
+  },
+  {
+    "name": "Seq compatibility package",
+    "opam": "seq",
+    "source": "https://github.com/ocaml/ocaml",
+    "license": "LGPL-2.1-only WITH OCaml-LGPL-linking-exception",
+    "scope": "standard-library iterator types used by Eio",
+    "licenseOpam": "ocaml",
+    "notes": "Metadata-only compatibility package. Seq is provided by the OCaml standard library; its license text comes from the ocaml package."
+  },
+  {
+    "name": "Bigstringaf",
+    "opam": "bigstringaf",
+    "source": "https://github.com/inhabitedtype/bigstringaf",
+    "license": "BSD-3-Clause",
+    "scope": "runtime dependency of Eio"
+  },
+  {
+    "name": "lwt-dllist",
+    "opam": "lwt-dllist",
+    "source": "https://github.com/mirage/lwt-dllist",
+    "license": "MIT",
+    "scope": "runtime dependency of Eio"
+  },
+  {
+    "name": "OCaml Cstruct",
+    "opam": "cstruct",
+    "source": "https://github.com/mirage/ocaml-cstruct",
+    "license": "ISC",
+    "scope": "runtime dependency of Eio"
+  },
+  {
+    "name": "Hmap",
+    "opam": "hmap",
+    "source": "https://erratique.ch/software/hmap",
+    "license": "ISC",
+    "scope": "runtime dependency of Eio"
+  },
+  {
+    "name": "ppx_deriving_yojson runtime",
+    "opam": "ppx_deriving_yojson",
+    "source": "https://github.com/ocaml-ppx/ppx_deriving_yojson",
+    "license": "MIT",
+    "scope": "JSON codecs for language-server editor settings in rescript"
   },
   {
     "name": "Cmdliner",
