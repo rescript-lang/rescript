@@ -2,10 +2,22 @@ import { createElement, useReducer } from "react";
 import { init, reduce } from "../app/TodoModel.res.ts";
 import { type inputProps, make as TodoApp } from "../app/TodoReact.res.ts";
 
-function TodoInput({ value, onValue }: inputProps) {
+function TodoInput({
+  value,
+  placeholder,
+  ariaLabel,
+  onValue,
+  onEnter,
+}: inputProps) {
   return createElement("input", {
+    type: "text",
     value,
+    placeholder,
+    "aria-label": ariaLabel,
     onChange: event => onValue(event.currentTarget.value),
+    onKeyDown: event => {
+      if (event.key === "Enter") onEnter();
+    },
   });
 }
 

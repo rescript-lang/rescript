@@ -6,11 +6,19 @@ import * as JsxRuntime from "react/jsx-runtime";
 
 import type {action as TodoModel_action} from './TodoModel.res.ts';
 
+import type {counts as TodoModel_counts} from './TodoModel.res.ts';
+
 import type {state as TodoModel_state} from './TodoModel.res.ts';
 
 import type {todo as TodoModel_todo} from './TodoModel.res.ts';
 
-export type inputProps = { readonly value: string; readonly onValue: (_1:string) => void };
+export type inputProps = {
+  readonly value: string; 
+  readonly placeholder: string; 
+  readonly ariaLabel: string; 
+  readonly onValue: (_1:string) => void; 
+  readonly onEnter: () => void
+};
 
 export type props<state,dispatch,input> = {
   readonly state: state; 
@@ -26,91 +34,155 @@ export function pressed(active: boolean): "false" | "mixed" | "true" {
   }
 }
 
+export function remainingText(counts: TodoModel_counts): string {
+  if (counts.active === 0) {
+    return "All tasks completed";
+  } else if (counts.active === 1) {
+    return "1 task left";
+  } else {
+    return counts.active.toString() + " tasks left";
+  }
+}
+
+export function tabLabel(label: string, count: number): string {
+  return label + " (" + count.toString() + ")";
+}
+
 function TodoReact(props: props<TodoModel_state,(_1:TodoModel_action) => void,(_1:inputProps) => React.JSX.Element>): React.JSX.Element {
   let input = props.input;
   let dispatch = props.dispatch;
   let state = props.state;
-  let rows = TodoModel.visibleTodos(state.model.todos, state.filter, state.query).map((todo: TodoModel_todo) => JsxRuntime.jsx(TodoRow.make, {
+  let counts = TodoModel.countTodos(state.model.todos);
+  let visible = TodoModel.visibleTodos(state.model.todos, state.filter, state.query);
+  let rows = visible.map((todo: TodoModel_todo) => JsxRuntime.jsx(TodoRow.make, {
     todo: todo,
     onAction: dispatch
   }, todo.id.toString()));
+  let listContent = rows.length === 0 ? JsxRuntime.jsx("p", {
+      className: "empty-state",
+      children: state.query.trim().length > 0 ? "No tasks match your search." : "No tasks in this view."
+    }) : JsxRuntime.jsx("ul", {
+      className: "todo-list",
+      children: rows
+    });
   return JsxRuntime.jsxs("main", {
+    className: "app-card",
     children: [
-      JsxRuntime.jsx("h1", {
-        children: "Tasks"
-      }),
-      JsxRuntime.jsxs("label", {
+      JsxRuntime.jsxs("header", {
+        className: "app-header",
         children: [
-          "New task",
+          JsxRuntime.jsxs("div", {
+            className: "title-group",
+            children: [
+              JsxRuntime.jsx("h1", {
+                children: "Tasks"
+              }),
+              JsxRuntime.jsx("p", {
+                className: "subtitle",
+                children: counts.completed.toString() + " of " + counts.total.toString() + " done"
+              })
+            ]
+          }),
+          JsxRuntime.jsx("span", {
+            className: "verified-badge",
+            children: "Verified reducer"
+          })
+        ]
+      }),
+      JsxRuntime.jsxs("div", {
+        className: "composer",
+        children: [
           JsxRuntime.jsx(input, {
             value: state.draft,
+            placeholder: "Add a new task...",
+            ariaLabel: "New task",
             onValue: (value: string) => dispatch({
               TAG: "Draft",
               _0: value
-            })
-          })
-        ]
-      }),
-      JsxRuntime.jsxs("div", {
-        className: "toolbar",
-        children: [
+            }),
+            onEnter: () => dispatch("Add")
+          }),
           JsxRuntime.jsx("button", {
+            className: "primary-btn",
             onClick: (param: React.MouseEvent) => dispatch("Add"),
-            children: "Add task"
-          }),
-          JsxRuntime.jsx("button", {
-            onClick: (param: React.MouseEvent) => dispatch("ToggleAll"),
-            children: "Toggle all"
-          }),
-          JsxRuntime.jsx("button", {
-            onClick: (param: React.MouseEvent) => dispatch("ClearCompleted"),
-            children: "Clear completed"
-          })
-        ]
-      }),
-      JsxRuntime.jsxs("label", {
-        children: [
-          "Search tasks",
-          JsxRuntime.jsx(input, {
-            value: state.query,
-            onValue: (value: string) => dispatch({
-              TAG: "Query",
-              _0: value
-            })
+            children: "Add"
           })
         ]
       }),
       JsxRuntime.jsxs("div", {
-        className: "toolbar",
+        className: "controls-bar",
         children: [
-          JsxRuntime.jsx("button", {
-            "aria-pressed": pressed(state.filter === "All"),
-            onClick: (param: React.MouseEvent) => dispatch({
-              TAG: "Filter",
-              _0: "All"
-            }),
-            children: "All"
+          JsxRuntime.jsxs("div", {
+            className: "filter-group",
+            children: [
+              JsxRuntime.jsx("button", {
+                "aria-pressed": pressed(state.filter === "All"),
+                className: "filter-tab",
+                onClick: (param: React.MouseEvent) => dispatch({
+                  TAG: "Filter",
+                  _0: "All"
+                }),
+                children: tabLabel("All", counts.total)
+              }),
+              JsxRuntime.jsx("button", {
+                "aria-pressed": pressed(state.filter === "Active"),
+                className: "filter-tab",
+                onClick: (param: React.MouseEvent) => dispatch({
+                  TAG: "Filter",
+                  _0: "Active"
+                }),
+                children: tabLabel("Active", counts.active)
+              }),
+              JsxRuntime.jsx("button", {
+                "aria-pressed": pressed(state.filter === "Completed"),
+                className: "filter-tab",
+                onClick: (param: React.MouseEvent) => dispatch({
+                  TAG: "Filter",
+                  _0: "Completed"
+                }),
+                children: tabLabel("Completed", counts.completed)
+              })
+            ]
           }),
-          JsxRuntime.jsx("button", {
-            "aria-pressed": pressed(state.filter === "Active"),
-            onClick: (param: React.MouseEvent) => dispatch({
-              TAG: "Filter",
-              _0: "Active"
-            }),
-            children: "Active"
-          }),
-          JsxRuntime.jsx("button", {
-            "aria-pressed": pressed(state.filter === "Completed"),
-            onClick: (param: React.MouseEvent) => dispatch({
-              TAG: "Filter",
-              _0: "Completed"
-            }),
-            children: "Completed"
+          JsxRuntime.jsx("div", {
+            className: "search-wrap",
+            children: JsxRuntime.jsx(input, {
+              value: state.query,
+              placeholder: "Search tasks...",
+              ariaLabel: "Search tasks",
+              onValue: (value: string) => dispatch({
+                TAG: "Query",
+                _0: value
+              }),
+              onEnter: () => {}
+            })
           })
         ]
       }),
-      JsxRuntime.jsx("ul", {
-        children: rows
+      listContent,
+      JsxRuntime.jsxs("footer", {
+        className: "app-footer",
+        children: [
+          JsxRuntime.jsx("span", {
+            className: "remaining",
+            children: remainingText(counts)
+          }),
+          JsxRuntime.jsxs("div", {
+            className: "footer-actions",
+            children: [
+              JsxRuntime.jsx("button", {
+                className: "ghost-btn",
+                onClick: (param: React.MouseEvent) => dispatch("ToggleAll"),
+                children: counts.active > 0 ? "Complete all" : "Reopen all"
+              }),
+              JsxRuntime.jsx("button", {
+                className: "ghost-btn",
+                onClick: (param: React.MouseEvent) => dispatch("ClearCompleted"),
+                children: "Clear completed"
+              })
+            ]
+          })
+        ]
       })
     ]
   });

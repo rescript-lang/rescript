@@ -6,6 +6,7 @@ export type props<title> = { readonly title: title };
 
 function TodoLabel(props: props<string>): React.JSX.Element {
   return JsxRuntime.jsx("span", {
+    className: "todo-title",
     children: props.title
   });
 }
