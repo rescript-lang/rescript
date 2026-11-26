@@ -695,6 +695,10 @@ function countBuild(rescript, dir, inputs) {
       env: {
         RESCRIPT_COMPILER_DOMAINS: "1",
         RESCRIPT_REPORT_WORKER_ALLOCATIONS: "1",
+        // The base this pull request is measured against still reads the
+        // REWATCH_ names. The next pull request in the stack removes these.
+        REWATCH_COMPILER_DOMAINS: "1",
+        REWATCH_REPORT_WORKER_ALLOCATIONS: "1",
       },
     }),
     inputs,
