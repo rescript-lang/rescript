@@ -33,7 +33,7 @@ The Makefile’s targets build on each other in this order:
 
 Before changing a subsystem, read its local agent instructions and area guide.
 For compiler changes, read [compiler/AGENTS.md](compiler/AGENTS.md). For build
-system changes, read [rewatch-ocaml/AGENTS.md](rewatch-ocaml/AGENTS.md). These
+system changes, read [build_system/AGENTS.md](build_system/AGENTS.md). These
 apply even when the task starts at the repository root. Changes spanning areas
 need the relevant guidance from each.
 
@@ -46,7 +46,7 @@ need the relevant guidance from each.
 - [`compiler/backend/README.md`](compiler/backend/README.md) for Lambda
   optimization and JavaScript generation
 - [`analysis/README.md`](analysis/README.md) for editor analysis
-- [`rewatch-ocaml/README.md`](rewatch-ocaml/README.md) for the build system
+- [`build_system/README.md`](build_system/README.md) for the build system
   and [`rewatch/README.md`](rewatch/README.md) for its integration suite
 - [`tools/README.md`](tools/README.md) for `rescript-tools`
 

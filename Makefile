@@ -71,7 +71,7 @@ $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 
 # Compiler
 
-COMPILER_SOURCE_DIRS := compiler syntax tests analysis tools rewatch-ocaml
+COMPILER_SOURCE_DIRS := compiler syntax tests analysis tools build_system
 COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \))
 COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
@@ -267,7 +267,7 @@ coverage-build: | $(YARN_INSTALL_STAMP)
 		cp $(DUNE_BIN_DIR)/$(bin)$(PLATFORM_EXE_EXT) $(BIN_DIR)/$(bin).exe && \
 		chmod 755 $(BIN_DIR)/$(bin).exe;)
 ifneq ($(OS),Windows_NT)
-	cp _build/default/rewatch-ocaml/rescript_ocaml.exe $(RESCRIPT_EXE)
+	cp _build/default/build_system/rescript.exe $(RESCRIPT_EXE)
 	chmod 755 $(RESCRIPT_EXE)
 endif
 

@@ -25,27 +25,27 @@ if $windows_posix_shell; then
   RESCRIPT_RUNTIME=$(native_path "$RESCRIPT_RUNTIME")
 fi
 export RESCRIPT_RUNTIME
-work="$root/tmp/rewatch-ocaml/test-$$"
+work="$root/tmp/build_system/test-$$"
 mkdir -p "$work"
-cp -R "$root/rewatch-ocaml/tests/basic" "$work/basic"
-cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-lifecycle"
-cp -R "$root/rewatch-ocaml/tests/basic" "$work/cleanup-failure"
-cp -R "$root/rewatch-ocaml/tests/basic" "$work/suffix-removal"
-cp -R "$root/rewatch-ocaml/tests/basic" "$work/suffix-failure"
-cp -R "$root/rewatch-ocaml/tests/basic" "$work/packaged-basic"
-cp -R "$root/rewatch-ocaml/tests/basic" "$work/runtime-discovery"
+cp -R "$root/build_system/tests/basic" "$work/basic"
+cp -R "$root/build_system/tests/basic" "$work/cleanup-lifecycle"
+cp -R "$root/build_system/tests/basic" "$work/cleanup-failure"
+cp -R "$root/build_system/tests/basic" "$work/suffix-removal"
+cp -R "$root/build_system/tests/basic" "$work/suffix-failure"
+cp -R "$root/build_system/tests/basic" "$work/packaged-basic"
+cp -R "$root/build_system/tests/basic" "$work/runtime-discovery"
 mkdir -p "$work/no-bin-annot/src"
 printf '{"name":"no-bin-annot","sources":["src"]}\n' \
   >"$work/no-bin-annot/rescript.json"
 printf '@@config({flags: ["-bs-no-bin-annot"]})\nlet value = 1\n' \
   >"$work/no-bin-annot/src/NoBinAnnot.res"
-cp -R "$root/rewatch-ocaml/tests/basic" "$work/legacy-config"
-cp -R "$root/rewatch-ocaml/tests/failure" "$work/failure"
-cp -R "$root/rewatch-ocaml/tests/features" "$work/features"
-cp -R "$root/rewatch-ocaml/tests/feature-dependencies" "$work/feature-dependencies"
-cp -R "$root/rewatch-ocaml/tests/gentype" "$work/gentype"
-cp -R "$root/rewatch-ocaml/tests/dependency" "$work/dependency"
-cp -R "$root/rewatch-ocaml/tests/package-output-dependency" \
+cp -R "$root/build_system/tests/basic" "$work/legacy-config"
+cp -R "$root/build_system/tests/failure" "$work/failure"
+cp -R "$root/build_system/tests/features" "$work/features"
+cp -R "$root/build_system/tests/feature-dependencies" "$work/feature-dependencies"
+cp -R "$root/build_system/tests/gentype" "$work/gentype"
+cp -R "$root/build_system/tests/dependency" "$work/dependency"
+cp -R "$root/build_system/tests/package-output-dependency" \
   "$work/package-output-dependency"
 mkdir -p "$work/feature-dependencies/node_modules"
 for dependency in consumer dep-union dep-transitive dep-empty; do
@@ -69,7 +69,7 @@ printf 'owned outside the resolved graph\n' \
   >"$unlinked_dependency/packages/dep/lib/rescript/marker"
 mkdir -p "$work/standalone-output/src" \
   "$work/standalone-output/node_modules"
-cp -R "$root/rewatch-ocaml/tests/shared-dep" \
+cp -R "$root/build_system/tests/shared-dep" \
   "$work/standalone-output/node_modules/dep"
 printf '%s\n' \
   '{"name":"standalone-output","sources":"src","dependencies":["dep"],"package-specs":{"module":"esmodule","in-source":false,"suffix":".mjs"}}' \
@@ -77,14 +77,14 @@ printf '%s\n' \
 printf 'let value = Dep.value\n' >"$work/standalone-output/src/Main.res"
 mkdir -p "$work/gentype/node_modules" "$work/dependency/node_modules" \
   "$work/package-output-dependency/node_modules"
-cp -R "$root/rewatch-ocaml/tests/shared-dep" "$work/gentype/node_modules/dep"
-cp -R "$root/rewatch-ocaml/tests/shared-dep" "$work/dependency/node_modules/dep"
-cp -R "$root/rewatch-ocaml/tests/shared-dep" \
+cp -R "$root/build_system/tests/shared-dep" "$work/gentype/node_modules/dep"
+cp -R "$root/build_system/tests/shared-dep" "$work/dependency/node_modules/dep"
+cp -R "$root/build_system/tests/shared-dep" \
   "$work/package-output-dependency/node_modules/dep"
-cp -R "$root/rewatch-ocaml/tests/external-boundary" "$work/external-boundary"
-cp -R "$root/rewatch-ocaml/tests/post-build" "$work/post-build"
+cp -R "$root/build_system/tests/external-boundary" "$work/external-boundary"
+cp -R "$root/build_system/tests/post-build" "$work/post-build"
 if $windows_posix_shell; then
-  cp -R "$root/rewatch-ocaml/tests/post-build" "$work/quoted-post-build"
+  cp -R "$root/build_system/tests/post-build" "$work/quoted-post-build"
   NODE_EXE=$(native_path "$(command -v node)") \
     CONFIG_PATH=$(native_path "$work/quoted-post-build/rescript.json") \
     node - <<'NODE'
@@ -97,21 +97,21 @@ const config = {
 fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(config));
 NODE
 fi
-cp -R "$root/rewatch-ocaml/tests/out-of-source" "$work/out-of-source"
-cp -R "$root/rewatch-ocaml/tests/ppx-filter" "$work/ppx-filter"
-cp -R "$root/rewatch-ocaml/tests/namespace" "$work/namespace"
-cp -R "$root/rewatch-ocaml/tests/namespace-entry" "$work/namespace-entry"
-cp -R "$root/rewatch-ocaml/tests/qualified-namespace" \
+cp -R "$root/build_system/tests/out-of-source" "$work/out-of-source"
+cp -R "$root/build_system/tests/ppx-filter" "$work/ppx-filter"
+cp -R "$root/build_system/tests/namespace" "$work/namespace"
+cp -R "$root/build_system/tests/namespace-entry" "$work/namespace-entry"
+cp -R "$root/build_system/tests/qualified-namespace" \
   "$work/qualified-namespace"
-cp -R "$root/rewatch-ocaml/tests/namespace-collision" \
+cp -R "$root/build_system/tests/namespace-collision" \
   "$work/namespace-collision"
 mkdir -p "$work/namespace-collision/node_modules"
 for dependency in namespace-one namespace-two; do
   directory_link "$work/namespace-collision/packages/$dependency" \
     "$work/namespace-collision/node_modules/$dependency"
 done
-cp -R "$root/rewatch-ocaml/tests/source-map" "$work/source-map"
-cp -R "$root/rewatch-ocaml/tests/monorepo" "$work/monorepo"
+cp -R "$root/build_system/tests/source-map" "$work/source-map"
+cp -R "$root/build_system/tests/monorepo" "$work/monorepo"
 basic="$work/basic"
 cleanup_lifecycle="$work/cleanup-lifecycle"
 cleanup_failure="$work/cleanup-failure"
@@ -894,7 +894,7 @@ printf '\nlet streamedAfterBuild = 1\n' >>"$basic/src/A.res"
 after_build_release="$basic/after-build-release"
 after_build_log="$basic/after-build-stream.log"
 "$port" build --after-build \
-  "node $(native_path "$root/rewatch-ocaml/tests/stream-after-build.js") $(native_path "$after_build_release")" \
+  "node $(native_path "$root/build_system/tests/stream-after-build.js") $(native_path "$after_build_release")" \
   "$basic" >"$after_build_log" 2>&1 &
 after_build_pid=$!
 background_pids="$background_pids $after_build_pid"
@@ -1021,7 +1021,7 @@ test ! -f "$basic/lib/rescript/lower.cmti"
 test ! -f "$basic/src/A.mjs"
 
 watch_basic="$work/watch-basic"
-cp -R "$root/rewatch-ocaml/tests/basic" "$watch_basic"
+cp -R "$root/build_system/tests/basic" "$watch_basic"
 rm -rf "$watch_basic/lib"
 rm -f "$watch_basic/src/A.mjs" "$watch_basic/src/B.mjs" "$watch_basic/src/WithInterface.mjs"
 "$port" watch "$watch_basic" >"$watch_basic/watch.log" 2>&1 &
@@ -1587,7 +1587,7 @@ wait "$transitive_local_watch_pid" 2>/dev/null || true
 
 # A watch rebuild after an unrelated edit replays warnings from modules it
 # doesn't recompile. Compiler requests are counted at the logical request log.
-cp -R "$root/rewatch-ocaml/tests/warning-replay" "$work/warning-replay"
+cp -R "$root/build_system/tests/warning-replay" "$work/warning-replay"
 warning_replay="$work/warning-replay"
 warning_call_log="$warning_replay/compiler-calls.log"
 warning_watch_log="$warning_replay/watch.log"

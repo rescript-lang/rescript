@@ -4,7 +4,7 @@ let check condition message = assert_bool message condition
 
 (* Type-checks the Windows backend against the platform interface on every
    platform. The library is wrapped, so its Platform module is named in full. *)
-module Checked_windows_platform : module type of Rewatch_ocaml_lib__Platform =
+module Checked_windows_platform : module type of Build_system__Platform =
   Platform_windows
 
 let write_file = Test_support.write_file
@@ -488,7 +488,7 @@ let process_dependency_graph_tests _context =
 
 let platform_tests _context =
   let test_executable = test_executable () in
-  let path_root = Filename.temp_file "rewatch-ocaml-path-" "" in
+  let path_root = Filename.temp_file "build-system-path-" "" in
   Sys.remove path_root;
   Unix.mkdir path_root 0o755;
   let path_root = Unix.realpath path_root in
@@ -569,7 +569,7 @@ let platform_tests _context =
       check
         (Platform_common.is_lock_owner_name name)
         (name ^ " can own a build lock"))
-    ["rescript"; "RESCRIPT.EXE"; "rescript_ocaml.exe"; "rescript_ocaml."];
+    ["rescript"; "RESCRIPT.EXE"];
   List.iter
     (fun name ->
       check
@@ -631,7 +631,7 @@ let platform_tests _context =
 
 let scheduler_tests _context =
   let test_executable = test_executable () in
-  let scheduler_root = Filename.temp_file "rewatch-ocaml-scheduler-" "" in
+  let scheduler_root = Filename.temp_file "build-system-scheduler-" "" in
   Sys.remove scheduler_root;
   Unix.mkdir scheduler_root 0o755;
   let scheduler_root = Unix.realpath scheduler_root in
@@ -680,7 +680,7 @@ let scheduler_tests _context =
       check
         (Sys.readdir scheduler_root
         |> Array.for_all (fun name ->
-            not (String.starts_with ~prefix:".rewatch-ocaml-" name)))
+            not (String.starts_with ~prefix:".build-system-" name)))
         "pipe capture creates no temporary scheduler logs")
 
 let graph_and_diagnostic_tests _context =
@@ -768,7 +768,7 @@ let graph_and_diagnostic_tests _context =
     (cycle_blocked = ["A"; "B"; "C"; "D"; "Dependent"; "TransitiveDependent"])
     "a linear scheduling pass retains every cycle and its dependents";
   if not Sys.win32 then (
-    let temporary = Filename.temp_file "rewatch-ocaml-package-path-" "" in
+    let temporary = Filename.temp_file "build-system-package-path-" "" in
     Sys.remove temporary;
     Unix.mkdir temporary 0o755;
     let temporary = Unix.realpath temporary in
@@ -876,7 +876,7 @@ let graph_and_diagnostic_tests _context =
 
 let lock_tests _context =
   let test_executable = test_executable () in
-  let lock_root = Filename.temp_file "rewatch-ocaml-stale-lock-" "" in
+  let lock_root = Filename.temp_file "build-system-stale-lock-" "" in
   Sys.remove lock_root;
   Unix.mkdir lock_root 0o755;
   let lock_root = Unix.realpath lock_root in
@@ -982,7 +982,7 @@ let lock_tests _context =
 
 let dependency_validation_tests _context =
   let dependency_root =
-    Filename.temp_file "rewatch-ocaml-allowed-dependents-" ""
+    Filename.temp_file "build-system-allowed-dependents-" ""
   in
   Sys.remove dependency_root;
   Unix.mkdir dependency_root 0o755;

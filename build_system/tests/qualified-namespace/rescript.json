@@ -1,0 +1,5 @@
+{
+  "name": "build-system-qualified-namespace",
+  "namespace": "OL",
+  "sources": "src"
+}

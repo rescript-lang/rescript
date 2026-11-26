@@ -6,7 +6,7 @@ set -eu
 . "$(dirname "$0")/test_helpers.sh"
 
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
-rescript=${1:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
+rescript=${1:-$root/_build/default/build_system/rescript.exe}
 rescript=$(realpath "$rescript")
 work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-verbose-output-XXXXXX")
 cleanup() {

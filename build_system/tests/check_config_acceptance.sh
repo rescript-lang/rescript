@@ -7,8 +7,8 @@ set -eu
 . "$(dirname "$0")/test_helpers.sh"
 
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
-rescript=${1:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
-cases=$root/rewatch-ocaml/tests/config_acceptance_cases.tsv
+rescript=${1:-$root/_build/default/build_system/rescript.exe}
+cases=$root/build_system/tests/config_acceptance_cases.tsv
 
 rescript=$(realpath "$rescript")
 mkdir -p "$root/tmp"

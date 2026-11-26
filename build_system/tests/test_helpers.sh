@@ -1,4 +1,4 @@
-# Helpers shared by the rewatch-ocaml test scripts. Source this file; it is
+# Helpers shared by the build_system test scripts. Source this file; it is
 # POSIX sh because run.sh runs under sh. Without `local`, the helpers keep their
 # state in `_`-prefixed variables so they never overwrite a caller's.
 #
@@ -111,7 +111,7 @@ file_link_if_supported() {
 }
 
 # check_snapshot SNAPSHOT ACTUAL [NAME=PATH...]: compares ACTUAL with the
-# snapshot file rewatch-ocaml/tests/snapshots/SNAPSHOT after replacing each
+# snapshot file build_system/tests/snapshots/SNAPSHOT after replacing each
 # PATH by <NAME> (see check_snapshot.js). On Windows the native long and short
 # spellings of each PATH are replaced as well. UPDATE_SNAPSHOTS=1 rewrites the
 # snapshot.

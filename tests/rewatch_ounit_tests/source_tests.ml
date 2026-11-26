@@ -55,7 +55,7 @@ let tests =
     (names (Source.namespace_members ~entry:(Some "Entry") namespace_modules)
     = ["Member"])
     "namespace membership excludes the entry and exotic module names";
-  let root = Filename.temp_file "rewatch-ocaml-sources-" "" in
+  let root = Filename.temp_file "build-system-sources-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
   let root = Unix.realpath root in

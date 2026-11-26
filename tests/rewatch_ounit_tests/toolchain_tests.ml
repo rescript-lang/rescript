@@ -6,7 +6,7 @@ let write_file = Test_support.write_file
 
 let tests =
   "toolchain_tests" >:: fun _context ->
-  let root = Filename.temp_file "rewatch-ocaml-toolchain-" "" in
+  let root = Filename.temp_file "build-system-toolchain-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
   let root = Unix.realpath root in

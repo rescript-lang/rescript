@@ -64,7 +64,7 @@
       "!**/tests/tests/**/src",
       "!**/tests/tools_tests/**/src",
       "!**/rewatch",
-      "!**/rewatch-ocaml",
+      "!**/build_system",
       "!**/lib/es6",
       "!**/lib/js",
       "!**/lib/rescript",

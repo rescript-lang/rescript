@@ -20,7 +20,7 @@ for the compiler area you are changing:
 - [type checker and typed tree](compiler/typing/README.md)
 - [Lambda, Lam, and JavaScript generation](compiler/backend/README.md)
 - [editor analysis](analysis/README.md)
-- [build system](rewatch-ocaml/README.md)
+- [build system](build_system/README.md)
 - [`rescript-tools`](tools/README.md)
 
 Public language and library documentation belongs on the

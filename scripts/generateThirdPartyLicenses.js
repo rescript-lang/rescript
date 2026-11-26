@@ -32,7 +32,7 @@ const platforms = [
 // from dune 3.25 on, the public name when there is one.
 const shippedExecutables = new Map([
   ["compiler/bsc", ["rescript_compiler_main", "bsc"]],
-  ["rewatch-ocaml", ["rescript_ocaml"]],
+  ["build_system", ["rescript"]],
   ["analysis/bin", ["main", "rescript-editor-analysis"]],
   ["tools/bin", ["main", "rescript-tools"]],
 ]);

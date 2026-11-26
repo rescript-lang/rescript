@@ -2,7 +2,7 @@
 
 This directory holds the integration suite of the ReScript build system and
 documents its behavior. The implementation lives in
-[`../rewatch-ocaml`](../rewatch-ocaml/README.md).
+[`../build_system`](../build_system/README.md).
 
 Focused documentation:
 

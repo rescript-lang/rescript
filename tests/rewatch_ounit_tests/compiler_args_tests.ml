@@ -35,7 +35,7 @@ let position value pairs = List.assoc_opt value pairs
 
 let tests =
   "compiler_args_tests" >:: fun _context ->
-  let root = Filename.temp_file "rewatch-ocaml-compiler-args-" "" in
+  let root = Filename.temp_file "build-system-compiler-args-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
   let root = Unix.realpath root in

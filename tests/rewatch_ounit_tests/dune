@@ -1,7 +1,7 @@
 (rule
  (target platform_windows.ml)
  (action
-  (copy ../../rewatch-ocaml/platform_windows.ml %{target})))
+  (copy ../../build_system/platform_windows.ml %{target})))
 
 (test
  (name rewatch_ounit_tests_main)
@@ -42,5 +42,5 @@
   (language c)
   (names test_env_stubs))
  (flags
-  (:standard -open Rewatch_ocaml_lib))
- (libraries rewatch_ocaml_lib ounit2))
+  (:standard -open Build_system))
+ (libraries build_system ounit2))

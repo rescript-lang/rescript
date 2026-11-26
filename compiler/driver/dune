@@ -1,6 +1,6 @@
 ; The compiler driver: compiles one source file from parsing through type
 ; checking to JavaScript, and implements bsc's command line. The bsc executable
-; (compiler/bsc) and the build system (rewatch-ocaml) link it.
+; (compiler/bsc) and the build system (build_system/) link it.
 
 (executable
  (name build_identity_gen)
