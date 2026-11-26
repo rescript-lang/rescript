@@ -3,6 +3,7 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 import * as Stdlib_JsError from "@rescript/runtime/lib/es6/Stdlib_JsError.mjs";
+import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 import * as JsxRuntime from "react/jsx-runtime";
 import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
 import * as Record_spread_source_effect_dep from "./record_spread_source_effect_dep.mjs";
@@ -77,6 +78,36 @@ let singleCallback = {
   run: () => 4
 };
 
+function makeNode(value) {
+  let node = {};
+  node.next = node;
+  node.value = value;
+  return node;
+}
+
+let cycle = {};
+
+Primitive_object.updateDummy(cycle, (logged("cycle", makeNode(0)), {
+  next: cycle,
+  value: 7
+}));
+
+let letCycle = {};
+
+let value = logged("letCycle", id(8));
+
+Primitive_object.updateDummy(letCycle, (logged("letCycleSource", makeNode(0)), {
+  next: letCycle,
+  value: value
+}));
+
+let sequenceCycle = {};
+
+Primitive_object.updateDummy(sequenceCycle, (logged("sequenceCycle", undefined), {
+  next: sequenceCycle,
+  value: 9
+}));
+
 let moduleCalls = takeCalls();
 
 let fromOtherModule = {
@@ -110,12 +141,12 @@ Mocha.describe("Record_spread_source_effect_test", () => {
       x: point_x,
       y: point_y
     };
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 70, characters 7-14", takeCalls(), [
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 90, characters 7-14", takeCalls(), [
       "source",
       "x",
       "y"
     ]);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 71, characters 7-14", point, {
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 91, characters 7-14", point, {
       x: 1,
       y: 2
     });
@@ -128,12 +159,12 @@ Mocha.describe("Record_spread_source_effect_test", () => {
       width: 1,
       height: 2
     };
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 76, characters 7-14", takeCalls(), ["source"]);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 77, characters 7-14", options, {
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 96, characters 7-14", takeCalls(), ["source"]);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 97, characters 7-14", options, {
       width: 1,
       height: 2
     });
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 79, characters 7-14", JSON.stringify(options), `{"width":1,"height":2}`);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 99, characters 7-14", JSON.stringify(options), `{"width":1,"height":2}`);
   });
   Mocha.test("a source that raises stops the record from being built", () => {
     let result;
@@ -148,7 +179,7 @@ Mocha.describe("Record_spread_source_effect_test", () => {
         throw exn;
       }
     }
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 89, characters 7-14", result, -1);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 109, characters 7-14", result, -1);
   });
   Mocha.test("the source of a JSX element's props runs", () => {
     logged("props", {
@@ -158,32 +189,42 @@ Mocha.describe("Record_spread_source_effect_test", () => {
       a: 1,
       b: 2
     });
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 94, characters 7-14", takeCalls(), ["props"]);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 114, characters 7-14", takeCalls(), ["props"]);
   });
   Mocha.test("sources of module-level and recursive records run", () => {
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 99, characters 7-14", moduleCalls, [
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 120, characters 6-13", moduleCalls, [
       "polymorphic",
-      "recursive"
+      "recursive",
+      "cycle",
+      "letCycle",
+      "letCycleSource",
+      "sequenceCycle"
     ]);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 100, characters 7-14", undefined, undefined);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 101, characters 7-14", undefined, undefined);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 102, characters 7-14", recursive_self().value, 2);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 103, characters 7-14", selfSpread_self().value, 3);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 104, characters 7-14", singleCallback.run(), 4);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 105, characters 7-14", fromOtherModule, {
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 124, characters 7-14", undefined, undefined);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 125, characters 7-14", undefined, undefined);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 126, characters 7-14", recursive_self().value, 2);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 127, characters 7-14", selfSpread_self().value, 3);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 128, characters 7-14", singleCallback.run(), 4);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 129, characters 7-14", cycle.next === cycle, true);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 130, characters 7-14", cycle.next.value, 7);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 131, characters 7-14", letCycle.next === letCycle, true);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 132, characters 7-14", letCycle.next.value, 8);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 133, characters 7-14", sequenceCycle.next === sequenceCycle, true);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 134, characters 7-14", sequenceCycle.next.value, 9);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 135, characters 7-14", fromOtherModule, {
       x: 5,
       y: 6
     });
   });
   Mocha.test("a pure source is left out", () => {
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 109, characters 7-14", overridePure(id({
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 139, characters 7-14", overridePure(id({
       x: 0,
       y: 0
     })), {
       x: 1,
       y: 2
     });
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 110, characters 7-14", takeCalls(), ["y"]);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 140, characters 7-14", takeCalls(), ["y"]);
     id({
       a: 0
     });
@@ -213,6 +254,10 @@ export {
   recursive,
   selfSpread,
   singleCallback,
+  makeNode,
+  cycle,
+  letCycle,
+  sequenceCycle,
   moduleCalls,
   fromOtherModule,
   overridePure,

@@ -84,6 +84,29 @@ let with_block_source_loc lam block =
   | stmt :: rest ->
     with_statement_source_loc (source_map_loc_of_lam lam) stmt :: rest
 
+(* The tag of the block that [lam] builds after evaluating other expressions,
+   when a field of the block may read one of the recursive [all_bindings], as
+   in [let rec r = {...f(), next: r}], whose spread source [f()] is evaluated
+   for its side effects first. Such a binding is declared as a dummy before
+   those expressions run, and the block is copied into it. A field that is a
+   function, a constant or a variable bound before the group reads none. *)
+let rec block_after_effects ~(all_bindings : (Ident.t * Lambda.t) list)
+    (lam : Lambda.t) =
+  let reads_binding (arg : Lambda.t) =
+    match arg with
+    | Lfunction _ | Lconst _ -> false
+    | Lvar pid ->
+      List.exists (fun (other, _) -> Ident.same other pid) all_bindings
+    | _ -> true
+  in
+  match lam with
+  | Lsequence (_, Lprim {primitive = Pmakeblock tag_info; args})
+  | Llet (_, _, _, Lprim {primitive = Pmakeblock tag_info; args}) ->
+    if List.exists reads_binding args then Some tag_info else None
+  | Lsequence (_, body) | Llet (_, _, _, body) ->
+    block_after_effects ~all_bindings body
+  | _ -> None
+
 let args_either_function_or_const (args : Lambda.t list) =
   List.for_all
     (fun (x : Lambda.t) ->
@@ -648,26 +671,13 @@ let compile output_prefix =
                       | _ -> assert false)))
                ls),
         [] )
-    | Lprim {primitive = Pmakeblock tag_info} -> (
+    | Lprim {primitive = Pmakeblock tag_info} ->
       (* Lconst should not appear here if we do [scc]
          optimization, since it's faked recursive value,
          however it would affect scope issues, we have to declare it first
       *)
-      match compile_lambda {cxt with continuation = NeedValue Not_tail} arg with
-      | {block = b; value = Some v} ->
-        (* TODO: check recursive value ..
-            could be improved for simple cases
-        *)
-        ( Js_output.make
-            (List.append b
-               [
-                 S.exp
-                   (E.runtime_call Primitive_modules.object_ "updateDummy"
-                      [E.var id; v]);
-               ]),
-          [S.define_variable ~kind:Variable id (E.dummy_obj tag_info)] )
-      | _ -> assert false)
-    | _ ->
+      compile_into_dummy cxt id tag_info arg
+    | _ -> (
       (* pathological case:
           fail to capture taill call?
          {[ let rec a =
@@ -689,7 +699,27 @@ let compile output_prefix =
                fun _-> print_endline "hey"; v ()
          ]}
       *)
-      (compile_lambda {cxt with continuation = Declare (Alias, id)} arg, [])
+      match block_after_effects ~all_bindings arg with
+      | Some tag_info -> compile_into_dummy cxt id tag_info arg
+      | None ->
+        (compile_lambda {cxt with continuation = Declare (Alias, id)} arg, []))
+  (* [id] is declared as a dummy object, which the block [arg] evaluates to is
+     copied into *)
+  and compile_into_dummy cxt id tag_info arg =
+    match compile_lambda {cxt with continuation = NeedValue Not_tail} arg with
+    | {block = b; value = Some v} ->
+      (* TODO: check recursive value ..
+          could be improved for simple cases
+      *)
+      ( Js_output.make
+          (List.append b
+             [
+               S.exp
+                 (E.runtime_call Primitive_modules.object_ "updateDummy"
+                    [E.var id; v]);
+             ]),
+        [S.define_variable ~kind:Variable id (E.dummy_obj tag_info)] )
+    | _ -> assert false
   and compile_recursive_lets_aux cxt (id_args : (Ident.t * Lambda.t) list) :
       Js_output.t =
     (* #1716 *)

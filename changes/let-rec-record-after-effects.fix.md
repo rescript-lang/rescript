@@ -1,0 +1,1 @@
+- Fix a `let rec` record that refers to itself and is built after other expressions, as in `let rec r = {...f(), next: r}` or `let rec r = {log(); {next: r}}`, reading itself before it is initialized.

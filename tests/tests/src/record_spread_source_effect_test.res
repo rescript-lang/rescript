@@ -9,6 +9,7 @@ type options = {width?: int, height: int}
 type polymorphic<'a> = {compare: option<('a, 'a) => int>, first: option<'a>}
 type rec recursive = {self: unit => recursive, value: int}
 type callback = {run: unit => int}
+type rec node = {next: node, value: int}
 
 module Component = {
   @react.component
@@ -54,6 +55,25 @@ let rec selfSpread = {...selfSpread, self: () => selfSpread, value: 3}
 
 let rec singleCallback = {...singleCallback, run: () => 4}
 
+let makeNode = value => {
+  let rec node = {next: node, value}
+  node
+}
+
+// The record still refers to itself once its source has been evaluated
+let rec cycle = {...logged("cycle", makeNode(0)), next: cycle, value: 7}
+
+let rec letCycle = {
+  let value = logged("letCycle", id(8))
+  {...logged("letCycleSource", makeNode(0)), next: letCycle, value}
+}
+
+// The same holds for a record built at the end of a sequence
+let rec sequenceCycle = {
+  ignore(logged("sequenceCycle", ()))
+  {next: sequenceCycle, value: 9}
+}
+
 let moduleCalls = takeCalls()
 
 // The source is evaluated, so the module it comes from stays imported when it
@@ -96,12 +116,22 @@ describe(__MODULE__, () => {
   })
 
   test("sources of module-level and recursive records run", () => {
-    eq(__LOC__, moduleCalls, ["polymorphic", "recursive"])
+    eq(
+      __LOC__,
+      moduleCalls,
+      ["polymorphic", "recursive", "cycle", "letCycle", "letCycleSource", "sequenceCycle"],
+    )
     eq(__LOC__, strings.first, None)
     eq(__LOC__, ints.first, None)
     eq(__LOC__, recursive.self().value, 2)
     eq(__LOC__, selfSpread.self().value, 3)
     eq(__LOC__, singleCallback.run(), 4)
+    eq(__LOC__, cycle.next === cycle, true)
+    eq(__LOC__, cycle.next.value, 7)
+    eq(__LOC__, letCycle.next === letCycle, true)
+    eq(__LOC__, letCycle.next.value, 8)
+    eq(__LOC__, sequenceCycle.next === sequenceCycle, true)
+    eq(__LOC__, sequenceCycle.next.value, 9)
     eq(__LOC__, fromOtherModule, {x: 5, y: 6})
   })
 
