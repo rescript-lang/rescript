@@ -44,3 +44,9 @@ val merge : t -> Set_ident.t -> t
 val str_of_ident : t -> Ident.t -> string * t
 
 val ident : t -> Ext_pp.t -> Ident.t -> t
+
+val printer_ident : t -> Ext_pp.t -> Ident.t -> t
+(** [printer_ident cxt f id] prints the declaration of [id], a binding the
+    printer introduces itself, like {!ident}. [Js_pass_external_shadow] never
+    saw such a binding, so a raw JS name in its scope still refers to the
+    global: [id] gets a name that is none of the reserved raw names. *)

@@ -47,7 +47,13 @@ let empty : t =
 
 let reserve (cxt : t) (reserved : Set_string.t) : t = {cxt with reserved}
 
-let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
+(* [shadow_checked] says whether [Js_pass_external_shadow] saw the binding.
+   If it did, any reference to a raw name in its scope was already rewritten
+   to [globalThis.x], so it may take a reserved name unsuffixed. A binding the
+   printer introduces itself was not seen, so it must avoid every reserved
+   name. *)
+let add_ident ~shadow_checked ~mangled:name (stamp : int) (cxt : t) : string * t
+    =
   let {next; stamps} =
     match Map_string.find_opt name cxt.names with
     | None -> {next = 0; stamps = Map_int.empty}
@@ -59,7 +65,8 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
     let rec pick i =
       let str = if i = 0 then name else Printf.sprintf "%s$%d" name i in
       if
-        Set_string.mem str cxt.used || (i > 0 && Set_string.mem str cxt.reserved)
+        Set_string.mem str cxt.used
+        || ((i > 0 || not shadow_checked) && Set_string.mem str cxt.reserved)
       then pick (i + 1)
       else (i, str)
     in
@@ -105,23 +112,33 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
       they can not have a collision
 
 *)
-let str_of_ident (cxt : t) (id : Ident.t) : string * t =
+let str_of_ident_checked ~shadow_checked (cxt : t) (id : Ident.t) : string * t =
   if Ext_ident.is_js id then (* reserved by compiler *)
     (id.name, cxt)
   else
     let id_name = id.name in
     let name = Ext_ident.convert id_name in
-    add_ident ~mangled:name id.stamp cxt
+    add_ident ~shadow_checked ~mangled:name id.stamp cxt
+
+let str_of_ident cxt id = str_of_ident_checked ~shadow_checked:true cxt id
 
 let ident (cxt : t) f (id : Ident.t) : t =
   let str, cxt = str_of_ident cxt id in
   Ext_pp.string f str;
   cxt
 
+let printer_ident (cxt : t) f (id : Ident.t) : t =
+  let str, cxt = str_of_ident_checked ~shadow_checked:false cxt id in
+  Ext_pp.string f str;
+  cxt
+
 let merge (cxt : t) (set : Set_ident.t) =
   Set_ident.fold
     (fun ident acc ->
-      snd (add_ident ~mangled:(Ext_ident.convert ident.name) ident.stamp acc))
+      snd
+        (add_ident ~shadow_checked:true
+           ~mangled:(Ext_ident.convert ident.name)
+           ident.stamp acc))
     set cxt
 
 (* Assume that all idents are already in [scope]

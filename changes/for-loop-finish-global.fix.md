@@ -1,0 +1,1 @@
+- Fix a `for` loop whose end calls a JS global named like the loop's end temporary, such as `i_finish` for a loop over `i`, throwing a `ReferenceError`: the temporary no longer takes the global's name.

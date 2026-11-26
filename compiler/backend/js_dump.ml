@@ -1423,7 +1423,9 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
                             Ext_ident.create
                               (Ext_ident.derived_name id ~suffix:"_finish")
                           in
-                          let cxt = Ext_pp_scope.ident cxt f id in
+                          (* The end may refer to a JS global with this
+                             name, which the binding would capture. *)
+                          let cxt = Ext_pp_scope.printer_ident cxt f id in
                           P.space f;
                           P.string f L.eq;
                           P.space f;
