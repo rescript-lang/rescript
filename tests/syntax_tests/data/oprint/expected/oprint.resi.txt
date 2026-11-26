@@ -164,13 +164,13 @@ module type Conjunctive = {
   let f: [< #T([< u2]) & ([< u2]) & ([< u1])] => unit
   let g: [< #S & ([< u2]) & ([< u2]) & ([< u1])] => unit
 }
-type t20 = [#"type"]
+type t20 = [#type]
 type t21 = [#"va r ia nt"]
 type t22 = [#"Variant ⛰"]
 type \"let" = int
 type \"type" = [#"Point🗿"(\"let", float)]
 type t23 = [#1 | #"10space" | #123]
-type exoticUser = {\"let": string, \"type": float, \"Upper": int}
+type exoticUser = {let: string, type: float, \"Upper": int}
 type arity1a = unit => int
 type arity1b = int => int
 type arity2 = (int, int) => int

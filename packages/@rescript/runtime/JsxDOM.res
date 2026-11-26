@@ -30,14 +30,14 @@ type domProps = {
   /* https://www.w3.org/TR/wai-aria-1.1/ */
   /* https://accessibilityresources.org/<aria-tag> is a great resource for these */
   @as("aria-current")
-  ariaCurrent?: [#page | #step | #location | #date | #time | #"true" | #"false"],
+  ariaCurrent?: [#page | #step | #location | #date | #time | #true | #false],
   @as("aria-details")
   ariaDetails?: string,
   @as("aria-disabled")
   ariaDisabled?: bool,
   @as("aria-hidden")
   ariaHidden?: bool,
-  @as("aria-invalid") ariaInvalid?: [#grammar | #"false" | #spelling | #"true"],
+  @as("aria-invalid") ariaInvalid?: [#grammar | #false | #spelling | #true],
   @as("aria-keyshortcuts")
   ariaKeyshortcuts?: string,
   @as("aria-label")
@@ -48,11 +48,11 @@ type domProps = {
   @as("aria-autocomplete") ariaAutocomplete?: [#inline | #list | #both | #none],
   /* https://www.w3.org/TR/wai-aria-1.1/#valuetype_tristate */
   @as("aria-checked")
-  ariaChecked?: [#"true" | #"false" | #mixed],
+  ariaChecked?: [#true | #false | #mixed],
   @as("aria-expanded")
   ariaExpanded?: bool,
   @as("aria-haspopup")
-  ariaHaspopup?: [#menu | #listbox | #tree | #grid | #dialog | #"true" | #"false"],
+  ariaHaspopup?: [#menu | #listbox | #tree | #grid | #dialog | #true | #false],
   @as("aria-level")
   ariaLevel?: int,
   @as("aria-modal")
@@ -65,7 +65,7 @@ type domProps = {
   @as("aria-placeholder")
   ariaPlaceholder?: string,
   /* https://www.w3.org/TR/wai-aria-1.1/#valuetype_tristate */
-  @as("aria-pressed") ariaPressed?: [#"true" | #"false" | #mixed],
+  @as("aria-pressed") ariaPressed?: [#true | #false | #mixed],
   @as("aria-readonly")
   ariaReadonly?: bool,
   @as("aria-required")

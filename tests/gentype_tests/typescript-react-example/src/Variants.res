@@ -45,7 +45,7 @@ type testGenTypeAs = [
 @genType
 type testGenTypeAs2 = [
   | #type_
-  | #"module"
+  | #module
   | #42
 ]
 
@@ -54,7 +54,7 @@ type testGenTypeAs2 = [
 @genType
 type testGenTypeAs3 = [
   | #type_
-  | #"module"
+  | #module
   | #42
 ]
 

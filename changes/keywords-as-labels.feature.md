@@ -1,0 +1,1 @@
+- Reserved words can name record fields, argument labels, JSX props, polymorphic variant tags and lowercase JSX elements without an escape: `type t = {type: string}`, `r.type`, `f(~type="a")`, `<input type="text" />`, `#type`, `<switch>`. A shorthand such as `{type}` or `~type` is still an error, since it would need a variable named `type`. The formatter prints these names bare.

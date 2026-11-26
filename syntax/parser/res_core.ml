@@ -240,21 +240,33 @@ module Error_messages = struct
     "Only one inline record definition is allowed per record field. This \
      defines more than one inline record."
 
-  let keyword_field_in_expr keyword_txt =
-    "Cannot use keyword `" ^ keyword_txt
-    ^ "` as a record field name. Suggestion: rename it (e.g. `" ^ keyword_txt
-    ^ "_`)"
+  (* A reserved word can be a label, but not the variable a shorthand
+     stands for. *)
+  let keyword_punned keyword_txt ~long_form =
+    "`" ^ keyword_txt
+    ^ "` is a reserved keyword, so it can't be a variable name and this \
+       shorthand can't be used.\n\
+      \  Write it out instead: `" ^ long_form ^ "`"
 
-  let keyword_field_in_pattern keyword_txt =
-    "Cannot use keyword `" ^ keyword_txt
-    ^ "` here. Keywords are not allowed as record field names."
+  let keyword_record_field_punned keyword_txt =
+    keyword_punned keyword_txt ~long_form:("{" ^ keyword_txt ^ ": value}")
 
-  let keyword_field_in_type keyword_txt =
-    "Cannot use keyword `" ^ keyword_txt
-    ^ "` as a record field name. Suggestion: rename it (e.g. `" ^ keyword_txt
-    ^ "_`)\n  If you need the field to be \"" ^ keyword_txt
-    ^ "\" at runtime, annotate the field: `@as(\"" ^ keyword_txt ^ "\") "
-    ^ keyword_txt ^ "_ : ...`"
+  let keyword_record_pattern_field_punned keyword_txt =
+    keyword_punned keyword_txt ~long_form:("{" ^ keyword_txt ^ ": pattern}")
+
+  let keyword_field_without_type keyword_txt =
+    "The field `" ^ keyword_txt
+    ^ "` needs a type: a reserved keyword can't name a type.\n\
+      \  Write it out instead: `" ^ keyword_txt ^ ": someType`"
+
+  let keyword_parameter_punned keyword_txt =
+    keyword_punned keyword_txt ~long_form:("~" ^ keyword_txt ^ " as name")
+
+  let keyword_argument_punned keyword_txt =
+    keyword_punned keyword_txt ~long_form:("~" ^ keyword_txt ^ "=value")
+
+  let keyword_jsx_prop_punned keyword_txt =
+    keyword_punned keyword_txt ~long_form:(keyword_txt ^ "={value}")
 
   let type_definition_in_function =
     "Type definitions are not allowed inside functions.\n"
@@ -470,24 +482,70 @@ let build_longident words =
   | [] -> assert false
   | hd :: tl -> List.fold_left (fun p s -> Longident.Ldot (p, s)) (Lident hd) tl
 
-let emit_keyword_field_error (p : Parser.t) ~mk_message =
-  let keyword_txt = Token.to_string (Parser.peek p) in
-  let keyword_start = Parser.start_pos p in
-  let keyword_end = Parser.end_pos p in
-  Parser.err ~start_pos:keyword_start ~end_pos:keyword_end p
-    (Diagnostics.message (mk_message keyword_txt))
+(* Reserved words as names.
 
-(* Recovers a keyword used as field name if it's probable that it's a full
-   field name (not punning etc), by checking if there's a colon after it. *)
-let recover_keyword_field_name_if_probably_field p ~mk_message :
-    (string * Location.t) option =
-  if Token.is_keyword (Parser.peek p) && Parser.peek2 p = Colon then (
-    emit_keyword_field_error p ~mk_message;
-    let loc = mk_loc (Parser.start_pos p) (Parser.end_pos p) in
-    let recovered_field_name = Token.to_string (Parser.peek p) ^ "_" in
-    Parser.next p;
-    Some (recovered_field_name, loc))
-  else None
+   A reserved word is reserved where a name is bound or looked up as a
+   variable, type or module. Where the grammar expects a label (a record field,
+   an argument label, a JSX prop), a polymorphic variant tag or a lowercase JSX
+   tag name, the word is a name: [r.type], [{type: v}], [~type=v],
+   [<input type="a" />], [#type], [<switch>]. Each of these positions is
+   entered on a token that is not a keyword, so the reading is unambiguous. A
+   shorthand ([{type}], [~type], [<input type />]) stands for a variable of
+   the same name and stays an error. *)
+
+let is_keyword_name token = Token.keyword_name token <> None
+
+(* [let?] can't be split inside a JSX name. *)
+let is_jsx_keyword_name = function
+  | Token.Let {unwrap = true} -> false
+  | token -> is_keyword_name token
+
+(* Consume a reserved word standing for a name. [let?] gives [let] and leaves
+   [?] as the current token. *)
+let take_keyword_name p =
+  let start_pos = Parser.start_pos p in
+  let name =
+    match Token.keyword_name (Parser.peek p) with
+    | Some name -> name
+    | None -> assert false
+  in
+  (match Parser.peek p with
+  | Let {unwrap = true} -> Parser.split_let_unwrap p
+  | _ -> Parser.next p);
+  (name, mk_loc start_pos (Parser.position p))
+
+(* A reserved word followed by [:] or [?], which names a field in a record
+   type declaration: [{type: string}], [{type?: string}]. *)
+let is_keyword_field_start p =
+  match Parser.peek p with
+  | Let {unwrap = true} -> Parser.peek2 p = Colon
+  | token when is_keyword_name token -> (
+    match Parser.peek2 p with
+    | Colon | Question -> true
+    | _ -> false)
+  | _ -> false
+
+(* Whether a reserved word starts a record row or a field declaration: it
+   must be followed by a token that fits there. A keyword followed by anything
+   else, such as the [let] of the next binding after an unfinished record, is
+   left to error recovery. [,] and [}] make a shorthand, which is reported. *)
+let keyword_starts_row ?(optional = false) p =
+  match Parser.peek p with
+  | Let {unwrap = true} -> optional && Parser.peek2 p = Colon
+  | token when is_keyword_name token -> (
+    match Parser.peek2 p with
+    | Colon | Equal | Comma | Rbrace -> true
+    | Question -> optional
+    | _ -> false)
+  | _ -> false
+
+(* Whether the current token is on the line of the previous one. *)
+let on_same_line p =
+  (Parser.position p).pos_lnum == (Parser.start_pos p).pos_lnum
+
+let report_keyword_pun p ~loc message =
+  Parser.err ~start_pos:loc.Location.loc_start ~end_pos:loc.loc_end p
+    (Diagnostics.message message)
 
 let make_infix_operator (p : Parser.t) token start_pos end_pos =
   let stringified_token =
@@ -654,6 +712,19 @@ let rec parse_lident p =
     | Some () -> parse_lident p
     | None -> ("_", mk_loc start_pos (Parser.position p)))
 
+(* An argument label after [~]: an identifier or a reserved word. Returns
+   whether it was a reserved word, which then can't be punned. As after the
+   [.] of a field access, a reserved word is taken only on the line of the
+   [~], so [f(~] at the end of a line being written does not swallow the next
+   [let]. *)
+let parse_label_name p =
+  if is_keyword_name (Parser.peek p) && on_same_line p then
+    let name, loc = take_keyword_name p in
+    (name, loc, true)
+  else
+    let name, loc = parse_lident p in
+    (name, loc, false)
+
 let parse_ident ~msg ~start_pos p =
   match Parser.peek p with
   | Lident ident | Uident ident ->
@@ -674,7 +745,8 @@ let parse_ident ~msg ~start_pos p =
     (token_txt, mk_loc start_pos (Parser.position p))
   | _token ->
     Parser.err ~start_pos p (Diagnostics.message msg);
-    Parser.next p;
+    (* [Parser.next] can't move past the end of the file: [type t = int as '] *)
+    Parser.next_unsafe p;
     ("", mk_loc start_pos (Parser.position p))
 
 let parse_hash_ident ~start_pos p =
@@ -697,6 +769,9 @@ let parse_hash_ident ~start_pos p =
     Parser.err ~start_pos p
       (Diagnostics.unexpected (Parser.peek p) p.breadcrumbs);
     ("", mk_loc start_pos (Parser.position p))
+  | token when is_keyword_name token ->
+    let name, _ = take_keyword_name p in
+    (name, mk_loc start_pos (Parser.position p))
   | _ -> parse_ident ~start_pos ~msg:Error_messages.variant_ident p
 
 (* Ldot (Ldot (Lident "Foo", "Bar"), "baz") *)
@@ -737,10 +812,65 @@ let parse_value_path p =
   in
   Location.mkloc ident (mk_loc start_pos (Parser.position p))
 
+let field_keyword_here ~after_dot p =
+  is_keyword_name (Parser.peek p) && ((not after_dot) || on_same_line p)
+
+(* The segments after [M]: [parse_value_path]'s loop, with a reserved word
+   allowed last *)
+let rec parse_field_path_tail ~after_dot p path =
+  let start_pos = Parser.start_pos p in
+  let token = Parser.peek p in
+  Parser.next p;
+  if Parser.peek p = Dot then (
+    Parser.expect Dot p;
+    match Parser.peek p with
+    | Lident ident ->
+      Parser.next p;
+      (Longident.Ldot (path, ident), false)
+    | Uident uident ->
+      parse_field_path_tail ~after_dot p (Longident.Ldot (path, uident))
+    | _ when field_keyword_here ~after_dot p ->
+      (Longident.Ldot (path, fst (take_keyword_name p)), true)
+    | token ->
+      Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
+      Parser.next_unsafe p;
+      (Longident.Ldot (path, "_"), false))
+  else (
+    Parser.err p ~start_pos ~end_pos:(Parser.position p)
+      (Diagnostics.lident token);
+    Parser.next_unsafe p;
+    (path, false))
+
+(* A record field path: [x], [M.x], [type] or [M.type]. It is
+   [parse_value_path] with a reserved word allowed as the last segment, because
+   a field is a label. Returns whether the last segment was a reserved word,
+   which then cannot be punned. After the [.] of a field access, [after_dot]
+   only accepts a reserved word on the same line: [user.] at the end of a line
+   that is still being written must not swallow the [let] on the next line. *)
+let parse_field_path ?(after_dot = false) p =
+  let start_pos = Parser.start_pos p in
+  let ident, last_is_keyword =
+    match Parser.peek p with
+    | Lident ident ->
+      Parser.next p;
+      (Longident.Lident ident, false)
+    | Uident ident -> parse_field_path_tail ~after_dot p (Lident ident)
+    | _ when field_keyword_here ~after_dot p ->
+      (Longident.Lident (fst (take_keyword_name p)), true)
+    | token ->
+      Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
+      Parser.next_unsafe p;
+      (Longident.Lident "_", false)
+  in
+  (Location.mkloc ident (mk_loc start_pos (Parser.position p)), last_is_keyword)
+
 let parse_value_path_after_dot p =
   let start_pos = Parser.start_pos p in
   match Parser.peek p with
-  | Lident _ | Uident _ -> parse_value_path p
+  | Lident _ -> parse_value_path p
+  | Uident _ -> fst (parse_field_path ~after_dot:true p)
+  | _ when field_keyword_here ~after_dot:true p ->
+    fst (parse_field_path ~after_dot:true p)
   | token ->
     Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
     Location.mkloc (Longident.Lident "_") (mk_loc start_pos (Parser.position p))
@@ -799,18 +929,28 @@ let parse_module_long_ident_tail ~lowercase p start_pos ident =
 type jsx_ident_kind = [`Lower | `Upper]
 
 (* Inspect current token; do not advance *)
-let peek_ident (p : Parser.t) : (string * Location.t * jsx_ident_kind) option =
+(* With [keywords], a reserved word is a lowercase name too, as in
+   [<switch>] and [<div data-type="a" />]. It is not after [M.]: [<M.type />]
+   would look up the value [M.type]. *)
+let peek_ident ?(keywords = false) (p : Parser.t) :
+    (string * Location.t * jsx_ident_kind) option =
   match Parser.peek p with
   | Lident txt ->
     Some (txt, mk_loc (Parser.start_pos p) (Parser.end_pos p), `Lower)
   | Uident txt ->
     Some (txt, mk_loc (Parser.start_pos p) (Parser.end_pos p), `Upper)
+  | Let {unwrap = true} -> None
+  | token when keywords -> (
+    match Token.keyword_name token with
+    | Some txt ->
+      Some (txt, mk_loc (Parser.start_pos p) (Parser.end_pos p), `Lower)
+    | None -> None)
   | _ -> None
 
 (* Consume one Lident/Uident if present *)
 let expect_ident (p : Parser.t) : (string * Location.t * jsx_ident_kind) option
     =
-  match peek_ident p with
+  match peek_ident ~keywords:true p with
   | None -> None
   | Some (txt, loc, k) ->
     Parser.next p;
@@ -823,7 +963,7 @@ let rec read_hyphen_chain (p : Parser.t) (buf : Buffer.t)
   | Minus -> (
     Parser.next p;
     (* after '-' *)
-    match peek_ident p with
+    match peek_ident ~keywords:true p with
     | Some (txt, _loc, _) ->
       Buffer.add_char buf '-';
       Buffer.add_string buf txt;
@@ -864,7 +1004,7 @@ let longident_of_segments (segs : string list) : Longident.t =
 (* Read a JSX tag name and return a jsx_tag_name; does not mutate tokens beyond what it consumes *)
 let read_jsx_tag_name (p : Parser.t) :
     (Parsetree.jsx_tag_name Location.loc, string) result =
-  match peek_ident p with
+  match peek_ident ~keywords:true p with
   | None -> Error ""
   | Some (_, _, `Lower) ->
     read_local_jsx_name p
@@ -1070,6 +1210,15 @@ let parse_template_constant ~start_pos ~prefix (p : Parser.t) =
       (Diagnostics.message Error_messages.string_interpolation_in_pattern);
     Ast_helper.Const.string ""
 
+(* A reserved word starting a row right after a row of a record, as in
+   [{a type: x}]: the comma between them is missing. [Grammar.is_list_element]
+   can't tell, because [type] also starts the next structure item. *)
+let keyword_row_follows grammar p =
+  match grammar with
+  | Grammar.PatternRecord | RecordRows | RecordDecl ->
+    keyword_starts_row ~optional:true p
+  | _ -> false
+
 let parse_comma_delimited_reversed_list p ~grammar ~closing ~f =
   Parser.leave_breadcrumb p grammar;
   (* Closing delimiters are constant token constructors. *)
@@ -1081,7 +1230,9 @@ let parse_comma_delimited_reversed_list p ~grammar ~closing ~f =
         Parser.next p;
         loop closing parents (node :: nodes)
       | token when token == closing || token = Eof -> node :: nodes
-      | token when Grammar.is_list_element grammar token ->
+      | token
+        when Grammar.is_list_element grammar token
+             || keyword_row_follows grammar p ->
         (* missing comma between nodes in the region and the current token
          * looks like the start of something valid in the current region.
          * Example:
@@ -1301,6 +1452,9 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
             Parser.err ~start_pos p
               (Diagnostics.unexpected (Parser.peek p) p.breadcrumbs);
             ("", mk_loc start_pos (Parser.position p))
+          | token when is_keyword_name token ->
+            let name, _ = take_keyword_name p in
+            (name, mk_loc start_pos (Parser.position p))
           | _ -> parse_ident ~msg:Error_messages.variant_ident ~start_pos p
         in
         match Parser.peek p with
@@ -1456,7 +1610,7 @@ and parse_optional_label p =
  *	 | field , _,
  *)
 and parse_record_pattern_row_field ~attrs p =
-  let label = parse_value_path p in
+  let label, label_is_keyword = parse_field_path p in
   let pattern, optional =
     match Parser.peek p with
     | Colon ->
@@ -1472,8 +1626,11 @@ and parse_record_pattern_row_field ~attrs p =
       let pat = parse_pattern p in
       (pat, optional)
     | _ ->
-      ( Ast_helper.Pat.var ~loc:label.loc ~attrs
-          (Location.mkloc (Longident.last label.txt) label.loc),
+      let name = Longident.last label.txt in
+      if label_is_keyword then
+        report_keyword_pun p ~loc:label.loc
+          (Error_messages.keyword_record_pattern_field_punned name);
+      ( Ast_helper.Pat.var ~loc:label.loc ~attrs (Location.mkloc name label.loc),
         false )
   in
   {Parsetree.lid = label; x = pattern; opt = optional}
@@ -1533,35 +1690,22 @@ and parse_record_pattern_row p =
         Some (true, PatField (parse_record_pattern_row_field ~attrs p)))
   | Uident _ | Lident _ ->
     Some (false, PatField (parse_record_pattern_row_field ~attrs p))
+  | _ when keyword_starts_row p ->
+    Some (false, PatField (parse_record_pattern_row_field ~attrs p))
   | Question -> (
     Parser.next p;
     match Parser.peek p with
     | Uident _ | Lident _ ->
       let {Parsetree.lid; x = pat} = parse_record_pattern_row_field ~attrs p in
       Some (false, PatField {lid; x = pat; opt = true})
+    | _ when keyword_starts_row p ->
+      let {Parsetree.lid; x = pat} = parse_record_pattern_row_field ~attrs p in
+      Some (false, PatField {lid; x = pat; opt = true})
     | _ -> None)
   | Underscore ->
     Parser.next p;
     Some (false, PatUnderscore)
-  | _ ->
-    if Token.is_keyword (Parser.peek p) then (
-      match
-        recover_keyword_field_name_if_probably_field p
-          ~mk_message:Error_messages.keyword_field_in_pattern
-      with
-      | Some (recovered_field_name, loc) ->
-        Parser.expect Colon p;
-        let optional = parse_optional_label p in
-        let pat = parse_pattern p in
-        let field =
-          Location.mkloc (Longident.Lident recovered_field_name) loc
-        in
-        Some (false, PatField {lid = field; x = pat; opt = optional})
-      | None ->
-        emit_keyword_field_error p
-          ~mk_message:Error_messages.keyword_field_in_pattern;
-        None)
-    else None
+  | _ -> None
 
 and parse_record_pattern ~attrs p =
   let start_pos = Parser.start_pos p in
@@ -1884,14 +2028,21 @@ and parse_parameter p =
         match Parser.peek p with
         | Tilde -> (
           Parser.next p;
-          let lbl_name, lbl_loc = parse_lident p in
+          let lbl_name, lbl_loc, lbl_is_keyword = parse_label_name p in
+          (* Without [as], the label also names the parameter. *)
           match Parser.peek p with
           | Comma | Equal | Rparen ->
+            if lbl_is_keyword then
+              report_keyword_pun p ~loc:lbl_loc
+                (Error_messages.keyword_parameter_punned lbl_name);
             let loc = mk_loc start_pos (Parser.position p) in
             ( Asttypes.Labelled {txt = lbl_name; loc = lbl_loc},
               lbl_loc,
               Ast_helper.Pat.var ~attrs ~loc (Location.mkloc lbl_name loc) )
           | Colon ->
+            if lbl_is_keyword then
+              report_keyword_pun p ~loc:lbl_loc
+                (Error_messages.keyword_parameter_punned lbl_name);
             let lbl_end = Parser.position p in
             Parser.next p;
             let typ = parse_typ_expr p in
@@ -2724,7 +2875,11 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
     (* Read the closing tag name and verify it matches the opening name *)
     let token0 = Parser.peek p in
     match token0 with
-    | Lident _ | Uident _ -> (
+    | token
+      when match token with
+           | Lident _ | Uident _ -> true
+           | token -> closing_tag_start <> None && is_jsx_keyword_name token
+      -> (
       (* Consume the closing name without mutating tokens beforehand *)
       let closing_name_res = read_jsx_tag_name p in
       match closing_name_res with
@@ -2832,6 +2987,8 @@ and parse_jsx p =
     match Parser.peek p with
     | Lident _ | Uident _ ->
       parse_jsx_opening_or_self_closing_element ~start_pos p
+    | token when is_jsx_keyword_name token ->
+      parse_jsx_opening_or_self_closing_element ~start_pos p
     | GreaterThan ->
       (* fragment: <> foo </> *)
       parse_jsx_fragment start_pos p
@@ -2873,30 +3030,18 @@ and parse_jsx_fragment start_pos p =
  *)
 and parse_jsx_prop p : Parsetree.jsx_prop option =
   match Parser.peek p with
-  | Question | Lident _ -> (
-    let optional = Parser.optional p Question in
-    (* allow hyphens inside prop names by reading a local jsx name *)
-    match read_local_jsx_name p with
-    | Some (name, loc, `Lower) -> (
-      if optional then Some (Parsetree.JSXPropPunning (true, {txt = name; loc}))
-      else
-        match Parser.peek p with
-        | Equal ->
-          Parser.next p;
-          let optional = Parser.optional p Question in
-          let attr_expr =
-            match Parser.peek p with
-            | Forwardslash as token when Parser.peek2 p = GreaterThan ->
-              Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
-              Recover.default_expr ()
-            | _ -> parse_primary_expr ~operand:(parse_atomic_expr p) p
-          in
-          Some (Parsetree.JSXPropValue ({txt = name; loc}, optional, attr_expr))
-        | _ -> Some (Parsetree.JSXPropPunning (false, {txt = name; loc})))
-    | Some (_name, _loc, `Upper) ->
-      Parser.err p (Diagnostics.message "JSX prop names must be lowercase");
-      None
-    | None -> None)
+  | Question | Lident _ -> parse_jsx_named_prop p
+  (* [type="a"], [type=?a], [data-type="a"]. A reserved word followed by
+     anything else is not taken as a prop: [<b] can be followed by the [let]
+     of the next binding while the tag is still being written. [/] and [>]
+     make a shorthand, which is reported. *)
+  | token
+    when is_jsx_keyword_name token
+         &&
+         match Parser.peek2 p with
+         | Equal | Minus | Forwardslash | GreaterThan -> true
+         | _ -> false ->
+    parse_jsx_named_prop p
   (* {...props} *)
   | Lbrace -> (
     let spread_start = Parser.start_pos p in
@@ -2915,6 +3060,41 @@ and parse_jsx_prop p : Parsetree.jsx_prop option =
       | _ -> None)
     | _ -> None)
   | _ -> None
+
+and parse_jsx_named_prop p : Parsetree.jsx_prop option =
+  let optional = Parser.optional p Question in
+  (* A reserved word is a prop name, but a punned prop also names a variable.
+     A hyphenated name such as [data-type] is never a variable. *)
+  let name_is_keyword = is_jsx_keyword_name (Parser.peek p) in
+  (* allow hyphens inside prop names by reading a local jsx name *)
+  match read_local_jsx_name p with
+  | Some (name, loc, `Lower) -> (
+    if optional then (
+      if name_is_keyword && Token.is_keyword_txt name then
+        report_keyword_pun p ~loc (Error_messages.keyword_jsx_prop_punned name);
+      Some (Parsetree.JSXPropPunning (true, {txt = name; loc})))
+    else
+      match Parser.peek p with
+      | Equal ->
+        Parser.next p;
+        let optional = Parser.optional p Question in
+        let attr_expr =
+          match Parser.peek p with
+          | Forwardslash as token when Parser.peek2 p = GreaterThan ->
+            Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
+            Recover.default_expr ()
+          | _ -> parse_primary_expr ~operand:(parse_atomic_expr p) p
+        in
+        Some (Parsetree.JSXPropValue ({txt = name; loc}, optional, attr_expr))
+      | _ ->
+        if name_is_keyword && Token.is_keyword_txt name then
+          report_keyword_pun p ~loc
+            (Error_messages.keyword_jsx_prop_punned name);
+        Some (Parsetree.JSXPropPunning (false, {txt = name; loc})))
+  | Some (_name, _loc, `Upper) ->
+    Parser.err p (Diagnostics.message "JSX prop names must be lowercase");
+    None
+  | None -> None
 
 and parse_jsx_props p : Parsetree.jsx_prop list =
   parse_region ~grammar:Grammar.JsxAttribute ~f:parse_jsx_prop p
@@ -2982,6 +3162,10 @@ and parse_braced_or_record_expr p =
   let start_pos = Parser.start_pos p in
   Parser.expect Lbrace p;
   match Parser.peek p with
+  | _ when starts_record_row_with_keyword_field p ->
+    let expr = parse_record_expr ~start_pos [] p in
+    Parser.expect Rbrace p;
+    expr
   | Break ->
     let expr = parse_expr_block p in
     Parser.expect Rbrace p;
@@ -2992,25 +3176,6 @@ and parse_braced_or_record_expr p =
     Parser.expect Rbrace p;
     let loc = mk_loc start_pos (Parser.position p) in
     Ast_helper.Exp.braces ~braces_loc:loc expr
-  | token when Token.is_keyword token -> (
-    match
-      recover_keyword_field_name_if_probably_field p
-        ~mk_message:Error_messages.keyword_field_in_expr
-    with
-    | Some (recovered_field_name, loc) ->
-      Parser.expect Colon p;
-      let optional = parse_optional_label p in
-      let field_expr = parse_expr p in
-      let field = Location.mkloc (Longident.Lident recovered_field_name) loc in
-      let first_row = {Parsetree.lid = field; x = field_expr; opt = optional} in
-      let expr = parse_record_expr ~start_pos [first_row] p in
-      Parser.expect Rbrace p;
-      expr
-    | None ->
-      let expr = parse_expr_block p in
-      Parser.expect Rbrace p;
-      let loc = mk_loc start_pos (Parser.position p) in
-      Ast_helper.Exp.braces ~braces_loc:loc expr)
   | Rbrace ->
     Parser.next p;
     let loc = mk_loc start_pos (Parser.position p) in
@@ -3098,7 +3263,9 @@ and parse_braced_or_record_expr p =
     Ast_helper.Exp.braces ~braces_loc:loc expr
   | Uident _ | Lident _ -> (
     let start_token = Parser.peek p in
-    let value_or_constructor = parse_value_or_constructor p in
+    let value_or_constructor =
+      parse_value_or_constructor ~keyword_field:true p
+    in
     match value_or_constructor.pexp_desc with
     | Pexp_ident path_ident -> (
       let ident_end_pos = Parser.position p in
@@ -3278,6 +3445,26 @@ and parse_braced_or_record_expr p =
     let loc = mk_loc start_pos (Parser.position p) in
     Ast_helper.Exp.braces ~braces_loc:loc expr
 
+(* [{type: v}]. No block starts with a reserved word followed by [:]: the
+ keywords that start a block item are followed by a pattern, a path or an
+ expression, and [true] and [false] by an operator. [{M.type: v}] is read
+ by [parse_value_or_constructor ~keyword_field:true]. *)
+and starts_record_row_with_keyword_field p =
+  match Parser.peek p with
+  | Let {unwrap = true} -> false
+  (* Blocks of their own: [{true}], [{break}]. *)
+  | (True | False | Break | Continue) as token -> (
+    match Parser.peek2 p with
+    | Colon -> true
+    | Comma -> is_keyword_name token
+    | _ -> false)
+  (* [{type}] and [{type, a}] are punned rows, reported as such. *)
+  | token when is_keyword_name token -> (
+    match Parser.peek2 p with
+    | Colon | Comma | Rbrace -> true
+    | _ -> false)
+  | _ -> false
+
 and parse_record_expr_row_with_string_key p :
     Parsetree.expression Parsetree.record_element option =
   match Parser.peek p with
@@ -3316,30 +3503,10 @@ and parse_record_expr_row p :
     | _ -> ()
   in
   match Parser.peek p with
-  | Lident _ | Uident _ -> (
-    let start_token = Parser.peek p in
-    let field = parse_value_path p in
-    match Parser.peek p with
-    | Colon ->
-      Parser.next p;
-      let optional = parse_optional_label p in
-      let field_expr = parse_expr p in
-      Some {lid = field; x = field_expr; opt = optional}
-    | Equal ->
-      Parser.err ~start_pos:(Parser.start_pos p) ~end_pos:(Parser.end_pos p) p
-        (Diagnostics.message Error_messages.record_field_missing_colon);
-      Parser.next p;
-      let optional = parse_optional_label p in
-      let field_expr = parse_expr p in
-      Some {lid = field; x = field_expr; opt = optional}
-    | _ ->
-      let value = Ast_helper.Exp.ident ~loc:field.loc ~attrs field in
-      let value =
-        match start_token with
-        | Uident _ -> remove_module_name_from_punned_field_value value
-        | _ -> value
-      in
-      Some {lid = field; x = value; opt = false})
+  | (Lident _ | Uident _) as start_token ->
+    parse_record_expr_field ~attrs ~start_token p
+  | token when keyword_starts_row p ->
+    parse_record_expr_field ~attrs ~start_token:token p
   | Question -> (
     Parser.next p;
     match Parser.peek p with
@@ -3353,26 +3520,43 @@ and parse_record_expr_row p :
         | _ -> value
       in
       Some {lid = field; x = value; opt = true}
+    | _ when keyword_starts_row p ->
+      let field, _ = parse_field_path p in
+      let name = Longident.last field.txt in
+      report_keyword_pun p ~loc:field.loc
+        (Error_messages.keyword_record_field_punned name);
+      let value = Ast_helper.Exp.ident ~loc:field.loc ~attrs field in
+      Some {lid = field; x = value; opt = true}
     | _ -> None)
+  | _ -> None
+
+and parse_record_expr_field ~attrs ~start_token p :
+    Parsetree.expression Parsetree.record_element option =
+  let field, field_is_keyword = parse_field_path p in
+  match Parser.peek p with
+  | Colon ->
+    Parser.next p;
+    let optional = parse_optional_label p in
+    let field_expr = parse_expr p in
+    Some {lid = field; x = field_expr; opt = optional}
+  | Equal ->
+    Parser.err ~start_pos:(Parser.start_pos p) ~end_pos:(Parser.end_pos p) p
+      (Diagnostics.message Error_messages.record_field_missing_colon);
+    Parser.next p;
+    let optional = parse_optional_label p in
+    let field_expr = parse_expr p in
+    Some {lid = field; x = field_expr; opt = optional}
   | _ ->
-    if Token.is_keyword (Parser.peek p) then (
-      match
-        recover_keyword_field_name_if_probably_field p
-          ~mk_message:Error_messages.keyword_field_in_expr
-      with
-      | Some (recovered_field_name, loc) ->
-        Parser.expect Colon p;
-        let optional = parse_optional_label p in
-        let field_expr = parse_expr p in
-        let field =
-          Location.mkloc (Longident.Lident recovered_field_name) loc
-        in
-        Some {lid = field; x = field_expr; opt = optional}
-      | None ->
-        emit_keyword_field_error p
-          ~mk_message:Error_messages.keyword_field_in_expr;
-        None)
-    else None
+    if field_is_keyword then
+      report_keyword_pun p ~loc:field.loc
+        (Error_messages.keyword_record_field_punned (Longident.last field.txt));
+    let value = Ast_helper.Exp.ident ~loc:field.loc ~attrs field in
+    let value =
+      match start_token with
+      | Uident _ -> remove_module_name_from_punned_field_value value
+      | _ -> value
+    in
+    Some {lid = field; x = value; opt = false}
 
 and parse_dict_expr_part p =
   match Parser.peek p with
@@ -3979,17 +4163,31 @@ and parse_argument2 p : argument option =
     Parser.next p;
     (* TODO: nesting of pattern matches not intuitive for error recovery *)
     match Parser.peek p with
-    | Lident ident -> (
+    | token
+      when match token with
+           | Lident _ -> true
+           (* only on the line of the [~], see [parse_label_name] *)
+           | token -> is_keyword_name token && on_same_line p -> (
       let start_pos = Parser.start_pos p in
-      Parser.next p;
+      let ident, ident_is_keyword =
+        match token with
+        | Lident ident ->
+          Parser.next p;
+          (ident, false)
+        | _ -> (fst (take_keyword_name p), true)
+      in
       let end_pos = Parser.position p in
       let loc = mk_loc start_pos end_pos in
       let named_arg_loc = loc in
       let ident_expr =
         Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident ident) loc)
       in
+      (* Without [=], the label also names the argument's value. *)
       match Parser.peek p with
       | Question ->
+        if ident_is_keyword then
+          report_keyword_pun p ~loc:named_arg_loc
+            (Error_messages.keyword_argument_punned ident);
         Parser.next p;
         Some
           {
@@ -4019,12 +4217,15 @@ and parse_argument2 p : argument option =
         let colon_start = Parser.start_pos p in
         Parser.next p;
         let colon_end = Parser.position p in
-        if Grammar.is_typ_expr_start (Parser.peek p) then
+        if Grammar.is_typ_expr_start (Parser.peek p) then (
+          if ident_is_keyword then
+            report_keyword_pun p ~loc:named_arg_loc
+              (Error_messages.keyword_argument_punned ident);
           let typ = parse_typ_expr p in
           let loc = mk_loc start_pos (Parser.position p) in
           let expr = Ast_helper.Exp.constraint_ ~loc ident_expr typ in
           Some
-            {label = Asttypes.Labelled {txt = ident; loc = named_arg_loc}; expr}
+            {label = Asttypes.Labelled {txt = ident; loc = named_arg_loc}; expr})
         else
           let label, expr =
             match Parser.peek p with
@@ -4053,6 +4254,9 @@ and parse_argument2 p : argument option =
           in
           Some {label; expr}
       | _ ->
+        if ident_is_keyword then
+          report_keyword_pun p ~loc:named_arg_loc
+            (Error_messages.keyword_argument_punned ident);
         Some
           {
             label = Asttypes.Labelled {txt = ident; loc = named_arg_loc};
@@ -4116,9 +4320,11 @@ and parse_call_expr p fun_expr =
   Parser.eat_breadcrumb p;
   apply
 
-and parse_value_or_constructor p =
+(* With [keyword_field], [M.type] followed by [:] is a path, as in the first
+   row of [{M.type: v}]; elsewhere [M.type] is not a value. *)
+and parse_value_or_constructor ?(keyword_field = false) p =
   let start_pos = Parser.start_pos p in
-  let rec aux p acc =
+  let rec aux ~keyword_field p acc =
     match Parser.peek p with
     | Uident ident -> (
       let end_pos_lident = Parser.end_pos p in
@@ -4126,7 +4332,7 @@ and parse_value_or_constructor p =
       match Parser.peek p with
       | Dot ->
         Parser.next p;
-        aux p (ident :: acc)
+        aux ~keyword_field p (ident :: acc)
       | Lparen
         when (Parser.position p).pos_lnum == (Parser.start_pos p).pos_lnum ->
         let args = parse_constructor_args p in
@@ -4145,6 +4351,14 @@ and parse_value_or_constructor p =
       let loc = mk_loc start_pos (Parser.position p) in
       let lident = build_longident (ident :: acc) in
       Ast_helper.Exp.ident ~loc (Location.mkloc lident loc)
+    | token
+      when keyword_field && acc <> [] && is_keyword_name token
+           && token <> Let {unwrap = true}
+           && Parser.peek2 p = Colon ->
+      let ident, _ = take_keyword_name p in
+      let loc = mk_loc start_pos (Parser.position p) in
+      let lident = build_longident (ident :: acc) in
+      Ast_helper.Exp.ident ~loc (Location.mkloc lident loc)
     | token ->
       if acc = [] then (
         Parser.next_unsafe p;
@@ -4156,7 +4370,7 @@ and parse_value_or_constructor p =
         let lident = build_longident ("_" :: acc) in
         Ast_helper.Exp.ident ~loc (Location.mkloc lident loc)
   in
-  aux p []
+  aux ~keyword_field p []
 
 and parse_poly_variant_expr p =
   let start_pos = Parser.start_pos p in
@@ -4578,7 +4792,7 @@ and parse_type_parameter ?current_type_name_path ?inline_types_context
     match Parser.peek p with
     | Tilde -> (
       Parser.next p;
-      let name, loc = parse_lident p in
+      let name, loc, _ = parse_label_name p in
       Parser.expect ~grammar:Grammar.TypeExpression Colon p;
       let arg_path =
         extend_current_type_name_path current_type_name_path name
@@ -4688,7 +4902,7 @@ and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
   match Parser.peek p with
   | Tilde ->
     Parser.next p;
-    let name, label_loc = parse_lident p in
+    let name, label_loc, _ = parse_label_name p in
     Parser.expect ~grammar:Grammar.TypeExpression Colon p;
     let arg_path = extend_current_type_name_path current_type_name_path name in
     let typ =
@@ -4968,13 +5182,9 @@ and parse_field_declaration ?current_type_name_path ?inline_types_context
      the caller before it knew a record was coming. They go through the same
      constructor as the rest so that [@as] is interpreted in one place. *)
   let attrs = extra_attrs @ parse_attributes p in
-  let mut =
-    if Parser.optional p Token.Mutable then Asttypes.Mutable
-    else Asttypes.Immutable
-  in
+  let mut = parse_field_mutable_flag p in
   let lident, loc =
-    match Parser.peek p with
-    | _ -> parse_lident p
+    if is_keyword_field_start p then take_keyword_name p else parse_lident p
   in
   let optional = parse_optional_label p in
   let name = Location.mkloc lident loc in
@@ -5004,10 +5214,7 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     ?found_object_field p =
   let start_pos = Parser.start_pos p in
   let attrs = parse_attributes p in
-  let mut =
-    if Parser.optional p Token.Mutable then Asttypes.Mutable
-    else Asttypes.Immutable
-  in
+  let mut = parse_field_mutable_flag p in
   match Parser.peek p with
   | DotDotDot ->
     Parser.next p;
@@ -5047,37 +5254,51 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     in
     let loc = mk_loc start_pos typ.ptyp_loc.loc_end in
     Some (Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ)
+  | _ when keyword_starts_row ~optional:true p ->
+    if is_keyword_field_start p then (
+      let name, name_loc = take_keyword_name p in
+      let name = Location.mkloc name name_loc in
+      let current_type_name_path =
+        extend_current_type_name_path current_type_name_path name.txt
+      in
+      let optional = parse_optional_label p in
+      Parser.expect Colon p;
+      let typ =
+        parse_poly_type_expr ?current_type_name_path ?inline_types_context p
+      in
+      let loc = mk_loc start_pos typ.ptyp_loc.loc_end in
+      Some (Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ))
+    else
+      (* [{type}] would be a field whose type has the same name, and a reserved
+         word can't name a type. *)
+      let name, name_loc = take_keyword_name p in
+      report_keyword_pun p ~loc:name_loc
+        (Error_messages.keyword_field_without_type name);
+      let name = Location.mkloc name name_loc in
+      let typ = Recover.default_type () in
+      let loc = mk_loc start_pos (Parser.position p) in
+      Some (Ast_helper.Type.field ~attrs ~loc ~mut name typ)
   | _ ->
-    if Token.is_keyword (Parser.peek p) then (
-      match
-        recover_keyword_field_name_if_probably_field p
-          ~mk_message:Error_messages.keyword_field_in_type
-      with
-      | Some (recovered_field_name, name_loc) ->
-        let optional = parse_optional_label p in
-        Parser.expect Colon p;
-        let typ =
-          parse_poly_type_expr ?current_type_name_path ?inline_types_context p
-        in
-        let loc = mk_loc start_pos typ.ptyp_loc.loc_end in
-        let name = Location.mkloc recovered_field_name name_loc in
-        Some (Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ)
-      | None ->
-        emit_keyword_field_error p
-          ~mk_message:Error_messages.keyword_field_in_type;
-        None)
-    else (
-      if attrs <> [] then
-        Parser.err ~start_pos p
-          (Diagnostics.message
-             "Attributes and doc comments can only be used at the beginning of \
-              a field declaration");
-      if mut = Mutable then
-        Parser.err ~start_pos p
-          (Diagnostics.message
-             "The `mutable` qualifier can only be used at the beginning of a \
-              field declaration");
-      None)
+    if attrs <> [] then
+      Parser.err ~start_pos p
+        (Diagnostics.message
+           "Attributes and doc comments can only be used at the beginning of a \
+            field declaration");
+    if mut = Mutable then
+      Parser.err ~start_pos p
+        (Diagnostics.message
+           "The `mutable` qualifier can only be used at the beginning of a \
+            field declaration");
+    None
+
+(* [mutable] is a field modifier, unless it is the name of the field:
+   [{mutable: bool}], [{mutable?: bool}]. *)
+and parse_field_mutable_flag p =
+  match Parser.peek p with
+  | Mutable when not (is_keyword_field_start p) ->
+    Parser.next p;
+    Asttypes.Mutable
+  | _ -> Asttypes.Immutable
 
 (* record-decl ::=
  *  | { field-decl }

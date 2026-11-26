@@ -1,0 +1,245 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:2:10-13
+
+  1 │ // A shorthand names a variable, and a reserved word can't be one
+  2 │ let a = {type}
+  3 │ let a = {x, type}
+  4 │ let a = {x, ?type}
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `{type: value}`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:3:13-16
+
+  1 │ // A shorthand names a variable, and a reserved word can't be one
+  2 │ let a = {type}
+  3 │ let a = {x, type}
+  4 │ let a = {x, ?type}
+  5 │ let {x, ?type} = r
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `{type: value}`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:4:14-17
+
+  2 │ let a = {type}
+  3 │ let a = {x, type}
+  4 │ let a = {x, ?type}
+  5 │ let {x, ?type} = r
+  6 │ type t = {type}
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `{type: value}`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:5:10-13
+
+  3 │ let a = {x, type}
+  4 │ let a = {x, ?type}
+  5 │ let {x, ?type} = r
+  6 │ type t = {type}
+  7 │ let f = (~type) => 1
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `{type: pattern}`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:6:11-14
+
+  4 │ let a = {x, ?type}
+  5 │ let {x, ?type} = r
+  6 │ type t = {type}
+  7 │ let f = (~type) => 1
+  8 │ let f = (~type: int) => 1
+
+  The field `type` needs a type: a reserved keyword can't name a type.
+  Write it out instead: `type: someType`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:7:11-14
+
+  5 │ let {x, ?type} = r
+  6 │ type t = {type}
+  7 │ let f = (~type) => 1
+  8 │ let f = (~type: int) => 1
+  9 │ let f = (~type=1) => 1
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `~type as name`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:8:11-14
+
+   6 │ type t = {type}
+   7 │ let f = (~type) => 1
+   8 │ let f = (~type: int) => 1
+   9 │ let f = (~type=1) => 1
+  10 │ let a = f(~type)
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `~type as name`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:9:11-14
+
+   7 │ let f = (~type) => 1
+   8 │ let f = (~type: int) => 1
+   9 │ let f = (~type=1) => 1
+  10 │ let a = f(~type)
+  11 │ let a = f(~type?)
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `~type as name`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:10:12-15
+
+   8 │ let f = (~type: int) => 1
+   9 │ let f = (~type=1) => 1
+  10 │ let a = f(~type)
+  11 │ let a = f(~type?)
+  12 │ let a = f(~type: int)
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `~type=value`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:11:12-15
+
+   9 │ let f = (~type=1) => 1
+  10 │ let a = f(~type)
+  11 │ let a = f(~type?)
+  12 │ let a = f(~type: int)
+  13 │ let a = <input type />
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `~type=value`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:12:12-15
+
+  10 │ let a = f(~type)
+  11 │ let a = f(~type?)
+  12 │ let a = f(~type: int)
+  13 │ let a = <input type />
+  14 │ let a = <input ?type />
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `~type=value`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:13:16-19
+
+  11 │ let a = f(~type?)
+  12 │ let a = f(~type: int)
+  13 │ let a = <input type />
+  14 │ let a = <input ?type />
+  15 │ 
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `type={value}`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:14:17-20
+
+  12 │ let a = f(~type: int)
+  13 │ let a = <input type />
+  14 │ let a = <input ?type />
+  15 │ 
+  16 │ // Still errors: a reserved word as a variable, a value or a qualified 
+     │ tag
+
+  `type` is a reserved keyword, so it can't be a variable name and this shorthand can't be used.
+  Write it out instead: `type={value}`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:17:12-15
+
+  15 │ 
+  16 │ // Still errors: a reserved word as a variable, a value or a qualified 
+     │ tag
+  17 │ let a = <M.type />
+  18 │ let type = 1
+  19 │ let a = M.type
+
+  expected identifier after '.' in JSX tag name
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:18:5-8
+
+  16 │ // Still errors: a reserved word as a variable, a value or a qualified 
+     │ tag
+  17 │ let a = <M.type />
+  18 │ let type = 1
+  19 │ let a = M.type
+  20 │ 
+
+  `type` is a reserved keyword. Keywords need to be escaped: \"type"
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:19:11-14
+
+  17 │ let a = <M.type />
+  18 │ let type = 1
+  19 │ let a = M.type
+  20 │ 
+
+  This let-binding misses an expression
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:19:11-14
+
+  17 │ let a = <M.type />
+  18 │ let type = 1
+  19 │ let a = M.type
+  20 │ 
+
+  Consecutive statements on a line must be separated by ';' or a newline
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/keywordShorthands.res:20:1
+
+  18 │ let type = 1
+  19 │ let a = M.type
+  20 │ 
+
+  I'm not sure what to parse here when looking at "eof".
+
+let a = { type }
+let a = { x; type }
+let a = { x; type? }
+let { x; type? } = r
+type nonrec t = {
+  type: [%rescript.typehole ] }
+let f [arity:1]~type  = 1
+let f [arity:1]~type:(type : int)  = 1
+let f [arity:1]?(type= 1)  = 1
+let a = f ~type
+let a = f ?type
+let a = f ~type:(type : int)
+let a = <input type />
+let a = <input ?type />
+let a = <M. type />
+let [%rescript.patternhole ] = 1
+let a = M._
+type nonrec _

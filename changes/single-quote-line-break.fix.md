@@ -1,0 +1,1 @@
+- Fix syntax error locations after a `'` that is directly followed by a line break: every later line was reported one line too low, and at the end of a file the parser crashed.

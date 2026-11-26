@@ -111,9 +111,9 @@ let onToggle = (event: JsxEvent.Toggle.t) => {
   let oldState = event->JsxEvent.Toggle.oldState
   let newState = event->JsxEvent.Toggle.newState
   switch (oldState, newState) {
-  | (#closed, #"open") => event->JsxEvent.Toggle.preventDefault
-  | (#"open", #closed) => event->JsxEvent.Synthetic.stopPropagation
-  | (#closed, #closed) | (#"open", #"open") => ()
+  | (#closed, #open) => event->JsxEvent.Toggle.preventDefault
+  | (#open, #closed) => event->JsxEvent.Synthetic.stopPropagation
+  | (#closed, #closed) | (#open, #open) => ()
   }
 }
 

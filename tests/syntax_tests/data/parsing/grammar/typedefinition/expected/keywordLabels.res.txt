@@ -1,0 +1,23 @@
+type nonrec t = {
+  type: string ;
+  mutable open: bool ;
+  in?: int ;
+  let?: string }
+type nonrec t = {
+  mutable: bool ;
+  mutable?: int ;
+  mutable mutable: string }
+type nonrec t =
+  | A of {
+  type: string ;
+  for: int [@as {js|x|js}]} 
+type nonrec t = {
+  ...: r ;
+  type: string }
+type nonrec t = {
+  type: string [@attr ]}
+type nonrec tag = [ `type  | `module  | `true  | `false ]
+type nonrec tag = [> `type ]
+type nonrec fn = type:string -> ?in:int -> unit (a:2)
+type nonrec fn = type:string -> unit (a:1)
+external f : type:string -> ?for:int -> unit (a:2) = "f"

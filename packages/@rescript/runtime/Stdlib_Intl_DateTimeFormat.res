@@ -99,14 +99,14 @@ type dateTimeComponent = [
 ]
 
 type dateTimePart = {
-  \"type": dateTimeComponent,
+  type: dateTimeComponent,
   value: string,
 }
 
 type dateTimeRangeSource = [#startRange | #shared | #endRange]
 
 type dateTimeRangePart = {
-  \"type": dateTimeComponent,
+  type: dateTimeComponent,
   value: string,
   source: dateTimeRangeSource,
 }

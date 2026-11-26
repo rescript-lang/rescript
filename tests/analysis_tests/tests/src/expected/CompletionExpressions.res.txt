@@ -1736,10 +1736,10 @@ ContextPath Value[hook]
 Path hook
 [
   {
-    "detail": "[#\"and\" | #or]",
+    "detail": "[#and | #or]",
     "documentation": {
       "kind": "markdown",
-      "value": "```rescript\noperator?: [#\"and\" | #or]\n```\n\n```rescript\ntype config = {includeName: bool, operator: option<[#\"and\" | #or]>, showMore: bool}\n```"
+      "value": "```rescript\noperator?: [#and | #or]\n```\n\n```rescript\ntype config = {includeName: bool, operator: option<[#and | #or]>, showMore: bool}\n```"
     },
     "kind": 5,
     "label": "operator",
@@ -1759,10 +1759,10 @@ ContextPath Value[hook]
 Path hook
 [
   {
-    "detail": "[#\"and\" | #or]",
+    "detail": "[#and | #or]",
     "documentation": {
       "kind": "markdown",
-      "value": "```rescript\noperator?: [#\"and\" | #or]\n```\n\n```rescript\ntype config = {includeName: bool, operator: option<[#\"and\" | #or]>, showMore: bool}\n```"
+      "value": "```rescript\noperator?: [#and | #or]\n```\n\n```rescript\ntype config = {includeName: bool, operator: option<[#and | #or]>, showMore: bool}\n```"
     },
     "kind": 5,
     "label": "operator",

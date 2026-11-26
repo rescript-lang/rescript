@@ -1,0 +1,31 @@
+// Escaped reserved words in label positions are printed bare
+type t = {\"type": string, mutable \"open": bool, \"in"?: int, \"let"?: int}
+let make = kind => {\"type": kind, \"open": false}
+let update = r => {...r, \"type": "a", M.\"module": 1}
+let get = r => r.\"type"
+let getQualified = r => r.M.\"type"
+let set = r => r.\"open" = true
+let f = r =>
+  switch r {
+  | {\"type": "a", \"in": ?i} => i
+  | {M.\"open": o} => o
+  | _ => None
+  }
+let g = (~\"type" as kind, ~\"for" as target=?) => kind
+let h = g(~\"type"="a", ~\"for"=?target)
+type fn = (~\"type": string, ~\"in": int=?) => unit
+let tag = #"type"
+let tagged = #"module"(1)
+let el = <input \"type"="text" />
+let svg = <svg> <\"switch"> <g /> </\"switch"> </svg>
+
+// A shorthand names a variable, which keeps its escape
+let punned = {\"type", x}
+let punnedPattern = ({\"type", x}) => \"type"
+let punnedArgument = (~\"type") => f(~\"type")
+
+// Bare reserved words
+type u = {type: string, mutable: bool, mutable mutable: bool}
+let u = {type: "a", mutable: true}
+let v = u.type
+let w = #true

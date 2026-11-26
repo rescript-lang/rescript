@@ -173,6 +173,21 @@ let next p =
 
 let next_unsafe p = if peek p <> Token.Eof then next p
 
+(* [let?] is scanned as one token. Where a name is expected, consume [let] and
+   leave [?] as the current token, as if the two had been scanned apart. *)
+let split_let_unwrap p =
+  let start_pos, end_pos, token = current p in
+  let cache = p.current in
+  assert (token = Token.Let {unwrap = true});
+  if cache.comments <> [] || cache.diagnostics <> [] then commit_effects p cache;
+  if p.line_break < 0 then p.line_break <- cache.line_break;
+  let let_end = {start_pos with pos_cnum = start_pos.pos_cnum + 3} in
+  p.cursor <- let_end;
+  cache.line_break <- -1;
+  (* The scanner already stands after [?], and a cached second token is still
+     the one that follows it. *)
+  cache.scanned <- (let_end, end_pos, Token.Question)
+
 let err ?start_pos:from ?end_pos:until p error =
   match p.regions with
   | Report :: rest ->

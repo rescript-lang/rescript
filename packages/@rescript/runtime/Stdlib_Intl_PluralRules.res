@@ -5,7 +5,7 @@ type localeType = [#cardinal | #ordinal]
 
 type options = {
   localeMatcher?: Stdlib_Intl_Common.localeMatcher,
-  \"type"?: localeType,
+  type?: localeType,
   // use either this group
   minimumIntegerDigits?: Stdlib_Intl_Common.oneTo21,
   minimumFractionDigits?: Stdlib_Intl_Common.zeroTo20,
@@ -27,7 +27,7 @@ type pluralCategories = [
 type resolvedOptions = {
   locale: string,
   pluralCategories: array<pluralCategories>,
-  \"type": localeType,
+  type: localeType,
   // either this group
   minimumIntegerDigits?: Stdlib_Intl_Common.oneTo21,
   minimumFractionDigits?: Stdlib_Intl_Common.zeroTo20,
