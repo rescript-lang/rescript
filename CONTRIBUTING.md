@@ -294,9 +294,11 @@ This will run our `mocha` unit test suite defined in `tests/tests`.
 node scripts/test.js -mocha
 ```
 
-**Run build system test (integration tests):**
+**Run build, project and error tests:**
 
-This will run the build system test suite defined in `tests/build_tests`.
+This will run the test projects in `tests/build_tests` (build system),
+`tests/project_tests` (compiler end-to-end) and `tests/error_tests` (error
+message snapshots).
 
 ```
 node scripts/test.js -build

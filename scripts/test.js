@@ -7,8 +7,10 @@ import {
   commonjsTestDir,
   compilerTestDir,
   docstringTestDir,
+  errorTestDir,
   ounitTestBin,
   projectDir,
+  projectTestDir,
 } from "#dev/paths";
 
 import {
@@ -151,28 +153,33 @@ if (mochaTest) {
 }
 
 if (buildTest) {
-  console.log("Doing build_tests");
-  const files = fs.readdirSync(buildTestDir);
-
+  // Each directory below these suites with an input.js is one test.
+  const suites = [buildTestDir, projectTestDir, errorTestDir];
   let hasError = false;
 
-  for (const file of files) {
-    const testDir = path.join(buildTestDir, file);
-    if (file === "node_modules" || !fs.lstatSync(testDir).isDirectory()) {
-      continue;
-    }
-    if (!fs.existsSync(path.join(testDir, "input.js"))) {
-      console.warn(`input.js does not exist in ${testDir}`);
-    } else {
-      // note existsSync test already ensure that it is a directory
-      const out = await node("input.js", [], { cwd: testDir });
-      process.stdout.write(out.stdout);
+  for (const suiteDir of suites) {
+    const suite = path.basename(suiteDir);
+    console.log(`Doing ${suite}`);
 
-      if (out.status === 0) {
-        console.log(`✅ success in ${file}`);
+    for (const file of fs.readdirSync(suiteDir)) {
+      const testDir = path.join(suiteDir, file);
+      if (file === "node_modules" || !fs.lstatSync(testDir).isDirectory()) {
+        continue;
+      }
+      if (!fs.existsSync(path.join(testDir, "input.js"))) {
+        console.warn(`input.js does not exist in ${testDir}`);
       } else {
-        console.log(`❌ error in ${file} with stderr:\n${out.stderr}`);
-        hasError = true;
+        const out = await node("input.js", [], { cwd: testDir });
+        process.stdout.write(out.stdout);
+
+        if (out.status === 0) {
+          console.log(`✅ success in ${suite}/${file}`);
+        } else {
+          console.log(
+            `❌ error in ${suite}/${file} with stderr:\n${out.stderr}`,
+          );
+          hasError = true;
+        }
       }
     }
   }

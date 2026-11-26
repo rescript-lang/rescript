@@ -13,7 +13,7 @@ code that implements it and the tests that pin it. Tests named
 `spec_test` are in
 [`tests/tests/src/untagged_variants_spec_test.res`](../../tests/tests/src/untagged_variants_spec_test.res);
 the committed `.mjs` beside it shows the checks emitted for each declaration.
-Fixtures are in `tests/build_tests/super_errors/fixtures/` unless another
+Fixtures are in `tests/error_tests/single/fixtures/` unless another
 directory is named.
 
 ## Rules
@@ -209,7 +209,7 @@ module has the functions of `TypedArray` for its own type, through the
 | Declaration | Error | Fixture |
 | --- | --- | --- |
 | `@typeOf("string") type t = option<string>`, `type t<'a> = 'a`, an abbreviation of `unit`, `list<_>` or a variant | @typeOf on a type abbreviation must describe an abstract type, ... | `runtime_annotation_on_option.res`, `runtime_annotation_on_type_variable.res` |
-| `@notUndefined type t = option<int>` | @notUndefined on a type abbreviation must describe an abstract type, ... | `not_undefined_on_option.res`, `tests/build_tests/not_undefined_attribute` |
+| `@notUndefined type t = option<int>` | @notUndefined on a type abbreviation must describe an abstract type, ... | `not_undefined_on_option.res`, `tests/project_tests/not_undefined_attribute` |
 | `@typeOf("number") type t = sym` with `@typeOf("symbol") type sym`, `@typeOf("string") type t = int`, or an abbreviation of a function type, a record or a tuple | This annotation, @typeOf("number"), contradicts the abbreviated type, whose values are recognized by @typeOf("symbol"). An array or tuple is recognized by Array.isArray. | `runtime_annotation_contradicts_manifest.res`, `runtime_annotation_contradicts_builtin.res`, `runtime_annotation_contradicts_function.res`, `runtime_annotation_contradicts_tuple.res` |
 | `@instanceOf("Date") type date = X.t` in a functor of `X`, or over `(type a)`; `@notUndefined type t = X.t` | @instanceOf cannot describe the type of a functor parameter, ... | `instance_of_functor_parameter.res`, `type_of_locally_abstract_type.res`, `not_undefined_on_functor_parameter_type.res` |
 | `@instanceOf("Dog") type dog = animal`, `= animal<int>`, or `= phantom<int>` with `type phantom<'a> = animal` | A subclass must be a private abbreviation ... | `instance_of_public_subclass.res`, `instance_of_public_subclass_instance.res`, `instance_of_public_subclass_through_alias.res` |
@@ -304,7 +304,7 @@ written (Known bugs).
   `not_undefined_abbreviation_test.res`; the fixtures above,
   `UntaggedAtMostOneInstance.res`, `UntaggedTupleAndArray.res`,
   `not_undefined_functor_argument.res`, `not_undefined_functor_parameter.res`;
-  `tests/build_tests/super_errors_multi/fixtures/`
+  `tests/error_tests/multi/fixtures/`
   `Cross_runtime_annotation_hidden_superclass`,
   `Cross_runtime_annotation_hidden_base`,
   `Cross_runtime_annotation_claimed_by_interface`,
@@ -579,7 +579,7 @@ hold `undefined`.
 - Implementation: `typeopt.ml:type_cannot_contain_undefined`.
 - Tests: `spec_test` rule 12; `UntaggedVariants.res`
   (`OptionUnboxingHeuristic`); `tests/tests/src/option_wrapping_test.res`;
-  `tests/build_tests/option_transitive_dependency`.
+  `tests/project_tests/option_transitive_dependency`.
 - Shaped by #6222, #6233, #8719, #8954.
 
 ### 13. `@tag` and interfaces
@@ -604,7 +604,7 @@ Type declarations in messages print the `@as` of nullary and tagged cases.
   `includecore.ml:compare_variants`, `type_declarations`.
 - Tests: `spec_test` rule 13; fixtures `UntaggedTagFieldNameConflict.res`,
   `variant_tag_overlaps_with_field.res`, `UntaggedInvalidVariantTagAnnotation.res`,
-  `UntaggedImplIntf.res`; `tests/build_tests/super_errors_multi/fixtures/`
+  `UntaggedImplIntf.res`; `tests/error_tests/multi/fixtures/`
   `Iface_unboxed_variant_mismatch`, `Iface_tag_name_mismatch`,
   `Iface_variant_representation_mismatch`; `variant_payload_tag_mismatch.res`.
 - Shaped by #6498, #6513, #6669, #7875, #8956.

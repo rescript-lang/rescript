@@ -3,7 +3,7 @@
    with the implementation's and must keep compiling.
 
    The rejecting direction (differing specs) is pinned in
-   tests/build_tests/super_errors_multi/fixtures/Cross_external_spec_mismatch. */
+   tests/error_tests/multi/fixtures/Cross_external_spec_mismatch. */
 
 /* identical specs: byte-equality fast path */
 @obj external make_same: (~x: int=?, unit) => _ = ""

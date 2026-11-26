@@ -3,7 +3,7 @@
 })
 
 // Printed as JSX or, when JSX can't express the element, as the call.
-// tests/build_tests/jsx_preserve_semantics checks that both mean the same.
+// tests/project_tests/jsx_preserve_semantics checks that both mean the same.
 
 %%raw(`
 function lowerComp(props) { return null }

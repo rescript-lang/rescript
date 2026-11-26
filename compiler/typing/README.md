@@ -117,7 +117,7 @@ make checkformat     # check formatting
 ```
 
 Useful focused suites include `tests/ounit_tests/` for internal operations and
-`tests/build_tests/super_errors/` for type errors. Add end-to-end cases under
+`tests/error_tests/single/` for type errors. Add end-to-end cases under
 `tests/tests/` when a type-system change also affects accepted programs or
 generated JavaScript.
 

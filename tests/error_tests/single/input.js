@@ -40,7 +40,7 @@ function postProcessErrorOutput(output) {
   let result = output;
   result = result.trimEnd();
   result = result.replace(
-    /(?:[A-Z]:)?[\\/][^ ]+?tests[\\/]build_tests[\\/]super_errors[\\/]([^:]+)/g,
+    /(?:[A-Z]:)?[\\/][^ ]+?tests[\\/]error_tests[\\/]single[\\/]([^:]+)/g,
     (_match, path, _offset, _string) => "/.../" + path.replace("\\", "/"),
   );
   return normalizeNewlines(result);
@@ -85,17 +85,12 @@ async function runFixture(fixturesDir, fileName) {
 // Diagnostics must not depend on the length of the source path. Every
 // fixture also runs from a copy whose directory path is 180 characters long,
 // so usually much longer than the in-tree path, ending in the same
-// tests/build_tests/super_errors/fixtures suffix so that
+// tests/error_tests/single/fixtures suffix so that
 // postProcessErrorOutput yields the same snapshot text. The directory length
 // is fixed rather than the padding, so the fixture paths stay below Windows'
 // 260-character MAX_PATH whatever the length of the temporary directory.
-const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "super_errors-"));
-const fixturesSuffix = path.join(
-  "tests",
-  "build_tests",
-  "super_errors",
-  "fixtures",
-);
+const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "error_tests-"));
+const fixturesSuffix = path.join("tests", "error_tests", "single", "fixtures");
 const fixturesLongPath = path.join(
   tempRoot,
   "x".repeat(

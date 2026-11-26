@@ -28,6 +28,16 @@ export const compilerTestDir = path.resolve(testDir, "tests");
 export const buildTestDir = path.resolve(testDir, "build_tests");
 
 /**
+ * path: `<projectDir>/tests/project_tests/`
+ */
+export const projectTestDir = path.resolve(testDir, "project_tests");
+
+/**
+ * path: `<projectDir>/tests/error_tests/`
+ */
+export const errorTestDir = path.resolve(testDir, "error_tests");
+
+/**
  * path: `<projectDir>/tests/docstring_tests/`
  */
 export const docstringTestDir = path.resolve(testDir, "docstring_tests");

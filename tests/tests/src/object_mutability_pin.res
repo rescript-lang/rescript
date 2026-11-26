@@ -1,5 +1,5 @@
 /* Accepted object-field mutability and subtyping cases. Rejecting
- counterparts are under tests/build_tests/super_errors/fixtures/object_*.res. */
+ counterparts are under tests/error_tests/single/fixtures/object_*.res. */
 
 type wide = {"a": int, "b": int}
 type narrow = {"a": int} /* wide <: narrow (width subtyping) */
@@ -50,7 +50,7 @@ let closed_immutable_covariant = (v: {"x": wide}): {"x": narrow} => (v :> {"x": 
    implementation's settable field is abstracted to a read-only one. The
    reverse (a signature granting @set over a plain implementation field) is
    pinned as an error in
-   tests/build_tests/super_errors/fixtures/object_private_row_grants_set.res.
+   tests/error_tests/single/fixtures/object_private_row_grants_set.res.
    Writing a private row that already has @set is accepted; writing a
    private readonly row is pinned as an error in
    object_private_row_write.res. */
