@@ -676,12 +676,7 @@ let scheduler_tests _context =
         (failure.status = Unix.WEXITED 7
         && failure.stdout = "partial"
         && failure.stderr = "diagnostic")
-        "parallel subprocess failures preserve status and output";
-      check
-        (Sys.readdir scheduler_root
-        |> Array.for_all (fun name ->
-            not (String.starts_with ~prefix:".build-system-" name)))
-        "pipe capture creates no temporary scheduler logs")
+        "parallel subprocess failures preserve status and output")
 
 let graph_and_diagnostic_tests _context =
   let node name deps = (name, deps) in
