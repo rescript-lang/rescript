@@ -1,0 +1,19 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/signature/contextualKeywords.resi:3:11
+
+  1 │ // A signature has no expressions: open, exception and external are alwa
+    │ ys
+  2 │ // keywords here, and the items after an error are kept.
+  3 │ exception /
+  4 │ let a: int
+  5 │ open 1
+
+  At this point, I'm looking for an uppercased name like `Array` or `Math`
+
+exception _ 
+val a : int
+open _
+val b : int
+val _ : [%rescript.typehole ]
+val c : int

@@ -1,0 +1,32 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/contextualKeywordDeclarations.res:4:6-9
+
+  2 │ // identifier, a string or a number are misspelled declarations: a varia
+    │ ble is
+  3 │ // never followed by one of these.
+  4 │ open belt
+  5 │ exception foo
+  6 │ external "f": int = "f"
+
+  Did you mean `Belt` instead of `belt`?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/contextualKeywordDeclarations.res:8:8-11
+
+   6 │ external "f": int = "f"
+   7 │ let f = () => {
+   8 │   open belt
+   9 │   1
+  10 │ }
+
+  Did you mean `Belt` instead of `belt`?
+
+open _
+;;belt
+exception _ 
+;;foo
+external int : [%rescript.typehole ] = "f"
+let f [arity:1]() = {let open _ in belt; 1}
+let x = 1

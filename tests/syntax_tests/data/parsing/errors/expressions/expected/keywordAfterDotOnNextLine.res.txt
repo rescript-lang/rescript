@@ -18,9 +18,55 @@
   10 │ let b = f(~
   11 │ let c = 1
   12 │ 
+  13 │ // `open M` on the next line is the declaration, not a field or an oper
+     │ and
 
   `let` is a reserved keyword. Keywords need to be escaped: \"let"
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/keywordAfterDotOnNextLine.res:15:1-4
+
+  13 │ // `open M` on the next line is the declaration, not a field or an oper
+     │ and
+  14 │ let d = user.
+  15 │ open Belt
+  16 │ let e = x->
+  17 │ open! Belt
+
+  I'm not sure what to parse here when looking at "open".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/keywordAfterDotOnNextLine.res:16:12-17:4
+
+  14 │ let d = user.
+  15 │ open Belt
+  16 │ let e = x->
+  17 │ open! Belt
+  18 │ let g = {a:
+  19 │ exception Foo
+
+  I'm not sure what to parse here when looking at "open".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/keywordAfterDotOnNextLine.res:18:12-19:9
+
+  16 │ let e = x->
+  17 │ open! Belt
+  18 │ let g = {a:
+  19 │ exception Foo
+  20 │ 
+
+  This let-binding misses an expression
 
 let f [arity:1]user = {let name = user._ in let age = 2 in age}
 let b = f ([%rescript.exprhole ])
 let c = 1
+let d = user._
+open Belt
+let e = x -> ([%rescript.exprhole ])
+open! Belt
+let g = { a = ([%rescript.exprhole ]) }
+exception Foo 

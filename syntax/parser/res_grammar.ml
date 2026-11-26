@@ -54,7 +54,6 @@ type t =
   | Structure
   | Implementation
   | Attribute
-  | TypeConstraint
   | AtomicTypExpr
   | ListExpr
   | Pattern
@@ -114,7 +113,6 @@ let to_string = function
   | Structure -> "structure"
   | Implementation -> "implementation"
   | Attribute -> "an attribute"
-  | TypeConstraint -> "constraints on a type"
   | AtomicTypExpr -> "a type"
   | ListExpr -> "an ocaml list expr"
   | PackageConstraint -> "a package constraint"
@@ -126,14 +124,14 @@ let to_string = function
   | DictRows -> "rows of a dict"
 
 let is_signature_item_start = function
-  | Token.At | Let _ | Typ | External | Exception | Open | Include | Module
-  | AtAt | PercentPercent ->
+  | Token.At | Let _ | Typ | Include | Module | AtAt | PercentPercent
+  | Lident ("external" | "exception" | "open") ->
     true
   | _ -> false
 
 let is_atomic_pattern_start = function
   | Token.Int _ | String _ | Codepoint _ | Backtick | Lparen | Lbracket | Lbrace
-  | Underscore | Lident _ | Uident _ | List | Dict | Exception | Percent ->
+  | Underscore | Lident _ | Uident _ | List | Dict | Percent ->
     true
   | _ -> false
 
@@ -165,17 +163,14 @@ let is_jsx_attribute_start = function
   | _ -> false
 
 let is_structure_item_start = function
-  | Token.Open | Let _ | Typ | External | Exception | Include | Module | AtAt
-  | PercentPercent | At ->
-    true
+  | Token.Let _ | Typ | Include | Module | AtAt | PercentPercent | At -> true
   | t when is_expr_start t -> true
   | _ -> false
 
 let is_pattern_start = function
   | Token.Int _ | Float _ | String _ | Codepoint _ | Backtick | True | False
   | Minus | Plus | Lparen | Lbracket | Lbrace | List | Dict | Underscore
-  | DotDotDot | Lident _ | Uident _ | Hash | Exception | Percent | Module | At
-    ->
+  | DotDotDot | Lident _ | Uident _ | Hash | Percent | Module | At ->
     true
   | _ -> false
 
@@ -191,14 +186,14 @@ let is_string_field_decl_start = function
 
 (* TODO: overparse Uident ? *)
 let is_field_decl_start = function
-  | Token.At | Mutable | Lident _ -> true
+  | Token.At | Lident _ -> true
   (* recovery, TODO: this is not ideal… *)
   | Uident _ -> true
   | t when Token.is_keyword t -> true
   | _ -> false
 
 let is_record_decl_start = function
-  | Token.At | Mutable | Lident _ | DotDotDot -> true
+  | Token.At | Lident _ | DotDotDot -> true
   | _ -> false
 
 let is_typ_expr_start = function
@@ -267,10 +262,10 @@ let is_jsx_child_start = is_atomic_expr_start
 
 let is_block_expr_start = function
   | Token.Assert | At | Await | Backtick | Bang | Break | Codepoint _ | Continue
-  | Exception | False | Float _ | For | Forwardslash | ForwardslashDot | Hash
-  | If | Int _ | Lbrace | Lbracket | LessThan | Let _ | Lident _ | List | Lparen
-  | Minus | MinusDot | Module | Open | Percent | Plus | PlusDot | String _
-  | Switch | True | Try | Uident _ | Underscore | While | Dict ->
+  | False | Float _ | For | Forwardslash | ForwardslashDot | Hash | If | Int _
+  | Lbrace | Lbracket | LessThan | Let _ | Lident _ | List | Lparen | Minus
+  | MinusDot | Module | Percent | Plus | PlusDot | String _ | Switch | True
+  | Try | Uident _ | Underscore | While | Dict ->
     true
   | _ -> false
 
@@ -299,7 +294,6 @@ let is_list_element grammar token =
   | PatternRecord -> is_pattern_record_item_start token
   | PatternDict -> is_dict_row_start token
   | Attribute -> is_attribute_start token
-  | TypeConstraint -> token = Constraint
   | PackageConstraint -> token = And
   | ConstructorDeclaration -> token = Bar
   | JsxAttribute -> is_jsx_attribute_start token
@@ -327,7 +321,6 @@ let is_list_terminator grammar token =
   | StringFieldDeclarations, Rbrace ->
     true
   | Attribute, token when token <> At -> true
-  | TypeConstraint, token when token <> Constraint -> true
   | PackageConstraint, token when token <> And -> true
   | ConstructorDeclaration, token when token <> Bar -> true
   | AttributePayload, Rparen -> true

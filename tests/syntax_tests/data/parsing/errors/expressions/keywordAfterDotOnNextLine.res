@@ -9,3 +9,11 @@ let f = user => {
 // The same holds for a label after `~`
 let b = f(~
 let c = 1
+
+// `open M` on the next line is the declaration, not a field or an operand
+let d = user.
+open Belt
+let e = x->
+open! Belt
+let g = {a:
+exception Foo

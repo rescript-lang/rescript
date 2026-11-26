@@ -745,7 +745,37 @@ and print_statement_expr ~protect_regexp expr kind doc =
   | Braced braces -> print_braces doc expr braces
   | Nothing when protect_regexp && Parens.starts_with_regexp expr ->
     add_statement_parens doc
+  (* [@a open] as a statement: see [is_keyword_statement] *)
+  | Nothing
+    when expr.pexp_attributes <> []
+         &&
+         match expr.pexp_desc with
+         | Pexp_ident {txt = Lident ("open" | "exception" | "external")} -> true
+         | _ -> false ->
+    add_parens doc
   | Nothing -> doc
+
+(* A statement [open], [exception] or [external] would start a declaration
+   when the next statement begins with a module name or an identifier. It is
+   printed escaped, [\"open"], which is always a name: in parentheses it
+   would be the arguments of a constructor declared just before it, as in
+   [type t = Foo] followed by [(open)]. *)
+and is_keyword_statement (expr : Parsetree.expression) =
+  match expr with
+  | {
+   pexp_desc = Pexp_ident {txt = Lident ("open" | "exception" | "external")};
+   pexp_attributes = [];
+  } ->
+    true
+  | _ -> false
+
+and print_keyword_statement (expr : Parsetree.expression) cmt_tbl =
+  match expr.pexp_desc with
+  | Pexp_ident ({txt = Lident name} as path) ->
+    print_comments
+      (Doc.concat [Doc.text "\\\""; Doc.text name; Doc.text "\""])
+      cmt_tbl path.loc
+  | _ -> assert false
 
 and print_structure_item ~state ?(protect_regexp = false)
     (si : Parsetree.structure_item) cmt_tbl =
@@ -769,7 +799,10 @@ and print_structure_item ~state ?(protect_regexp = false)
     clear_pending ();
     let expr_doc =
       let protect_regexp = protect_regexp && attrs = [] in
-      let doc = print_expression_with_comments ~state expr cmt_tbl in
+      let doc =
+        if is_keyword_statement expr then print_keyword_statement expr cmt_tbl
+        else print_expression_with_comments ~state expr cmt_tbl
+      in
       print_statement_expr ~protect_regexp expr (Parens.structure_expr expr) doc
     in
     Doc.concat [print_attributes ~state attrs cmt_tbl; expr_doc]
@@ -1489,11 +1522,18 @@ and print_type_declaration ?inline_record_definitions ~state ~name ~equal_sign
       match td.ptype_manifest with
       | None -> Doc.nil
       | Some typ ->
+        let typ_doc = print_typ_expr ~state typ cmt_tbl in
+        (* [type t = private as 'a] would declare a private type *)
+        let typ_doc =
+          if Parsetree_viewer.typ_starts_with_lident "private" typ then
+            add_parens typ_doc
+          else typ_doc
+        in
         Doc.concat
           [
             Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
             print_private_flag td.ptype_private;
-            print_typ_expr ~state typ cmt_tbl;
+            typ_doc;
           ])
     | Ptype_open ->
       Doc.concat
@@ -2587,6 +2627,18 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
       has_any_trailing_line_comment cmt_tbl vb.pvb_pat.ppat_loc
     in
     let pattern_doc = print_pattern ~state vb.pvb_pat cmt_tbl in
+    (* [let rec as x = 1] would be recursive. [let rec = 1] and
+       [let rec: t = 1] bind a variable named [rec]. *)
+    let pattern_doc =
+      match vb.pvb_pat.ppat_desc with
+      | Ppat_var _ | Ppat_constraint ({ppat_desc = Ppat_var _}, _) ->
+        pattern_doc
+      | _
+        when i = 0 && rec_flag = Doc.nil
+             && Parsetree_viewer.leftmost_pattern_var vb.pvb_pat = Some "rec" ->
+        add_parens pattern_doc
+      | _ -> pattern_doc
+    in
     let equal_doc =
       if pattern_has_trailing_line_comment then
         Doc.indent (Doc.concat [Doc.hard_line; Doc.equal])
@@ -2958,7 +3010,11 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
       let needs_parens =
         match p.ppat_desc with
         | Ppat_or (_, _) | Ppat_alias (_, _) -> true
-        | _ -> false
+        | _ -> (
+          (* [exception as] would alias a variable named [exception] *)
+          match Parsetree_viewer.leftmost_pattern_var p with
+          | Some ("as" | "when" | "of") -> true
+          | _ -> false)
       in
       let pat =
         let p = print_pattern ~state p cmt_tbl in
@@ -5748,7 +5804,11 @@ and print_expression_block ~state ~braces expr cmt_tbl =
       collect_rows ~protect_regexp:false ((loc, open_doc) :: acc) expr2
     | Pexp_sequence (expr1, expr2) ->
       let expr_doc =
-        let doc = print_expression ~state expr1 cmt_tbl in
+        let doc =
+          if is_keyword_statement expr1 then
+            print_keyword_statement expr1 cmt_tbl
+          else print_expression ~state expr1 cmt_tbl
+        in
         print_statement_expr ~protect_regexp expr1 (Parens.expr expr1) doc
       in
       collect_rows ~protect_regexp:true
@@ -5788,7 +5848,10 @@ and print_expression_block ~state ~braces expr cmt_tbl =
       | _ -> collect_rows ~protect_regexp:true ((loc, let_doc) :: acc) expr2)
     | _ ->
       let expr_doc =
-        let doc = print_expression ~state expr cmt_tbl in
+        let doc =
+          if is_keyword_statement expr then print_keyword_statement expr cmt_tbl
+          else print_expression ~state expr cmt_tbl
+        in
         print_statement_expr ~protect_regexp expr (Parens.expr expr) doc
       in
       List.rev (statement_row expr expr_doc :: acc)

@@ -2,7 +2,6 @@ module Comment = Res_comment
 
 type t =
   | Await
-  | Open
   | Break
   | Continue
   | True
@@ -13,7 +12,6 @@ type t =
   | String of string
   | Lident of string
   | Uident of string
-  | As
   | Dot
   | DotDot
   | DotDotDot
@@ -21,7 +19,6 @@ type t =
   | Semicolon
   | Let of {unwrap: bool}
   | And
-  | Rec
   | Underscore
   | SingleQuote
   | Equal
@@ -38,7 +35,6 @@ type t =
   | Colon
   | Comma
   | Eof
-  | Exception
   | Backslash [@live]
   | Forwardslash
   | ForwardslashDot
@@ -66,17 +62,11 @@ type t =
   | In
   | While
   | Switch
-  | When
   | EqualGreater
   | MinusGreater
-  | External
   | Typ
-  | Private
-  | Mutable
-  | Constraint
   | Include
   | Module
-  | Of
   | Land
   | Lor
   | Bnot (* Bitwise not: ~~~ *)
@@ -126,7 +116,6 @@ let precedence = function
 
 let to_string = function
   | Await -> "await"
-  | Open -> "open"
   | Break -> "break"
   | Continue -> "continue"
   | True -> "true"
@@ -145,7 +134,6 @@ let to_string = function
   | Let {unwrap = true} -> "let?"
   | Let {unwrap = false} -> "let"
   | And -> "and"
-  | Rec -> "rec"
   | Underscore -> "_"
   | SingleQuote -> "'"
   | Equal -> "="
@@ -154,7 +142,6 @@ let to_string = function
   | Eof -> "eof"
   | Ampersand -> "&"
   | Bar -> "|"
-  | As -> "as"
   | Lparen -> "("
   | Rparen -> ")"
   | Lbracket -> "["
@@ -174,7 +161,6 @@ let to_string = function
   | Regex (pattern, flags) -> "regex: /" ^ pattern ^ "/" ^ flags
   | Forwardslash -> "/"
   | ForwardslashDot -> "/."
-  | Exception -> "exception"
   | Hash -> "#"
   | HashEqual -> "#="
   | GreaterThan -> ">"
@@ -191,17 +177,11 @@ let to_string = function
   | In -> "in"
   | While -> "while"
   | Switch -> "switch"
-  | When -> "when"
   | EqualGreater -> "=>"
   | MinusGreater -> "->"
-  | External -> "external"
   | Typ -> "type"
-  | Private -> "private"
-  | Constraint -> "constraint"
-  | Mutable -> "mutable"
   | Include -> "include"
   | Module -> "module"
-  | Of -> "of"
   | Lor -> "||"
   | Bnot -> "~~~"
   | Bor -> "|||"
@@ -233,15 +213,11 @@ let to_string = function
 
 let keyword_table = function
   | "and" -> And
-  | "as" -> As
   | "assert" -> Assert
   | "await" -> Await
   | "break" -> Break
-  | "constraint" -> Constraint
   | "continue" -> Continue
   | "else" -> Else
-  | "exception" -> Exception
-  | "external" -> External
   | "false" -> False
   | "for" -> For
   | "if" -> If
@@ -252,27 +228,26 @@ let keyword_table = function
   | "list{" -> List
   | "dict{" -> Dict
   | "module" -> Module
-  | "mutable" -> Mutable
-  | "of" -> Of
-  | "open" -> Open
-  | "private" -> Private
-  | "rec" -> Rec
   | "switch" -> Switch
   | "true" -> True
   | "try" -> Try
   | "type" -> Typ
-  | "when" -> When
   | "while" -> While
   | _ -> raise Not_found
 [@@throws Not_found]
 
 let is_keyword = function
-  | Await | Break | Continue | And | As | Assert | Constraint | Else | Exception
-  | External | False | For | If | In | Include | Land | Let _ | List | Lor
-  | Module | Mutable | Of | Open | Private | Rec | Switch | True | Try | Typ
-  | When | While | Dict ->
+  | Await | Break | Continue | And | Assert | Else | False | For | If | In
+  | Include | Land | Let _ | List | Lor | Module | Switch | True | Try | Typ
+  | While | Dict ->
     true
   | _ -> false
+
+(* Contextual keywords are identifiers, recognised as keywords by the parser
+   only where the grammar uses them (see [Res_core]): [as], [constraint],
+   [exception], [external], [mutable], [of], [open], [private], [rec] and
+   [when]. Like [async], [catch] or [nonrec], each can name a variable, a field
+   or a label elsewhere. *)
 
 (* The text of a reserved word, for the positions where the grammar expects a
    name that no variable is bound to: a record field, an argument label, a JSX
@@ -280,15 +255,11 @@ let is_keyword = function
    single token; the name it stands for is [let], followed by [?]. *)
 let keyword_name = function
   | And -> Some "and"
-  | As -> Some "as"
   | Assert -> Some "assert"
   | Await -> Some "await"
   | Break -> Some "break"
-  | Constraint -> Some "constraint"
   | Continue -> Some "continue"
   | Else -> Some "else"
-  | Exception -> Some "exception"
-  | External -> Some "external"
   | False -> Some "false"
   | For -> Some "for"
   | If -> Some "if"
@@ -296,16 +267,10 @@ let keyword_name = function
   | Include -> Some "include"
   | Let _ -> Some "let"
   | Module -> Some "module"
-  | Mutable -> Some "mutable"
-  | Of -> Some "of"
-  | Open -> Some "open"
-  | Private -> Some "private"
-  | Rec -> Some "rec"
   | Switch -> Some "switch"
   | True -> Some "true"
   | Try -> Some "try"
   | Typ -> Some "type"
-  | When -> Some "when"
   | While -> Some "while"
   | _ -> None
 

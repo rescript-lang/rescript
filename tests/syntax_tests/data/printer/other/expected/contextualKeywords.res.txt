@@ -1,0 +1,44 @@
+// Escaped contextual keywords print bare
+let open = dialog.open
+let {private, as} = options
+type t = {mutable: bool, mutable when: int}
+let f = (~as, ~open=false) => <Dialog as open />
+type rec = int
+
+// A statement that is only `open`, `exception` or `external` is printed
+// escaped; parentheses keep the other names from reading as keywords
+let f = () => {
+  ignore()
+  \"open"
+  Belt.x
+  \"exception"
+  Foo
+  \"open"
+  !x
+}
+
+\"external"
+r.x = 1
+type u = Foo
+\"open"
+Belt.x
+let (rec as x) = 1
+
+let f = x =>
+  switch x {
+  | exception (as) => 1
+  | exception (when) => 2
+  | exception (of) => 3
+  | exception exception => 4
+  }
+
+type t = (private)
+type t = (private as 'a)
+type t = (private<int>)
+module X: S with type t = (private) = M
+
+// Unparenthesized where nothing else is possible
+let rec = 1
+let rec: int = 1
+let f = () => open
+type t = private => int

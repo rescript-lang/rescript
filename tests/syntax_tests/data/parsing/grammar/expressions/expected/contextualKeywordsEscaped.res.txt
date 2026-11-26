@@ -1,0 +1,10 @@
+;;open
+;;Belt.x
+let f [arity:1]() = {ignore (); exception; Foo}
+;;external
+;;foo ()
+let f [arity:1]x =
+  match x with | exception -> 1 | exception as -> 2 | exception when -> 3
+let rec = 1
+type nonrec rec = int
+type nonrec t = private

@@ -1,3 +1,3 @@
 type d = {
-  foo: string, mutable
+  foo: string, mutable 1
 }
