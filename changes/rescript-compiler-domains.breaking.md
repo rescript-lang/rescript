@@ -1,0 +1,1 @@
+- The build system reads its worker count from `RESCRIPT_COMPILER_DOMAINS` instead of `REWATCH_COMPILER_DOMAINS`.

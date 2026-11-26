@@ -6,21 +6,14 @@ let recommended_domain_count available_cpus = min 8 (max 1 (available_cpus - 1))
 
 (* A count above the machine's limit is lowered to it, so one setting works on
    machines with different CPU counts. *)
-(* REWATCH_COMPILER_DOMAINS is the deprecated name of the setting; it is read
-   only when RESCRIPT_COMPILER_DOMAINS is unset. *)
-let domain_count_setting () =
-  List.find_map
-    (fun variable ->
-      Sys.getenv_opt variable |> Option.map (fun value -> (variable, value)))
-    ["RESCRIPT_COMPILER_DOMAINS"; "REWATCH_COMPILER_DOMAINS"]
-
 let configured_count () =
-  match domain_count_setting () with
+  match Sys.getenv_opt "RESCRIPT_COMPILER_DOMAINS" with
   | None -> recommended_domain_count (Domain.recommended_domain_count ())
-  | Some (variable, value) -> (
+  | Some value -> (
     match int_of_string_opt (String.trim value) with
     | Some count when count >= 1 -> min count max_domain_count
     | _ ->
       raise
-        (Process.Error (variable ^ " must be a positive integer, got " ^ value))
+        (Process.Error
+           ("RESCRIPT_COMPILER_DOMAINS must be a positive integer, got " ^ value))
     )
