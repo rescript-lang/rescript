@@ -1,0 +1,1 @@
+- Group the Belt, CommonJS and docstring suites under `tests/runtime_tests`, move the shared rescript-react project to `tests/fixtures` and the CLI platform test to `tests/package_tests`.

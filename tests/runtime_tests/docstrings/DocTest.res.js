@@ -14,7 +14,7 @@ import * as Stdlib_JsError from "@rescript/runtime/lib/es6/Stdlib_JsError.mjs";
 import * as Primitive_string from "@rescript/runtime/lib/es6/Primitive_string.mjs";
 import * as Promises from "node:fs/promises";
 import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
-import * as BinsJs from "../../cli/common/bins.js";
+import * as BinsJs from "../../../cli/common/bins.js";
 
 let rescript_tools_exe = BinsJs.rescript_tools_exe;
 

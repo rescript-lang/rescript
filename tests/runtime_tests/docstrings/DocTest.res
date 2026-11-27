@@ -1,6 +1,6 @@
 open Node
 
-@module("../../cli/common/bins.js")
+@module("../../../cli/common/bins.js")
 external rescript_tools_exe: string = "rescript_tools_exe"
 
 // Only major version
