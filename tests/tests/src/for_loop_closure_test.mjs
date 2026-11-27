@@ -88,19 +88,42 @@ function uppercaseExotic() {
   return fs.map(f => f());
 }
 
+function inOperatorEnd(d) {
+  let fs = [];
+  let i_start = id(0);
+  let n;
+  try {
+    n = id(1);
+  } catch (exn) {
+    n = 0;
+  }
+  for (let i = i_start, i_finish = ("x" in d) ? n : 2; i <= i_finish; ++i) {
+    fs.push(() => i);
+  }
+  return fs.map(f => f());
+}
+
+function inOperatorEndConditional(d) {
+  let fs = [];
+  for (let i = 0, i_finish = ("x" in d) ? 3 : 2; i <= i_finish; ++i) {
+    fs.push(() => i);
+  }
+  return fs.map(f => f());
+}
+
 Mocha.describe("For_loop_closure_test", () => {
-  Mocha.test("closures capture each iteration", () => Test_utils.eq("File \"for_loop_closure_test.res\", line 80, characters 7-14", closures(), [
+  Mocha.test("closures capture each iteration", () => Test_utils.eq("File \"for_loop_closure_test.res\", line 109, characters 7-14", closures(), [
     0,
     1,
     2
   ]));
-  Mocha.test("closures capture each iteration with downto", () => Test_utils.eq("File \"for_loop_closure_test.res\", line 83, characters 7-14", closuresDownto(), [
+  Mocha.test("closures capture each iteration with downto", () => Test_utils.eq("File \"for_loop_closure_test.res\", line 112, characters 7-14", closuresDownto(), [
     2,
     1,
     0
   ]));
-  Mocha.test("empty range runs no iteration", () => Test_utils.eq("File \"for_loop_closure_test.res\", line 86, characters 7-14", emptyRange(), 0));
-  Mocha.test("the start runs before the end's statements", () => Test_utils.eq("File \"for_loop_closure_test.res\", line 89, characters 7-14", startBeforeEnd(), [
+  Mocha.test("empty range runs no iteration", () => Test_utils.eq("File \"for_loop_closure_test.res\", line 115, characters 7-14", emptyRange(), 0));
+  Mocha.test("the start runs before the end's statements", () => Test_utils.eq("File \"for_loop_closure_test.res\", line 118, characters 7-14", startBeforeEnd(), [
     [
       1,
       3
@@ -111,13 +134,41 @@ Mocha.describe("For_loop_closure_test", () => {
       3
     ]
   ]));
-  Mocha.test("uppercase exotic loop variables", () => Test_utils.eq("File \"for_loop_closure_test.res\", line 92, characters 7-14", uppercaseExotic(), [
+  Mocha.test("uppercase exotic loop variables", () => Test_utils.eq("File \"for_loop_closure_test.res\", line 121, characters 7-14", uppercaseExotic(), [
     0,
     1,
     2,
     3,
     4
   ]));
+  Mocha.test("an end using `in` after a start that runs first", () => {
+    Test_utils.eq("File \"for_loop_closure_test.res\", line 124, characters 7-14", inOperatorEnd({
+      x: 1
+    }), [
+      0,
+      1
+    ]);
+    Test_utils.eq("File \"for_loop_closure_test.res\", line 125, characters 7-14", inOperatorEnd({}), [
+      0,
+      1,
+      2
+    ]);
+  });
+  Mocha.test("an end using `in` in a conditional", () => {
+    Test_utils.eq("File \"for_loop_closure_test.res\", line 128, characters 7-14", inOperatorEndConditional({
+      x: 1
+    }), [
+      0,
+      1,
+      2,
+      3
+    ]);
+    Test_utils.eq("File \"for_loop_closure_test.res\", line 129, characters 7-14", inOperatorEndConditional({}), [
+      0,
+      1,
+      2
+    ]);
+  });
 });
 
 export {
@@ -127,5 +178,7 @@ export {
   emptyRange,
   startBeforeEnd,
   uppercaseExotic,
+  inOperatorEnd,
+  inOperatorEndConditional,
 }
 /*  Not a pure module */

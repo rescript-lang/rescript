@@ -75,6 +75,35 @@ let uppercaseExotic = () => {
   fs->Array.map(f => f())
 }
 
+// An end that binds through a `try` is printed as the loop's end temporary in
+// its header, where JavaScript reads a bare `in` as a `for...in`.
+let inOperatorEnd = (d: dict<int>) => {
+  let fs = []
+  for i in id(0) to {
+    let n = try {
+      id(1)
+    } catch {
+    | _ => 0
+    }
+    if Dict.has(d, "x") {
+      n
+    } else {
+      2
+    }
+  } {
+    fs->Array.push(() => i)
+  }
+  fs->Array.map(f => f())
+}
+
+let inOperatorEndConditional = (d: dict<int>) => {
+  let fs = []
+  for i in 0 to Dict.has(d, "x") ? 3 : 2 {
+    fs->Array.push(() => i)
+  }
+  fs->Array.map(f => f())
+}
+
 describe(__MODULE__, () => {
   test("closures capture each iteration", () => {
     eq(__LOC__, closures(), [0, 1, 2])
@@ -90,5 +119,13 @@ describe(__MODULE__, () => {
   })
   test("uppercase exotic loop variables", () => {
     eq(__LOC__, uppercaseExotic(), [0, 1, 2, 3, 4])
+  })
+  test("an end using `in` after a start that runs first", () => {
+    eq(__LOC__, inOperatorEnd(dict{"x": 1}), [0, 1])
+    eq(__LOC__, inOperatorEnd(dict{}), [0, 1, 2])
+  })
+  test("an end using `in` in a conditional", () => {
+    eq(__LOC__, inOperatorEndConditional(dict{"x": 1}), [0, 1, 2, 3])
+    eq(__LOC__, inOperatorEndConditional(dict{}), [0, 1, 2])
   })
 })
