@@ -34,6 +34,12 @@ val create : string -> Ident.t
 val make_js_object : Ident.t -> unit
 
 val create_tmp : ?name:string -> unit -> Ident.t
+(** An identifier the compiler synthesizes, which no source name refers to.
+    It is printed with a name that is none of the raw JS names the program
+    refers to, so it shadows none of them. *)
+
+val is_synthesized : Ident.t -> bool
+(** Whether [create_tmp] created the identifier *)
 
 val unwrap_uppercase_exotic : string -> string
 

@@ -5,6 +5,7 @@ import * as Test_utils from "./test_utils.mjs";
 
 function End_finish() { return 1 }
 function i_finish() { return 3 }
+function j_start() { return 1 }
 ;
 
 function uppercaseExotic() {
@@ -23,12 +24,32 @@ function lowercase() {
   return fs.map(f => f());
 }
 
+function startBeforeStatements(g) {
+  let fs = [];
+  let j_start$1 = j_start();
+  let tmp;
+  try {
+    tmp = g();
+  } catch (exn) {
+    tmp = 0;
+  }
+  for (let j = j_start$1; j <= tmp; ++j) {
+    fs.push(() => j);
+  }
+  return fs.map(f => f());
+}
+
 Mocha.describe("For_loop_finish_global_test", () => {
-  Mocha.test("uppercase exotic loop variable", () => Test_utils.eq("File \"for_loop_finish_global_test.res\", line 37, characters 7-14", uppercaseExotic(), [
+  Mocha.test("uppercase exotic loop variable", () => Test_utils.eq("File \"for_loop_finish_global_test.res\", line 54, characters 7-14", uppercaseExotic(), [
     0,
     1
   ]));
-  Mocha.test("lowercase loop variable", () => Test_utils.eq("File \"for_loop_finish_global_test.res\", line 40, characters 7-14", lowercase(), [
+  Mocha.test("lowercase loop variable", () => Test_utils.eq("File \"for_loop_finish_global_test.res\", line 57, characters 7-14", lowercase(), [
+    2,
+    3
+  ]));
+  Mocha.test("start calling a raw function named like its temporary", () => Test_utils.eq("File \"for_loop_finish_global_test.res\", line 60, characters 7-14", startBeforeStatements(() => 3), [
+    1,
     2,
     3
   ]));
@@ -37,5 +58,6 @@ Mocha.describe("For_loop_finish_global_test", () => {
 export {
   uppercaseExotic,
   lowercase,
+  startBeforeStatements,
 }
 /*  Not a pure module */

@@ -1,1 +1,1 @@
-- Fix a `for` loop whose end calls a JS global named like the loop's end temporary, such as `i_finish` for a loop over `i`, throwing a `ReferenceError`: the temporary no longer takes the global's name.
+- Fix a temporary the compiler names, such as a `for` loop's `i_finish`, capturing a JS name the code refers to, a global or a function declared in `%%raw`, which threw a `ReferenceError` or a `TypeError`: a temporary no longer takes such a name.
