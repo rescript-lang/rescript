@@ -631,15 +631,7 @@ function measureProjectBuild(checkout, projectCheckout, results) {
       `${JSON.stringify(config, null, 2)}\n`,
     );
     const scope = path.join(workDir, "node_modules", "@rescript");
-    // A base from before tests/dependencies/rescript-react moved to
-    // packages/rescript-react still has the project there; the next pull
-    // request in the stack drops that fallback.
-    const react =
-      [
-        path.join(projectCheckout, "packages", "rescript-react"),
-        path.join(projectCheckout, "tests", "dependencies", "rescript-react"),
-      ].find(dir => fs.existsSync(dir)) ??
-      path.join(projectCheckout, "packages", "rescript-react");
+    const react = path.join(projectCheckout, "packages", "rescript-react");
     copySources(path.join(react, "src"), path.join(scope, "react", "src"));
     fs.copyFileSync(
       path.join(react, "rescript.json"),
