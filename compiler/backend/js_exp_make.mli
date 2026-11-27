@@ -115,7 +115,6 @@ val float : string -> t
 
 (* TODO: we can do hash consing for small integers *)
 val zero_int_literal : t
-val zero_float_lit : t
 
 val zero_bigint_literal : t
 
@@ -212,6 +211,8 @@ val int32_bor : t -> t -> t
 val float_add : t -> t -> t
 
 val float_minus : t -> t -> t
+
+val float_neg : t -> t
 
 val float_mul : t -> t -> t
 
