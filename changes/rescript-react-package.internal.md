@@ -1,0 +1,1 @@
+- Move the vendored rescript-react, which the playground and many tests build against, to `packages/rescript-react`, and require `"private": true` for every workspace that is not published.

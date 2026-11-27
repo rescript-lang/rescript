@@ -8,17 +8,40 @@ const fs = require("node:fs/promises");
 const { defineConfig } = require("@yarnpkg/types");
 
 /**
+ * The workspaces that are published to npm: the rescript package at the root
+ * and the packages in packages/@rescript. Other workspaces with an @rescript
+ * scope, like the vendored rescript-react in packages/rescript-react, are not.
+ *
+ * @param {Yarn.Constraints.Workspace} workspace
+ */
+function isPublished(workspace) {
+  return (
+    workspace.cwd === "." || workspace.cwd.startsWith("packages/@rescript/")
+  );
+}
+
+/**
+ * Every other workspace must be private: the publish workflow publishes all
+ * workspaces that are not (`yarn workspaces foreach --no-private`).
+ *
+ * @param {Yarn.Constraints.Context} ctx
+ */
+function enforcePrivateWorkspaces({ Yarn }) {
+  for (const workspace of Yarn.workspaces()) {
+    if (!isPublished(workspace)) {
+      workspace.set("private", true);
+    }
+  }
+}
+
+/**
  * @param {Yarn.Constraints.Context} ctx
  */
 async function enforceCompilerMeta({ Yarn }) {
   const EXPECTED_VERSION = "13.0.0-alpha.8";
 
   for (const workspace of Yarn.workspaces()) {
-    const { ident } = workspace.pkg;
-    if (
-      ident === "rescript" ||
-      (workspace.cwd.startsWith("packages") && ident.startsWith("@rescript/"))
-    ) {
+    if (isPublished(workspace)) {
       workspace.set("version", EXPECTED_VERSION);
       workspace.set("homepage", "https://rescript-lang.org");
       workspace.set("bugs", "https://github.com/rescript-lang/rescript/issues");
@@ -74,5 +97,6 @@ async function enforceCompilerMeta({ Yarn }) {
 module.exports = defineConfig({
   async constraints(ctx) {
     await enforceCompilerMeta(ctx);
+    enforcePrivateWorkspaces(ctx);
   },
 });
