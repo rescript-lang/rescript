@@ -123,7 +123,7 @@ system).
 #### Test Types to Include
 
 1. **Syntax tests** (`tests/syntax_tests/`) - Parser validation
-2. **Integration tests** (`tests/tests/`) - End-to-end behavior
+2. **Integration tests** (`tests/compiler_tests/`) - End-to-end behavior
 3. **Unit tests** (`tests/ounit_tests/`) - Compiler functions
 4. **Build tests** (`tests/build_tests/`) - Build system behavior
 5. **Project tests** (`tests/project_tests/`) - Compiler behavior that needs a whole project, such as JSX output or source maps

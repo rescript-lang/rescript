@@ -118,7 +118,7 @@ make checkformat     # check formatting
 
 Useful focused suites include `tests/ounit_tests/` for internal operations and
 `tests/error_tests/single/` for type errors. Add end-to-end cases under
-`tests/tests/` when a type-system change also affects accepted programs or
+`tests/compiler_tests/` when a type-system change also affects accepted programs or
 generated JavaScript.
 
 To inspect the compiler pipeline for a small source file:

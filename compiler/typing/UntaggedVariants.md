@@ -11,7 +11,7 @@ apart (rule 6). The user manual describes the feature in
 This document states the rules the compiler implements. Each rule names the
 code that implements it and the tests that pin it. Tests named
 `spec_test` are in
-[`tests/tests/src/untagged_variants_spec_test.res`](../../tests/tests/src/untagged_variants_spec_test.res);
+[`tests/compiler_tests/src/untagged_variants_spec_test.res`](../../tests/compiler_tests/src/untagged_variants_spec_test.res);
 the committed `.mjs` beside it shows the checks emitted for each declaration.
 Fixtures are in `tests/error_tests/single/fixtures/` unless another
 directory is named.
@@ -85,7 +85,7 @@ is the number `1`.
   ("A variant case annotation @as(...) must be a string, integer, float,
   bigint, boolean, null, or undefined."), `VariantAsIntegerOutOfRange.res`,
   `UntaggedDuplicatedBsAs.res`; `spec_test` rule 2;
-  `tests/tests/src/unboxed_variant_fold_test.res` (`wide`).
+  `tests/compiler_tests/src/unboxed_variant_fold_test.res` (`wide`).
 
 ### 4. Payload kinds
 
@@ -125,7 +125,7 @@ builtin payload type. `@notUndefined` on an abstract type leaves it unknown.
   `UntaggedNonUnary2.res` ("Constructor A has more than one argument."),
   `UntaggedUnknown.res` (`list<float>` is unknown),
   `untagged_unannotated_stdlib_name.res` (a type named like a stdlib class
-  is unknown); `tests/tests/src/untagged_runtime_annotations_test.res`,
+  is unknown); `tests/compiler_tests/src/untagged_runtime_annotations_test.res`,
   `untagged_builtin_alias_test.res`.
 - Shaped by #6121, #6208, #6219, #6279, #6368, #6394, #6550, #6670.
 
@@ -298,7 +298,7 @@ written (Known bugs).
   `variant_runtime.ml:Instance`;
   `lam_compile_external_call.ml:class_constructor`.
 - Tests: `spec_test` rules 4 and 5;
-  `tests/tests/src/untagged_runtime_annotations_test.res`,
+  `tests/compiler_tests/src/untagged_runtime_annotations_test.res`,
   `untagged_runtime_annotations_shadow_test.res`,
   `untagged_file_blob_test.res`, `not_undefined_interface_test.res`,
   `not_undefined_abbreviation_test.res`; the fixtures above,
@@ -350,7 +350,7 @@ belongs to.
 
 - Implementation: `variant_layout.ml:check_invariant`,
   `variant_runtime.ml:literal_value_key`.
-- Tests: the fixtures above; `tests/tests/src/unboxed_variant_fold_test.res`
+- Tests: the fixtures above; `tests/compiler_tests/src/unboxed_variant_fold_test.res`
   (a number and a bigint literal with the same digits); `TaggedDuplicateLiteral.res`,
   `multiple_tag_1.res`, `multiple_tag_2.res` (tagged variants).
 - Shaped by #6128, #6136, #7441, #8777, #8953.
@@ -403,7 +403,7 @@ does not cover it.
 
 - Implementation: `untagged_dispatch.ml:plan` (the literal part);
   `parmatch.ml` (shadowed payload patterns, exhaustiveness).
-- Tests: `spec_test` rule 7; `tests/tests/src/untagged_variants_heuristic.res`
+- Tests: `spec_test` rule 7; `tests/compiler_tests/src/untagged_variants_heuristic.res`
   (literals that skip the `switch`); `unboxed_variant_fold_test.res`
   (`answerName2`, `bigintOrPayloadName`); fixtures
   `warning_11_untagged_literal_shadows_payload.res`,
@@ -467,8 +467,8 @@ context, where they are labeled; an arm of an `if` is not
   `ounit_untagged_dispatch_tests.ml` pin plans as data.
 - Tests: `spec_test` rules 4, 5 and 8 (`instanceName` shows the chain in
   declaration order, `objectFirst` the unchecked last arm);
-  `tests/tests/src/UntaggedVariants.res` (`AllInstanceofTypes`,
-  `MergeCases`); `tests/tests/src/untagged_runtime_annotations_test.res`
+  `tests/compiler_tests/src/UntaggedVariants.res` (`AllInstanceofTypes`,
+  `MergeCases`); `tests/compiler_tests/src/untagged_runtime_annotations_test.res`
   (subclasses, the function case, a missing class);
   `untagged_default_arm_test.res` (`Symbol.hasInstance`, incomplete
   matches); `untagged_loop_control_test.res` (`break`, `continue`).
@@ -494,7 +494,7 @@ as a record case does.
 - Implementation: `untagged_dispatch.ml:plan` (`null_guard`),
   `payload_part`.
 - Tests: `spec_test` rule 9; `UntaggedVariants.res` (`ObjectAndNull`, `Json`);
-  `tests/tests/src/untagged_default_arm_test.res`.
+  `tests/compiler_tests/src/untagged_default_arm_test.res`.
 - Shaped by #6219, #7303, #8253, #8255, #8279, #8995.
 
 ### 10. Values outside every case
@@ -532,7 +532,7 @@ matched at run time.
 
 - Implementation: `lambda.ml:switch` (`untagged_value`, `untagged_plan`),
   `untagged_dispatch.ml:select`.
-- Tests: `tests/tests/src/unboxed_variant_fold_test.res`; `spec_test` rule 10
+- Tests: `tests/compiler_tests/src/unboxed_variant_fold_test.res`; `spec_test` rule 10
   (a folded value outside every case); `ounit_untagged_dispatch_tests.ml`
   compares the plans of random variants and matches with rules 7 to 9.
 - Shaped by #8631.
@@ -578,7 +578,7 @@ hold `undefined`.
 
 - Implementation: `typeopt.ml:type_cannot_contain_undefined`.
 - Tests: `spec_test` rule 12; `UntaggedVariants.res`
-  (`OptionUnboxingHeuristic`); `tests/tests/src/option_wrapping_test.res`;
+  (`OptionUnboxingHeuristic`); `tests/compiler_tests/src/option_wrapping_test.res`;
   `tests/project_tests/option_transitive_dependency`.
 - Shaped by #6222, #6233, #8719, #8954.
 

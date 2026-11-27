@@ -62,7 +62,7 @@
       "!**/tests/docstring_tests",
       "!**/tests/gentype_tests",
       "**/tests/gentype_tests/typescript-react-example/**",
-      "!**/tests/tests/**/src",
+      "!**/tests/compiler_tests/**/src",
       "!**/tests/tools_tests/**/src",
       "!**/tests/build_tests/isolated",
       "!**/tests/build_tests/integration",

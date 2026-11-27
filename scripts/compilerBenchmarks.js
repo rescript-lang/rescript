@@ -41,7 +41,7 @@
 // inputs, the data files and the largest runtime and Belt files run under
 // cachegrind. The generated inputs and the data files come from the checkout
 // of this script, so both measurements use the same ones. With `--project`,
-// it also builds tests/tests of the given checkout with the build system,
+// it also builds tests/compiler_tests of the given checkout with the build system,
 // clean, with nothing to do and after two edits (see measureProjectBuild),
 // and a few generated projects, clean and after an edit, for costs that grow
 // with the number of modules of a build (see generatedProjects), counting
@@ -583,7 +583,7 @@ function copySources(from, to) {
 }
 
 /** The project the build benchmarks build, relative to a checkout. */
-const benchmarkProject = path.join("tests", "tests");
+const benchmarkProject = path.join("tests", "compiler_tests");
 
 /**
  * The module of the project that about 200 others use, and that has no
@@ -592,7 +592,7 @@ const benchmarkProject = path.join("tests", "tests");
 const sharedModule = path.join("src", "test_utils.res");
 
 /**
- * Builds tests/tests of `projectCheckout` with the build system of
+ * Builds tests/compiler_tests of `projectCheckout` with the build system of
  * `checkout`, on one worker domain so that the counts don't depend on how
  * the work is shared: a clean build, a build with nothing to do, and the
  * builds after an edit of a module that nothing uses and of one that many
@@ -765,7 +765,7 @@ function measureGeneratedProjects(checkout, results) {
 /**
  * @param {string} checkout
  * @param {{ instructions: boolean, project?: string, playground?: boolean }} options
- *   `project` is the checkout whose tests/tests the build benchmarks build;
+ *   `project` is the checkout whose tests/compiler_tests the build benchmarks build;
  *   without it, there are none. `playground` adds the size of the
  *   playground's compiler, which must be built.
  * @returns {Results}
