@@ -102,23 +102,53 @@ let directory_entries path =
 
 let atomic_write_prefix = ".rewatch-write-"
 
-let write_file_atomic ?(ensure_parent = true) path contents =
-  if ensure_parent then ensure_dir (Filename.dirname path);
-  let candidate =
-    Filename.temp_file ~temp_dir:(Filename.dirname path) atomic_write_prefix
-      ".tmp"
+let temporary_names = Domain.DLS.new_key Random.State.make_self_init
+
+(* Creates the temporary file under a random name, as Filename.temp_file
+   does, but keeps its descriptor open for writing instead of closing it. *)
+let open_temporary_file directory =
+  let rec attempt count =
+    let name =
+      Printf.sprintf "%s%06x.tmp" atomic_write_prefix
+        (Random.State.bits (Domain.DLS.get temporary_names) land 0xFFFFFF)
+    in
+    let path = Filename.concat directory name in
+    match
+      Unix.openfile path
+        [Unix.O_WRONLY; Unix.O_CREAT; Unix.O_EXCL; Unix.O_CLOEXEC]
+        0o644
+    with
+    | descriptor -> (path, descriptor)
+    | exception Unix.Unix_error (Unix.EEXIST, _, _) when count < 1000 ->
+      attempt (count + 1)
   in
-  let published = ref false in
-  Fun.protect
-    ~finally:(fun () ->
-      if not !published then
-        try Sys.remove candidate with Sys_error _ | Unix.Unix_error _ -> ())
-    (fun () ->
-      Unix.chmod candidate 0o644;
-      write_file candidate contents;
-      Build_file_store.forget path;
-      Sys.rename candidate path;
-      published := true)
+  attempt 0
+
+(* A build writes thousands of artifacts, and for most of them the
+   file-system calls cost more than writing the contents. So the temporary
+   file is created once and written and given its permissions through that
+   one descriptor. *)
+let write_file_atomic ?(ensure_parent = true) path contents =
+  let directory = Filename.dirname path in
+  if ensure_parent then ensure_dir directory;
+  let candidate, descriptor = open_temporary_file directory in
+  let open_descriptor = ref (Some descriptor) in
+  try
+    (* The umask may clear bits of the mode openfile was given. *)
+    Platform.set_file_permissions descriptor 0o644;
+    ignore (Unix.write_substring descriptor contents 0 (String.length contents));
+    open_descriptor := None;
+    Unix.close descriptor;
+    Build_file_store.forget path;
+    Sys.rename candidate path
+  with exn ->
+    let backtrace = Printexc.get_raw_backtrace () in
+    Option.iter
+      (fun descriptor ->
+        try Unix.close descriptor with Unix.Unix_error _ -> ())
+      !open_descriptor;
+    (try Sys.remove candidate with Sys_error _ -> ());
+    Printexc.raise_with_backtrace exn backtrace
 
 let stat_opt path =
   try Some (Unix.stat path)

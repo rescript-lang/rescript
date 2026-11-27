@@ -36,6 +36,11 @@ val spawn :
 
 val null_device : string
 
+val set_file_permissions : Unix.file_descr -> int -> unit
+(** Sets the permissions of an open file regardless of the umask. Windows has
+    no umask and keeps only a read-only flag, which [Unix.openfile] already
+    sets from the requested permissions, so there it does nothing. *)
+
 val current_process_id : unit -> int
 val process_id : process -> int
 val release_process : process -> unit

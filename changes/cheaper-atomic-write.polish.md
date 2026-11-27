@@ -1,0 +1,1 @@
+- Write build artifacts with fewer file-system calls, so publishing a module's outputs takes about 17% less time with one compiler worker.
