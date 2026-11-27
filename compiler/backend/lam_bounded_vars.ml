@@ -178,7 +178,10 @@ let rewrite (map : _ Hash_ident.t) (lam : Lambda.t) : Lambda.t =
         | Some _ ->
           (* Only let-bound variables are assigned, never the parameters [map]
              may replace with another term. *)
-          assert false
+          Ext_fmt.failwithf ~loc:__LOC__
+            "%s/%d is assigned, but inlining replaces it with a term that is \
+             not a variable"
+            (Ident.name v) v.stamp
         | None -> v
       in
       Lambda.assign v (aux l)
