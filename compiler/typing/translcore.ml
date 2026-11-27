@@ -1054,8 +1054,10 @@ let fields_by_position fields =
 
 (* How [transl_record] builds a record: by copying the fields of [init] one
    by one (or with no [init] at all), or by taking a shallow copy of [init]
-   and setting the other fields. JSX props follow the same rule. A shallow
-   copy is an object spread, so an array record always copies its fields.
+   and setting the other fields. With no field left to take from [init], it is
+   evaluated for its side effects and not copied. JSX props follow the same
+   rule. A shallow copy is an object spread, so an array record always copies
+   its fields.
    TODO: More strategies
    3 + 2 * List.length lbl_expr_list >= size (density) *)
 let record_copies_fields
@@ -1063,6 +1065,7 @@ let record_copies_fields
     ~(init : expression option) =
   match init with
   | None -> true
+  | Some _ when writes_all_labels fields -> true
   | Some _ -> (
     let lbl_all = all_labels fields in
     match lbl_all.(0).lbl_repres with
@@ -1070,6 +1073,14 @@ let record_copies_fields
     | Record_regular | Record_unboxed _ | Record_inlined _ | Record_extension ->
       Array.length lbl_all < 20
       && not (Array.exists (fun lbl -> lbl.lbl_optional) lbl_all))
+
+(* Whether [transl_record] leaves out the record's source: with no field to
+   take from it, a variable has nothing to evaluate. A binding for it would
+   count toward the size that decides whether a function is inlined. *)
+let drops_record_source fields (init : Lambda.t) =
+  match init with
+  | Lvar _ -> writes_all_labels fields
+  | _ -> false
 
 let jsx_props_of ~multi (props : expression) =
   match props.exp_desc with
@@ -1723,6 +1734,7 @@ and transl_jsx_element loc
       (* An optional prop that is statically [undefined] can be left out,
          unless it overrides a prop of the spread *)
       let has_spread = Option.is_some init && not copy_fields in
+      let drops_source = drops_record_source fields in
       let field (lbl : label_description) value =
         Some (lbl.lbl_runtime_name, lbl.lbl_optional && not has_spread, value)
       in
@@ -1754,7 +1766,9 @@ and transl_jsx_element loc
       let init, spread =
         match init with
         | None -> (None, None)
-        | Some init when copy_fields -> (Some (transl_exp init), None)
+        | Some init when copy_fields ->
+          let init = transl_exp init in
+          ((if drops_source init then None else Some init), None)
         | Some init -> (None, Some (transl_exp init))
       in
       (init, spread, fields, children)
@@ -1911,7 +1925,10 @@ and transl_record loc env fields repres opt_init_expr =
       in
       match opt_init_expr with
       | None -> lam
-      | Some init_expr -> let_ Strict init_id (transl_exp init_expr) lam
+      | Some init_expr ->
+        let init = transl_exp init_expr in
+        if drops_record_source fields init then lam
+        else let_ Strict init_id init lam
     else
       (* Take a shallow copy of the init record, then mutate the fields
          of the copy *)

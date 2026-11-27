@@ -298,7 +298,10 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
         Use.guard
     in
     let field env (_, _, e) = expression env e in
-    Use.join (use (array field env es)) (option expression env eo)
+    let source = option expression env eo in
+    (* A source whose fields are all overridden is evaluated and dropped *)
+    let source = if writes_all_labels es then Use.discard source else source in
+    Use.join (use (array field env es)) source
   | Texp_ifthenelse (cond, ifso, ifnot) ->
     Use.(
       join
@@ -498,7 +501,11 @@ let check_recursive_bindings valbinds =
   List.iter
     (fun {vb_expr} ->
       match vb_expr.exp_desc with
-      | Texp_record {fields = [|(lbl, _, {exp_desc = Texp_function _})|]}
+      | Texp_record
+          {
+            fields = [|(lbl, _, {exp_desc = Texp_function _})|];
+            extended_expression = None;
+          }
         when Array.length lbl.lbl_all = 1 ->
         ()
       | Texp_function _ -> ()

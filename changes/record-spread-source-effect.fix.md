@@ -1,0 +1,1 @@
+- Fix the source of a record spread (or JSX props spread) not being evaluated when every field is overridden, as in `{...f(), a: 1, b: 2}`.
