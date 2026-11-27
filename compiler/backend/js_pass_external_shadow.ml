@@ -45,6 +45,12 @@ let rec add_declarations (block : J.block) names =
   List.fold_left
     (fun acc (st : J.statement) ->
       match st.statement_desc with
+      | Variable
+          {ident; value = Some {expression_desc = Record_rest (fields, _)}} ->
+        List.fold_left
+          (fun acc ident -> add_binding ident acc)
+          (add_binding ident acc)
+          (J.record_rest_field_idents fields)
       | Variable {ident} -> add_binding ident acc
       | Block block -> add_declarations block acc
       | _ -> acc)

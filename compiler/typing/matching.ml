@@ -605,14 +605,12 @@ let simplify_cases args cls =
           in
           (omega :: patl, action) :: simplify rem
         | Tpat_record (lbls, closed, rest) ->
-          let all_lbls = all_record_args lbls in
+          (* The rest is bound by [divide_record], together with the fields *)
           let full_pat =
-            {pat with pat_desc = Tpat_record (all_lbls, closed, None)}
-          in
-          let action =
-            match rest with
-            | None -> action
-            | Some rest -> bind_record_rest pat.pat_loc arg rest action
+            {
+              pat with
+              pat_desc = Tpat_record (all_record_args lbls, closed, rest);
+            }
           in
           (full_pat :: patl, action) :: simplify rem
         | Tpat_or _ -> (
@@ -1609,7 +1607,22 @@ let matcher_record num_fields p rem =
     record_matching_line num_fields lbl_pat_list @ rem
   | _ -> raise NoMatch
 
-let make_record_matching loc all_labels def = function
+(* The positions of the fields a record pattern takes variables from next to a
+   rest. *)
+let fields_bound_next_to_rest cases =
+  let add_bound positions (_, lbl, pat, _) =
+    if Set_ident.is_empty (extract_vars Set_ident.empty pat) then positions
+    else lbl.lbl_pos :: positions
+  in
+  List.fold_left
+    (fun positions (patl, _) ->
+      match patl with
+      | {pat_desc = Tpat_record (lbls, _, Some _)} :: _ ->
+        List.fold_left add_bound positions lbls
+      | _ -> positions)
+    [] cases
+
+let make_record_matching loc all_labels ~bound_next_to_rest def = function
   | [] -> fatal_error "Matching.make_record_matching"
   | (arg, _mut) :: argl ->
     let rec make_args pos =
@@ -1640,8 +1653,12 @@ let make_record_matching loc all_labels def = function
         in
         let str =
           match lbl.lbl_mut with
-          | Immutable -> Alias
           | Mutable -> StrictOpt
+          | Immutable ->
+            (* The rest is a copy made at the destructuring, and the fields
+               bound next to it are read then too: the record may be another
+               view of a mutable one, or be written by JavaScript. *)
+            if List.mem pos bound_next_to_rest then StrictOpt else Alias
         in
         (access, str) :: make_args (pos + 1)
     in
@@ -1650,10 +1667,18 @@ let make_record_matching loc all_labels def = function
     {cases = []; args = make_args 0; default = def}
 
 let divide_record all_labels p ctx pm =
+  let bind_rest ((patl, action) as case) =
+    match (patl, pm.args) with
+    | ({pat_desc = Tpat_record (_, _, Some rest)} as pat) :: _, (arg, _) :: _ ->
+      (patl, bind_record_rest pat.pat_loc arg rest action)
+    | _ -> case
+  in
   let get_args = get_args_record (Array.length all_labels) in
   divide_line (filter_ctx p)
-    (make_record_matching p.pat_loc all_labels)
-    get_args p ctx pm
+    (make_record_matching p.pat_loc all_labels
+       ~bound_next_to_rest:(fields_bound_next_to_rest pm.cases))
+    get_args p ctx
+    {pm with cases = List.map bind_rest pm.cases}
 
 (* Matching against an array pattern *)
 

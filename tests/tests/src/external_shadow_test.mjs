@@ -9,6 +9,7 @@ globalThis.shadowC = 30;
 globalThis.shadowD = 40;
 globalThis.shadowE = 50;
 globalThis.shadowF = 60;
+globalThis.shadowG = 80;
 globalThis.Test_utils = 70;
 ;
 
@@ -66,22 +67,42 @@ function loopE() {
   return sum;
 }
 
-Mocha.describe("File \"external_shadow_test.res\", line 70, characters 9-16", () => {
+let makeG = (() => ({shadowG: 1, other: 2}));
+
+let match = makeG();
+
+let {shadowG, ...restG} = match;
+
+function readGAfter() {
+  return globalThis.shadowG;
+}
+
+Mocha.describe("File \"external_shadow_test.res\", line 79, characters 9-16", () => {
   Mocha.test("globals shadowed by bindings with the same name", () => {
-    Test_utils.eq("File \"external_shadow_test.res\", line 72, characters 7-14", shadowA(2), 14);
-    Test_utils.eq("File \"external_shadow_test.res\", line 73, characters 7-14", globalThis.shadowA, 10);
-    Test_utils.eq("File \"external_shadow_test.res\", line 74, characters 7-14", valueA, 10);
-    Test_utils.eq("File \"external_shadow_test.res\", line 75, characters 7-14", globalThis.shadowF, 60);
-    Test_utils.eq("File \"external_shadow_test.res\", line 76, characters 7-14", shadowF(2), 68);
-    Test_utils.eq("File \"external_shadow_test.res\", line 77, characters 7-14", paramB(3), 29);
-    Test_utils.eq("File \"external_shadow_test.res\", line 78, characters 7-14", localC(1), 925474);
-    Test_utils.eq("File \"external_shadow_test.res\", line 79, characters 7-14", switchD(0), 89);
-    Test_utils.eq("File \"external_shadow_test.res\", line 80, characters 7-14", shadowD + 1 | 0, 41);
-    Test_utils.eq("File \"external_shadow_test.res\", line 81, characters 7-14", (shadowD << 1), 80);
-    Test_utils.eq("File \"external_shadow_test.res\", line 82, characters 7-14", shadowD - 3 | 0, 37);
-    Test_utils.eq("File \"external_shadow_test.res\", line 83, characters 7-14", shadowD + 5 | 0, 45);
-    Test_utils.eq("File \"external_shadow_test.res\", line 84, characters 7-14", loopE(), 155);
-    Test_utils.eq("File \"external_shadow_test.res\", line 85, characters 7-14", globalThis.Test_utils, 70);
+    Test_utils.eq("File \"external_shadow_test.res\", line 81, characters 7-14", shadowA(2), 14);
+    Test_utils.eq("File \"external_shadow_test.res\", line 82, characters 7-14", globalThis.shadowA, 10);
+    Test_utils.eq("File \"external_shadow_test.res\", line 83, characters 7-14", valueA, 10);
+    Test_utils.eq("File \"external_shadow_test.res\", line 84, characters 7-14", globalThis.shadowF, 60);
+    Test_utils.eq("File \"external_shadow_test.res\", line 85, characters 7-14", shadowF(2), 68);
+    Test_utils.eq("File \"external_shadow_test.res\", line 86, characters 7-14", paramB(3), 29);
+    Test_utils.eq("File \"external_shadow_test.res\", line 87, characters 7-14", localC(1), 925474);
+    Test_utils.eq("File \"external_shadow_test.res\", line 88, characters 7-14", switchD(0), 89);
+    Test_utils.eq("File \"external_shadow_test.res\", line 89, characters 7-14", shadowD + 1 | 0, 41);
+    Test_utils.eq("File \"external_shadow_test.res\", line 90, characters 7-14", (shadowD << 1), 80);
+    Test_utils.eq("File \"external_shadow_test.res\", line 91, characters 7-14", shadowD - 3 | 0, 37);
+    Test_utils.eq("File \"external_shadow_test.res\", line 92, characters 7-14", shadowD + 5 | 0, 45);
+    Test_utils.eq("File \"external_shadow_test.res\", line 93, characters 7-14", loopE(), 155);
+    Test_utils.eq("File \"external_shadow_test.res\", line 94, characters 7-14", globalThis.shadowG, 80);
+    Test_utils.eq("File \"external_shadow_test.res\", line 95, characters 7-14", [
+      shadowG,
+      restG
+    ], [
+      1,
+      {
+        other: 2
+      }
+    ]);
+    Test_utils.eq("File \"external_shadow_test.res\", line 96, characters 7-14", globalThis.Test_utils, 70);
   });
 });
 
@@ -96,5 +117,9 @@ export {
   localC,
   switchD,
   loopE,
+  makeG,
+  restG,
+  shadowG,
+  readGAfter,
 }
 /*  Not a pure module */

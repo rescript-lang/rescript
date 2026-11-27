@@ -11,6 +11,7 @@ globalThis.shadowC = 30;
 globalThis.shadowD = 40;
 globalThis.shadowE = 50;
 globalThis.shadowF = 60;
+globalThis.shadowG = 80;
 globalThis.Test_utils = 70;
 `)
 
@@ -21,6 +22,7 @@ module G = {
   @val external shadowD: int = "shadowD"
   @val external shadowE: int = "shadowE"
   @val external shadowF: int = "shadowF"
+  @val external shadowG: int = "shadowG"
   // same name as the imported module Test_utils
   @val external testUtils: int = "Test_utils"
 }
@@ -67,6 +69,13 @@ let loopE = () => {
   sum.contents
 }
 
+// toplevel field bound next to a record rest, before any use of the global
+type withG = {shadowG: int, other: int}
+type onlyOther = {other: int}
+let makeG: unit => withG = %raw(`() => ({shadowG: 1, other: 2})`)
+let {shadowG, ...onlyOther as restG} = makeG()
+let readGAfter = () => G.shadowG
+
 describe(__LOC__, () => {
   test("globals shadowed by bindings with the same name", () => {
     eq(__LOC__, shadowA(2), 14)
@@ -82,6 +91,8 @@ describe(__LOC__, () => {
     eq(__LOC__, switchD(3), 37)
     eq(__LOC__, switchD(5), 45)
     eq(__LOC__, loopE(), 155)
+    eq(__LOC__, readGAfter(), 80)
+    eq(__LOC__, (shadowG, restG), (1, {other: 2}))
     eq(__LOC__, G.testUtils, 70)
   })
 })
