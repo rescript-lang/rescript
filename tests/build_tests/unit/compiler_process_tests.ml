@@ -372,27 +372,27 @@ let escaped_exception_test _context =
 
 let domain_execution_test _context =
   Test_support.with_temp_dir "rewatch-domain-execution-" (fun root ->
-      let previous_count = Sys.getenv_opt "REWATCH_COMPILER_DOMAINS" in
+      let previous_count = Sys.getenv_opt "RESCRIPT_COMPILER_DOMAINS" in
       Fun.protect
         ~finally:(fun () ->
-          restore_environment "REWATCH_COMPILER_DOMAINS" previous_count)
+          restore_environment "RESCRIPT_COMPILER_DOMAINS" previous_count)
         (fun () ->
           List.iter
             (fun (cpus, workers) ->
               assert_equal workers
                 (Compiler_execution_mode.recommended_domain_count cpus))
             [(1, 1); (2, 1); (4, 3); (8, 7); (10, 8); (16, 8)];
-          Test_support.unsetenv "REWATCH_COMPILER_DOMAINS";
+          Test_support.unsetenv "RESCRIPT_COMPILER_DOMAINS";
           assert_equal
             (Compiler_execution_mode.recommended_domain_count
                (Domain.recommended_domain_count ()))
             (Compiler_execution_mode.configured_count ());
           let count =
-            if Sys.getenv_opt "REWATCH_TEST_DOMAIN_CONCURRENCY" = Some "1" then
+            if Sys.getenv_opt "RESCRIPT_TEST_DOMAIN_CONCURRENCY" = Some "1" then
               2
             else 1
           in
-          Unix.putenv "REWATCH_COMPILER_DOMAINS" (string_of_int count);
+          Unix.putenv "RESCRIPT_COMPILER_DOMAINS" (string_of_int count);
           assert_equal count (Compiler_execution_mode.configured_count ());
           List.iter
             (fun name ->
@@ -453,7 +453,7 @@ let domain_execution_test _context =
             "the PPX transformed request still writes JavaScript";
           List.iter
             (fun value ->
-              Unix.putenv "REWATCH_COMPILER_DOMAINS" value;
+              Unix.putenv "RESCRIPT_COMPILER_DOMAINS" value;
               check
                 (try
                    ignore (Compiler_execution_mode.configured_count ());
@@ -461,7 +461,7 @@ let domain_execution_test _context =
                  with Process.Error _ -> true)
                 ("domain count " ^ value ^ " is reported as invalid"))
             ["0"; "-1"; "abc"];
-          Unix.putenv "REWATCH_COMPILER_DOMAINS"
+          Unix.putenv "RESCRIPT_COMPILER_DOMAINS"
             (string_of_int (Compiler_execution_mode.max_domain_count + 1));
           assert_equal Compiler_execution_mode.max_domain_count
             (Compiler_execution_mode.configured_count ())

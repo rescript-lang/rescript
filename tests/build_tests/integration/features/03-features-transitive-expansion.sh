@@ -7,9 +7,9 @@ bold "Test: --features=full transitively expands through the features map"
 
 pushd ./packages/with-features > /dev/null
 
-"$REWATCH_EXECUTABLE" clean &> /dev/null
+"$RESCRIPT_EXECUTABLE" clean &> /dev/null
 
-error_output=$("$REWATCH_EXECUTABLE" build --features full 2>&1)
+error_output=$("$RESCRIPT_EXECUTABLE" build --features full 2>&1)
 if [ $? -ne 0 ];
 then
   error "Build with --features full failed"
@@ -28,5 +28,5 @@ else
   exit 1
 fi
 
-"$REWATCH_EXECUTABLE" clean &> /dev/null
+"$RESCRIPT_EXECUTABLE" clean &> /dev/null
 popd > /dev/null

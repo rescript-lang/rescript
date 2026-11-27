@@ -7,7 +7,7 @@ bold "Test: --features with empty value is rejected"
 
 pushd ./packages/with-features > /dev/null
 
-error_output=$("$REWATCH_EXECUTABLE" build --features "" 2>&1)
+error_output=$("$RESCRIPT_EXECUTABLE" build --features "" 2>&1)
 status=$?
 
 if [ "$status" -eq 0 ]; then

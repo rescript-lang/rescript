@@ -7,10 +7,10 @@ bold "Test: toggling off a feature removes previously-compiled artifacts on next
 
 pushd ./packages/with-features > /dev/null
 
-"$REWATCH_EXECUTABLE" clean &> /dev/null
+"$RESCRIPT_EXECUTABLE" clean &> /dev/null
 
 # First build with all features: experimental should be compiled
-error_output=$("$REWATCH_EXECUTABLE" build 2>&1)
+error_output=$("$RESCRIPT_EXECUTABLE" build 2>&1)
 if [ $? -ne 0 ]; then
   error "Initial full build failed"
   printf "%s\n" "$error_output" >&2
@@ -25,7 +25,7 @@ if [ ! -f "src-experimental/Experimental.mjs" ]; then
 fi
 
 # Rebuild with only 'native' active
-error_output=$("$REWATCH_EXECUTABLE" build --features native 2>&1)
+error_output=$("$RESCRIPT_EXECUTABLE" build --features native 2>&1)
 if [ $? -ne 0 ]; then
   error "Restricted rebuild failed"
   printf "%s\n" "$error_output" >&2
@@ -47,5 +47,5 @@ if [ ! -f "src-native/Native.mjs" ]; then
   exit 1
 fi
 
-"$REWATCH_EXECUTABLE" clean &> /dev/null
+"$RESCRIPT_EXECUTABLE" clean &> /dev/null
 popd > /dev/null

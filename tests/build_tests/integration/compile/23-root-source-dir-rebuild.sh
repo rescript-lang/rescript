@@ -29,7 +29,7 @@ JSON
   printf 'let value = 1\n' > "$fixture/Root.res"
   printf 'let value = Root.value + 1\n' > "$fixture/ui/Component.res"
 
-  if ! compiler_output=$(cd "$fixture" && "$REWATCH_EXECUTABLE" build 2>&1); then
+  if ! compiler_output=$(cd "$fixture" && "$RESCRIPT_EXECUTABLE" build 2>&1); then
     error "Initial $name fixture build failed"
     printf "%s\n" "$compiler_output" >&2
     return 1
@@ -37,7 +37,7 @@ JSON
 
   # Several unchanged builds, since a removed output only shows on the next one.
   for attempt in 1 2 3; do
-    compiler_output=$(cd "$fixture" && "$REWATCH_EXECUTABLE" build 2>&1)
+    compiler_output=$(cd "$fixture" && "$RESCRIPT_EXECUTABLE" build 2>&1)
     if ! printf '%s\n' "$compiler_output" | grep -q "Compiled 0 modules"; then
       error "Unchanged $name build $attempt recompiled modules"
       printf "%s\n" "$compiler_output" >&2

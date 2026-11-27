@@ -2,7 +2,7 @@
 
 Features let a package declare optional parts of its source tree that can be included or excluded at build time. Use them to ship a library with optional backends, experimental modules, or platform-specific code without paying the compile cost when a consumer doesn't need them.
 
-Features are a `rewatch` extension and are not part of the legacy `bsb` build-configuration spec.
+Features are an extension of the ReScript build system and are not part of the legacy `bsb` build-configuration spec.
 
 ## Tagging a source directory
 
@@ -37,12 +37,12 @@ With the above, requesting `full` transitively enables `native` and `experimenta
 
 ## Selecting features on the command line
 
-When you run `rewatch build` or `rewatch watch`, pass `--features` to restrict compilation to a specific set. Without the flag, every feature is active and the whole source tree compiles:
+When you run `rescript build` or `rescript watch`, pass `--features` to restrict compilation to a specific set. Without the flag, every feature is active and the whole source tree compiles:
 
 ```
-rewatch build                            # all features active (default)
-rewatch build --features native          # only untagged + native
-rewatch build --features native,full     # multiple features; also expands `full`
+rescript build                           # all features active (default)
+rescript build --features native         # only untagged + native
+rescript build --features native,full    # multiple features; also expands `full`
 ```
 
 The CLI flag applies only to the **current package** — the one you're building from. It does not flow down to dependencies; each dependency's active feature set comes from its consumer declarations (see below).
@@ -73,13 +73,13 @@ When the same dependency is referenced by multiple consumers with different feat
 ## Interaction with other flags
 
 - **`type: "dev"` and `--prod`** are orthogonal to features. A source directory may declare both `type: "dev"` and a `feature`; it will only build when both filters pass (not in `--prod`, and the feature is active).
-- **`rewatch clean`** ignores `--features` and always cleans the full set of build artifacts across every feature-gated directory. This keeps `clean` predictable regardless of which features happen to be active.
+- **`rescript clean`** ignores `--features` and always cleans the full set of build artifacts across every feature-gated directory. This keeps `clean` predictable regardless of which features happen to be active.
 
 ## How incremental builds handle feature changes
 
-Toggling a feature off between builds removes its source files from the build's view. The next `rewatch build` sees the shrunken file set and cleans up the corresponding artifacts (`.mjs`, `.cmj`, etc.) through the same diff mechanism that handles deleted source files.
+Toggling a feature off between builds removes its source files from the build's view. The next `rescript build` sees the shrunken file set and cleans up the corresponding artifacts (`.mjs`, `.cmj`, etc.) through the same diff mechanism that handles deleted source files.
 
-For `rewatch watch`, a change to `features` in `rescript.json` triggers a full rebuild that recomputes the active set and re-registers watches on the active source directories. The CLI `--features` flag is evaluated once at watcher start; to change it you must restart the watcher.
+For `rescript watch`, a change to `features` in `rescript.json` triggers a full rebuild that recomputes the active set and re-registers watches on the active source directories. The CLI `--features` flag is evaluated once at watcher start; to change it you must restart the watcher.
 
 ## Validating feature names
 
@@ -107,6 +107,6 @@ For `rewatch watch`, a change to `features` in `rescript.json` triggers a full r
 }
 ```
 
-- `rewatch build` at `@example/lib` — compiles every source dir; `@other/heavy` builds with just its `native` feature because that's all the consumer requested; `@plain/dep` builds with all of its features.
-- `rewatch build --features all-backends` — compiles `src`, `src-native`, `src-web`; skips `src-experimental`.
-- `rewatch build --features experimental` — compiles `src`, `src-experimental`; skips the backends.
+- `rescript build` at `@example/lib` — compiles every source dir; `@other/heavy` builds with just its `native` feature because that's all the consumer requested; `@plain/dep` builds with all of its features.
+- `rescript build --features all-backends` — compiles `src`, `src-native`, `src-web`; skips `src-experimental`.
+- `rescript build --features experimental` — compiles `src`, `src-experimental`; skips the backends.

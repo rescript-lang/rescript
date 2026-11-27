@@ -131,7 +131,7 @@ Use the Dev Container tooling rather than building `.devcontainer/Dockerfile` di
 Main targets:
 
 ```sh
-# Build the compiler and the build system (rewatch)
+# Build the compiler and the build system
 make
 
 # Build the runtime/standard library

@@ -336,7 +336,7 @@ printf 'let value = 20\n' >"$work/watch-filter/inactive/Inactive.res"
 printf '{"name":"quiet-watch","sources":["src"]}\n' \
   >"$work/quiet-watch/rescript.json"
 printf 'let value = 1\n' >"$work/quiet-watch/src/A.res"
-printf 'require("fs").appendFileSync(process.env.REWATCH_WATCH_FILTER_MARKER, "done\\n")\n' \
+printf 'require("fs").appendFileSync(process.env.RESCRIPT_WATCH_FILTER_MARKER, "done\\n")\n' \
   >"$work/watch-filter-marker.js"
 default_runtime=$root/packages/@rescript/runtime
 case $(uname -s) in
@@ -1089,7 +1089,7 @@ fi
 checked=$((checked + 1))
 
 retained_graph_marker="$work/watch-retained-graph/after-build.log"
-REWATCH_WATCH_FILTER_MARKER="$retained_graph_marker" \
+RESCRIPT_WATCH_FILTER_MARKER="$retained_graph_marker" \
   "$rescript" watch --after-build "node $command_work/watch-filter-marker.js" \
     "$work/watch-retained-graph" \
     >"$work/watch-retained-graph.out" \
@@ -1180,7 +1180,7 @@ checked=$((checked + 1))
 
 if $file_symlinks_supported; then
   symlink_target_marker="$work/watch-symlink-target/after-build.log"
-  REWATCH_WATCH_FILTER_MARKER="$symlink_target_marker" \
+  RESCRIPT_WATCH_FILTER_MARKER="$symlink_target_marker" \
     "$rescript" watch --after-build "node $command_work/watch-filter-marker.js" \
     "$work/watch-symlink-target" \
     >"$work/watch-symlink-target.out" 2>"$work/watch-symlink-target.err" &
@@ -1223,7 +1223,7 @@ fi
 # The watch filter applies to file events too: an edit of a filtered-out or
 # feature-disabled source does not trigger a rebuild.
 filter_marker="$work/watch-filter/after-build.log"
-REWATCH_WATCH_FILTER_MARKER="$filter_marker" \
+RESCRIPT_WATCH_FILTER_MARKER="$filter_marker" \
   "$rescript" watch --features other --filter 'Include\.res$' \
     --after-build "node $command_work/watch-filter-marker.js" \
     "$work/watch-filter" \
@@ -1264,7 +1264,7 @@ checked=$((checked + 1))
 
 quiet_watch_project="$work/quiet-watch"
 quiet_watch_marker="$quiet_watch_project/after-build.log"
-REWATCH_WATCH_FILTER_MARKER="$quiet_watch_marker" \
+RESCRIPT_WATCH_FILTER_MARKER="$quiet_watch_marker" \
   "$rescript" watch -q \
     --after-build "node $command_work/watch-filter-marker.js" \
     "$quiet_watch_project" \

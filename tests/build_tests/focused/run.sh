@@ -605,7 +605,7 @@ cleanup() {
   for pid in $background_pids; do
     wait "$pid" 2>/dev/null || true
   done
-  if [ "${REWATCH_KEEP_TEST_WORK:-}" = "1" ]; then
+  if [ "${RESCRIPT_KEEP_TEST_WORK:-}" = "1" ]; then
     echo "Preserving focused test workspace: $work" >&2
   else
     rm -rf "$work"
@@ -898,7 +898,7 @@ after_build_log="$basic/after-build-stream.log"
   "$basic" >"$after_build_log" 2>&1 &
 after_build_pid=$!
 background_pids="$background_pids $after_build_pid"
-if ! wait_for_text "$after_build_log" REWATCH_AFTER_BUILD_READY; then
+if ! wait_for_text "$after_build_log" RESCRIPT_AFTER_BUILD_READY; then
   cat "$after_build_log" >&2
   exit 1
 fi
@@ -1591,7 +1591,7 @@ cp -R "$root/tests/build_tests/focused/warning-replay" "$work/warning-replay"
 warning_replay="$work/warning-replay"
 warning_call_log="$warning_replay/compiler-calls.log"
 warning_watch_log="$warning_replay/watch.log"
-env REWATCH_COMPILER_CALL_LOG="$(native_path "$warning_call_log")" \
+env RESCRIPT_COMPILER_CALL_LOG="$(native_path "$warning_call_log")" \
   "$port" watch "$warning_replay" >"$warning_watch_log" 2>&1 &
 warning_watch_pid=$!
 background_pids="$background_pids $warning_watch_pid"
@@ -1813,7 +1813,7 @@ if ! $windows_posix_shell; then
     "${namespace_stop_deps%,}" >"$namespace_stop/rescript.json"
   printf '{"name":"root","private":true,"workspaces":["packages/*"]}\n' \
     >"$namespace_stop/package.json"
-  REWATCH_COMPILER_CALL_LOG="$namespace_stop/calls.log" \
+  RESCRIPT_COMPILER_CALL_LOG="$namespace_stop/calls.log" \
     "$port" build "$namespace_stop" >"$namespace_stop/build.log" 2>&1 &
   namespace_stop_pid=$!
   background_pids="$background_pids $namespace_stop_pid"
@@ -1940,7 +1940,7 @@ printf '%s\n' '{"name":"retained-parse","sources":"src","package-specs":{"module
   >"$retained_parse/rescript.json"
 printf 'let value = 1\n' >"$retained_parse/src/A.res"
 printf 'let other = 1\n' >"$retained_parse/src/B.res"
-REWATCH_COMPILER_CALL_LOG="$retained_parse/calls.log" \
+RESCRIPT_COMPILER_CALL_LOG="$retained_parse/calls.log" \
   "$port" watch "$retained_parse" >"$retained_parse/watch.log" 2>&1 &
 retained_parse_pid=$!
 background_pids="$background_pids $retained_parse_pid"
@@ -2243,19 +2243,19 @@ rm -f "$out_of_source/src/Main.res"
 test ! -f "$out_of_source/lib/es6/src/Main.js"
 
 namespace_call_log="$namespace/compiler-calls.log"
-REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
+RESCRIPT_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
   "$port" build "$namespace"
 test -f "$namespace/lib/rescript/A-Widget.cmi"
 test -f "$namespace/src/B.js"
 : > "$namespace_call_log"
-REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
+RESCRIPT_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
   "$port" build "$namespace"
 if grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null; then
   echo "unchanged build unexpectedly recompiled its namespace" >&2
   exit 1
 fi
 printf '\nlet changed = 1\n' >> "$namespace/src/B.res"
-REWATCH_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
+RESCRIPT_COMPILER_CALL_LOG="$(native_path "$namespace_call_log")" \
   "$port" build "$namespace"
 grep -F 'Widget.mlmap' "$namespace_call_log" >/dev/null
 
@@ -2409,7 +2409,7 @@ printf '%s\n' \
   '{"name":"worker-allocations","sources":"src","package-specs":{"module":"esmodule","in-source":true,"suffix":".mjs"}}' \
   >"$worker_allocations/rescript.json"
 printf 'let x = 1\n' >"$worker_allocations/src/A.res"
-env REWATCH_REPORT_WORKER_ALLOCATIONS=1 REWATCH_COMPILER_DOMAINS=1 \
+env RESCRIPT_REPORT_WORKER_ALLOCATIONS=1 RESCRIPT_COMPILER_DOMAINS=1 \
   "$port" build "$worker_allocations" >"$worker_allocations/build.log" 2>&1
 worker_words=$(sed -n 's/^worker_allocated_words: \([0-9]*\)$/\1/p' "$worker_allocations/build.log")
 if ! test "${worker_words:-0}" -gt 0; then

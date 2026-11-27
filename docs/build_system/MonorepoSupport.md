@@ -1,6 +1,6 @@
-# Monorepo Support in `rewatch` (ReScript Build System)
+# Monorepo Support in the ReScript Build System
 
-This document describes **how `rewatch` infers monorepo structure**, **what invariants are required**, and **how build scope changes** depending on where you invoke the build.
+This document describes **how the build system infers monorepo structure**, **what invariants are required**, and **how build scope changes** depending on where you invoke the build.
 
 All statements are derived from:
 - `build_system/project_context.ml` – monorepo context detection, locality and dependency lookup
@@ -22,7 +22,7 @@ All statements are derived from:
 
 ## Build Modes
 
-`rewatch` does **not** read package manager workspace definitions (e.g., `pnpm-workspace.yaml`). Instead, it infers monorepo structure from:
+The build system does **not** read package manager workspace definitions (e.g., `pnpm-workspace.yaml`). Instead, it infers monorepo structure from:
 
 - `rescript.json` `dependencies` / `dev-dependencies` lists
 - `node_modules/<packageName>` resolution (typically workspace symlinks)
@@ -81,7 +81,7 @@ If no path exists, the build fails with: *"are node_modules up-to-date?"*
 
 ## Build Scope ("Package Graph")
 
-Starting from the current package, `rewatch` builds a **package graph**:
+Starting from the current package, the build system builds a **package graph**:
 
 1. **Always includes** the current package (marked as `is_root=true`)
 2. **Recursively includes** transitive `dependencies`

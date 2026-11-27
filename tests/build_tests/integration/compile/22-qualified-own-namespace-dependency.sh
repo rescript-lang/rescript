@@ -31,7 +31,7 @@ let value = Ns.Target.value + 1
 RES
 
 cd "$fixture"
-if ! compiler_output=$("$REWATCH_EXECUTABLE" build 2>&1); then
+if ! compiler_output=$("$RESCRIPT_EXECUTABLE" build 2>&1); then
   error "Clean build compiled User before Target"
   printf "%s\n" "$compiler_output" >&2
   exit 1
@@ -42,7 +42,7 @@ cat > src/Target.res <<'RES'
 let value = "not an int"
 RES
 
-if compiler_output=$("$REWATCH_EXECUTABLE" build 2>&1); then
+if compiler_output=$("$RESCRIPT_EXECUTABLE" build 2>&1); then
   error "Incremental build did not recompile User after Target changed"
   printf "%s\n" "$compiler_output" >&2
   exit 1

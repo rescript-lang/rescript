@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: It should format a single file"
 
-error_output=$("$REWATCH_EXECUTABLE" format packages/dep01/src/Dep01.res)
+error_output=$("$RESCRIPT_EXECUTABLE" format packages/dep01/src/Dep01.res)
 git_diff_file_count=$(git diff --name-only ./ | wc -l | xargs)
 if [ $? -eq 0 ] && [ $git_diff_file_count -eq 1 ];
 then

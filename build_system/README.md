@@ -91,13 +91,13 @@ there directly; dependencies are on its include path as their
 ## In-process compilation
 
 Independent parse and compile requests run on a bounded pool of OCaml domains.
-The pool has `min(8, max(1, CPUs - 1))` workers; set `REWATCH_COMPILER_DOMAINS`
+The pool has `min(8, max(1, CPUs - 1))` workers; set `RESCRIPT_COMPILER_DOMAINS`
 to choose another count: a positive integer, lowered to the machine's limit of
 `max(12, min(32, CPUs))`. The main domain schedules dependencies;
 workers run compiler requests and publish what they produce.
 
 The runtime's allocation report at exit (`OCAMLRUNPARAM=v=0x400`) only counts
-the main domain. With `REWATCH_REPORT_WORKER_ALLOCATIONS` set, the build also
+the main domain. With `RESCRIPT_REPORT_WORKER_ALLOCATIONS` set, the build also
 prints `worker_allocated_words: <n>`, the words its workers allocated, which
 the compiler benchmarks (`scripts/compilerBenchmarks.js`) add to it.
 
@@ -194,7 +194,6 @@ integration test script is run by `tests/build_tests/integration/suite.sh`.
 ## Packaging
 
 Each platform package contains `bin/rescript.exe`, together with
-`THIRD_PARTY_NOTICES_REWATCH.md` and `RE_LICENSE.md` for the bundled OCaml
-libraries. After a build,
+`THIRD_PARTY_LICENSES` for the bundled third-party libraries. After a build,
 `node scripts/updateArtifactList.js` must leave `packages/artifacts.json`
 unchanged.

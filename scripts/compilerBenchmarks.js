@@ -131,7 +131,7 @@ export function parseAllocatedWords(stderr) {
   if (!match) return undefined;
   // The build system compiles on worker domains, whose allocations the
   // runtime leaves out; it reports them itself when asked to
-  // (REWATCH_REPORT_WORKER_ALLOCATIONS).
+  // (RESCRIPT_REPORT_WORKER_ALLOCATIONS).
   const workers = /^worker_allocated_words: (\d+)$/m.exec(stderr);
   return Number(match[1]) + (workers ? Number(workers[1]) : 0);
 }
@@ -693,6 +693,10 @@ function countBuild(rescript, dir, inputs) {
   return {
     ...measureRun(rescript, ["build"], dir, false, {
       env: {
+        RESCRIPT_COMPILER_DOMAINS: "1",
+        RESCRIPT_REPORT_WORKER_ALLOCATIONS: "1",
+        // The base this pull request is measured against still reads the
+        // REWATCH_ names. The next pull request in the stack removes these.
         REWATCH_COMPILER_DOMAINS: "1",
         REWATCH_REPORT_WORKER_ALLOCATIONS: "1",
       },
