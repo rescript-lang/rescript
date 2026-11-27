@@ -1,4 +1,4 @@
-# Rewatch
+# ReScript build system
 
 This directory contains ReScript's build system and CLI (`rescript build`,
 `watch`, `clean`, `format`, and `compiler-args`). It ships as `rescript` in the
@@ -16,7 +16,7 @@ installed:
 
 ```sh
 make                                     # builds bsc and packages/@rescript/<platform>/bin/rescript.exe
-dune build rewatch-ocaml/rescript_ocaml.exe   # just this executable
+dune build build_system/rescript.exe     # just this executable
 ```
 
 The npm launcher (`cli/rescript.js`) supplies the runtime path. To run the
@@ -24,7 +24,7 @@ dune executable directly, point it at the runtime:
 
 ```sh
 export RESCRIPT_RUNTIME="$PWD/packages/@rescript/runtime"
-_build/default/rewatch-ocaml/rescript_ocaml.exe build path/to/project
+_build/default/build_system/rescript.exe build path/to/project
 ```
 
 Builds and `rescript format` use the embedded compiler. The `bsc.exe` next to
@@ -39,7 +39,7 @@ does not depend on the runner's libc. Its version comes from the shared
 
 | Area | Modules |
 |---|---|
-| CLI and entry point | `cli`, `rescript_ocaml`, `output` |
+| CLI and entry point | `cli`, `rescript`, `output` |
 | Configuration | `config_types`, `config_decode` (strict JSON decoding), `config` |
 | Projects and packages | `project_context` (workspace roots and dependency lookup), `package_resolution`, `package_traversal`, `package_graph`, `package_plan`, `package_diagnostics` |
 | Sources | `source`, `source_filter` (`--filter`), `source_dirs` |
@@ -127,7 +127,7 @@ requests on different domains don't interfere and repeated requests produce
 byte-identical artifacts. Compiler output is captured per request instead of
 going to the process's stdout and stderr. The compiler build identity is
 derived from the compiler sources, so compiler changes clean the build while
-rewatch-only changes don't.
+build-system-only changes don't.
 
 External PPXs, `js-post-build` hooks, and `--after-build` remain subprocesses
 under the process owners described below.
@@ -180,7 +180,7 @@ Windows CI.
 
 ```sh
 dune runtest tests/rewatch_ounit_tests                          # unit tests
-sh rewatch-ocaml/tests/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"   # focused end-to-end tests
+sh build_system/tests/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"   # focused end-to-end tests
 make test-rewatch                                               # integration suite in rewatch/tests
 ```
 

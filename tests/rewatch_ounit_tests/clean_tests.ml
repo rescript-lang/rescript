@@ -4,7 +4,7 @@ let check condition message = assert_bool message condition
 
 let write_file = Test_support.write_file
 
-let with_temp_dir = Test_support.with_temp_dir "rewatch-ocaml-clean-"
+let with_temp_dir = Test_support.with_temp_dir "build-system-clean-"
 
 let tests =
   "clean_tests" >:: fun _context ->

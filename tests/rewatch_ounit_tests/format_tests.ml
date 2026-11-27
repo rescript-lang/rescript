@@ -14,7 +14,7 @@ let contains text fragment =
 
 let write_file = Test_support.write_file
 
-let with_temp_dir = Test_support.with_temp_dir "rewatch-ocaml-format-"
+let with_temp_dir = Test_support.with_temp_dir "build-system-format-"
 
 let tests =
   "format_tests" >:: fun _context ->

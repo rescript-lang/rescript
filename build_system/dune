@@ -27,7 +27,7 @@
     (echo "let architecture = \"%{architecture}\"\n")))))
 
 (library
- (name rewatch_ocaml_lib)
+ (name build_system)
  (wrapped true)
  (modules
   string_util
@@ -104,8 +104,8 @@
   (names windows_job_stubs)))
 
 (executable
- (name rescript_ocaml)
- (modules rescript_ocaml)
+ (name rescript)
+ (modules rescript)
  (flags
-  (:standard -open Rewatch_ocaml_lib))
- (libraries rewatch_ocaml_lib))
+  (:standard -open Build_system))
+ (libraries build_system))

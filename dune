@@ -1,4 +1,4 @@
-(dirs compiler syntax tests analysis tools rewatch-ocaml)
+(dirs compiler syntax tests analysis tools build_system)
 
 ; All warnings are enabled, except:
 ; - 4 (fragile-match): wildcard cases are used deliberately.

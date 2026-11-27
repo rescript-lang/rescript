@@ -1,5 +1,5 @@
 {
-  "name": "rewatch-ocaml-gentype",
+  "name": "build-system-gentype",
   "sources": "src",
   "dependencies": ["dep"],
   "package-specs": {"module": "esmodule", "in-source": true},

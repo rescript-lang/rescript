@@ -1,7 +1,7 @@
-# Rewatch agent instructions
+# Build system agent instructions
 
 Read these alongside the [root instructions](../AGENTS.md) and the
-[Rewatch guide](README.md). Paths and commands are relative to the
+[build system guide](README.md). Paths and commands are relative to the
 repository root.
 
 ## Observable behavior
@@ -9,7 +9,7 @@ repository root.
 - A change in observable behavior (output, exit status, generated files,
   configuration handling) needs a test, and a changelog fragment when users
   can notice it.
-- Only update the snapshots in `rewatch/tests` and `rewatch-ocaml/tests` for an
+- Only update the snapshots in `rewatch/tests` and `build_system/tests` for an
   intended output change, never just to make a failing test pass.
 
 ## Platforms
@@ -34,7 +34,7 @@ repository root.
 
 - Unit tests: `dune runtest tests/rewatch_ounit_tests`.
 - Focused end-to-end tests:
-  `sh rewatch-ocaml/tests/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"`.
+  `sh build_system/tests/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"`.
 - Integration suite: `make test-rewatch`. Run it for any change to build
   behavior.
 - Add a test for every bug fix. Prefer the integration suite in

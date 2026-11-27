@@ -7,7 +7,7 @@ let write_file = Test_support.write_file
 
 let tests =
   "package_metadata_tests" >:: fun _context ->
-  let root = Filename.temp_file "rewatch-ocaml-package-" "" in
+  let root = Filename.temp_file "build-system-package-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
   let root = Unix.realpath root in

@@ -35,7 +35,7 @@ let rec contains_adjacent left right = function
   | [] -> false
 
 let with_config_file test _context =
-  let root = Filename.temp_file "rewatch-ocaml-config-" "" in
+  let root = Filename.temp_file "build-system-config-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
   let root = Unix.realpath root in

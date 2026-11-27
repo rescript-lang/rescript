@@ -9,7 +9,7 @@ set -eu
 unset CLICOLOR_FORCE
 
 root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
-rescript=${1:-$root/_build/default/rewatch-ocaml/rescript_ocaml.exe}
+rescript=${1:-$root/_build/default/build_system/rescript.exe}
 rescript=$(realpath "$rescript")
 work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-command-validation-XXXXXX")
 # Compiler diagnostics contain canonical paths. Resolve platform aliases such
@@ -556,14 +556,14 @@ line_count_stays() {
 }
 
 run_build_output_case redirected-success 0 \
-  "$root/rewatch-ocaml/tests/basic" redirected
+  "$root/build_system/tests/basic" redirected
 run_build_output_case redirected-compile-error 1 \
-  "$root/rewatch-ocaml/tests/failure" redirected
+  "$root/build_system/tests/failure" redirected
 run_build_output_case redirected-parse-error 1 \
   "$work/redirected-parse-fixture" redirected
 run_multiple_parse_errors_case
 run_build_output_case redirected-warning 0 \
-  "$root/rewatch-ocaml/tests/warning-replay" redirected
+  "$root/build_system/tests/warning-replay" redirected
 run_build_output_case redirected-config-diagnostics 0 \
   "$work/redirected-config-diagnostics" redirected
 run_build_output_case forced-color-config-diagnostics 0 \
@@ -576,10 +576,10 @@ if [ -s "$work/rescript.out" ] || [ -s "$work/rescript.err" ]; then
   exit 1
 fi
 run_build_output_case quiet-compile-error 1 \
-  "$root/rewatch-ocaml/tests/failure" quiet
+  "$root/build_system/tests/failure" quiet
 run_build_output_case quiet-parse-error 1 "$work/redirected-parse-fixture" quiet
 run_build_output_case quiet-warning 0 \
-  "$root/rewatch-ocaml/tests/warning-replay" quiet
+  "$root/build_system/tests/warning-replay" quiet
 
 run_case build-subcommand-version accept build --version
 run_case short-help accept -h

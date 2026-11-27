@@ -26,7 +26,7 @@
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe
   ../../tools/bin/main.exe
-  ../../rewatch-ocaml/rescript_ocaml.exe)
+  ../../build_system/rescript.exe)
  (mode
   (promote
    (until-clean)
@@ -36,7 +36,7 @@
    (run strip -o bsc.exe ../bsc/rescript_compiler_main.exe)
    (run strip -o rescript-editor-analysis.exe ../../analysis/bin/main.exe)
    (run strip -o rescript-tools.exe ../../tools/bin/main.exe)
-   (run strip -o rescript.exe ../../rewatch-ocaml/rescript_ocaml.exe))))
+   (run strip -o rescript.exe ../../build_system/rescript.exe))))
 
 (rule
  (enabled_if
@@ -53,7 +53,7 @@
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe
   ../../tools/bin/main.exe
-  ../../rewatch-ocaml/rescript_ocaml.exe)
+  ../../build_system/rescript.exe)
  (mode
   (promote
    (until-clean)
@@ -63,7 +63,7 @@
    (run strip -o bsc.exe ../bsc/rescript_compiler_main.exe)
    (run strip -o rescript-editor-analysis.exe ../../analysis/bin/main.exe)
    (run strip -o rescript-tools.exe ../../tools/bin/main.exe)
-   (run strip -o rescript.exe ../../rewatch-ocaml/rescript_ocaml.exe))))
+   (run strip -o rescript.exe ../../build_system/rescript.exe))))
 
 (rule
  (enabled_if
@@ -80,7 +80,7 @@
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe
   ../../tools/bin/main.exe
-  ../../rewatch-ocaml/rescript_ocaml.exe)
+  ../../build_system/rescript.exe)
  (mode
   (promote
    (until-clean)
@@ -90,7 +90,7 @@
    (run strip -o bsc.exe ../bsc/rescript_compiler_main.exe)
    (run strip -o rescript-editor-analysis.exe ../../analysis/bin/main.exe)
    (run strip -o rescript-tools.exe ../../tools/bin/main.exe)
-   (run strip -o rescript.exe ../../rewatch-ocaml/rescript_ocaml.exe))))
+   (run strip -o rescript.exe ../../build_system/rescript.exe))))
 
 (rule
  (enabled_if
@@ -107,7 +107,7 @@
   ../bsc/rescript_compiler_main.exe
   ../../analysis/bin/main.exe
   ../../tools/bin/main.exe
-  ../../rewatch-ocaml/rescript_ocaml.exe)
+  ../../build_system/rescript.exe)
  (mode
   (promote
    (until-clean)
@@ -117,4 +117,4 @@
    (copy ../bsc/rescript_compiler_main.exe bsc.exe)
    (copy ../../analysis/bin/main.exe rescript-editor-analysis.exe)
    (copy ../../tools/bin/main.exe rescript-tools.exe)
-   (copy ../../rewatch-ocaml/rescript_ocaml.exe rescript.exe))))
+   (copy ../../build_system/rescript.exe rescript.exe))))

@@ -1,7 +1,5 @@
 {
-  "name": "rewatch-ocaml-namespace-entry",
-  "namespace": "EntryNamespace",
-  "namespace-entry": "Entry",
+  "name": "build-system-basic",
   "sources": {"dir": "src", "subdirs": true},
   "package-specs": {"module": "esmodule", "in-source": true},
   "suffix": ".mjs"

@@ -3,9 +3,9 @@
 This document describes **how `rewatch` infers monorepo structure**, **what invariants are required**, and **how build scope changes** depending on where you invoke the build.
 
 All statements are derived from:
-- `rewatch-ocaml/project_context.ml` – monorepo context detection, locality and dependency lookup
-- `rewatch-ocaml/package_resolution.ml`, `package_traversal.ml`, `package_graph.ml` – package discovery and traversal
-- `rewatch-ocaml/package_parse.ml`, `module_graph.ml`, `package_compilation.ml` – build phases
+- `build_system/project_context.ml` – monorepo context detection, locality and dependency lookup
+- `build_system/package_resolution.ml`, `package_traversal.ml`, `package_graph.ml` – package discovery and traversal
+- `build_system/package_parse.ml`, `module_graph.ml`, `package_compilation.ml` – build phases
 
 ---
 

@@ -27,22 +27,11 @@ let resolve_program ~path_separator ~executable_extensions ~normalize_directory
 
 (* A lock records the PID of the rescript process that owns it. A PID that has
    since been reused by an unrelated process must not keep the lock alive, so
-   only the names of the build-system executables count: the packaged
-   executable and the dune development executable. Linux truncates process
-   names to 15 bytes, so a truncated name also matches. *)
-let lock_owner_names = ["rescript"; "rescript_ocaml"]
-
+   only the name of the build-system executable counts. The packaged executable
+   and the dune development executable are both called rescript. *)
 let is_lock_owner_name name =
   let name = String.lowercase_ascii name in
-  let without_extension =
-    if Filename.check_suffix name ".exe" then Filename.chop_suffix name ".exe"
-    else name
-  in
-  List.mem without_extension lock_owner_names
-  || String.length name >= 15
-     && List.exists
-          (fun owner -> String.starts_with ~prefix:name (owner ^ ".exe"))
-          lock_owner_names
+  name = "rescript" || name = "rescript.exe"
 
 let process_is_active ~probe value =
   try

@@ -9,7 +9,7 @@ let write_config root contents =
 
 let tests =
   "project_context_tests" >:: fun _context ->
-  let root = Filename.temp_file "rewatch-ocaml-project-context-" "" in
+  let root = Filename.temp_file "build-system-project-context-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
   let root = Unix.realpath root in
@@ -137,7 +137,7 @@ let tests =
       let repository_tmp = Filename.concat (Sys.getcwd ()) "tmp" in
       File_util.ensure_dir repository_tmp;
       let standalone =
-        Filename.temp_file ~temp_dir:repository_tmp "rewatch-ocaml-standalone-"
+        Filename.temp_file ~temp_dir:repository_tmp "build-system-standalone-"
           ""
       in
       Sys.remove standalone;
