@@ -35,7 +35,14 @@ interactive:
 isolated:
 	sh isolated/run.sh "$(RESCRIPT)"
 
+# The suite fails when another process runs its executable as it starts, so it
+# runs a copy of the binaries: the other suites, run alongside it with -j or by
+# another make, use the original.
 integration:
-	./integration/suite.sh "$(RESCRIPT)"
+	mkdir -p $(ROOT)/tmp
+	bin=$$(mktemp -d "$(ROOT)/tmp/integration-bin.XXXXXX") && \
+	  cp -R "$$(dirname "$(RESCRIPT)")"/. "$$bin" && \
+	  { ./integration/suite.sh "$$bin/$$(basename "$(RESCRIPT)")"; status=$$?; \
+	    rm -rf "$$bin"; exit $$status; }
 
 .PHONY: test unit snapshots verbose interactive isolated integration

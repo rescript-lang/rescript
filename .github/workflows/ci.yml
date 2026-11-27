@@ -260,19 +260,17 @@ jobs:
 
       # The integration suite works in tests/build_tests/testrepo and the
       # isolated one in directories of its own, so they run side by side; each
-      # takes one to three and a half minutes. The integration suite fails when
-      # another process runs its executable as it starts, so it runs a copy.
-      # Its output is shown once both are done.
+      # takes one to three and a half minutes. The integration target runs a
+      # copy of the binaries, so the isolated suite's processes don't count as
+      # leftovers. Its output is shown once both are done.
       - name: Run build system integration and isolated tests
         if: ${{ !matrix.skip_build_system_integration_tests }}
         timeout-minutes: 30
         run: |
           bin=packages/@rescript/${{ matrix.node-target }}/bin
-          rm -rf tmp/integration-bin
           mkdir -p tmp
-          cp -R "$bin" tmp/integration-bin
           integration_log=tmp/integration-tests.log
-          make -C tests/build_tests integration RESCRIPT="$PWD/tmp/integration-bin/rescript.exe" \
+          make -C tests/build_tests integration RESCRIPT="$PWD/$bin/rescript.exe" \
             >"$integration_log" 2>&1 &
           integration=$!
 
