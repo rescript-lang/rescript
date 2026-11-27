@@ -288,9 +288,8 @@ type fn_exp_state =
 let default_fn_exp_state = No_name {single_arg = false}
 
 (* Whether [e] printed at the unary-minus level starts with [-]: a negative
-   literal, or [0 - x] which is itself printed as [-x]. An identity [Some] or
-   an untagged constructor is
-   printed as its payload. *)
+   literal, or [0 - x] which is itself printed as [-x]. An identity [Some], or
+   the block of an untagged constructor, is printed as its payload. *)
 let rec prints_with_leading_minus (e : J.expression) =
   match e.expression_desc with
   | Number (Int {i; c = None}) -> i < 0l
