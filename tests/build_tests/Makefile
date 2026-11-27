@@ -6,7 +6,9 @@ SHELL = /bin/bash
 # default the one in the platform package; pass an absolute path to override.
 
 ROOT := $(abspath ../..)
-RESCRIPT ?= $(shell node -p "require('$(ROOT)/cli/common/bins.cjs').rescript_exe")
+# Relative, so that a make that spells paths the MSYS way still gives node
+# a path it can resolve.
+RESCRIPT ?= $(shell node -p "require('../../cli/common/bins.cjs').rescript_exe")
 
 test: unit snapshots verbose interactive isolated integration
 
@@ -37,12 +39,15 @@ isolated:
 
 # The suite fails when another process runs its executable as it starts, so it
 # runs a copy of the binaries: the other suites, run alongside it with -j or by
-# another make, use the original.
+# another make, use the original. The copy's path is always the same, so a
+# watcher left by an interrupted earlier run still counts as a leftover, and
+# the next run replaces it.
+INTEGRATION_BIN := $(ROOT)/tmp/integration-bin
+
 integration:
-	mkdir -p $(ROOT)/tmp
-	bin=$$(mktemp -d "$(ROOT)/tmp/integration-bin.XXXXXX") && \
-	  cp -R "$$(dirname "$(RESCRIPT)")"/. "$$bin" && \
-	  { ./integration/suite.sh "$$bin/$$(basename "$(RESCRIPT)")"; status=$$?; \
-	    rm -rf "$$bin"; exit $$status; }
+	rm -rf "$(INTEGRATION_BIN)"
+	mkdir -p "$(INTEGRATION_BIN)"
+	cp -R "$$(dirname "$(RESCRIPT)")"/. "$(INTEGRATION_BIN)"
+	./integration/suite.sh "$(INTEGRATION_BIN)/$$(basename "$(RESCRIPT)")"
 
 .PHONY: test unit snapshots verbose interactive isolated integration
