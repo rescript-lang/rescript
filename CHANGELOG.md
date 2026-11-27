@@ -19,6 +19,7 @@
 - Integer patterns that alias the same int32 value (e.g. `0xFFFF_FFFF` and `-1`) may now produce unused-case warnings. https://github.com/rescript-lang/rescript/pull/8717 https://github.com/rescript-lang/rescript/pull/8858
 - Fix constant folding of a `switch` picking the wrong case for `@as(int)` constructors and for coerced variants. https://github.com/rescript-lang/rescript/pull/9318
 - Fix constant folding of comparisons between `@as(int)` constructors and other constructors, and merging of switch arms returning them. https://github.com/rescript-lang/rescript/pull/9319
+- Fix float addition and subtraction of constants that came from int literals being folded with int wraparound, float addition chains such as `x +. Float.fromInt(1) +. Float.fromInt(2)` being reassociated, and subtracting an expression that starts with a minus sign from zero printing `--`. https://github.com/rescript-lang/rescript/pull/9415
 
 #### :nail_care: Polish
 
