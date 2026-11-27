@@ -2210,15 +2210,19 @@ function update_loop(canvas, param, map_dim) {
     if (player$1._2.kill === true) {
       return game_loss(state.ctx);
     }
+    let score = state.score;
+    let coins = state.coins;
+    let multiplier = state.multiplier;
+    let game_over = state.game_over;
     let state$1 = {
       bgd: state.bgd,
       ctx: state.ctx,
       vpt: update(state.vpt, player$1._2.pos),
       map: state.map,
-      score: state.score,
-      coins: state.coins,
-      multiplier: state.multiplier,
-      game_over: state.game_over
+      score: score,
+      coins: coins,
+      multiplier: multiplier,
+      game_over: game_over
     };
     Stdlib_List.forEach(objs, obj => {
       run_update_collid(state$1, obj, objs);
