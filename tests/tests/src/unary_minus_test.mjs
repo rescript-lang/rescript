@@ -2,6 +2,8 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
+import * as Stdlib_JsExn from "@rescript/runtime/lib/es6/Stdlib_JsExn.mjs";
+import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
 
 function id(x) {
   return x;
@@ -70,71 +72,92 @@ Mocha.describe("Unary_minus_test", () => {
   Mocha.test("negated int", () => {
     let n = id(0);
     Test_utils.eq("File \"unary_minus_test.res\", line 69, characters 7-14", isNegativeZero(-n | 0), false);
-    Test_utils.eq("File \"unary_minus_test.res\", line 70, characters 7-14", -id(5) & 3, 3);
-    Test_utils.eq("File \"unary_minus_test.res\", line 71, characters 7-14", -id(5) | 0 | id(0), -5);
-    Test_utils.eq("File \"unary_minus_test.res\", line 72, characters 7-14", (1 << (-id(-3) | 0)), 8);
-    Test_utils.eq("File \"unary_minus_test.res\", line 73, characters 7-14", -(id(2) ** id(3) | 0) | 0, -8);
+    Test_utils.eq("File \"unary_minus_test.res\", line 70, characters 7-14", -id(5) | 0 | id(0), -5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 71, characters 7-14", -(id(2) ** id(3) | 0) | 0, -8);
   });
   Mocha.test("negated int as the left operand of a bitwise operator", () => {
-    Test_utils.eq("File \"unary_minus_test.res\", line 77, characters 7-14", -id(5) & 3, 3);
-    Test_utils.eq("File \"unary_minus_test.res\", line 78, characters 7-14", -id(5) | 0 | 2, -5);
-    Test_utils.eq("File \"unary_minus_test.res\", line 79, characters 7-14", (-id(5) | 0) ^ 2, -7);
-    Test_utils.eq("File \"unary_minus_test.res\", line 80, characters 7-14", ((-id(5) | 0) << 1), -10);
-    Test_utils.eq("File \"unary_minus_test.res\", line 81, characters 7-14", ((-id(5) | 0) >> 1), -3);
-    Test_utils.eq("File \"unary_minus_test.res\", line 82, characters 7-14", ((-id(5) | 0) >>> 28), 15);
+    Test_utils.eq("File \"unary_minus_test.res\", line 75, characters 7-14", -id(5) & 3, 3);
+    Test_utils.eq("File \"unary_minus_test.res\", line 76, characters 7-14", -id(5) | 0 | 2, -5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 77, characters 7-14", (-id(5) | 0) ^ 2, -7);
+    Test_utils.eq("File \"unary_minus_test.res\", line 78, characters 7-14", ((-id(5) | 0) << 1), -10);
+    Test_utils.eq("File \"unary_minus_test.res\", line 79, characters 7-14", ((-id(5) | 0) >> 1), -3);
+    Test_utils.eq("File \"unary_minus_test.res\", line 80, characters 7-14", ((-id(5) | 0) >>> 28), 15);
   });
   Mocha.test("negated int as the right operand of a bitwise operator", () => {
-    Test_utils.eq("File \"unary_minus_test.res\", line 86, characters 7-14", 3 & (-id(5) | 0), 3);
-    Test_utils.eq("File \"unary_minus_test.res\", line 87, characters 7-14", 2 | -id(5) | 0, -5);
-    Test_utils.eq("File \"unary_minus_test.res\", line 88, characters 7-14", 2 ^ (-id(5) | 0), -7);
-    Test_utils.eq("File \"unary_minus_test.res\", line 89, characters 7-14", (1 << (-id(-3) | 0)), 8);
-    Test_utils.eq("File \"unary_minus_test.res\", line 90, characters 7-14", (-16 >> (-id(-3) | 0)), -2);
-    Test_utils.eq("File \"unary_minus_test.res\", line 91, characters 7-14", (16 >>> (-id(-3) | 0)) | 0, 2);
+    Test_utils.eq("File \"unary_minus_test.res\", line 84, characters 7-14", 3 & (-id(5) | 0), 3);
+    Test_utils.eq("File \"unary_minus_test.res\", line 85, characters 7-14", 2 | -id(5) | 0, -5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 86, characters 7-14", 2 ^ (-id(5) | 0), -7);
+    Test_utils.eq("File \"unary_minus_test.res\", line 87, characters 7-14", (1 << (-id(-3) | 0)), 8);
+    Test_utils.eq("File \"unary_minus_test.res\", line 88, characters 7-14", (-16 >> (-id(-3) | 0)), -2);
+    Test_utils.eq("File \"unary_minus_test.res\", line 89, characters 7-14", (16 >>> (-id(-3) | 0)) | 0, 2);
   });
   Mocha.test("subtraction of a negative from a converted zero int", () => {
     let five = id(5);
-    Test_utils.eq("File \"unary_minus_test.res\", line 96, characters 7-14", - - five | 0, 5);
-    Test_utils.eq("File \"unary_minus_test.res\", line 97, characters 7-14", - - (base ** exponent) | 0, 8);
-    Test_utils.eq("File \"unary_minus_test.res\", line 98, characters 7-14", - -5 | 0, 5);
-    Test_utils.eq("File \"unary_minus_test.res\", line 99, characters 7-14", - - five | 0, 5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 94, characters 7-14", - - five | 0, 5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 95, characters 7-14", - - (base ** exponent) | 0, 8);
+    Test_utils.eq("File \"unary_minus_test.res\", line 96, characters 7-14", - -5 | 0, 5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 97, characters 7-14", - - five | 0, 5);
   });
-  Mocha.test("negation of an inlined negative int literal", () => Test_utils.eq("File \"unary_minus_test.res\", line 103, characters 7-14", negateFiveAfter(id(2)), 5));
+  Mocha.test("negation of an inlined negative int literal", () => Test_utils.eq("File \"unary_minus_test.res\", line 101, characters 7-14", negateFiveAfter(id(2)), 5));
+  Mocha.test("int negation of an operand printed with a leading minus", () => {
+    Test_utils.eq("File \"unary_minus_test.res\", line 107, characters 7-14", - -5 | 0, 5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 108, characters 7-14", - -5 | 0, 5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 109, characters 7-14", 3 & (- -5 | 0), 1);
+    Test_utils.eq("File \"unary_minus_test.res\", line 110, characters 7-14", - -5.5 | 0, 5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 111, characters 7-14", - -0 | 0, 0);
+    Test_utils.eq("File \"unary_minus_test.res\", line 112, characters 7-14", - - id(5) | 0, 5);
+  });
+  Mocha.test("int negation of a negative bigint", () => {
+    let error;
+    try {
+      id(- -5n | 0);
+      error = undefined;
+    } catch (raw_e) {
+      let e = Primitive_exceptions.internalToException(raw_e);
+      if (e.RE_EXN_ID === "JsExn") {
+        error = Stdlib_JsExn.name(e._1);
+      } else {
+        throw e;
+      }
+    }
+    Test_utils.eq("File \"unary_minus_test.res\", line 123, characters 7-14", error, "TypeError");
+  });
   Mocha.test("subtraction from a converted zero int under a bitwise operator", () => {
     let five = id(5);
     let minusThree = id(-3);
-    Test_utils.eq("File \"unary_minus_test.res\", line 111, characters 7-14", -five & 3, 3);
-    Test_utils.eq("File \"unary_minus_test.res\", line 112, characters 7-14", -five | 2, -5);
-    Test_utils.eq("File \"unary_minus_test.res\", line 113, characters 7-14", -five ^ 2, -7);
-    Test_utils.eq("File \"unary_minus_test.res\", line 114, characters 7-14", (-five << 1), -10);
-    Test_utils.eq("File \"unary_minus_test.res\", line 115, characters 7-14", (-five >> 1), -3);
-    Test_utils.eq("File \"unary_minus_test.res\", line 116, characters 7-14", (-five >>> 28), 15);
-    Test_utils.eq("File \"unary_minus_test.res\", line 117, characters 7-14", 3 & -five, 3);
-    Test_utils.eq("File \"unary_minus_test.res\", line 118, characters 7-14", 2 | -five, -5);
-    Test_utils.eq("File \"unary_minus_test.res\", line 119, characters 7-14", 2 ^ -five, -7);
-    Test_utils.eq("File \"unary_minus_test.res\", line 120, characters 7-14", (1 << -minusThree), 8);
-    Test_utils.eq("File \"unary_minus_test.res\", line 121, characters 7-14", (-16 >> -minusThree), -2);
-    Test_utils.eq("File \"unary_minus_test.res\", line 122, characters 7-14", (16 >>> -minusThree) | 0, 2);
-    Test_utils.eq("File \"unary_minus_test.res\", line 123, characters 7-14", 3 & -(base ** exponent), 0);
+    Test_utils.eq("File \"unary_minus_test.res\", line 131, characters 7-14", -five & 3, 3);
+    Test_utils.eq("File \"unary_minus_test.res\", line 132, characters 7-14", -five | 2, -5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 133, characters 7-14", -five ^ 2, -7);
+    Test_utils.eq("File \"unary_minus_test.res\", line 134, characters 7-14", (-five << 1), -10);
+    Test_utils.eq("File \"unary_minus_test.res\", line 135, characters 7-14", (-five >> 1), -3);
+    Test_utils.eq("File \"unary_minus_test.res\", line 136, characters 7-14", (-five >>> 28), 15);
+    Test_utils.eq("File \"unary_minus_test.res\", line 137, characters 7-14", 3 & -five, 3);
+    Test_utils.eq("File \"unary_minus_test.res\", line 138, characters 7-14", 2 | -five, -5);
+    Test_utils.eq("File \"unary_minus_test.res\", line 139, characters 7-14", 2 ^ -five, -7);
+    Test_utils.eq("File \"unary_minus_test.res\", line 140, characters 7-14", (1 << -minusThree), 8);
+    Test_utils.eq("File \"unary_minus_test.res\", line 141, characters 7-14", (-16 >> -minusThree), -2);
+    Test_utils.eq("File \"unary_minus_test.res\", line 142, characters 7-14", (16 >>> -minusThree) | 0, 2);
+    Test_utils.eq("File \"unary_minus_test.res\", line 143, characters 7-14", 3 & -(base ** exponent), 0);
   });
   Mocha.test("prefix operators on a power", () => {
-    Test_utils.eq("File \"unary_minus_test.res\", line 127, characters 7-14", - (base ** exponent), -8);
-    Test_utils.eq("File \"unary_minus_test.res\", line 128, characters 7-14", typeof (base ** exponent), "number");
-    Test_utils.eq("File \"unary_minus_test.res\", line 129, characters 7-14", typeof (base ** exponent), "number");
-    Test_utils.eq("File \"unary_minus_test.res\", line 130, characters 7-14", ~(id(2) ** id(3) | 0), -9);
-    Test_utils.eq("File \"unary_minus_test.res\", line 131, characters 7-14", ~(id(2n) ** id(3n)), -9n);
-    Test_utils.eq("File \"unary_minus_test.res\", line 132, characters 7-14", !(base ** exponent), false);
+    Test_utils.eq("File \"unary_minus_test.res\", line 147, characters 7-14", - (base ** exponent), -8);
+    Test_utils.eq("File \"unary_minus_test.res\", line 148, characters 7-14", typeof (base ** exponent), "number");
+    Test_utils.eq("File \"unary_minus_test.res\", line 149, characters 7-14", typeof (base ** exponent), "number");
+    Test_utils.eq("File \"unary_minus_test.res\", line 150, characters 7-14", ~(id(2) ** id(3) | 0), -9);
+    Test_utils.eq("File \"unary_minus_test.res\", line 151, characters 7-14", ~(id(2n) ** id(3n)), -9n);
+    Test_utils.eq("File \"unary_minus_test.res\", line 152, characters 7-14", !(base ** exponent), false);
   });
   Mocha.test("prefix operators on operators other than a power", () => {
-    Test_utils.eq("File \"unary_minus_test.res\", line 136, characters 7-14", typeof (base * exponent), "number");
-    Test_utils.eq("File \"unary_minus_test.res\", line 137, characters 7-14", - base * exponent, -6);
-    Test_utils.eq("File \"unary_minus_test.res\", line 138, characters 7-14", - (base * exponent), -6);
-    Test_utils.eq("File \"unary_minus_test.res\", line 139, characters 7-14", ~- base, 1);
-    Test_utils.eq("File \"unary_minus_test.res\", line 140, characters 7-14", ~~id(2n), 2n);
-    Test_utils.eq("File \"unary_minus_test.res\", line 141, characters 7-14", !- base, false);
+    Test_utils.eq("File \"unary_minus_test.res\", line 156, characters 7-14", typeof (base * exponent), "number");
+    Test_utils.eq("File \"unary_minus_test.res\", line 157, characters 7-14", - base * exponent, -6);
+    Test_utils.eq("File \"unary_minus_test.res\", line 158, characters 7-14", - (base * exponent), -6);
+    Test_utils.eq("File \"unary_minus_test.res\", line 159, characters 7-14", ~- base, 1);
+    Test_utils.eq("File \"unary_minus_test.res\", line 160, characters 7-14", ~~id(2n), 2n);
+    Test_utils.eq("File \"unary_minus_test.res\", line 161, characters 7-14", !- base, false);
   });
   Mocha.test("await on a power", async () => {
     let awaitPow = async (a, b) => await (a ** b);
-    return Test_utils.eq("File \"unary_minus_test.res\", line 146, characters 7-14", await awaitPow(base, exponent), 8);
+    return Test_utils.eq("File \"unary_minus_test.res\", line 166, characters 7-14", await awaitPow(base, exponent), 8);
   });
 });
 

@@ -67,9 +67,7 @@ describe(__MODULE__, () => {
   test("negated int", () => {
     let n = id(0)
     eq(__LOC__, isNegativeZero(Int.toFloat(-n)), false)
-    eq(__LOC__, -id(5) &&& 3, 3)
     eq(__LOC__, -id(5) ||| id(0), -5)
-    eq(__LOC__, 1 << -id(-3), 8)
     eq(__LOC__, -(id(2) ** id(3)), -8)
   })
 
@@ -101,6 +99,28 @@ describe(__MODULE__, () => {
 
   test("negation of an inlined negative int literal", () => {
     eq(__LOC__, negateFiveAfter(id(2)), 5)
+  })
+
+  // The `-` of an int negation is kept apart from an operand that prints
+  // with a leading minus itself, as `--` is a decrement or a syntax error.
+  test("int negation of an operand printed with a leading minus", () => {
+    eq(__LOC__, -(%raw("-5"): int), 5)
+    eq(__LOC__, -Option.getUnsafe(Some((%raw("-5"): int))), 5)
+    eq(__LOC__, 3 &&& -(%raw("-5"): int), 1)
+    eq(__LOC__, -(Obj.magic(-5.5): int), 5)
+    eq(__LOC__, -(Obj.magic(-0.): int), 0)
+    eq(__LOC__, -floatAsInt(-.id(5.)), 5)
+  })
+
+  // `- -5n | 0` parses, and then throws as it mixes a bigint and an int.
+  test("int negation of a negative bigint", () => {
+    let error = try {
+      ignore(id(-(Obj.magic(-5n): int)))
+      None
+    } catch {
+    | JsExn(e) => JsExn.name(e)
+    }
+    eq(__LOC__, error, Some("TypeError"))
   })
 
   // The conversions are erased, so the subtraction itself is the operand.

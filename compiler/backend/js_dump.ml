@@ -599,7 +599,15 @@ and unary_operand cxt f (e : J.expression) : cxt =
     match e.expression_desc with
     | Bin (Pow, _, _) -> true
     | Optional_block (e, true) -> is_pow e
-    | _ -> false
+    | Optional_block (_, false)
+    | Length _ | Is_null_or_undefined _ | String_append _ | Bool _ | Typeof _
+    | In _ | Js_not _ | Js_bnot _ | Seq _ | Cond _ | Bin _ | Call _ | Jsx _
+    | Array_index _ | Tagged_template _ | Interpolated_template _
+    | Static_index _ | New _ | Var _ | Fun _ | Str _ | Template_literal _
+    | Raw_js_code _ | Array _ | Json_literal _ | Caml_block _ | Caml_block_tag _
+    | Number _ | Object _ | Undefined _ | Null | Await _ | Spread _
+    | Record_rest _ ->
+      false
   in
   expression ~level:(if is_pow e then 14 else 13) cxt f e
 
