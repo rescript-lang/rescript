@@ -79,8 +79,13 @@ let refine_let ?original ~assignable ~kind param (arg : Lambda.t) (l : Lambda.t)
      the single eager evaluation promised by [Strict]/[StrictOpt]. *)
   let rec is_safe_to_alias (lam : Lambda.t) =
     match lam with
-    | Lvar _ | Lconst _ ->
-      (* var/const --> emitting multiple `const` reads is identical to the
+    | Lvar v ->
+      (* var --> emitting multiple reads is identical to the original eager
+           evaluation, so codegen may inline them freely, unless an [Lassign]
+           may change the variable between the binding and a read. *)
+      not (Set_ident.mem v assignable)
+    | Lconst _ ->
+      (* const --> emitting multiple `const` reads is identical to the
            original eager evaluation, so codegen may inline them freely. *)
       true
     | Lprim {primitive = Ptemplate [_]; args = []; _} ->

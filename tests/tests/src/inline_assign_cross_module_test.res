@@ -16,6 +16,10 @@ let bumpConstants = () => (
   Inline_assign_cross_module_lib.bumpTwice(3),
 )
 
+let readBeforeAssign = () => Inline_assign_cross_module_lib.readThenAssign(5, p => () => p)
+
+let copyBeforeAssign = () => Inline_assign_cross_module_lib.copyThenAssign(1)
+
 describe(__MODULE__, () => {
   test("a variable the inlined function assigns, twice in a function", () => {
     eq(__LOC__, 14, addBumped(id(3), id(4)))
@@ -23,5 +27,13 @@ describe(__MODULE__, () => {
 
   test("a variable the inlined function assigns, with a constant argument", () => {
     eq(__LOC__, (12, 4), bumpConstants())
+  })
+
+  test("a read of an assigned variable, passed to a closure before the assignment", () => {
+    eq(__LOC__, 15, readBeforeAssign())
+  })
+
+  test("a copy of an assigned variable, made before the assignment", () => {
+    eq(__LOC__, 3, copyBeforeAssign())
   })
 })

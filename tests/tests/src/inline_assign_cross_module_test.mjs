@@ -34,17 +34,45 @@ function bumpConstants() {
   ];
 }
 
+function readBeforeAssign() {
+  let r = 5;
+  let p = r;
+  r = 10;
+  return p + r | 0;
+}
+
+function copyBeforeAssign() {
+  let r = 1;
+  let s = r;
+  r = s + 1 | 0;
+  return s + r | 0;
+}
+
 Mocha.describe("Inline_assign_cross_module_test", () => {
-  Mocha.test("a variable the inlined function assigns, twice in a function", () => Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 21, characters 7-14", 14, addBumped(id(3), id(4))));
-  Mocha.test("a variable the inlined function assigns, with a constant argument", () => Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 25, characters 7-14", [
+  Mocha.test("a variable the inlined function assigns, twice in a function", () => Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 25, characters 7-14", 14, addBumped(id(3), id(4))));
+  Mocha.test("a variable the inlined function assigns, with a constant argument", () => Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 29, characters 7-14", [
     12,
     4
   ], bumpConstants()));
+  Mocha.test("a read of an assigned variable, passed to a closure before the assignment", () => {
+    let r = 5;
+    let p = r;
+    r = 10;
+    Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 33, characters 7-14", 15, p + r | 0);
+  });
+  Mocha.test("a copy of an assigned variable, made before the assignment", () => {
+    let r = 1;
+    let s = r;
+    r = s + 1 | 0;
+    Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 37, characters 7-14", 3, s + r | 0);
+  });
 });
 
 export {
   id,
   addBumped,
   bumpConstants,
+  readBeforeAssign,
+  copyBeforeAssign,
 }
 /*  Not a pure module */

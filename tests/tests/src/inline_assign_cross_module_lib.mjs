@@ -10,7 +10,23 @@ function bumpTwice(x) {
   return r;
 }
 
+function readThenAssign(x, f) {
+  let r = x;
+  let g = f(r);
+  r = 10;
+  return g() + r | 0;
+}
+
+function copyThenAssign(x) {
+  let r = x;
+  let s = r;
+  r = s + 1 | 0;
+  return s + r | 0;
+}
+
 export {
   bumpTwice,
+  readThenAssign,
+  copyThenAssign,
 }
 /* No side effect */

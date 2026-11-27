@@ -22,7 +22,10 @@ let lets_helper ~assignable (count_var : Ident.t -> Lam_pass_count.used_info)
       match Hash_ident.find_opt subst v with
       | Some lam -> lam
       | None -> lam)
-    | Llet ((Strict | Alias | StrictOpt), v, Lvar w, l2) ->
+    | Llet ((Strict | Alias | StrictOpt), v, Lvar w, l2)
+      when not (Set_ident.mem w assignable) ->
+      (* A variable some [Lassign] assigns may change between the binding and
+         a read of [v], so [v] keeps its own binding. *)
       Hash_ident.add subst v (simplif (Lambda.var w));
       simplif l2
     | Llet (Alias, v, l1, l2) -> (
