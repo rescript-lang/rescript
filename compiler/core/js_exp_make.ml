@@ -369,8 +369,8 @@ let bool v = if v then true_ else false_
 
 let float ?comment f : t = {expression_desc = Number (Float {f}); comment}
 
-let zero_float_lit : t =
-  {expression_desc = Number (Float {f = "0."}); comment = None}
+let negative_zero_float_lit : t =
+  {expression_desc = Number (Float {f = "-0."}); comment = None}
 
 let float_mod ?comment e1 e2 : J.expression =
   {comment; expression_desc = Bin (Mod, e1, e2)}
@@ -1559,6 +1559,9 @@ let int32_minus ?comment (e1 : t) (e2 : t) : J.expression =
 
 let unchecked_int32_minus ?comment e1 e2 : J.expression =
   float_minus ?comment e1 e2
+
+(* Not [0. - e], which is [0] and not [-0] when [e] is [0] *)
+let float_neg ?comment e = float_minus ?comment negative_zero_float_lit e
 
 let float_div ?comment e1 e2 = bin ?comment Div e1 e2
 let float_pow ?comment e1 e2 = bin ?comment Pow e1 e2

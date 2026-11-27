@@ -288,8 +288,9 @@ type fn_exp_state =
 let default_fn_exp_state = No_name {single_arg = false}
 
 (* Whether [e] printed at the unary-minus level starts with [-]: a negative
-   literal, or [0 - x] which is itself printed as [-x]. An identity [Some], or
-   the block of an untagged constructor, is printed as its payload. *)
+   literal, raw JavaScript that starts with [-], or [-0 - x] which is itself
+   printed as [- x]. An identity [Some], or the block of an untagged
+   constructor, is printed as its payload. *)
 let rec prints_with_leading_minus (e : J.expression) =
   match e.expression_desc with
   | Number (Int {i; c = None}) -> i < 0l
@@ -297,9 +298,7 @@ let rec prints_with_leading_minus (e : J.expression) =
     let s = Js_number.caml_float_literal_to_js_string f in
     s <> "" && s.[0] = '-'
   | Number (BigInt {positive}) -> not positive
-  | Bin (Minus, {expression_desc = Number (Int {i = 0l} | Float {f = "0."})}, _)
-    ->
-    true
+  | Bin (Minus, {expression_desc = Number (Float {f = "-0."})}, _) -> true
   | Optional_block (e, true) -> prints_with_leading_minus e
   | Caml_block ([e], _, _, Blk_constructor {attrs})
     when Ast_untagged_variants.process_untagged attrs ->
@@ -522,6 +521,41 @@ and vident cxt f (v : J.vident) =
 and expression ~level:l cxt f (exp : J.expression) : cxt =
   pp_comment_option f exp.comment;
   expression_desc cxt ~level:l f exp.expression_desc
+
+(* The operand of a prefix operator. [**] has the same level as the prefix
+   operators, but JavaScript rejects [-a ** b], so it needs parentheses. An
+   identity [Some], or the block of an untagged constructor, is printed as its
+   payload. *)
+and unary_operand cxt f (e : J.expression) : cxt =
+  let rec is_pow (e : J.expression) =
+    match e.expression_desc with
+    | Bin (Pow, _, _) -> true
+    | Optional_block (e, true) -> is_pow e
+    | Caml_block ([e], _, _, Blk_constructor {attrs})
+      when Ast_untagged_variants.process_untagged attrs ->
+      is_pow e
+    | Optional_block (_, false)
+    | Length _ | Is_null_or_undefined _ | String_append _ | Bool _ | Typeof _
+    | In _ | Js_not _ | Js_bnot _ | Seq _ | Cond _ | Bin _ | FlatCall _ | Call _
+    | String_index _ | Array_index _ | Tagged_template _ | Static_index _
+    | New _ | Var _ | Fun _ | Str _ | Raw_js_code _ | Array _ | Caml_block _
+    | Caml_block_tag _ | Number _ | Object _ | Undefined _ | Null | Await _
+    | Spread _ ->
+      false
+  in
+  expression ~level:(if is_pow e then 14 else 13) cxt f e
+
+(* The operand of a bitwise operator, which converts it to an int32. This
+   loses the sign of a zero, so [0 - x] can be printed as [-x]. An [x] that
+   starts with a minus itself is kept apart, as [--] is a decrement. *)
+and int32_operand ~level cxt f (e : J.expression) : cxt =
+  match e.expression_desc with
+  | Bin (Minus, {expression_desc = Number (Int {i = 0l})}, operand) ->
+    pp_comment_option f e.comment;
+    P.cond_paren_group f (level > 13) (fun _ ->
+        P.string f (if prints_with_leading_minus operand then "- " else "-");
+        unary_operand cxt f operand)
+  | _ -> expression ~level cxt f e
 
 and expression_desc cxt ~(level : int) f x : cxt =
   match x with
@@ -817,11 +851,11 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | Js_not e ->
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f "!";
-        expression ~level:13 cxt f e)
+        unary_operand cxt f e)
   | Js_bnot e ->
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f "~";
-        expression ~level:13 cxt f e)
+        unary_operand cxt f e)
   | In (prop, obj) ->
     P.cond_paren_group f (level > 12) (fun _ ->
         let cxt = expression ~level:0 cxt f prop in
@@ -835,28 +869,13 @@ and expression_desc cxt ~(level : int) f x : cxt =
     in
     P.string f "typeof";
     P.space f;
-    P.cond_paren_group f is_fun (fun _ -> expression ~level:13 cxt f e)
-  | Bin
-      ( Minus,
-        {
-          expression_desc = Number ((Int {i = 0l; _} | Float {f = "0."}) as desc);
-        },
-        e )
-  (* TODO:
-     Handle multiple cases like
-     {[ 0. - x ]}
-     {[ 0.00 - x ]}
-     {[ 0.000 - x ]}
-  *)
-    ->
+    P.cond_paren_group f is_fun (fun _ -> unary_operand cxt f e)
+  | Bin (Minus, {expression_desc = Number (Float {f = "-0."})}, e) ->
+    (* [-0 - x] is [-x] for every [x], while [0 - x] is [0] and not [-0] when
+       [x] is [0] *)
     P.cond_paren_group f (level > 13) (fun _ ->
-        (* A space keeps [-] apart from an operand that itself prints with a
-           leading [-]: [--x] would be a decrement, [--5] a syntax error. *)
-        P.string f
-          (match desc with
-          | Float _ -> "- "
-          | _ -> if prints_with_leading_minus e then "- " else "-");
-        expression ~level:13 cxt f e)
+        P.string f "- ";
+        unary_operand cxt f e)
   | Bin
       ( Or,
         {expression_desc = Bin (EqEqEq, e1, {expression_desc = Null})},
@@ -878,12 +897,19 @@ and expression_desc cxt ~(level : int) f x : cxt =
     in
     (* We are more conservative here, to make the generated code more readable
           to the user *)
+    let operand =
+      match op with
+      | Bor | Bxor | Band | Lsl | Lsr | Asr -> int32_operand
+      | Eq | Or | And | EqEqEq | NotEqEq | Lt | Le | Gt | Ge | Bnot | Plus
+      | Minus | Mul | Div | Mod | Pow | InstanceOf ->
+        expression
+    in
     P.cond_paren_group f need_paren (fun _ ->
-        let cxt = expression ~level:lft cxt f e1 in
+        let cxt = operand ~level:lft cxt f e1 in
         P.space f;
         P.string f (Js_op_util.op_str op);
         P.space f;
-        expression ~level:rght cxt f e2)
+        operand ~level:rght cxt f e2)
   | String_append (e1, e2) ->
     let op : Js_op.binop = Plus in
     let out, lft, rght = Js_op_util.op_prec op in
@@ -1099,7 +1125,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | Await e ->
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f "await ";
-        expression ~level:13 cxt f e)
+        unary_operand cxt f e)
   | Spread e ->
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f "...";

@@ -20,6 +20,7 @@
 - Fix constant folding of a `switch` picking the wrong case for `@as(int)` constructors and for coerced variants. https://github.com/rescript-lang/rescript/pull/9318
 - Fix constant folding of comparisons between `@as(int)` constructors and other constructors, and merging of switch arms returning them. https://github.com/rescript-lang/rescript/pull/9319
 - Fix float addition and subtraction of constants that came from int literals being folded with int wraparound, float addition chains such as `x +. Float.fromInt(1) +. Float.fromInt(2)` being reassociated, and subtracting an expression that starts with a minus sign from zero printing `--`. https://github.com/rescript-lang/rescript/pull/9415
+- Fix `0. -. x` and `Float.fromInt(0) -. x` giving `-0` instead of `0` when `x` is `0.`, and a syntax error in the generated JavaScript for `**` as the operand of a float negation, `~~~` on a bigint, `typeof` or `await`. https://github.com/rescript-lang/rescript/pull/9422
 
 #### :nail_care: Polish
 

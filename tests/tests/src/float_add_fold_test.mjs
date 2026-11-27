@@ -28,26 +28,26 @@ Mocha.describe("Float_add_fold_test", () => {
     Test_utils.eq("File \"float_add_fold_test.res\", line 37, characters 6-13", x + -2147483648 + 2147483647, 0.1 - 2147483648.0 + 2147483647.0);
   });
   Mocha.test("negating a negative operand", () => {
-    Test_utils.eq("File \"float_add_fold_test.res\", line 44, characters 7-14", - -2147483648, 2147483648.0);
-    Test_utils.eq("File \"float_add_fold_test.res\", line 45, characters 7-14", - -5.0, 5.0);
+    Test_utils.eq("File \"float_add_fold_test.res\", line 44, characters 7-14", 0 - -2147483648, 2147483648.0);
+    Test_utils.eq("File \"float_add_fold_test.res\", line 45, characters 7-14", 0 - -5.0, 5.0);
     let a = id(3.0);
-    Test_utils.eq("File \"float_add_fold_test.res\", line 47, characters 7-14", - -a + id(1.0), 4.0);
+    Test_utils.eq("File \"float_add_fold_test.res\", line 47, characters 7-14", 0 - (0 - a) + id(1.0), 4.0);
     Test_utils.eq("File \"float_add_fold_test.res\", line 48, characters 7-14", a, 3.0);
-    Test_utils.eq("File \"float_add_fold_test.res\", line 49, characters 7-14", - -12, 12.0);
+    Test_utils.eq("File \"float_add_fold_test.res\", line 49, characters 7-14", 0 - -12, 12.0);
     Test_utils.eq("File \"float_add_fold_test.res\", line 50, characters 7-14", - -5n, 5n);
   });
   Mocha.test("negating a negative operand printed without its wrapper", () => {
     let a = id(3.0);
-    Test_utils.eq("File \"float_add_fold_test.res\", line 55, characters 7-14", - -a, 3.0);
+    Test_utils.eq("File \"float_add_fold_test.res\", line 55, characters 7-14", 0 - (0 - a), 3.0);
     Test_utils.eq("File \"float_add_fold_test.res\", line 56, characters 7-14", a, 3.0);
     Test_utils.eq("File \"float_add_fold_test.res\", line 57, characters 7-14", - -5 | 0, 5);
-    Test_utils.eq("File \"float_add_fold_test.res\", line 58, characters 7-14", - -5, 5.0);
-    Test_utils.eq("File \"float_add_fold_test.res\", line 59, characters 7-14", - -5.0, 5.0);
+    Test_utils.eq("File \"float_add_fold_test.res\", line 58, characters 7-14", 0 - -5, 5.0);
+    Test_utils.eq("File \"float_add_fold_test.res\", line 59, characters 7-14", 0 - -5.0, 5.0);
   });
   Mocha.test("negating a raw negative literal", () => {
-    Test_utils.eq("File \"float_add_fold_test.res\", line 63, characters 7-14", - -5, 5.0);
+    Test_utils.eq("File \"float_add_fold_test.res\", line 63, characters 7-14", 0 - -5, 5.0);
     Test_utils.eq("File \"float_add_fold_test.res\", line 64, characters 7-14", - -5 | 0, 5);
-    Test_utils.eq("File \"float_add_fold_test.res\", line 65, characters 7-14", -5, -5.0);
+    Test_utils.eq("File \"float_add_fold_test.res\", line 65, characters 7-14", 0 - 5, -5.0);
   });
   Mocha.test("int arithmetic wraps", () => {
     Test_utils.eq("File \"float_add_fold_test.res\", line 69, characters 7-14", -2147483648, -2147483648);
