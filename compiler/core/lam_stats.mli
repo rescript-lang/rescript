@@ -36,6 +36,11 @@ type t = {
       (** we don't need count arities for all identifiers, for identifiers
       for sure it's not a function, there is no need to count them
   *)
+  assignable: Set_ident.t;
+      (** The variables some [Lassign] assigns, as far as
+          [Lam_pass_remove_alias.simplify_alias] knows: it is empty outside it.
+          Inlining binds an argument read from one of them instead of
+          substituting it. *)
 }
 
 val print : Format.formatter -> t -> unit

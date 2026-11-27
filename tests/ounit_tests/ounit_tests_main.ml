@@ -24,6 +24,7 @@ let suites =
       Ounit_integer_constant_tests.suites;
       Ounit_jsx_loc_tests.suites;
       Ounit_analysis_references_tests.suites;
+      Ounit_lam_bounded_vars_tests.suites;
     ]
 
 let _ = OUnit.run_test_tt_main suites

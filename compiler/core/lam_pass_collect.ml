@@ -102,7 +102,12 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
       (* functor ? *)
       List.iter (fun p -> Hash_ident.add meta.ident_tbl p Parameter) params;
       collect l
-    | Llet (_kind, ident, arg, body) ->
+    | Llet (Variable, _, arg, body) ->
+      (* An [Lassign] may change the variable, so what it is bound to says
+         nothing about its value later. *)
+      collect arg;
+      collect body
+    | Llet ((Strict | Alias | StrictOpt), ident, arg, body) ->
       collect_bind Lam_non_rec ident arg;
       collect body
     | Lletrec (bindings, body) ->

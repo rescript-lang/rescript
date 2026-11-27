@@ -46,6 +46,7 @@
 *)
 let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
     (body : Lam.t) (args : Lam.t list) =
+  let assignable = meta.assignable in
   match Lam_beta_reduce_util.simple_beta_reduce params body args with
   | Some x -> x
   | None ->
@@ -53,8 +54,13 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
       Ext_list.fold_left2 params args ([], [])
         (fun old_param arg (rest_bindings, acc) ->
           match arg with
-          | Lconst _ | Lvar _ -> (rest_bindings, arg :: acc)
+          | Lconst _ -> (rest_bindings, arg :: acc)
+          | Lvar v when not (Set_ident.mem assignable v) ->
+            (rest_bindings, arg :: acc)
           | _ ->
+            (* A variable some [Lassign] assigns is bound too: the body may
+               read the parameter after an assignment, when the variable has
+               a new value. *)
             let p = Ident.rename old_param in
             ((p, arg) :: rest_bindings, Lam.var p :: acc))
     in
@@ -74,10 +80,11 @@ let propagate_beta_reduce (meta : Lam_stats.t) (params : Ident.t list)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]; _} ->
           Hash_ident.replace meta.ident_tbl param (Normal_optional v)
         | _ -> ());
-        Lam_util.refine_let ~kind:Strict param arg l)
+        Lam_util.refine_let ~assignable ~kind:Strict param arg l)
 
 let propagate_beta_reduce_with_map (meta : Lam_stats.t)
     (map : Lam_var_stats.stats Map_ident.t) params body args =
+  let assignable = meta.assignable in
   match Lam_beta_reduce_util.simple_beta_reduce params body args with
   | Some x -> x
   | None ->
@@ -85,8 +92,11 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
       Ext_list.fold_left2 params args ([], [])
         (fun old_param arg (rest_bindings, acc) ->
           match arg with
-          | Lconst _ | Lvar _ -> (rest_bindings, arg :: acc)
-          | Lglobal_module _ ->
+          | Lconst _ -> (rest_bindings, arg :: acc)
+          | Lvar v when not (Set_ident.mem assignable v) ->
+            (rest_bindings, arg :: acc)
+          | Lvar _ | Lglobal_module _ ->
+            (* See above for an assigned variable *)
             let p = Ident.rename old_param in
             ((p, arg) :: rest_bindings, Lam.var p :: acc)
           | _ ->
@@ -116,11 +126,11 @@ let propagate_beta_reduce_with_map (meta : Lam_stats.t)
         | Lprim {primitive = Psome | Psome_not_nest; args = [v]} ->
           Hash_ident.replace meta.ident_tbl param (Normal_optional v)
         | _ -> ());
-        Lam_util.refine_let ~kind:Strict param arg l)
+        Lam_util.refine_let ~assignable ~kind:Strict param arg l)
 
-let no_names_beta_reduce params body args =
+let no_names_beta_reduce ~assignable params body args =
   match Lam_beta_reduce_util.simple_beta_reduce params body args with
   | Some x -> x
   | None ->
     Ext_list.fold_left2 params args body (fun param arg l ->
-        Lam_util.refine_let ~kind:Strict param arg l)
+        Lam_util.refine_let ~assignable ~kind:Strict param arg l)

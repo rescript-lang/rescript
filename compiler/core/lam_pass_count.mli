@@ -25,6 +25,8 @@ type occ_tbl = used_info Hash_ident.t
 
 val dummy_info : unit -> used_info
 
-val collect_occurs : Lam.t -> occ_tbl
+val collect_occurs : assignable:Set_ident.t -> Lam.t -> occ_tbl
+(** [assignable] are the variables some [Lassign] assigns, as for
+    {!Lam_pass_lets_dce.simplify_lets} *)
 
 val pp_occ_tbl : Format.formatter -> occ_tbl -> unit
