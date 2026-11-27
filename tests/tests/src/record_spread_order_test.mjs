@@ -247,8 +247,37 @@ function protoOverride(base, value) {
   return newrecord;
 }
 
+function protoAssignedAfter(base) {
+  let newrecord = {...base};
+  Object.defineProperty(newrecord, "__proto__", {
+    value: 5,
+    writable: true,
+    enumerable: true,
+    configurable: true
+  });
+  Object.defineProperty(newrecord, "__proto__", {
+    value: 5,
+    writable: true,
+    enumerable: true,
+    configurable: true
+  });
+  return newrecord;
+}
+
+function protoUsedAfter(base) {
+  let newrecord = {...base};
+  Object.defineProperty(newrecord, "__proto__", {
+    value: 5,
+    writable: true,
+    enumerable: true,
+    configurable: true
+  });
+  id(newrecord.name);
+  return newrecord;
+}
+
 Mocha.describe("Record_spread_order_test", () => {
-  Mocha.test("an override that mutates the base", () => Test_utils.eq("File \"record_spread_order_test.res\", line 222, characters 7-14", mutateInOverride({
+  Mocha.test("an override that mutates the base", () => Test_utils.eq("File \"record_spread_order_test.res\", line 236, characters 7-14", mutateInOverride({
     a: 1,
     b: 2
   }).a, 1));
@@ -258,7 +287,7 @@ Mocha.describe("Record_spread_order_test", () => {
       a: 1,
       b: 2
     });
-    Test_utils.eq("File \"record_spread_order_test.res\", line 228, characters 7-14", order, [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 242, characters 7-14", order, [
       "base",
       "b"
     ]);
@@ -269,12 +298,12 @@ Mocha.describe("Record_spread_order_test", () => {
       a: 1,
       b: 2
     });
-    Test_utils.eq("File \"record_spread_order_test.res\", line 234, characters 7-14", order, [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 248, characters 7-14", order, [
       "base2",
       "a2",
       "b2"
     ]);
-    Test_utils.eq("File \"record_spread_order_test.res\", line 235, characters 7-14", [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 249, characters 7-14", [
       res.a,
       res.b
     ], [
@@ -288,7 +317,7 @@ Mocha.describe("Record_spread_order_test", () => {
       b: 2
     };
     let res = simpleOverride(base);
-    Test_utils.eq("File \"record_spread_order_test.res\", line 241, characters 7-14", [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 255, characters 7-14", [
       res.a,
       res.b,
       base.b
@@ -304,11 +333,11 @@ Mocha.describe("Record_spread_order_test", () => {
       a: 0,
       b: 0
     });
-    Test_utils.eq("File \"record_spread_order_test.res\", line 247, characters 7-14", order, [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 261, characters 7-14", order, [
       "a",
       "b"
     ]);
-    Test_utils.eq("File \"record_spread_order_test.res\", line 248, characters 7-14", [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 262, characters 7-14", [
       res.a,
       res.b
     ], [
@@ -320,11 +349,11 @@ Mocha.describe("Record_spread_order_test", () => {
       a: 0,
       b: 0
     });
-    Test_utils.eq("File \"record_spread_order_test.res\", line 251, characters 7-14", order, [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 265, characters 7-14", order, [
       "a",
       "b"
     ]);
-    Test_utils.eq("File \"record_spread_order_test.res\", line 252, characters 7-14", [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 266, characters 7-14", [
       res$1.a,
       res$1.b
     ], [
@@ -334,7 +363,7 @@ Mocha.describe("Record_spread_order_test", () => {
   });
   Mocha.test("fields assigned after the spread", () => {
     clearOrder();
-    Test_utils.eq("File \"record_spread_order_test.res\", line 257, characters 7-14", assignAfter({
+    Test_utils.eq("File \"record_spread_order_test.res\", line 271, characters 7-14", assignAfter({
       x: 0,
       y: 0
     }), {
@@ -342,12 +371,12 @@ Mocha.describe("Record_spread_order_test", () => {
       y: 1,
       z: 1
     });
-    Test_utils.eq("File \"record_spread_order_test.res\", line 258, characters 7-14", order, [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 272, characters 7-14", order, [
       "first",
       "second"
     ]);
     clearOrder();
-    Test_utils.eq("File \"record_spread_order_test.res\", line 260, characters 7-14", assignAfterExpression({
+    Test_utils.eq("File \"record_spread_order_test.res\", line 274, characters 7-14", assignAfterExpression({
       x: 0,
       y: 0
     }), {
@@ -355,20 +384,20 @@ Mocha.describe("Record_spread_order_test", () => {
       y: 1,
       z: 1
     });
-    Test_utils.eq("File \"record_spread_order_test.res\", line 261, characters 7-14", order, [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 275, characters 7-14", order, [
       "first",
       "second"
     ]);
   });
   Mocha.test("a field assigned a value that reads the copy", () => {
-    Test_utils.eq("File \"record_spread_order_test.res\", line 265, characters 7-14", readCopy({
+    Test_utils.eq("File \"record_spread_order_test.res\", line 279, characters 7-14", readCopy({
       x: 0,
       y: 0
     }), {
       x: 1,
       y: 2
     });
-    Test_utils.eq("File \"record_spread_order_test.res\", line 266, characters 7-14", readCopyInSwitch({
+    Test_utils.eq("File \"record_spread_order_test.res\", line 280, characters 7-14", readCopyInSwitch({
       x: 1,
       y: 2
     }), {
@@ -377,11 +406,11 @@ Mocha.describe("Record_spread_order_test", () => {
     });
   });
   Mocha.test("the last assignment of a field wins", () => {
-    Test_utils.eq("File \"record_spread_order_test.res\", line 270, characters 7-14", assignTwice({
+    Test_utils.eq("File \"record_spread_order_test.res\", line 284, characters 7-14", assignTwice({
       x: 0,
       y: 0
     }).x, 2);
-    Test_utils.eq("File \"record_spread_order_test.res\", line 271, characters 7-14", assignTwiceTry({
+    Test_utils.eq("File \"record_spread_order_test.res\", line 285, characters 7-14", assignTwiceTry({
       x: 0,
       y: 0
     }).x, 4);
@@ -391,21 +420,21 @@ Mocha.describe("Record_spread_order_test", () => {
       a: 1,
       b: 2
     };
-    Test_utils.eq("File \"record_spread_order_test.res\", line 276, characters 7-14", pureStatements(base, {
+    Test_utils.eq("File \"record_spread_order_test.res\", line 290, characters 7-14", pureStatements(base, {
       a: 3,
       b: 4
     }), {
       a: 1,
       b: 8
     });
-    Test_utils.eq("File \"record_spread_order_test.res\", line 277, characters 7-14", pureStatementsAfterCall(base, {
+    Test_utils.eq("File \"record_spread_order_test.res\", line 291, characters 7-14", pureStatementsAfterCall(base, {
       a: 3,
       b: 4
     }), {
       a: 1,
       b: 200
     });
-    Test_utils.eq("File \"record_spread_order_test.res\", line 278, characters 7-14", callThenPureStatements(base, {
+    Test_utils.eq("File \"record_spread_order_test.res\", line 292, characters 7-14", callThenPureStatements(base, {
       a: 3,
       b: 4
     }), {
@@ -415,24 +444,24 @@ Mocha.describe("Record_spread_order_test", () => {
   });
   Mocha.test("a discarded result", () => {
     clearOrder();
-    Test_utils.eq("File \"record_spread_order_test.res\", line 283, characters 7-14", discarded({
+    Test_utils.eq("File \"record_spread_order_test.res\", line 297, characters 7-14", discarded({
       a: 1,
       b: 2
     }), 1);
-    Test_utils.eq("File \"record_spread_order_test.res\", line 284, characters 7-14", order, [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 298, characters 7-14", order, [
       "a",
       "b"
     ]);
   });
   Mocha.test("an override that throws", () => {
     clearOrder();
-    Test_utils.throws("File \"record_spread_order_test.res\", line 289, characters 11-18", () => {
+    Test_utils.throws("File \"record_spread_order_test.res\", line 303, characters 11-18", () => {
       throwing({
         a: 1,
         b: 2
       });
     });
-    Test_utils.eq("File \"record_spread_order_test.res\", line 290, characters 7-14", order, [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 304, characters 7-14", order, [
       "base",
       "a"
     ]);
@@ -444,10 +473,10 @@ Mocha.describe("Record_spread_order_test", () => {
       b: 2
     });
     if (typeof match !== "object") {
-      return Test_utils.ok("File \"record_spread_order_test.res\", line 296, characters 18-25", false);
+      return Test_utils.ok("File \"record_spread_order_test.res\", line 310, characters 18-25", false);
     }
     let a = match.a;
-    Test_utils.eq("File \"record_spread_order_test.res\", line 295, characters 27-34", [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 309, characters 27-34", [
       a,
       match.b
     ], [
@@ -459,23 +488,35 @@ Mocha.describe("Record_spread_order_test", () => {
     let withInt = protoOverride({
       name: "int"
     }, 5);
-    Test_utils.ok("File \"record_spread_order_test.res\", line 302, characters 7-14", Object.hasOwn(withInt, "__proto__"));
-    Test_utils.eq("File \"record_spread_order_test.res\", line 303, characters 7-14", withInt.__proto__, 5);
+    Test_utils.ok("File \"record_spread_order_test.res\", line 316, characters 7-14", Object.hasOwn(withInt, "__proto__"));
+    Test_utils.eq("File \"record_spread_order_test.res\", line 317, characters 7-14", withInt.__proto__, 5);
     let withObject = protoOverride({
       name: "object"
     }, {
       z: 1
     });
-    Test_utils.ok("File \"record_spread_order_test.res\", line 305, characters 7-14", Object.hasOwn(withObject, "__proto__"));
-    Test_utils.eq("File \"record_spread_order_test.res\", line 306, characters 7-14", withObject.__proto__, {
+    Test_utils.ok("File \"record_spread_order_test.res\", line 319, characters 7-14", Object.hasOwn(withObject, "__proto__"));
+    Test_utils.eq("File \"record_spread_order_test.res\", line 320, characters 7-14", withObject.__proto__, {
       z: 1
     });
-    Test_utils.ok("File \"record_spread_order_test.res\", line 307, characters 7-14", Object.getPrototypeOf(withObject) === Object.prototype);
+    Test_utils.ok("File \"record_spread_order_test.res\", line 321, characters 7-14", Object.getPrototypeOf(withObject) === Object.prototype);
     let overridden = protoOverride({
       name: "own",
       ["__proto__"]: 1
     }, 2);
-    Test_utils.eq("File \"record_spread_order_test.res\", line 309, characters 7-14", overridden.__proto__, 2);
+    Test_utils.eq("File \"record_spread_order_test.res\", line 323, characters 7-14", overridden.__proto__, 2);
+  });
+  Mocha.test("a __proto__ field set on the copy is an own property", () => {
+    let assigned = protoAssignedAfter({
+      name: "assigned"
+    });
+    Test_utils.ok("File \"record_spread_order_test.res\", line 328, characters 7-14", Object.hasOwn(assigned, "__proto__"));
+    Test_utils.eq("File \"record_spread_order_test.res\", line 329, characters 7-14", assigned.__proto__, 5);
+    let used = protoUsedAfter({
+      name: "used"
+    });
+    Test_utils.ok("File \"record_spread_order_test.res\", line 331, characters 7-14", Object.hasOwn(used, "__proto__"));
+    Test_utils.eq("File \"record_spread_order_test.res\", line 332, characters 7-14", used.__proto__, 5);
   });
   Mocha.test("an exception's record", () => {
     let match = exceptionRecord({
@@ -485,10 +526,10 @@ Mocha.describe("Record_spread_order_test", () => {
       c: undefined
     });
     if (match.RE_EXN_ID !== Extension) {
-      return Test_utils.ok("File \"record_spread_order_test.res\", line 315, characters 14-21", false);
+      return Test_utils.ok("File \"record_spread_order_test.res\", line 338, characters 14-21", false);
     }
     let a = match.a;
-    Test_utils.eq("File \"record_spread_order_test.res\", line 314, characters 30-37", [
+    Test_utils.eq("File \"record_spread_order_test.res\", line 337, characters 30-37", [
       a,
       match.b
     ], [
@@ -524,5 +565,7 @@ export {
   clearOrder,
   simpleOverride,
   protoOverride,
+  protoAssignedAfter,
+  protoUsedAfter,
 }
 /*  Not a pure module */

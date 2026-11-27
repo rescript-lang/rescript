@@ -217,6 +217,20 @@ let protoOverride = (base: proto<'a>, value: 'a) => {
   },
 }
 
+type mutableProto = {name: string, @as("__proto__") mutable mutableProto?: int}
+
+let protoAssignedAfter = (base: mutableProto) => {
+  let x = {...base, mutableProto: 5}
+  x.mutableProto = Some(5)
+  x
+}
+
+let protoUsedAfter = (base: mutableProto) => {
+  let x = {...base, mutableProto: 5}
+  ignore(id(x.name))
+  x
+}
+
 describe(__MODULE__, () => {
   test("an override that mutates the base", () => {
     eq(__LOC__, mutateInOverride({a: 1, b: 2}).a, 1)
@@ -307,6 +321,15 @@ describe(__MODULE__, () => {
     ok(__LOC__, getPrototypeOf(withObject) === objectPrototype)
     let overridden = protoOverride({name: "own", proto: 1}, 2)
     eq(__LOC__, overridden.proto, Some(2))
+  })
+
+  test("a __proto__ field set on the copy is an own property", () => {
+    let assigned = protoAssignedAfter({name: "assigned"})
+    ok(__LOC__, hasOwn(assigned, "__proto__"))
+    eq(__LOC__, assigned.mutableProto, Some(5))
+    let used = protoUsedAfter({name: "used"})
+    ok(__LOC__, hasOwn(used, "__proto__"))
+    eq(__LOC__, used.mutableProto, Some(5))
   })
 
   test("an exception's record", () =>

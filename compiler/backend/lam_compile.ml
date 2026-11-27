@@ -1985,33 +1985,51 @@ let compile output_prefix =
         ~hold:(Lam_compile_external_call.hold_args arg_types)
         primitive args loc
     | {primitive; args; loc} -> compile_primitive_default primitive args loc
-  (* The fields set on the copy [copy_id] of a record before it is returned, in
+  (* The fields set on the copy [copy_id] of a record right after it is made, in
      the order they are set: the overrides of a spread, and then the fields
-     assigned to it by later code. None when one of the values uses the copy or
-     a field is set twice, since then the copy has to exist before the
-     assignments run. *)
+     assigned to it by later code. Returns them with the code that follows. *)
   and collect_dup_overrides (copy_id : Ident.t) (lam : Lambda.t)
       (acc : (int * Lambda.set_field_dbg_info * Location.t * Lambda.t) list) :
-      (int * Lambda.set_field_dbg_info * Location.t * Lambda.t) list option =
+      (int * Lambda.set_field_dbg_info * Location.t * Lambda.t) list * Lambda.t
+      =
     match lam with
     | Lsequence
         ( Lprim
             {primitive = Psetfield (i, fld_info); args = [Lvar id'; value]; loc},
           rest )
-      when Ident.same id' copy_id
-           && (not (List.exists (fun (j, _, _, _) -> i = j) acc))
-           && not (Lam_hit.hit_variable copy_id value) ->
+      when Ident.same id' copy_id ->
       collect_dup_overrides copy_id rest ((i, fld_info, loc, value) :: acc)
-    | Lvar id' when Ident.same id' copy_id -> Some (List.rev acc)
-    | _ -> None
+    | _ -> (List.rev acc, lam)
   and try_compile_record_spread (lambda_cxt : Lam_compile_context.t)
       (let_kind : Lambda.let_kind) (id : Ident.t) (arg : Lambda.t)
       (body : Lambda.t) : Js_output.t option =
     match arg with
     | Lprim {primitive = Pduprecord; args = [init]; loc} -> (
       match collect_dup_overrides id body [] with
-      | None -> None
-      | Some overrides ->
+      | [], _ -> None
+      | overrides, rest ->
+        (* The copy is returned right after the fields are set *)
+        let returns_copy =
+          match rest with
+          | Lvar id' -> Ident.same id' id
+          | _ -> false
+        in
+        (* A value that reads the copy, or code after the fields are set, needs
+           the copy to exist, and a field set twice would be one property of
+           the literal: these are compiled as a copy and assignments. *)
+        let reads_copy =
+          (not returns_copy)
+          || List.exists
+               (fun (_, _, _, value) -> Lam_hit.hit_variable id value)
+               overrides
+        in
+        let rec sets_a_field_twice = function
+          | [] -> false
+          | (i, _, _, _) :: rest ->
+            List.exists (fun (j, _, _, _) -> i = j) rest
+            || sets_a_field_twice rest
+        in
+        let needs_copy = reads_copy || sets_a_field_twice overrides in
         let compile_value lam : Js_output.t * J.expression =
           let output =
             compile_lambda
@@ -2042,7 +2060,9 @@ let compile output_prefix =
                  ~earlier_run_no_code:(earlier_run_no_code && runs_no_code value)
                  rest
         in
-        if fits_literal ~earlier_run_no_code:(runs_no_code init_val) overrides
+        if
+          (not needs_copy)
+          && fits_literal ~earlier_run_no_code:(runs_no_code init_val) overrides
         then
           let props =
             List.map
@@ -2064,15 +2084,18 @@ let compile output_prefix =
             init_output
             :: List.map (fun (_, _, _, output, _) -> output) overrides
           in
+          (* The copy is still made when a value reads it *)
           let copy_is_unused =
-            (match lambda_cxt.continuation with
-              | EffectCall Not_tail -> true
-              | EffectCall (Maybe_tail_is_return _)
-              | Declare _ | Assign _ | NeedValue _ ->
-                false)
-            || List.exists
-                 (fun (output : Js_output.t) -> output.output_finished = True)
-                 outputs
+            (not reads_copy)
+            && ((match lambda_cxt.continuation with
+                  | EffectCall Not_tail -> true
+                  | EffectCall (Maybe_tail_is_return _)
+                  | Declare _ | Assign _ | NeedValue _ ->
+                    false)
+               || List.exists
+                    (fun (output : Js_output.t) ->
+                      output.output_finished = True)
+                    outputs)
           in
           if copy_is_unused then Some (Js_output.concat outputs)
           else
@@ -2101,13 +2124,19 @@ let compile output_prefix =
                     ])
                 overrides
             in
+            let block =
+              init_output.block
+              @ S.define_variable ~kind:let_kind id
+                  (with_source_loc loc (E.obj ~dup:init_val []))
+                :: assignments
+            in
             Some
-              (Js_output.output_of_block_and_expression lambda_cxt.continuation
-                 (init_output.block
-                 @ S.define_variable ~kind:let_kind id
-                     (with_source_loc loc (E.obj ~dup:init_val []))
-                   :: assignments)
-                 copy))
+              (if returns_copy then
+                 Js_output.output_of_block_and_expression
+                   lambda_cxt.continuation block copy
+               else
+                 Js_output.append_output (Js_output.make block)
+                   (compile_lambda lambda_cxt rest)))
     | _ -> None
   and compile_lambda (lambda_cxt : Lam_compile_context.t) (cur_lam : Lambda.t) :
       Js_output.t =
