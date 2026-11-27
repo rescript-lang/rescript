@@ -1,0 +1,1 @@
+- Fix evaluation order for dict and array spreads `dict{...base, "key": value}` and `[...base, value]`: the base is copied before later elements that can change it, such as a `try` or, in an array, a function call, so their mutations of the base no longer show up in the result.

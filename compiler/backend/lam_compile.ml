@@ -301,6 +301,10 @@ let rec evaluate_now ~assignable (e : J.expression) : J.block * J.expression =
   | Optional_block (a, identity) ->
     let held, a = evaluate_now ~assignable a in
     (held, {e with expression_desc = Optional_block (a, identity)})
+  | Array [{expression_desc = Spread _}] ->
+    (* The copy of an array; see [copy_spreads] *)
+    let tmp = Ext_ident.create_tmp () in
+    ([S.define_variable ~kind:Strict tmp e], E.var tmp)
   | Array xs ->
     let held, xs = evaluate_all_now ~assignable xs in
     (held, {e with expression_desc = Array xs})
@@ -399,6 +403,69 @@ let sequence_arguments ?(method_callee = false) ~assignable
         args (last, [], [])
     in
     (code, values)
+
+(* Like [runs_no_code], but also looks into pure operations, literals and reads
+   of records and arrays, whose values other code may change *)
+let rec can_run_code (e : J.expression) =
+  match e.expression_desc with
+  | Undefined _ | Null | Json_literal _ | Fun _ -> false
+  | Static_index (a, _, Some _)
+  | Length a
+  | Caml_block_tag (a, _)
+  | Typeof a
+  | Is_null_or_undefined a
+  | Js_not a
+  | Js_bnot a
+  | Optional_block (a, _) ->
+    can_run_code a
+  | Array_index (a, b) | Seq (a, b) | String_append (a, b) ->
+    can_run_code a || can_run_code b
+  | Bin (_, a, b) ->
+    (not (Js_analyzer.no_side_effect_expression e))
+    || can_run_code a || can_run_code b
+  | Cond (a, b, c) -> can_run_code a || can_run_code b || can_run_code c
+  | Interpolated_template {values} -> List.exists can_run_code values
+  | Array xs | Caml_block (xs, _, _) -> List.exists can_run_code xs
+  | Object entries ->
+    List.exists
+      (function
+        | J.Object_property (_, v) | Record_spread v -> can_run_code v
+        | Object_spread _ -> true)
+      entries
+  | _ -> not (runs_no_code e)
+
+(* The compiled parts of a literal with spreads, where [copy] turns the bare
+   spreads into copies when a later part can run code that changes them: its
+   statements, which [sequence_arguments] moves in front of the literal, and
+   also its value when [in_place] is false, since then the spreads are copied
+   only after all parts are evaluated. *)
+let copy_spreads ~in_place ~copy (parts : (J.block * J.expression) list) =
+  let _, parts =
+    List.fold_right
+      (fun (block, value) (later_code, parts) ->
+        ( later_code
+          || (not (defines_pure_values block))
+          || ((not in_place) && can_run_code value),
+          (block, if later_code then copy value else value) :: parts ))
+      parts (false, [])
+  in
+  parts
+
+(* The parts of a [Pdict_spread]: a spread is copied where its part stands in
+   the object literal *)
+let copy_dict_spreads =
+  copy_spreads ~in_place:true ~copy:(fun (e : J.expression) ->
+      match e.expression_desc with
+      | Object _ -> e
+      | _ -> E.obj_entries [Object_spread e])
+
+(* The parts of a [Parray_spread]: the runtime call copies the spreads after all
+   parts are evaluated *)
+let copy_array_spreads =
+  copy_spreads ~in_place:false ~copy:(fun (e : J.expression) ->
+      match e.expression_desc with
+      | Array _ -> e
+      | _ -> E.array [{e with expression_desc = Spread e}])
 
 let compile output_prefix =
   (* When compiling a read from another module, a nested source path like
@@ -1970,6 +2037,24 @@ let compile output_prefix =
       compile_primitive_default
         ~hold:(Lam_compile_external_call.hold_args arg_types)
         primitive args loc
+    | {
+     primitive = Parray_spread;
+     args = [Lprim {primitive = Pmakearray; args = parts; loc = parts_loc}];
+     loc;
+    } ->
+      let parts_code, parts =
+        compile_arguments ~hold:copy_array_spreads lambda_cxt parts
+      in
+      let translate loc primitive args =
+        with_source_loc loc
+          (Lam_compile_primitive.translate output_prefix loc lambda_cxt
+             primitive args)
+      in
+      Js_output.output_of_block_and_expression lambda_cxt.continuation
+        parts_code
+        (translate loc Parray_spread [translate parts_loc Pmakearray parts])
+    | {primitive = Pdict_spread as primitive; args; loc} ->
+      compile_primitive_default ~hold:copy_dict_spreads primitive args loc
     | {primitive; args; loc} -> compile_primitive_default primitive args loc
   and collect_dup_overrides (copy_id : Ident.t) (lam : Lambda.t)
       (acc : (Lambda.set_field_dbg_info * Lambda.t) list) :
