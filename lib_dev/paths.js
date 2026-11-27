@@ -38,14 +38,22 @@ export const projectTestDir = path.resolve(testDir, "project_tests");
 export const errorTestDir = path.resolve(testDir, "error_tests");
 
 /**
- * path: `<projectDir>/tests/docstring_tests/`
+ * path: `<projectDir>/tests/runtime_tests/docstrings/`
  */
-export const docstringTestDir = path.resolve(testDir, "docstring_tests");
+export const docstringTestDir = path.resolve(
+  testDir,
+  "runtime_tests",
+  "docstrings",
+);
 
 /**
- * path: `<projectDir>/tests/commonjs_tests/`
+ * path: `<projectDir>/tests/runtime_tests/commonjs/`
  */
-export const commonjsTestDir = path.resolve(testDir, "commonjs_tests");
+export const commonjsTestDir = path.resolve(
+  testDir,
+  "runtime_tests",
+  "commonjs",
+);
 
 /**
  * path: `<projectDir>/compiler/version/rescript_version.ml`

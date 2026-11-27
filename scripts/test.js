@@ -73,7 +73,7 @@ if (ounitTest) {
 
 if (mochaTest) {
   const beltPackageDir = path.join(projectDir, "packages/@rescript/belt");
-  const beltTestDir = path.join(projectDir, "tests/belt_tests");
+  const beltTestDir = path.join(projectDir, "tests/runtime_tests/belt");
 
   // No need to clean beforehand, the build system detects changes to the compiler binary
   // and rebuilds automatically in that case.
@@ -101,8 +101,8 @@ if (mochaTest) {
       "-t",
       "10000",
       "tests/compiler_tests/src/**/*_test.mjs",
-      "tests/belt_tests/src/**/*_test.mjs",
-      "tests/cli_tests/*_test.mjs",
+      "tests/runtime_tests/belt/src/**/*_test.mjs",
+      "tests/package_tests/*_test.mjs",
       // jsx_preserve_test.mjs contains JSX, which Node cannot load; the
       // file exists to pin the preserved-JSX output.
       "--ignore",
@@ -147,7 +147,7 @@ if (mochaTest) {
     stdio: "inherit",
   });
 
-  await node("tests/commonjs_tests/src/belt_import.js", [], {
+  await node("tests/runtime_tests/commonjs/src/belt_import.js", [], {
     cwd: projectDir,
     stdio: "inherit",
   });

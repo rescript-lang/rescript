@@ -218,9 +218,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/react@workspace:^, @rescript/react@workspace:tests/dependencies/rescript-react":
+"@rescript/react@workspace:^, @rescript/react@workspace:packages/rescript-react":
   version: 0.0.0-use.local
-  resolution: "@rescript/react@workspace:tests/dependencies/rescript-react"
+  resolution: "@rescript/react@workspace:packages/rescript-react"
   dependencies:
     rescript: "workspace:^"
   languageName: unknown
@@ -585,9 +585,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@tests/belt@workspace:tests/belt_tests":
+"@tests/belt@workspace:tests/runtime_tests/belt":
   version: 0.0.0-use.local
-  resolution: "@tests/belt@workspace:tests/belt_tests"
+  resolution: "@tests/belt@workspace:tests/runtime_tests/belt"
   dependencies:
     "@rescript/belt": "workspace:^"
     mocha: "npm:12.0.3"
@@ -595,9 +595,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@tests/docstring-tests@workspace:^, @tests/docstring-tests@workspace:tests/docstring_tests":
+"@tests/docstring-tests@workspace:^, @tests/docstring-tests@workspace:tests/runtime_tests/docstrings":
   version: 0.0.0-use.local
-  resolution: "@tests/docstring-tests@workspace:tests/docstring_tests"
+  resolution: "@tests/docstring-tests@workspace:tests/runtime_tests/docstrings"
   dependencies:
     "@rescript/belt": "workspace:^"
     "@rescript/react": "workspace:^"
@@ -1365,9 +1365,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rescript-commonjs-tests@workspace:tests/commonjs_tests":
+"rescript-commonjs-tests@workspace:tests/runtime_tests/commonjs":
   version: 0.0.0-use.local
-  resolution: "rescript-commonjs-tests@workspace:tests/commonjs_tests"
+  resolution: "rescript-commonjs-tests@workspace:tests/runtime_tests/commonjs"
   dependencies:
     "@rescript/belt": "workspace:^"
     rescript: "workspace:^"

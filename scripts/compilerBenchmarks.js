@@ -582,15 +582,8 @@ function copySources(from, to) {
   });
 }
 
-/**
- * The project the build benchmarks build, relative to a checkout. A base from
- * before the rename to tests/compiler_tests still has it at tests/tests; the
- * next pull request in the stack drops that fallback.
- */
-const benchmarkProjects = [
-  path.join("tests", "compiler_tests"),
-  path.join("tests", "tests"),
-];
+/** The project the build benchmarks build, relative to a checkout. */
+const benchmarkProject = path.join("tests", "compiler_tests");
 
 /**
  * The module of the project that about 200 others use, and that has no
@@ -622,11 +615,7 @@ const sharedModule = path.join("src", "test_utils.res");
  */
 function measureProjectBuild(checkout, projectCheckout, results) {
   const rescript = path.join(checkout, relativeBinDir, "rescript.exe");
-  const projectDir =
-    benchmarkProjects
-      .map(project => path.join(projectCheckout, project))
-      .find(dir => fs.existsSync(dir)) ??
-    path.join(projectCheckout, benchmarkProjects[0]);
+  const projectDir = path.join(projectCheckout, benchmarkProject);
   const workDir = path.join(os.tmpdir(), "compiler-bench-project");
   fs.rmSync(workDir, { recursive: true, force: true });
   try {
@@ -642,12 +631,15 @@ function measureProjectBuild(checkout, projectCheckout, results) {
       `${JSON.stringify(config, null, 2)}\n`,
     );
     const scope = path.join(workDir, "node_modules", "@rescript");
-    const react = path.join(
-      projectCheckout,
-      "tests",
-      "dependencies",
-      "rescript-react",
-    );
+    // A base from before tests/dependencies/rescript-react moved to
+    // packages/rescript-react still has the project there; the next pull
+    // request in the stack drops that fallback.
+    const react =
+      [
+        path.join(projectCheckout, "packages", "rescript-react"),
+        path.join(projectCheckout, "tests", "dependencies", "rescript-react"),
+      ].find(dir => fs.existsSync(dir)) ??
+      path.join(projectCheckout, "packages", "rescript-react");
     copySources(path.join(react, "src"), path.join(scope, "react", "src"));
     fs.copyFileSync(
       path.join(react, "rescript.json"),
