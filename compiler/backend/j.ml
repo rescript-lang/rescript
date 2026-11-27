@@ -59,13 +59,10 @@ and vident = Id of ident | Qualified of module_id * string option
    when the third one is None, it means the whole module
 
    TODO:
-   invariant, when [kind] is [Runtime], then we can ignore [ident],
-   since all [runtime] functions are unique, when do the
-   pattern match we can ignore the first one for simplicity
-   for example
-   {[
-     Qualified (_, Runtime, Some "compare")
-   ]}
+   when [kind] is [Runtime], the name alone does not identify a function:
+   several runtime modules export the same name with different semantics,
+   such as [compare] of [Primitive_int], [Primitive_float] and
+   [Primitive_object]. Match on the module's [ident] as well.
 *)
 
 and exception_ident = ident

@@ -1,0 +1,2 @@
+- Fold `compare(a, b)` against `0` into a JS comparison only for ints, bools, strings and bigints, so structural comparison of records, tuples, arrays, options and NaN floats is no longer miscompiled.
+- Fix `compare` of int constants against `0` folding to the wrong result when the first constant is negative, such as `compare(-1, -1) == 0`.
