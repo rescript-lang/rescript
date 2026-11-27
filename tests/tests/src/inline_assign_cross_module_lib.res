@@ -30,3 +30,22 @@ let copyThenAssign = (x: int) => {
   r := s + 1
   s + r.contents
 }
+
+// Inlined by inline_assign_cross_module_test.res: the condition and the switch
+// read [r] after the assignment, not the argument it was bound to.
+@inline
+let negated = (x: bool) => {
+  let r = ref(x)
+  r := !r.contents
+  r.contents ? 1 : 2
+}
+
+@inline
+let matchAfterAssign = (x: string) => {
+  let r = ref(x)
+  r := "b"
+  switch r.contents {
+  | "a" => 1
+  | _ => 2
+  }
+}

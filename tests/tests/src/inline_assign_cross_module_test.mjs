@@ -55,9 +55,30 @@ function readBeforeAssignBound() {
   return p + r | 0;
 }
 
+function negatedTrue() {
+  let r = true;
+  r = !r;
+  if (r) {
+    return 1;
+  } else {
+    return 2;
+  }
+}
+
+function matchAfterAssignA() {
+  let r = "a";
+  r = "b";
+  let match = r;
+  if (match === "a") {
+    return 1;
+  } else {
+    return 2;
+  }
+}
+
 Mocha.describe("Inline_assign_cross_module_test", () => {
-  Mocha.test("a variable the inlined function assigns, twice in a function", () => Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 30, characters 7-14", 14, addBumped(id(3), id(4))));
-  Mocha.test("a variable the inlined function assigns, with a constant argument", () => Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 34, characters 7-14", [
+  Mocha.test("a variable the inlined function assigns, twice in a function", () => Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 34, characters 7-14", 14, addBumped(id(3), id(4))));
+  Mocha.test("a variable the inlined function assigns, with a constant argument", () => Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 38, characters 7-14", [
     12,
     4
   ], bumpConstants()));
@@ -65,15 +86,27 @@ Mocha.describe("Inline_assign_cross_module_test", () => {
     let r = 5;
     let p = r;
     r = 10;
-    Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 38, characters 7-14", 15, p + r | 0);
+    Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 42, characters 7-14", 15, p + r | 0);
   });
   Mocha.test("a copy of an assigned variable, made before the assignment", () => {
     let r = 1;
     let s = r;
     r = s + 1 | 0;
-    Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 42, characters 7-14", 3, s + r | 0);
+    Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 46, characters 7-14", 3, s + r | 0);
   });
-  Mocha.test("a read of an assigned variable, passed to a bound closure before the assignment", () => Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 46, characters 7-14", 15, readBeforeAssignBound()));
+  Mocha.test("a read of an assigned variable, passed to a bound closure before the assignment", () => Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 50, characters 7-14", 15, readBeforeAssignBound()));
+  Mocha.test("a condition on an assigned variable bound to a constant", () => {
+    let r = true;
+    r = !r;
+    Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 54, characters 7-14", 2, r ? 1 : 2);
+  });
+  Mocha.test("a switch on an assigned variable bound to a constant", () => {
+    let r = "a";
+    r = "b";
+    let match = r;
+    let tmp = match === "a" ? 1 : 2;
+    Test_utils.eq("File \"inline_assign_cross_module_test.res\", line 58, characters 7-14", 2, tmp);
+  });
 });
 
 export {
@@ -83,5 +116,7 @@ export {
   readBeforeAssign,
   copyBeforeAssign,
   readBeforeAssignBound,
+  negatedTrue,
+  matchAfterAssignA,
 }
 /*  Not a pure module */

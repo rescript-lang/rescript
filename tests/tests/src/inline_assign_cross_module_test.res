@@ -25,6 +25,10 @@ let readBeforeAssignBound = () => {
   Inline_assign_cross_module_lib.readThenAssign(5, capture)
 }
 
+let negatedTrue = () => Inline_assign_cross_module_lib.negated(true)
+
+let matchAfterAssignA = () => Inline_assign_cross_module_lib.matchAfterAssign("a")
+
 describe(__MODULE__, () => {
   test("a variable the inlined function assigns, twice in a function", () => {
     eq(__LOC__, 14, addBumped(id(3), id(4)))
@@ -44,5 +48,13 @@ describe(__MODULE__, () => {
 
   test("a read of an assigned variable, passed to a bound closure before the assignment", () => {
     eq(__LOC__, 15, readBeforeAssignBound())
+  })
+
+  test("a condition on an assigned variable bound to a constant", () => {
+    eq(__LOC__, 2, negatedTrue())
+  })
+
+  test("a switch on an assigned variable bound to a constant", () => {
+    eq(__LOC__, 2, matchAfterAssignA())
   })
 })

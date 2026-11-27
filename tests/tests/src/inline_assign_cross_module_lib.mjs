@@ -24,9 +24,32 @@ function copyThenAssign(x) {
   return s + r | 0;
 }
 
+function negated(x) {
+  let r = x;
+  r = !r;
+  if (r) {
+    return 1;
+  } else {
+    return 2;
+  }
+}
+
+function matchAfterAssign(x) {
+  let r = x;
+  r = "b";
+  let match = r;
+  if (match === "a") {
+    return 1;
+  } else {
+    return 2;
+  }
+}
+
 export {
   bumpTwice,
   readThenAssign,
   copyThenAssign,
+  negated,
+  matchAfterAssign,
 }
 /* No side effect */
