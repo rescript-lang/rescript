@@ -794,10 +794,12 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f "~";
         expression ~level:13 cxt f e)
   | In (prop, obj) ->
-    P.cond_paren_group f (level > 12) (fun _ ->
-        let cxt = expression ~level:0 cxt f prop in
+    (* Binds like the other relational operators *)
+    let out, lft, rght = Js_op_util.op_prec InstanceOf in
+    P.cond_paren_group f (level > out) (fun _ ->
+        let cxt = expression ~level:lft cxt f prop in
         P.string f " in ";
-        expression ~level:0 cxt f obj)
+        expression ~level:rght cxt f obj)
   | Typeof e ->
     let is_fun =
       match e.expression_desc with
@@ -1428,7 +1430,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
                         with
                         | Some ident_expression, (Number _ | Var _) ->
                           let cxt = pp_var_assign cxt f id in
-                          (expression ~level:0 cxt f ident_expression, None)
+                          (expression ~level:1 cxt f ident_expression, None)
                         | Some ident_expression, _ ->
                           let cxt = pp_var_assign cxt f id in
                           let cxt =
