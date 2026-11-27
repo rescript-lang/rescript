@@ -295,6 +295,33 @@ let debugger_nl f =
   semi f;
   P.newline f
 
+(* Whether [e] printed at the unary-minus level starts with [-]: a negative
+   literal, or [0 - x] which is itself printed as [-x]. An identity [Some] is
+   printed as its payload. *)
+let rec prints_with_leading_minus (e : J.expression) =
+  match e.expression_desc with
+  | Number (Int {i; c = None}) -> i < 0l
+  | Number (Float {f}) ->
+    let s = Js_number.caml_float_literal_to_js_string f in
+    s <> "" && s.[0] = '-'
+  | Number (BigInt {positive}) -> not positive
+  | Bin (Minus, {expression_desc = Number (Int {i = 0l} | Float {f = "0."})}, _)
+    ->
+    true
+  | Optional_block (e, true) -> prints_with_leading_minus e
+  | Raw_js_code {code; code_info = Exp (Js_literal _)} | Json_literal code ->
+    String.starts_with ~prefix:"-" code
+  | Raw_js_code {code_info = Exp (Js_function _ | Js_exp_unknown) | Stmt _}
+  | Number (Int {c = Some _})
+  | Optional_block (_, false)
+  | Length _ | Is_null_or_undefined _ | String_append _ | Bool _ | Typeof _
+  | In _ | Js_not _ | Js_bnot _ | Seq _ | Cond _ | Bin _ | Call _ | Jsx _
+  | Array_index _ | Tagged_template _ | Interpolated_template _ | Static_index _
+  | New _ | Var _ | Fun _ | Str _ | Template_literal _ | Array _ | Caml_block _
+  | Caml_block_tag _ | Object _ | Undefined _ | Null | Await _ | Spread _
+  | Record_rest _ ->
+    false
+
 let rec record_rest_field cxt f
     ({record_rest_label; record_rest_ident} : J.record_rest_field) =
   let key = Js_dump_property.property_key (Lit record_rest_label) in
@@ -803,10 +830,12 @@ and expression_desc cxt ~(level : int) f x : cxt =
   *)
     ->
     P.cond_paren_group f (level > 13) (fun _ ->
+        (* A space keeps [-] apart from an operand that itself prints with a
+           leading [-]: [--x] would be a decrement, [--5] a syntax error. *)
         P.string f
           (match desc with
           | Float _ -> "- "
-          | _ -> "-");
+          | _ -> if prints_with_leading_minus e then "- " else "-");
         expression ~level:13 cxt f e)
   | Bin
       ( Or,
