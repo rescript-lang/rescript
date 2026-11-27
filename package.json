@@ -106,7 +106,7 @@
     "packages/dev-playground",
     "packages/playground",
     "packages/@rescript/*",
-    "tests/fixtures/**",
+    "packages/rescript-react",
     "tests/analysis_tests/**",
     "tests/runtime_tests/docstrings",
     "tests/runtime_tests/belt",

@@ -58,7 +58,7 @@
       "!**/tests/project_tests/**/src",
       "!**/tests/runtime_tests/belt/**/src",
       "!**/tests/runtime_tests/commonjs/src",
-      "!**/tests/fixtures/**/src",
+      "!**/packages/rescript-react/src",
       "!**/tests/runtime_tests/docstrings",
       "!**/tests/gentype_tests",
       "**/tests/gentype_tests/typescript-react-example/**",
