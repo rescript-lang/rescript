@@ -7,7 +7,6 @@
  frontend
  gentype
  playground
- sync
  syntax_cli
  typing
  version)

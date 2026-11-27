@@ -80,7 +80,7 @@ RESCRIPT_EXE := $(BIN_DIR)/rescript.exe
 compiler: $(COMPILER_EXES)
 
 # The compiler binaries in $(BIN_DIR) are produced by dune itself: the
-# promotion rules in compiler/sync/dune copy (and strip) them into the
+# promotion rules in packages/dune copy (and strip) them into the
 # platform npm package on every `dune build`, comparing content so unchanged
 # binaries are not rewritten. Make only needs to know that running dune
 # produces them.
@@ -88,12 +88,12 @@ $(COMPILER_BUILD_STAMP): $(COMPILER_SOURCES)
 	dune build
 
 $(COMPILER_EXES): $(COMPILER_BUILD_STAMP)
-	@cmp -s $@ _build/default/compiler/sync/$(@F) || { \
-	  rm -f _build/default/compiler/sync/$(@F); dune build; }
-	@cmp -s $@ _build/default/compiler/sync/$(@F) || { \
+	@cmp -s $@ _build/default/packages/$(@F) || { \
+	  rm -f _build/default/packages/$(@F); dune build; }
+	@cmp -s $@ _build/default/packages/$(@F) || { \
 	  echo "Error: $@ is missing or does not match the dune build output."; \
 	  echo "Dune promotion did not produce it; check that this platform is"; \
-	  echo "covered by a rule in compiler/sync/dune."; \
+	  echo "covered by a rule in packages/dune."; \
 	  exit 1; }
 	@test -x $@ || chmod 755 $@
 

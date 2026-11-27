@@ -1,0 +1,1 @@
+- Move the rules that copy the executables into the platform packages from `compiler/sync/dune` to `packages/dune`.

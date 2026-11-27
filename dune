@@ -1,4 +1,4 @@
-(dirs compiler syntax tests analysis tools build_system)
+(dirs compiler syntax tests analysis tools build_system packages)
 
 ; All warnings are enabled, except:
 ; - 4 (fragile-match): wildcard cases are used deliberately.
