@@ -569,7 +569,7 @@ jobs:
           # to 0.2%. The runtime and Belt are built there too, since the
           # replayed builds would otherwise write interfaces that don't
           # match those of the files they don't replay yet. Both build the
-          # base's tests/tests, which the base's compiler builds already.
+          # base's tests/compiler_tests, which the base's compiler builds already.
           measure() {
             sudo mkdir -p /bench
             sudo mount --bind "$1" /bench
@@ -782,10 +782,10 @@ jobs:
             echo "$manager=$dir" >> "$GITHUB_OUTPUT"
             cp -r tests/package_tests/installation_test/* "$dir"
             # The compiled stdlib tests run against the installed runtime. Their
-            # Test.mjs imports @babel/code-frame, which tests/tests depends on.
-            cp -r tests/tests/src/stdlib "$dir/stdlib"
+            # Test.mjs imports @babel/code-frame, which tests/compiler_tests depends on.
+            cp -r tests/compiler_tests/src/stdlib "$dir/stdlib"
           done
-          echo "code-frame=$(node -p 'require("./tests/tests/package.json").dependencies["@babel/code-frame"]')" >> "$GITHUB_OUTPUT"
+          echo "code-frame=$(node -p 'require("./tests/compiler_tests/package.json").dependencies["@babel/code-frame"]')" >> "$GITHUB_OUTPUT"
 
       - name: "npm: Install ReScript package"
         run: |

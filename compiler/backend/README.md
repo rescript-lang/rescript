@@ -81,7 +81,7 @@ Run the full compiler tests for backend changes:
 make test
 ```
 
-End-to-end fixtures under `tests/tests/` check generated `.mjs` output. Add
+End-to-end fixtures under `tests/compiler_tests/` check generated `.mjs` output. Add
 focused OUnit coverage for an isolated analysis or transformation. Use the
 compiler flags below to compare intermediate forms for a small source file:
 

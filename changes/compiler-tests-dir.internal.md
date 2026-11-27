@@ -1,0 +1,1 @@
+- Rename `tests/tests`, the compiler's output and mocha tests, to `tests/compiler_tests`.

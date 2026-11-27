@@ -1381,9 +1381,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rescript-tests@workspace:tests/tests":
+"rescript-tests@workspace:tests/compiler_tests":
   version: 0.0.0-use.local
-  resolution: "rescript-tests@workspace:tests/tests"
+  resolution: "rescript-tests@workspace:tests/compiler_tests"
   dependencies:
     "@babel/code-frame": "npm:^8.0.6"
     "@rescript/react": "workspace:^"

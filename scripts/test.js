@@ -100,13 +100,13 @@ if (mochaTest) {
     [
       "-t",
       "10000",
-      "tests/tests/src/**/*_test.mjs",
+      "tests/compiler_tests/src/**/*_test.mjs",
       "tests/belt_tests/src/**/*_test.mjs",
       "tests/cli_tests/*_test.mjs",
       // jsx_preserve_test.mjs contains JSX, which Node cannot load; the
       // file exists to pin the preserved-JSX output.
       "--ignore",
-      "tests/tests/src/jsx_preserve_test.mjs",
+      "tests/compiler_tests/src/jsx_preserve_test.mjs",
     ],
     {
       cwd: projectDir,
@@ -114,12 +114,12 @@ if (mochaTest) {
     },
   );
 
-  await node("tests/tests/src/stdlib/Stdlib_TestSuite.mjs", [], {
+  await node("tests/compiler_tests/src/stdlib/Stdlib_TestSuite.mjs", [], {
     cwd: projectDir,
     stdio: "inherit",
   });
 
-  await node("tests/tests/src/stdlib/Stdlib_TempTests.mjs", [], {
+  await node("tests/compiler_tests/src/stdlib/Stdlib_TempTests.mjs", [], {
     cwd: projectDir,
     stdio: "inherit",
   });
@@ -127,7 +127,7 @@ if (mochaTest) {
   // Not part of Stdlib_TestSuite, which the installation tests also run on
   // Node.js 22.
   if ("Temporal" in globalThis) {
-    await node("tests/tests/src/stdlib/Stdlib_TemporalTests.mjs", [], {
+    await node("tests/compiler_tests/src/stdlib/Stdlib_TemporalTests.mjs", [], {
       cwd: projectDir,
       stdio: "inherit",
     });
