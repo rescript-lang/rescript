@@ -55,10 +55,20 @@ let max_inline_depth = 4
 
 let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
   (* Inlining keeps the reads of assigned variables in order (see
-     [Lam_beta_reduce]). Only [Lam_pass_sroa], which runs later, makes
-     [Lassign]s now, so this is usually empty; computing it here keeps the
-     inlining sound if that changes. *)
-  let meta = {meta with assignable = Lambda_traverse.assigned_variables lam} in
+     [Lam_beta_reduce]), so it needs the variables some [Lassign] assigns.
+     Only [Lam_pass_sroa], which runs later, makes [Lassign]s, so [lam] has
+     none yet; computing them here keeps the inlining sound if that changes. *)
+  let assignable = ref (Lambda_traverse.assigned_variables lam) in
+  let current_meta () = {meta with assignable = !assignable} in
+  (* A body inlined from another module was optimized by [Lam_pass_sroa]
+     there, so it may assign variables, and inlining renamed them. They are
+     added before the inlined body is simplified further, or inlining a call in
+     it could move a read of one past an assignment. *)
+  let record_assigned (lam : Lambda.t) =
+    assignable :=
+      Set_ident.union !assignable (Lambda_traverse.assigned_variables lam);
+    lam
+  in
   let inline_depth = ref 0 in
   let rec simpl (lam : Lambda.t) : Lambda.t =
     match lam with
@@ -164,7 +174,10 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
                     | _ -> true)
                   args
              && Lambda.lfunction_can_be_inlined lfunction ->
-        simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
+        simpl
+          (record_assigned
+             (Lam_beta_reduce.propagate_beta_reduce (current_meta ()) params
+                body args))
       | _ ->
         let fn = simpl l1 in
         let args' = Ext_list.map_sharing args simpl in
@@ -203,7 +216,9 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
             (* Check: recursive applying may result in non-termination *)
             (* Ir_log.dwarn __LOC__ "beta .. %s/%d" v.name v.stamp ; *)
             simpl
-              (Lam_beta_reduce.propagate_beta_reduce meta params body ap_args)
+              (record_assigned
+                 (Lam_beta_reduce.propagate_beta_reduce (current_meta ()) params
+                    body ap_args))
           else if Lam_analysis.ok_to_inline_fun_when_app m ap_args then
             let param_map =
               Lam_closure.is_closed_with_map meta.export_idents params body
@@ -213,8 +228,9 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
             | false, (_, param_map) | true, (true, param_map) -> (
               match rec_flag with
               | Lam_rec ->
-                Lam_beta_reduce.propagate_beta_reduce_with_map meta param_map
-                  params body ap_args
+                record_assigned
+                  (Lam_beta_reduce.propagate_beta_reduce_with_map
+                     (current_meta ()) param_map params body ap_args)
               | Lam_self_rec -> normal ()
               | Lam_non_rec ->
                 if
@@ -229,8 +245,9 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
                   incr inline_depth;
                   let inlined =
                     simpl
-                      (Lam_beta_reduce.propagate_beta_reduce_with_map meta
-                         param_map params body ap_args)
+                      (record_assigned
+                         (Lam_beta_reduce.propagate_beta_reduce_with_map
+                            (current_meta ()) param_map params body ap_args))
                   in
                   decr inline_depth;
                   inlined))
@@ -242,7 +259,10 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lambda.t) : Lambda.t =
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when List.compare_lengths params args = 0
            && Lambda.lfunction_can_be_inlined lfunction ->
-      simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
+      simpl
+        (record_assigned
+           (Lam_beta_reduce.propagate_beta_reduce (current_meta ()) params body
+              args))
     | Lstringswitch (l, sw, d) -> (
       let known_constant =
         match l with
