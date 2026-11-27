@@ -100,12 +100,13 @@ let rec eliminate_tuple (id : Ident.t) (lam : Lam.t) acc =
                     - also for function compilation, flattening should be done first
                     - [compile_group] and [compile] become mutually recursive function
                 *)
-let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lam.t) : Lam.t
-    =
+let lambda_of_groups ~assignable ~(rev_bindings : Lam_group.t list)
+    (result : Lam.t) : Lam.t =
   Ext_list.fold_left rev_bindings result (fun acc x ->
       match x with
       | Nop l -> Lam.seq l acc
-      | Single (kind, ident, lam) -> Lam_util.refine_let ~kind ident lam acc
+      | Single (kind, ident, lam) ->
+        Lam_util.refine_let ~assignable ~kind ident lam acc
       | Recursive bindings -> Lam.letrec bindings acc)
 
 (* TODO:
@@ -115,6 +116,9 @@ let lambda_of_groups ~(rev_bindings : Lam_group.t list) (result : Lam.t) : Lam.t
     return value are in reverse order, but handled by [lambda_of_groups]
 *)
 let deep_flatten (lam : Lam.t) : Lam.t =
+  (* A body inlined from another module with [-bs-cross-module-opt] may
+     assign variables, and a binding to one of them is not an alias. *)
+  let assignable = Lam_util.assigned_variables lam in
   let rec flatten (acc : Lam_group.t list) (lam : Lam.t) :
       Lam.t * Lam_group.t list =
     match lam with
@@ -178,7 +182,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     match lam with
     | Llet _ ->
       let res, groups = flatten [] lam in
-      lambda_of_groups res ~rev_bindings:groups
+      lambda_of_groups ~assignable res ~rev_bindings:groups
     | Lletrec (bind_args, body) ->
       (* Attention: don't mess up with internal {let rec} *)
       let rec iter bind_args groups set =
@@ -207,7 +211,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
                 Lam_group.Single (Strict, id, lam) :: wrap,
                 false ))
       in
-      lambda_of_groups
+      lambda_of_groups ~assignable
         ~rev_bindings:rev_wrap (* These bindings are extracted from [letrec] *)
         (Lam.letrec (List.rev rev_bindings) (aux body))
     | Lsequence (l, r) -> Lam.seq (aux l) (aux r)

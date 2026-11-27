@@ -48,6 +48,18 @@ let is_const_some (cst : Lam_constant.t) : bool =
   | _ -> false
 
 let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
+  (* Inlining needs the variables some [Lassign] assigns. Within a module,
+     only [Lam_pass_lets_dce], which runs later, makes [Lassign]s, but a body
+     inlined from another module with [-bs-cross-module-opt] was optimized by
+     it there, so it may assign variables, and inlining renamed them. They are
+     added before the inlined body is simplified further, or inlining a call in
+     it could move a read of one past an assignment. *)
+  let assignable = ref (Lam_util.assigned_variables lam) in
+  let current_meta () = {meta with assignable = !assignable} in
+  let record_assigned (lam : Lam.t) =
+    assignable := Set_ident.union !assignable (Lam_util.assigned_variables lam);
+    lam
+  in
   let rec simpl (lam : Lam.t) : Lam.t =
     match lam with
     | Lvar _ -> lam
@@ -156,7 +168,10 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
                       | None -> true)
                     | _ -> true)
              && Lam_analysis.lfunction_can_be_inlined lfunction ->
-        simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
+        simpl
+          (record_assigned
+             (Lam_beta_reduce.propagate_beta_reduce (current_meta ()) params
+                body args))
       | _ ->
         Lam.apply (simpl l1) (Ext_list.map args simpl) ap_info
           ?ap_transformed_jsx:None)
@@ -194,7 +209,9 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
             (* Check: recursive applying may result in non-termination *)
             (* Ext_log.dwarn __LOC__ "beta .. %s/%d" v.name v.stamp ; *)
             simpl
-              (Lam_beta_reduce.propagate_beta_reduce meta params body ap_args)
+              (record_assigned
+                 (Lam_beta_reduce.propagate_beta_reduce (current_meta ()) params
+                    body ap_args))
           else if
             (* Lam_analysis.size body < Lam_analysis.small_inline_size *)
             (* ap_inlined = Always_inline || *)
@@ -213,8 +230,9 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
             | false, (_, param_map) | true, (true, param_map) -> (
               match rec_flag with
               | Lam_rec ->
-                Lam_beta_reduce.propagate_beta_reduce_with_map meta param_map
-                  params body ap_args
+                record_assigned
+                  (Lam_beta_reduce.propagate_beta_reduce_with_map
+                     (current_meta ()) param_map params body ap_args)
               | Lam_self_rec -> normal ()
               | Lam_non_rec ->
                 if
@@ -224,8 +242,9 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
                 then normal ()
                 else
                   simpl
-                    (Lam_beta_reduce.propagate_beta_reduce_with_map meta
-                       param_map params body ap_args))
+                    (record_assigned
+                       (Lam_beta_reduce.propagate_beta_reduce_with_map
+                          (current_meta ()) param_map params body ap_args)))
             | _ -> normal ()
           else normal ()
         else normal ()
@@ -234,7 +253,10 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when Ext_list.same_length params args
            && Lam_analysis.lfunction_can_be_inlined lfunction ->
-      simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
+      simpl
+        (record_assigned
+           (Lam_beta_reduce.propagate_beta_reduce (current_meta ()) params body
+              args))
     (* | Lapply{ fn = Lfunction{function_kind =  Tupled;  params; body};  *)
     (*          args = [Lprim {primitive = Pmakeblock _; args; _}]; _} *)
     (*   (\** TODO: keep track of this parameter in ocaml trunk, *)

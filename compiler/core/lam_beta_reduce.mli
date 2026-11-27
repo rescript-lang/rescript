@@ -24,7 +24,8 @@
 
 (** Beta reduction of lambda IR *)
 
-val no_names_beta_reduce : Ident.t list -> Lam.t -> Lam.t list -> Lam.t
+val no_names_beta_reduce :
+  assignable:Set_ident.t -> Ident.t list -> Lam.t -> Lam.t list -> Lam.t
 (* Compile-time beta-reduction of functions immediately applied:
       Lapply(Lfunction(Curried, params, body), args, loc) ->
         let paramN = argN in ... let param1 = arg1 in body

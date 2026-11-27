@@ -154,7 +154,20 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
       let l1 = aux l1 in
       let l2 = aux l2 in
       Lam.while_ l1 l2
-    | Lassign (v, l) -> Lam.assign v (aux l)
+    | Lassign (v, l) ->
+      let v =
+        match Hash_ident.find_opt map v with
+        | Some (Lvar v) -> v
+        | Some _ ->
+          (* Only let-bound variables are assigned, never the parameters [map]
+             may replace with another term. *)
+          Ext_fmt.failwithf ~loc:__LOC__
+            "%s/%d is assigned, but inlining replaces it with a term that is \
+             not a variable"
+            (Ident.name v) v.stamp
+        | None -> v
+      in
+      Lam.assign v (aux l)
   in
   aux lam
 

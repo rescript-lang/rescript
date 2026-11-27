@@ -11,14 +11,18 @@
 (***********************************************************************)
 (* Adapted for Javascript backend : Hongbo Zhang,  *)
 
-let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
+let lets_helper ~assignable (count_var : Ident.t -> Lam_pass_count.used_info)
+    lam : Lam.t =
   let subst : Lam.t Hash_ident.t = Hash_ident.create 32 in
   let string_table : string Hash_ident.t = Hash_ident.create 32 in
   let used v = (count_var v).times > 0 in
   let rec simplif (lam : Lam.t) =
     match lam with
     | Lvar v -> Hash_ident.find_default subst v lam
-    | Llet ((Strict | Alias | StrictOpt), v, Lvar w, l2) ->
+    | Llet ((Strict | Alias | StrictOpt), v, Lvar w, l2)
+      when not (Set_ident.mem assignable w) ->
+      (* A variable some [Lassign] assigns may change between the binding and
+         a read of [v], so [v] keeps its own binding. *)
       Hash_ident.add subst v (simplif (Lam.var w));
       simplif l2
     | Llet
@@ -35,10 +39,10 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
       let slbody = simplif lbody in
       try
         (* TODO: record all references variables *)
-        Lam_util.refine_let ~kind:Variable v slinit
+        Lam_util.refine_let ~assignable ~kind:Variable v slinit
           (Lam_pass_eliminate_ref.eliminate_ref v slbody)
       with Lam_pass_eliminate_ref.Real_reference ->
-        Lam_util.refine_let ~kind v
+        Lam_util.refine_let ~assignable ~kind v
           (Lam.prim ~primitive ~args:[slinit] loc)
           slbody)
     | Llet (Alias, v, l1, l2) -> (
@@ -103,10 +107,10 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
           let slbody = simplif lbody in
           try
             (* TODO: record all references variables *)
-            Lam_util.refine_let ~kind:Variable v slinit
+            Lam_util.refine_let ~assignable ~kind:Variable v slinit
               (Lam_pass_eliminate_ref.eliminate_ref v slbody)
           with Lam_pass_eliminate_ref.Real_reference ->
-            Lam_util.refine_let ~kind v
+            Lam_util.refine_let ~assignable ~kind v
               (Lam.prim ~primitive ~args:[slinit] loc)
               slbody)
         | _ -> (
@@ -116,7 +120,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
             Hash_ident.add string_table v s;
             (* we need move [simplif lbody] later, since adding Hash does have side effect *)
             Lam.let_ Alias v l1 (simplif lbody)
-          | _ -> Lam_util.refine_let ~kind v l1 (simplif lbody))
+          | _ -> Lam_util.refine_let ~assignable ~kind v l1 (simplif lbody))
         (* TODO: check if it is correct rollback to [StrictOpt]? *))
     | Llet (((Strict | Variable) as kind), v, l1, l2) -> (
       if not (used v) then
@@ -130,13 +134,14 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
         | Strict, Lconst (Const_string {s; delim = None}) ->
           Hash_ident.add string_table v s;
           Lam.let_ Alias v l1 (simplif l2)
-        | _ -> Lam_util.refine_let ~kind v l1 (simplif l2))
+        | _ -> Lam_util.refine_let ~assignable ~kind v l1 (simplif l2))
     | Lsequence (l1, l2) -> Lam.seq (simplif l1) (simplif l2)
     | Lapply
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when Ext_list.same_length params args
            && Lam_analysis.lfunction_can_be_inlined lfunction ->
-      simplif (Lam_beta_reduce.no_names_beta_reduce params body args)
+      simplif
+        (Lam_beta_reduce.no_names_beta_reduce ~assignable params body args)
       (* | Lapply{ fn = Lfunction{function_kind = Tupled; params; body}; *)
       (*           args = [Lprim {primitive = Pmakeblock _;  args; _}]; _} *)
       (*   (\** TODO: keep track of this parameter in ocaml trunk, *)
@@ -205,15 +210,18 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
   simplif lam
 
 (* To transform let-bound references into variables *)
-let apply_lets occ lambda =
+let apply_lets ~assignable occ lambda =
   let count_var v =
     match Hash_ident.find_opt occ v with
     | None -> Lam_pass_count.dummy_info ()
     | Some v -> v
   in
-  lets_helper count_var lambda
+  lets_helper ~assignable count_var lambda
 
 let simplify_lets (lam : Lam.t) : Lam.t =
-  let occ = Lam_pass_count.collect_occurs lam in
+  (* Within a module, this pass makes the first [Lassign]s, but a body inlined
+     from another module with [-bs-cross-module-opt] comes with its own. *)
+  let assignable = Lam_util.assigned_variables lam in
+  let occ = Lam_pass_count.collect_occurs ~assignable lam in
   (* Ext_log.dwarn ~__POS__ "@[%a@]@." Lam_pass_count.pp_occ_tbl occ ; *)
-  apply_lets occ lam
+  apply_lets ~assignable occ lam

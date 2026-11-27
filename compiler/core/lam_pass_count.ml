@@ -56,7 +56,7 @@ let pp_occ_tbl fmt tbl =
      The local table [bv] associates to each locally-let-bound variable
      its reference count, as above.  [bv] is enriched at let bindings
      but emptied when crossing lambdas and loops. *)
-let collect_occurs lam : occ_tbl =
+let collect_occurs ~assignable lam : occ_tbl =
   let occ : occ_tbl = Hash_ident.create 83 in
 
   (* Current use count of a variable. *)
@@ -147,7 +147,8 @@ let collect_occurs lam : occ_tbl =
         {ap_func = Lfunction ({params; body} as lfunction); ap_args = args; _}
       when Ext_list.same_length params args
            && Lam_analysis.lfunction_can_be_inlined lfunction ->
-      count bv (Lam_beta_reduce.no_names_beta_reduce params body args)
+      count bv
+        (Lam_beta_reduce.no_names_beta_reduce ~assignable params body args)
     (* | Lapply{fn = Lfunction{function_kind = Tupled; params; body}; *)
     (*          args = [Lprim {primitive = Pmakeblock _;  args; _}]; _} *)
     (*   when  Ext_list.same_length params  args -> *)

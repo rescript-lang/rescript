@@ -19,6 +19,7 @@
 - Integer patterns that alias the same int32 value (e.g. `0xFFFF_FFFF` and `-1`) may now produce unused-case warnings. https://github.com/rescript-lang/rescript/pull/8717 https://github.com/rescript-lang/rescript/pull/8858
 - Fix constant folding of a `switch` picking the wrong case for `@as(int)` constructors and for coerced variants. https://github.com/rescript-lang/rescript/pull/9318
 - Fix constant folding of comparisons between `@as(int)` constructors and other constructors, and merging of switch arms returning them. https://github.com/rescript-lang/rescript/pull/9319
+- Fix inlining another module's function that assigns a local variable, as in `let r = ref(x); r := r.contents + 1`, with `-bs-cross-module-opt`: the compiler crashed, the generated code assigned an undeclared variable, a value read from the variable before an assignment was read after it instead, or a condition on the variable was decided by the value it started with. https://github.com/rescript-lang/rescript/pull/9424
 
 #### :nail_care: Polish
 

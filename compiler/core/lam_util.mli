@@ -52,7 +52,18 @@ val field_flatten_get :
 val alias_ident_or_global :
   Lam_stats.t -> Ident.t -> Ident.t -> Lam_id_kind.t -> unit
 
-val refine_let : kind:Lam_compat.let_kind -> Ident.t -> Lam.t -> Lam.t -> Lam.t
+val refine_let :
+  assignable:Set_ident.t ->
+  kind:Lam_compat.let_kind ->
+  Ident.t ->
+  Lam.t ->
+  Lam.t ->
+  Lam.t
+(** [assignable] are the variables some [Lassign] assigns: a binding to one
+    of them is not an alias. *)
+
+val assigned_variables : Lam.t -> Set_ident.t
+(** The variables some [Lassign] in the term assigns *)
 
 val dump : string -> Lam.t -> unit
 (** [dump] when {!Js_config.is_same_file}*)

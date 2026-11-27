@@ -65,7 +65,8 @@ let add_required_modules ( x : Ident.t list) (meta : Lam_stats.t) =
    Falling through keeps the original binding.  Only the Alias clause changes
    evaluation strategy downstream, so we keep its predicate intentionally
    syntactic and narrow. *)
-  let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
+(* [assignable] are the variables some [Lassign] assigns. *)
+  let refine_let ~assignable ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
   let is_block_constructor = function
     | Lam_primitive.Pmakeblock _ -> true
     | _ -> false
@@ -78,8 +79,13 @@ let add_required_modules ( x : Ident.t list) (meta : Lam_stats.t) =
      the single eager evaluation promised by [Strict]/[StrictOpt]. *)
   let rec is_safe_to_alias (lam : Lam.t) =
     match lam with
-    | Lvar _ | Lconst _ ->
-        (* var/const --> emitting multiple `const` reads is identical to the
+    | Lvar v ->
+        (* var --> emitting multiple reads is identical to the original eager
+           evaluation, so codegen may inline them freely, unless an [Lassign]
+           may change the variable between the binding and a read. *)
+        not (Set_ident.mem assignable v)
+    | Lconst _ ->
+        (* const --> emitting multiple `const` reads is identical to the
            original eager evaluation, so codegen may inline them freely. *)
         true
     | Lprim { primitive = Pfield (_, Fld_module _); args = [ (Lglobal_module _ | Lvar _) ]; _ } ->
@@ -254,6 +260,21 @@ let dump ext  lam =
 
 
 
+
+(* The variables some [Lassign] in [lam] assigns *)
+let assigned_variables (lam : Lam.t) : Set_ident.t =
+  let assigned = ref Set_ident.empty in
+  let rec walk (lam : Lam.t) =
+    (match lam with
+    | Lassign (id, _) -> assigned := Set_ident.add !assigned id
+    | Lvar _ | Lglobal_module _ | Lconst _ | Lapply _ | Lfunction _ | Llet _
+    | Lletrec _ | Lprim _ | Lswitch _ | Lstringswitch _ | Lstaticraise _
+    | Lstaticcatch _ | Ltrywith _ | Lifthenelse _ | Lsequence _ | Lwhile _
+    | Lfor _ -> ());
+    Lam_iter.inner_iter lam walk
+  in
+  walk lam;
+  !assigned
 
 let is_function (lam : Lam.t) = 
   match lam with 
