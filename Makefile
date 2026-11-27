@@ -232,7 +232,7 @@ semantic-diff:
 #   make coverage         # run full test suite, generate report
 #   make clean-coverage   # remove coverage artifacts
 #
-# Suites covered: the `scripts/test.js -all` suites (mocha/build/ounit/
+# Suites covered: the `scripts/test.js -all` suites (mocha/projects/ounit/
 # docstrings), the syntax tests (syntax/, via the instrumented
 # res_parser), the gentype tests (compiler/gentype, via the instrumented
 # bsc) and the analysis + tools tests, including reanalyze (analysis/, via
@@ -288,7 +288,7 @@ coverage-lib: coverage-prepare
 
 # Run the test suites that exercise the instrumented toolchain. Each suite
 # shells out to a binary that `coverage-build` instrumented:
-#   - `node scripts/test.js -all` drives bsc (mocha/build/ounit/docstrings).
+#   - `node scripts/test.js -all` drives bsc (mocha/projects/ounit/docstrings).
 #   - the syntax tests drive the instrumented `res_parser` from
 #     _build/install/default/bin, adding coverage for syntax/.
 #     ROUNDTRIP_TEST=1 matches Linux CI and also exercises the printer paths.
