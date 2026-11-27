@@ -8,8 +8,8 @@ let five = BigInt("5");
 
 Mocha.describe("Caml_compare_bigint_test", () => {
   Mocha.test("compare: 123 and 555555", () => {
-    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 10, characters 7-14", BigInt("555555") > BigInt("123"));
-    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 11, characters 7-14", BigInt("123") < BigInt("555555"));
+    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 10, characters 7-14", Primitive_float.compare(BigInt("555555"), BigInt("123")) > 0);
+    Test_utils.ok("File \"caml_compare_bigint_test.res\", line 11, characters 7-14", Primitive_float.compare(BigInt("123"), BigInt("555555")) < 0);
     Test_utils.ok("File \"caml_compare_bigint_test.res\", line 12, characters 7-14", BigInt("123") < BigInt("555555"));
     Test_utils.ok("File \"caml_compare_bigint_test.res\", line 13, characters 7-14", BigInt("123") <= BigInt("555555"));
     Test_utils.ok("File \"caml_compare_bigint_test.res\", line 14, characters 7-14", BigInt("555555") > BigInt("123"));
