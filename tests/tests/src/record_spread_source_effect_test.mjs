@@ -108,6 +108,43 @@ Primitive_object.updateDummy(sequenceCycle, (logged("sequenceCycle", undefined),
   value: 9
 }));
 
+let letRecCycle = {};
+
+function retry(_attempts) {
+  while (true) {
+    let attempts = _attempts;
+    if (attempts <= 0) {
+      return logged("letRecCycle", makeNode(0));
+    }
+    _attempts = attempts - 1 | 0;
+    continue;
+  };
+}
+
+Primitive_object.updateDummy(letRecCycle, (retry(id(2)), {
+  next: letRecCycle,
+  value: 12
+}));
+
+function localLetRecCycle(value) {
+  let node = {};
+  let retry = _attempts => {
+    while (true) {
+      let attempts = _attempts;
+      if (attempts <= 0) {
+        return makeNode(0);
+      }
+      _attempts = attempts - 1 | 0;
+      continue;
+    };
+  };
+  Primitive_object.updateDummy(node, (retry(id(2)), {
+    next: node,
+    value: value
+  }));
+  return node;
+}
+
 function nextCount() {
   return counter.start + 1 | 0;
 }
@@ -158,12 +195,12 @@ Mocha.describe("Record_spread_source_effect_test", () => {
       x: point_x,
       y: point_y
     };
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 99, characters 7-14", takeCalls(), [
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 124, characters 7-14", takeCalls(), [
       "source",
       "x",
       "y"
     ]);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 100, characters 7-14", point, {
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 125, characters 7-14", point, {
       x: 1,
       y: 2
     });
@@ -176,12 +213,12 @@ Mocha.describe("Record_spread_source_effect_test", () => {
       width: 1,
       height: 2
     };
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 105, characters 7-14", takeCalls(), ["source"]);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 106, characters 7-14", options, {
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 130, characters 7-14", takeCalls(), ["source"]);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 131, characters 7-14", options, {
       width: 1,
       height: 2
     });
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 108, characters 7-14", JSON.stringify(options), `{"width":1,"height":2}`);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 133, characters 7-14", JSON.stringify(options), `{"width":1,"height":2}`);
   });
   Mocha.test("a source that raises stops the record from being built", () => {
     let result;
@@ -196,7 +233,7 @@ Mocha.describe("Record_spread_source_effect_test", () => {
         throw exn;
       }
     }
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 118, characters 7-14", result, -1);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 143, characters 7-14", result, -1);
   });
   Mocha.test("the source of a JSX element's props runs", () => {
     logged("props", {
@@ -206,46 +243,52 @@ Mocha.describe("Record_spread_source_effect_test", () => {
       a: 1,
       b: 2
     });
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 123, characters 7-14", takeCalls(), ["props"]);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 148, characters 7-14", takeCalls(), ["props"]);
   });
   Mocha.test("sources of module-level and recursive records run", () => {
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 129, characters 6-13", moduleCalls, [
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 154, characters 6-13", moduleCalls, [
       "polymorphic",
       "recursive",
       "cycle",
       "letCycle",
       "letCycleSource",
       "sequenceCycle",
+      "letRecCycle",
       "counter",
       "counterStart"
     ]);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 142, characters 7-14", undefined, undefined);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 143, characters 7-14", undefined, undefined);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 144, characters 7-14", recursive_self().value, 2);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 145, characters 7-14", selfSpread_self().value, 3);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 146, characters 7-14", singleCallback.run(), 4);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 147, characters 7-14", cycle.next === cycle, true);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 148, characters 7-14", cycle.next.value, 7);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 149, characters 7-14", letCycle.next === letCycle, true);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 150, characters 7-14", letCycle.next.value, 8);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 151, characters 7-14", sequenceCycle.next === sequenceCycle, true);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 152, characters 7-14", sequenceCycle.next.value, 9);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 153, characters 7-14", counter_start, 10);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 154, characters 7-14", counter_step(), 11);
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 155, characters 7-14", fromOtherModule, {
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 168, characters 7-14", undefined, undefined);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 169, characters 7-14", undefined, undefined);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 170, characters 7-14", recursive_self().value, 2);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 171, characters 7-14", selfSpread_self().value, 3);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 172, characters 7-14", singleCallback.run(), 4);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 173, characters 7-14", cycle.next === cycle, true);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 174, characters 7-14", cycle.next.value, 7);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 175, characters 7-14", letCycle.next === letCycle, true);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 176, characters 7-14", letCycle.next.value, 8);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 177, characters 7-14", sequenceCycle.next === sequenceCycle, true);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 178, characters 7-14", sequenceCycle.next.value, 9);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 179, characters 7-14", letRecCycle.next === letRecCycle, true);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 180, characters 7-14", letRecCycle.next.value, 12);
+    let local = localLetRecCycle(13);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 182, characters 7-14", local.next === local, true);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 183, characters 7-14", local.next.value, 13);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 184, characters 7-14", counter_start, 10);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 185, characters 7-14", counter_step(), 11);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 186, characters 7-14", fromOtherModule, {
       x: 5,
       y: 6
     });
   });
   Mocha.test("a pure source is left out", () => {
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 159, characters 7-14", overridePure(id({
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 190, characters 7-14", overridePure(id({
       x: 0,
       y: 0
     })), {
       x: 1,
       y: 2
     });
-    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 160, characters 7-14", takeCalls(), ["y"]);
+    Test_utils.eq("File \"record_spread_source_effect_test.res\", line 191, characters 7-14", takeCalls(), ["y"]);
     id({
       a: 0
     });
@@ -279,6 +322,8 @@ export {
   cycle,
   letCycle,
   sequenceCycle,
+  letRecCycle,
+  localLetRecCycle,
   nextCount,
   counter,
   moduleCalls,

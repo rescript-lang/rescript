@@ -75,6 +75,31 @@ let rec sequenceCycle = {
   {next: sequenceCycle, value: 9}
 }
 
+// A recursive helper of the source is hoisted out of it, which leaves the
+// record after a recursive let
+let rec letRecCycle = {
+  ...{
+    let rec retry = attempts =>
+      attempts > 0 ? retry(attempts - 1) : logged("letRecCycle", makeNode(0))
+    retry(id(2))
+  },
+  next: letRecCycle,
+  value: 12,
+}
+
+// The same holds for a record local to a function
+let localLetRecCycle = value => {
+  let rec node = {
+    ...{
+      let rec retry = attempts => attempts > 0 ? retry(attempts - 1) : makeNode(0)
+      retry(id(2))
+    },
+    next: node,
+    value,
+  }
+  node
+}
+
 // A record of a recursive group whose fields read none of the group's bindings
 // when it is built is declared directly, after the expressions before it
 let rec nextCount = () => counter.start + 1
@@ -135,6 +160,7 @@ describe(__MODULE__, () => {
         "letCycle",
         "letCycleSource",
         "sequenceCycle",
+        "letRecCycle",
         "counter",
         "counterStart",
       ],
@@ -150,6 +176,11 @@ describe(__MODULE__, () => {
     eq(__LOC__, letCycle.next.value, 8)
     eq(__LOC__, sequenceCycle.next === sequenceCycle, true)
     eq(__LOC__, sequenceCycle.next.value, 9)
+    eq(__LOC__, letRecCycle.next === letRecCycle, true)
+    eq(__LOC__, letRecCycle.next.value, 12)
+    let local = localLetRecCycle(13)
+    eq(__LOC__, local.next === local, true)
+    eq(__LOC__, local.next.value, 13)
     eq(__LOC__, counter.start, 10)
     eq(__LOC__, counter.step(), 11)
     eq(__LOC__, fromOtherModule, {x: 5, y: 6})

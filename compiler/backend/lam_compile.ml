@@ -87,7 +87,9 @@ let with_block_source_loc lam block =
 (* The tag of the block that [lam] builds after evaluating other expressions,
    when a field of the block may read one of the recursive [all_bindings], as
    in [let rec r = {...f(), next: r}], whose spread source [f()] is evaluated
-   for its side effects first. Such a binding is declared as a dummy before
+   for its side effects first. The block may follow any chain of sequences,
+   lets and recursive lets, such as the one [Lam_pass_deep_flatten] leaves when
+   it hoists the bindings of a source out of it. Such a binding is declared as a dummy before
    those expressions run, and the block is copied into it. A field that is a
    function reads none when the block is built, whatever it refers to; any
    other field reads one when it refers to a binding of the group. *)
@@ -99,15 +101,17 @@ let block_after_effects ~(all_bindings : (Ident.t * Lambda.t) list)
     | Lfunction _ -> false
     | _ -> Lam_hit.hit_variables group arg
   in
-  let rec block_tag (lam : Lambda.t) =
+  (* [after_effects]: [lam] is evaluated after other expressions. A bare block
+     is compiled into a dummy by the caller already. *)
+  let rec block_tag ~after_effects (lam : Lambda.t) =
     match lam with
-    | Lsequence (_, Lprim {primitive = Pmakeblock tag_info; args})
-    | Llet (_, _, _, Lprim {primitive = Pmakeblock tag_info; args}) ->
+    | Lprim {primitive = Pmakeblock tag_info; args} when after_effects ->
       if List.exists reads_binding args then Some tag_info else None
-    | Lsequence (_, body) | Llet (_, _, _, body) -> block_tag body
+    | Lsequence (_, body) | Llet (_, _, _, body) | Lletrec (_, body) ->
+      block_tag ~after_effects:true body
     | _ -> None
   in
-  block_tag lam
+  block_tag ~after_effects:false lam
 
 let args_either_function_or_const (args : Lambda.t list) =
   List.for_all
