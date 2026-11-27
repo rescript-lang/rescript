@@ -35,7 +35,7 @@ val write_ast : sourcefile:string -> output:string -> 'a kind -> 'a -> unit
       (predefined names excluded), each followed by a newline;
     - [sourcefile] and a newline;
     - the marshalled [ast].
-    [read_ast_exn] skips the dependency block; rewatch reads it with
+    [read_ast_exn] skips the dependency block; the build system reads it with
     {!read_header}. *)
 
 type header = {source_start: int; source_end: int}

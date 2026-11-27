@@ -8,7 +8,7 @@ source "../utils.sh"
 
 bold "Test: Uncurried-dot deprecation warning surfaces from external deps"
 
-fixture=$(mktemp -d 2>/dev/null || mktemp -d -t rewatch-ext-uncur)
+fixture=$(mktemp -d 2>/dev/null || mktemp -d -t build-system-ext-uncur)
 trap "rm -rf '$fixture'" EXIT
 
 mkdir -p "$fixture/src"
@@ -56,7 +56,7 @@ let add = (. a, b) => a + b
 EOF
 
 cd "$fixture"
-stderr_output=$(rewatch 2>&1 1>/dev/null)
+stderr_output=$(rescript 2>&1 1>/dev/null)
 build_status=$?
 
 if [ $build_status -ne 0 ]; then

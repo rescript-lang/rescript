@@ -100,7 +100,7 @@ let directory_entries path =
       in
       read [])
 
-let atomic_write_prefix = ".rewatch-write-"
+let atomic_write_prefix = ".rescript-write-"
 
 let write_file_atomic ?(ensure_parent = true) path contents =
   if ensure_parent then ensure_dir (Filename.dirname path);

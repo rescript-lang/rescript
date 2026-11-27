@@ -2,7 +2,7 @@ open OUnit2
 
 let check condition message = assert_bool message condition
 
-let with_temp_dir = Test_support.with_temp_dir "rewatch-compiler-info-"
+let with_temp_dir = Test_support.with_temp_dir "build-system-compiler-info-"
 
 let write = Test_support.write_file
 

@@ -3,7 +3,7 @@ let terminal_supports_color_without_term = true
 let inherit_streaming_terminal_stdin = true
 
 external enable_virtual_terminal_processing : unit -> unit
-  = "rewatch_windows_enable_virtual_terminal_processing"
+  = "rescript_windows_enable_virtual_terminal_processing"
 
 let configure_standard_streams () =
   set_binary_mode_in stdin true;
@@ -32,7 +32,7 @@ let strip_verbatim_prefix path =
 let canonicalize_path path = Unix.realpath path |> strip_verbatim_prefix
 
 external directory_file_identity : string -> string
-  = "rewatch_windows_directory_identity"
+  = "rescript_windows_directory_identity"
 
 let directory_identity ~path _metadata = directory_file_identity path
 
@@ -103,13 +103,13 @@ external spawn_owned :
   stdin:Unix.file_descr ->
   stdout:Unix.file_descr ->
   stderr:Unix.file_descr ->
-  process = "rewatch_windows_spawn_owned_byte" "rewatch_windows_spawn_owned"
+  process = "rescript_windows_spawn_owned_byte" "rescript_windows_spawn_owned"
 
 external terminate_process_job : process_job -> bool
-  = "rewatch_windows_terminate_process_job"
+  = "rescript_windows_terminate_process_job"
 
 external close_process_job : process_job -> unit
-  = "rewatch_windows_close_process_job"
+  = "rescript_windows_close_process_job"
 
 let quote_argument argument =
   if
@@ -160,7 +160,8 @@ let spawn ~env ~cwd ~program ~args ~stdin ~stdout ~stderr =
 
 let null_device = "NUL"
 
-external current_process_id : unit -> int = "rewatch_windows_current_process_id"
+external current_process_id : unit -> int
+  = "rescript_windows_current_process_id"
 
 let process_id process = process.wait_id
 let release_process process = close_process_job process.job

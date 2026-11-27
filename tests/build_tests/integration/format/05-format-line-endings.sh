@@ -17,7 +17,7 @@ printf "$formatted" | sed 's/$/\r/' > $dir/Crlf.res
 printf 'let  x  =  1\n' > $dir/UnformattedLf.res
 printf 'let  x  =  1\r\n' > $dir/UnformattedCrlf.res
 
-if ! check_output=$(rewatch format --check $dir/Lf.res $dir/Crlf.res 2>&1); then
+if ! check_output=$(rescript format --check $dir/Lf.res $dir/Crlf.res 2>&1); then
   error "Formatted LF and CRLF files failed the format check"
   echo "$check_output"
   exit 1
@@ -28,7 +28,7 @@ cp $dir/Crlf.res $dir/Crlf.expected
 printf 'let x = 1\n' > $dir/UnformattedLf.expected
 printf 'let x = 1\r\n' > $dir/UnformattedCrlf.expected
 
-if ! format_output=$(rewatch format $dir/*.res 2>&1); then
+if ! format_output=$(rescript format $dir/*.res 2>&1); then
   error "Error formatting LF and CRLF files"
   echo "$format_output"
   exit 1

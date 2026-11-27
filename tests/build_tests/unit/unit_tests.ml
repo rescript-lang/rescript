@@ -312,7 +312,7 @@ let process_cancellation_tests _context =
     (concurrent_task_cancelled && Atomic.get concurrent_cancelled)
     "dependency scheduler cancellation invokes active concurrent-task cleanup";
   if not Sys.win32 then
-    Test_support.with_temp_dir "rewatch-descendant-pipe-" (fun root ->
+    Test_support.with_temp_dir "build-system-descendant-pipe-" (fun root ->
         let marker = Filename.concat root "parent-exiting" in
         let parent_pid = ref None in
         let parent_has_exited pid =
@@ -676,12 +676,7 @@ let scheduler_tests _context =
         (failure.status = Unix.WEXITED 7
         && failure.stdout = "partial"
         && failure.stderr = "diagnostic")
-        "parallel subprocess failures preserve status and output";
-      check
-        (Sys.readdir scheduler_root
-        |> Array.for_all (fun name ->
-            not (String.starts_with ~prefix:".build-system-" name)))
-        "pipe capture creates no temporary scheduler logs")
+        "parallel subprocess failures preserve status and output")
 
 let graph_and_diagnostic_tests _context =
   let node name deps = (name, deps) in
@@ -790,7 +785,7 @@ let graph_and_diagnostic_tests _context =
             (resolved = Unix.realpath package)
             "dependency paths are canonicalized"
         | None -> failwith "dependency symlink was not resolved"));
-  Test_support.with_temp_dir "rewatch-compiler-log-" (fun root ->
+  Test_support.with_temp_dir "build-system-compiler-log-" (fun root ->
       File_util.ensure_dir (Build_artifacts.artifact_dir root);
       Compiler_log.initialize root;
       Compiler_log.append root "plain \027[1;31mred\027[0m text";

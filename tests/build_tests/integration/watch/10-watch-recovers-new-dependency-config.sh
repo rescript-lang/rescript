@@ -24,7 +24,7 @@ cd "$fixture"
 
 fail_test() {
   error "$1"
-  cat rewatch.log >&2
+  cat rescript.log >&2
   exit 1
 }
 
@@ -49,11 +49,11 @@ fs.mkdirSync("node_modules");
 fs.symlinkSync(path.resolve("packages/new-dependency"), "node_modules/new-dependency", "junction");
 JS
 
-rewatch watch > rewatch.log 2>&1 &
+rescript watch > rescript.log 2>&1 &
 watch_pid=$!
-wait_for_pattern rewatch.log "Finished initial compilation" 60 ||
+wait_for_pattern rescript.log "Finished initial compilation" 60 ||
   fail_test "Initial watch build did not finish"
-completed=$(grep -c "Finished compilation" rewatch.log || true)
+completed=$(grep -c "Finished compilation" rescript.log || true)
 
 node <<'JS'
 const fs = require("fs");
@@ -62,13 +62,13 @@ config.dependencies = ["new-dependency"];
 fs.writeFileSync("rescript.next", JSON.stringify(config));
 JS
 mv rescript.next rescript.json
-wait_for_pattern rewatch.log "Could not build package tree for 'new-dependency'" 30 ||
+wait_for_pattern rescript.log "Could not build package tree for 'new-dependency'" 30 ||
   fail_test "Watcher did not report the newly added dependency's invalid config"
 
 # Only fix the dependency: its directory must have a recovery watch by now.
 cp valid-dependency.json packages/new-dependency/rescript.next
 mv packages/new-dependency/rescript.next packages/new-dependency/rescript.json
-wait_for_pattern_count rewatch.log "Finished compilation" "$((completed + 1))" 30 ||
+wait_for_pattern_count rescript.log "Finished compilation" "$((completed + 1))" 30 ||
   fail_test "Watcher did not recover after fixing only the dependency config"
 wait_for_file packages/new-dependency/src/Dep.mjs 20 ||
   fail_test "Recovered watcher did not compile the new dependency"

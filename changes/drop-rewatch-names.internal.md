@@ -1,0 +1,1 @@
+- Drop the remaining "rewatch" names from C stubs, test helpers, temporary files, comments and CI step names.

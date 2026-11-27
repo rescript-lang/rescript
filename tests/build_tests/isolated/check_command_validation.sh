@@ -11,7 +11,7 @@ unset CLICOLOR_FORCE
 root=$(CDPATH= cd -- "$(dirname "$0")/../../.." && pwd)
 rescript=${1:-$root/_build/default/build_system/rescript.exe}
 rescript=$(realpath "$rescript")
-work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-command-validation-XXXXXX")
+work=$(mktemp -d "${TMPDIR:-/tmp}/build-system-command-validation-XXXXXX")
 # Compiler diagnostics contain canonical paths. Resolve platform aliases such
 # as macOS's /var -> /private/var before deriving paths used for comparison.
 work=$(realpath "$work")
@@ -556,14 +556,14 @@ line_count_stays() {
 }
 
 run_build_output_case redirected-success 0 \
-  "$root/tests/build_tests/focused/basic" redirected
+  "$root/tests/build_tests/isolated/basic" redirected
 run_build_output_case redirected-compile-error 1 \
-  "$root/tests/build_tests/focused/failure" redirected
+  "$root/tests/build_tests/isolated/failure" redirected
 run_build_output_case redirected-parse-error 1 \
   "$work/redirected-parse-fixture" redirected
 run_multiple_parse_errors_case
 run_build_output_case redirected-warning 0 \
-  "$root/tests/build_tests/focused/warning-replay" redirected
+  "$root/tests/build_tests/isolated/warning-replay" redirected
 run_build_output_case redirected-config-diagnostics 0 \
   "$work/redirected-config-diagnostics" redirected
 run_build_output_case forced-color-config-diagnostics 0 \
@@ -576,10 +576,10 @@ if [ -s "$work/rescript.out" ] || [ -s "$work/rescript.err" ]; then
   exit 1
 fi
 run_build_output_case quiet-compile-error 1 \
-  "$root/tests/build_tests/focused/failure" quiet
+  "$root/tests/build_tests/isolated/failure" quiet
 run_build_output_case quiet-parse-error 1 "$work/redirected-parse-fixture" quiet
 run_build_output_case quiet-warning 0 \
-  "$root/tests/build_tests/focused/warning-replay" quiet
+  "$root/tests/build_tests/isolated/warning-replay" quiet
 
 run_case build-subcommand-version accept build --version
 run_case short-help accept -h
@@ -768,10 +768,10 @@ if ! grep -F -- '--after-build command cannot be empty' \
 fi
 # The shell reports the missing program; the build fails with its status.
 run_case after-build-missing-program reject build --after-build \
-  rewatch-command-that-does-not-exist "$project"
+  build-system-command-that-does-not-exist "$project"
 if ! grep -F -- '--after-build command failed' \
     "$work/rescript.err" >/dev/null || \
-  ! grep -F 'rewatch-command-that-does-not-exist' \
+  ! grep -F 'build-system-command-that-does-not-exist' \
     "$work/rescript.err" >/dev/null; then
   echo "Missing --after-build program did not produce a contextual error" >&2
   dump_output

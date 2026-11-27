@@ -5,8 +5,8 @@ cd ../../testrepo
 
 bold "Test: It should compile dev dependencies"
 
-rewatch clean &> /dev/null
-rewatch build &> /dev/null
+rescript clean &> /dev/null
+rescript build &> /dev/null
 if [ $? -ne 0 ];
 then
   error "Failed to compile dev dependencies"
@@ -23,7 +23,7 @@ else
   exit 1
 fi
 
-error_output=$(rewatch clean 2>&1 >/dev/null)
+error_output=$(rescript clean 2>&1 >/dev/null)
 file_count=$(find ./packages/with-dev-deps -name *.mjs | wc -l)
 if [ "$file_count" -eq 0 ];
 then

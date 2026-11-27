@@ -106,7 +106,7 @@ let tests =
         "GenType arguments reuse the dependency path selected for the graph";
       (if not Sys.win32 then
          let external_source =
-           Filename.temp_file "rewatch-linked-source-" ".res"
+           Filename.temp_file "build-system-linked-source-" ".res"
          in
          Fun.protect
            ~finally:(fun () -> Sys.remove external_source)
@@ -159,7 +159,8 @@ let tests =
            Test_support.contains_text message "Could not read source file"
            && Test_support.contains_text message missing_source)
         "missing compiler-args sources produce a contextual error");
-  Test_support.with_temp_dir "rewatch-compiler-args-workspace-" (fun outer ->
+  Test_support.with_temp_dir "build-system-compiler-args-workspace-"
+    (fun outer ->
       let workspace = Filename.concat outer "workspace" in
       let package = Filename.concat workspace "packages/app" in
       let source = Filename.concat package "src/App.res" in

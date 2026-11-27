@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: Watcher keeps watching a folder when an overlapping source folder is removed"
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -21,7 +21,7 @@ RETAINED=packages/dep01/src/retained
 cleanup() {
   git restore --worktree -- "$DEP01_CONFIG"
   rm -rf "$RETAINED"
-  rm -f rewatch.log
+  rm -f rescript.log
 }
 
 # src/retained is watched both through the recursive src folder and as a
@@ -39,7 +39,7 @@ retained_output() {
   find "$RETAINED" -name 'Retained.*js' | head -n 1
 }
 
-rewatch_bg watch > rewatch.log 2>&1 &
+rescript_bg watch > rescript.log 2>&1 &
 success "Watcher Started"
 
 retained_output_has() {
@@ -53,7 +53,7 @@ wait_for_retained_value() {
 
 if ! wait_for_retained_value "= 1"; then
   error "Initial build did not compile the retained folder"
-  cat rewatch.log
+  cat rescript.log
   exit_watcher
   cleanup
   exit 1
@@ -72,13 +72,13 @@ if poll 30 nested_output_exists; then
   success "A folder created inside the retained folder is watched"
 else
   error "A folder created inside the retained folder is not watched"
-  cat rewatch.log
+  cat rescript.log
   exit_watcher
   cleanup
   exit 1
 fi
 
-completed_builds=$(grep -c "Finished .*compilation" rewatch.log 2>/dev/null || true)
+completed_builds=$(grep -c "Finished .*compilation" rescript.log 2>/dev/null || true)
 
 # Remove the recursive src folder while keeping src itself (non-recursive)
 # and src/retained
@@ -88,10 +88,10 @@ node -e "
   config.sources = ['src', 'src/retained'];
   fs.writeFileSync('$DEP01_CONFIG', JSON.stringify(config, null, 2) + '\n');
 "
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" \
+if ! wait_for_pattern_count rescript.log "Finished .*compilation" \
   $((completed_builds + 1)) 30; then
   error "No rebuild after the configuration change"
-  cat rewatch.log
+  cat rescript.log
   exit_watcher
   cleanup
   exit 1
@@ -102,7 +102,7 @@ if wait_for_retained_value "= 2"; then
   success "Edit in the retained folder was compiled"
 else
   error "Edit in the retained folder was not picked up"
-  cat rewatch.log
+  cat rescript.log
   exit_watcher
   cleanup
   exit 1
@@ -114,8 +114,8 @@ if ! exit_watcher; then
 fi
 cleanup
 
-# Rebuild to regenerate the outputs removed by `rewatch clean`
-rewatch build > /dev/null 2>&1
+# Rebuild to regenerate the outputs removed by `rescript clean`
+rescript build > /dev/null 2>&1
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
 then

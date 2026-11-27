@@ -9,7 +9,7 @@ repository root.
 - A change in observable behavior (output, exit status, generated files,
   configuration handling) needs a test, and a changelog fragment when users
   can notice it.
-- Only update the snapshots in `tests/build_tests/integration` and `tests/build_tests/focused` for an
+- Only update the snapshots in `tests/build_tests/integration` and `tests/build_tests/isolated` for an
   intended output change, never just to make a failing test pass.
 
 ## Platforms
@@ -33,8 +33,8 @@ repository root.
 ## Testing
 
 - Unit tests: `dune runtest tests/build_tests/unit`.
-- Focused end-to-end tests:
-  `sh tests/build_tests/focused/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"`.
+- Isolated end-to-end tests:
+  `sh tests/build_tests/isolated/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"`.
 - Integration suite: `make test-build`. Run it for any change to build
   behavior.
 - Add a test for every bug fix. Prefer the integration suite in

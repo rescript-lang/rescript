@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: Watcher picks up new files in source dirs"
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -16,21 +16,21 @@ else
 fi
 
 # Start watcher
-rewatch_bg watch > rewatch.log 2>&1 &
+rescript_bg watch > rescript.log 2>&1 &
 success "Watcher Started"
 
 # Wait for initial build to complete
 if ! wait_for_file "./src/Test.mjs" 40; then
   error "Initial build did not complete"
-  cat rewatch.log
+  cat rescript.log
   exit_watcher
   exit 1
 fi
 success "Initial build completed"
 
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 60; then
+if ! wait_for_pattern_count rescript.log "Finished .*compilation" 1 60; then
   error "Initial build did not settle"
-  cat rewatch.log
+  cat rescript.log
   exit_watcher
   exit 1
 fi
@@ -44,7 +44,7 @@ EOF
 # Wait for the new file to be compiled
 if ! wait_for_file "./src/NewWatchTestFile.mjs" 40; then
   error "New file was not compiled by watcher"
-  cat rewatch.log
+  cat rescript.log
   rm -f ./src/NewWatchTestFile.res
   exit_watcher
   exit 1
@@ -62,12 +62,12 @@ fi
 
 # Clean up the new file. Wait for the resulting rebuild so it cannot race with
 # later tests; stale-output deletion is not part of this new-file watcher test.
-completed_builds=$(grep -c "Finished .*compilation" rewatch.log || true)
+completed_builds=$(grep -c "Finished .*compilation" rescript.log || true)
 rm -f ./src/NewWatchTestFile.res
 
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" "$((completed_builds + 1))" 60; then
+if ! wait_for_pattern_count rescript.log "Finished .*compilation" "$((completed_builds + 1))" 60; then
   error "Watcher did not finish rebuilding after deleting the source"
-  cat rewatch.log
+  cat rescript.log
   exit_watcher
   exit 1
 fi
@@ -78,7 +78,7 @@ if ! exit_watcher; then
   exit 1
 fi
 
-rm -f rewatch.log
+rm -f rescript.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
 then

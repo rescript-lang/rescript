@@ -5,13 +5,13 @@ cd ../../testrepo
 
 bold "Test: --prod flag skips dev-dependencies and dev sources"
 
-rewatch clean &> /dev/null
+rescript clean &> /dev/null
 
 # Test 1: A nonexistent dev-dependency should cause a normal build to fail
 # but succeed with --prod
 replace "s|@testrepo/pure-dev\"]|@testrepo/pure-dev\",\"@testrepo/nonexistent-pkg\"]|" rescript.json
 
-rewatch build &> /dev/null
+rescript build &> /dev/null
 if [ $? -ne 0 ];
 then
   success "Build without --prod correctly failed with nonexistent dev-dependency"
@@ -21,7 +21,7 @@ else
   exit 1
 fi
 
-rewatch build --prod &> /dev/null
+rescript build --prod &> /dev/null
 if [ $? -eq 0 ];
 then
   success "Build with --prod succeeded despite nonexistent dev-dependency"
@@ -31,12 +31,12 @@ else
   exit 1
 fi
 
-rewatch clean &> /dev/null
+rescript clean &> /dev/null
 git restore --worktree -- rescript.json
 
 # Test 2: --prod should skip dev source files
-rewatch clean &> /dev/null
-rewatch build --prod &> /dev/null
+rescript clean &> /dev/null
+rescript build --prod &> /dev/null
 if [ $? -ne 0 ];
 then
   error "Build with --prod failed"
@@ -63,10 +63,10 @@ else
   exit 1
 fi
 
-rewatch clean &> /dev/null
+rescript clean &> /dev/null
 
 # Test 3: Without --prod, dev sources should be compiled
-rewatch build &> /dev/null
+rescript build &> /dev/null
 if [ $? -ne 0 ];
 then
   error "Build without --prod failed"
@@ -91,4 +91,4 @@ else
   exit 1
 fi
 
-rewatch clean &> /dev/null
+rescript clean &> /dev/null

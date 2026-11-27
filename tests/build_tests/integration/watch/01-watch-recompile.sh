@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: It should watch"
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -16,7 +16,7 @@ else
 fi
 
 # Start watcher and capture logs for debugging
-rewatch_bg watch > rewatch.log 2>&1 &
+rescript_bg watch > rescript.log 2>&1 &
 success "Watcher Started"
 
 # Trigger a recompilation
@@ -27,7 +27,7 @@ target=./packages/main/src/Main.mjs
 if ! wait_for_file "$target" 40; then
   error "Expected output not found: $target"
   ls -la ./packages/main/src || true
-  tail -n 200 rewatch.log || true
+  tail -n 200 rescript.log || true
   exit_watcher
   exit 1
 fi
@@ -37,7 +37,7 @@ fi
 dependency_target=./packages/dep01/src/Dep01.mjs
 if [ ! -f "$dependency_target" ]; then
   error "Dependency output was not published with the root output: $dependency_target"
-  tail -n 200 rewatch.log || true
+  tail -n 200 rescript.log || true
   exit_watcher
   exit 1
 fi
@@ -51,9 +51,9 @@ else
   exit 1
 fi
 
-if ! wait_for_pattern_count rewatch.log "Finished .*compilation" 1 60; then
+if ! wait_for_pattern_count rescript.log "Finished .*compilation" 1 60; then
   error "Initial build did not settle"
-  tail -n 200 rewatch.log || true
+  tail -n 200 rescript.log || true
   exit_watcher
   exit 1
 fi
@@ -62,7 +62,7 @@ replace '/Console.log("added-by-test")/d' ./packages/main/src/Main.res;
 
 if ! wait_for_pattern_gone "$target" "added-by-test" 40; then
   error "Watcher did not rebuild after restoring the source"
-  tail -n 200 rewatch.log || true
+  tail -n 200 rescript.log || true
   exit_watcher
   exit 1
 fi

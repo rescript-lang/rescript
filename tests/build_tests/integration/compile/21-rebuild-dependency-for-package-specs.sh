@@ -7,7 +7,7 @@ source "../utils.sh"
 
 bold "Test: Rebuild dependencies when package specs change"
 
-fixture=$(mktemp -d 2>/dev/null || mktemp -d -t rewatch-package-specs)
+fixture=$(mktemp -d 2>/dev/null || mktemp -d -t build-system-package-specs)
 trap "rm -rf '$fixture'" EXIT
 
 mkdir -p "$fixture/src"
@@ -52,7 +52,7 @@ let value = 42
 EOF
 
 cd "$fixture"
-rewatch build
+rescript build
 
 if [ ! -f "node_modules/shared-dep/lib/js/src/SharedDep.cjs" ]; then
   error "Expected CommonJS dependency output"
@@ -68,7 +68,7 @@ cat > "$fixture/rescript.json" <<'EOF'
 }
 EOF
 
-rewatch build
+rescript build
 
 if [ ! -f "node_modules/shared-dep/lib/es6/src/SharedDep.mjs" ]; then
   error "Expected ES module dependency output after changing package specs"

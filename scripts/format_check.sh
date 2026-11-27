@@ -17,7 +17,7 @@ fi
 echo "Checking ReScript code formatting..."
 # xargs passes the files in batches that fit the platform's command-line
 # length limit, which is only 32K characters on Windows.
-if find packages tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -name "generated_mocha_test.res" ! -path "tests/error_tests/single/fixtures/break_keyword_binding.res" ! -path "tests/tools_tests/*/NoMigration.res*" ! -path "tests/error_tests/multi/fixtures/Iface_not_compiled/*" ! -path "tests/syntax_tests*" ! -path "tests/analysis_tests/tests*" ! -path "tests/build_tests/focused/*" ! -path "tests/build_tests/integration/*" ! -path "tests/build_tests/testrepo/*" ! -path "*/node_modules/*" -print0 \
+if find packages tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -name "generated_mocha_test.res" ! -path "tests/error_tests/single/fixtures/break_keyword_binding.res" ! -path "tests/tools_tests/*/NoMigration.res*" ! -path "tests/error_tests/multi/fixtures/Iface_not_compiled/*" ! -path "tests/syntax_tests*" ! -path "tests/analysis_tests/tests*" ! -path "tests/build_tests/isolated/*" ! -path "tests/build_tests/integration/*" ! -path "tests/build_tests/testrepo/*" ! -path "*/node_modules/*" -print0 \
   | xargs -0 node ./cli/rescript.js format --check; then
   printf "${successGreen}✅ ReScript code formatting ok.${reset}\n"
 else

@@ -5,8 +5,8 @@ cd ../../testrepo
 
 bold "Test: Make sure there are no new files created by the build"
 
-rewatch clean &> /dev/null
-rewatch build &> /dev/null
+rescript clean &> /dev/null
+rescript build &> /dev/null
 
 # This could happen because of not cleaning up .mjs files after we rename files
 new_files=$(git ls-files --others --exclude-standard ./)

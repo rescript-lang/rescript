@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: Clean succeeds when the module graph is invalid"
 
-rewatch clean > /dev/null 2>&1
+rescript clean > /dev/null 2>&1
 cp rescript.json rescript.json.clean-invalid.bak
 
 restore_fixture() {
@@ -13,7 +13,7 @@ restore_fixture() {
   if [ -f rescript.json.clean-invalid.bak ]; then
     mv rescript.json.clean-invalid.bak rescript.json
   fi
-  rewatch build > /dev/null 2>&1 || true
+  rescript build > /dev/null 2>&1 || true
 }
 trap restore_fixture EXIT
 
@@ -28,7 +28,7 @@ node -e '
   fs.writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`);
 ' rescript.json
 
-rewatch build > /dev/null 2>&1
+rescript build > /dev/null 2>&1
 
 if [ ! -f src/Test.mjs ] || [ ! -f lib/es6/src/Test.out.mjs ]; then
   error "Test setup did not produce both in-source and out-of-source outputs"
@@ -39,7 +39,7 @@ mkdir -p src/dupe-a src/dupe-b
 echo 'let value = 1' > src/dupe-a/DuplicateModule.res
 echo 'let value = 2' > src/dupe-b/DuplicateModule.res
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 clean_status=$?
 
 if [ $clean_status -ne 0 ]; then

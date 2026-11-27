@@ -14,7 +14,7 @@ j["experimental-features"]={FooBar:true};
 fs.writeFileSync("rescript.json", JSON.stringify(j,null,2));
 '
 
-out=$(rewatch compiler-args packages/file-casing/src/Consume.res 2>&1)
+out=$(rescript compiler-args packages/file-casing/src/Consume.res 2>&1)
 status=$?
 
 mv rescript.json.bak rescript.json

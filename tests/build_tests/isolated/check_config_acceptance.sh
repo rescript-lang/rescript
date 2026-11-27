@@ -8,11 +8,11 @@ set -eu
 
 root=$(CDPATH= cd -- "$(dirname "$0")/../../.." && pwd)
 rescript=${1:-$root/_build/default/build_system/rescript.exe}
-cases=$root/tests/build_tests/focused/config_acceptance_cases.tsv
+cases=$root/tests/build_tests/isolated/config_acceptance_cases.tsv
 
 rescript=$(realpath "$rescript")
 mkdir -p "$root/tmp"
-work=$(mktemp -d "$root/tmp/rewatch-config-acceptance-XXXXXX")
+work=$(mktemp -d "$root/tmp/build-system-config-acceptance-XXXXXX")
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/project/src" "$work/project/node_modules/dep/lib/rescript" \
   "$work/project/node_modules/ppx"

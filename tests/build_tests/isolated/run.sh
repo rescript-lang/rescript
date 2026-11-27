@@ -27,25 +27,25 @@ fi
 export RESCRIPT_RUNTIME
 work="$root/tmp/build_system/test-$$"
 mkdir -p "$work"
-cp -R "$root/tests/build_tests/focused/basic" "$work/basic"
-cp -R "$root/tests/build_tests/focused/basic" "$work/cleanup-lifecycle"
-cp -R "$root/tests/build_tests/focused/basic" "$work/cleanup-failure"
-cp -R "$root/tests/build_tests/focused/basic" "$work/suffix-removal"
-cp -R "$root/tests/build_tests/focused/basic" "$work/suffix-failure"
-cp -R "$root/tests/build_tests/focused/basic" "$work/packaged-basic"
-cp -R "$root/tests/build_tests/focused/basic" "$work/runtime-discovery"
+cp -R "$root/tests/build_tests/isolated/basic" "$work/basic"
+cp -R "$root/tests/build_tests/isolated/basic" "$work/cleanup-lifecycle"
+cp -R "$root/tests/build_tests/isolated/basic" "$work/cleanup-failure"
+cp -R "$root/tests/build_tests/isolated/basic" "$work/suffix-removal"
+cp -R "$root/tests/build_tests/isolated/basic" "$work/suffix-failure"
+cp -R "$root/tests/build_tests/isolated/basic" "$work/packaged-basic"
+cp -R "$root/tests/build_tests/isolated/basic" "$work/runtime-discovery"
 mkdir -p "$work/no-bin-annot/src"
 printf '{"name":"no-bin-annot","sources":["src"]}\n' \
   >"$work/no-bin-annot/rescript.json"
 printf '@@config({flags: ["-bs-no-bin-annot"]})\nlet value = 1\n' \
   >"$work/no-bin-annot/src/NoBinAnnot.res"
-cp -R "$root/tests/build_tests/focused/basic" "$work/legacy-config"
-cp -R "$root/tests/build_tests/focused/failure" "$work/failure"
-cp -R "$root/tests/build_tests/focused/features" "$work/features"
-cp -R "$root/tests/build_tests/focused/feature-dependencies" "$work/feature-dependencies"
-cp -R "$root/tests/build_tests/focused/gentype" "$work/gentype"
-cp -R "$root/tests/build_tests/focused/dependency" "$work/dependency"
-cp -R "$root/tests/build_tests/focused/package-output-dependency" \
+cp -R "$root/tests/build_tests/isolated/basic" "$work/legacy-config"
+cp -R "$root/tests/build_tests/isolated/failure" "$work/failure"
+cp -R "$root/tests/build_tests/isolated/features" "$work/features"
+cp -R "$root/tests/build_tests/isolated/feature-dependencies" "$work/feature-dependencies"
+cp -R "$root/tests/build_tests/isolated/gentype" "$work/gentype"
+cp -R "$root/tests/build_tests/isolated/dependency" "$work/dependency"
+cp -R "$root/tests/build_tests/isolated/package-output-dependency" \
   "$work/package-output-dependency"
 mkdir -p "$work/feature-dependencies/node_modules"
 for dependency in consumer dep-union dep-transitive dep-empty; do
@@ -69,7 +69,7 @@ printf 'owned outside the resolved graph\n' \
   >"$unlinked_dependency/packages/dep/lib/rescript/marker"
 mkdir -p "$work/standalone-output/src" \
   "$work/standalone-output/node_modules"
-cp -R "$root/tests/build_tests/focused/shared-dep" \
+cp -R "$root/tests/build_tests/isolated/shared-dep" \
   "$work/standalone-output/node_modules/dep"
 printf '%s\n' \
   '{"name":"standalone-output","sources":"src","dependencies":["dep"],"package-specs":{"module":"esmodule","in-source":false,"suffix":".mjs"}}' \
@@ -77,14 +77,14 @@ printf '%s\n' \
 printf 'let value = Dep.value\n' >"$work/standalone-output/src/Main.res"
 mkdir -p "$work/gentype/node_modules" "$work/dependency/node_modules" \
   "$work/package-output-dependency/node_modules"
-cp -R "$root/tests/build_tests/focused/shared-dep" "$work/gentype/node_modules/dep"
-cp -R "$root/tests/build_tests/focused/shared-dep" "$work/dependency/node_modules/dep"
-cp -R "$root/tests/build_tests/focused/shared-dep" \
+cp -R "$root/tests/build_tests/isolated/shared-dep" "$work/gentype/node_modules/dep"
+cp -R "$root/tests/build_tests/isolated/shared-dep" "$work/dependency/node_modules/dep"
+cp -R "$root/tests/build_tests/isolated/shared-dep" \
   "$work/package-output-dependency/node_modules/dep"
-cp -R "$root/tests/build_tests/focused/external-boundary" "$work/external-boundary"
-cp -R "$root/tests/build_tests/focused/post-build" "$work/post-build"
+cp -R "$root/tests/build_tests/isolated/external-boundary" "$work/external-boundary"
+cp -R "$root/tests/build_tests/isolated/post-build" "$work/post-build"
 if $windows_posix_shell; then
-  cp -R "$root/tests/build_tests/focused/post-build" "$work/quoted-post-build"
+  cp -R "$root/tests/build_tests/isolated/post-build" "$work/quoted-post-build"
   NODE_EXE=$(native_path "$(command -v node)") \
     CONFIG_PATH=$(native_path "$work/quoted-post-build/rescript.json") \
     node - <<'NODE'
@@ -97,21 +97,21 @@ const config = {
 fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(config));
 NODE
 fi
-cp -R "$root/tests/build_tests/focused/out-of-source" "$work/out-of-source"
-cp -R "$root/tests/build_tests/focused/ppx-filter" "$work/ppx-filter"
-cp -R "$root/tests/build_tests/focused/namespace" "$work/namespace"
-cp -R "$root/tests/build_tests/focused/namespace-entry" "$work/namespace-entry"
-cp -R "$root/tests/build_tests/focused/qualified-namespace" \
+cp -R "$root/tests/build_tests/isolated/out-of-source" "$work/out-of-source"
+cp -R "$root/tests/build_tests/isolated/ppx-filter" "$work/ppx-filter"
+cp -R "$root/tests/build_tests/isolated/namespace" "$work/namespace"
+cp -R "$root/tests/build_tests/isolated/namespace-entry" "$work/namespace-entry"
+cp -R "$root/tests/build_tests/isolated/qualified-namespace" \
   "$work/qualified-namespace"
-cp -R "$root/tests/build_tests/focused/namespace-collision" \
+cp -R "$root/tests/build_tests/isolated/namespace-collision" \
   "$work/namespace-collision"
 mkdir -p "$work/namespace-collision/node_modules"
 for dependency in namespace-one namespace-two; do
   directory_link "$work/namespace-collision/packages/$dependency" \
     "$work/namespace-collision/node_modules/$dependency"
 done
-cp -R "$root/tests/build_tests/focused/source-map" "$work/source-map"
-cp -R "$root/tests/build_tests/focused/monorepo" "$work/monorepo"
+cp -R "$root/tests/build_tests/isolated/source-map" "$work/source-map"
+cp -R "$root/tests/build_tests/isolated/monorepo" "$work/monorepo"
 basic="$work/basic"
 cleanup_lifecycle="$work/cleanup-lifecycle"
 cleanup_failure="$work/cleanup-failure"
@@ -606,7 +606,7 @@ cleanup() {
     wait "$pid" 2>/dev/null || true
   done
   if [ "${RESCRIPT_KEEP_TEST_WORK:-}" = "1" ]; then
-    echo "Preserving focused test workspace: $work" >&2
+    echo "Preserving isolated test workspace: $work" >&2
   else
     rm -rf "$work"
   fi
@@ -894,7 +894,7 @@ printf '\nlet streamedAfterBuild = 1\n' >>"$basic/src/A.res"
 after_build_release="$basic/after-build-release"
 after_build_log="$basic/after-build-stream.log"
 "$port" build --after-build \
-  "node $(native_path "$root/tests/build_tests/focused/stream-after-build.js") $(native_path "$after_build_release")" \
+  "node $(native_path "$root/tests/build_tests/isolated/stream-after-build.js") $(native_path "$after_build_release")" \
   "$basic" >"$after_build_log" 2>&1 &
 after_build_pid=$!
 background_pids="$background_pids $after_build_pid"
@@ -1021,7 +1021,7 @@ test ! -f "$basic/lib/rescript/lower.cmti"
 test ! -f "$basic/src/A.mjs"
 
 watch_basic="$work/watch-basic"
-cp -R "$root/tests/build_tests/focused/basic" "$watch_basic"
+cp -R "$root/tests/build_tests/isolated/basic" "$watch_basic"
 rm -rf "$watch_basic/lib"
 rm -f "$watch_basic/src/A.mjs" "$watch_basic/src/B.mjs" "$watch_basic/src/WithInterface.mjs"
 "$port" watch "$watch_basic" >"$watch_basic/watch.log" 2>&1 &
@@ -1233,7 +1233,7 @@ if $file_symlinks_supported; then
     cat "$symlink_source/watch.log" >&2
     exit 1
   fi
-  symlink_replacement=$(mktemp "${TMPDIR:-/tmp}/rewatch-symlink-target.XXXXXX")
+  symlink_replacement=$(mktemp "${TMPDIR:-/tmp}/build-system-symlink-target.XXXXXX")
   printf 'let value = 3\n' >"$symlink_replacement"
   mv "$symlink_replacement" "$symlink_source/shared/Source.js"
   if ! wait_for_text "$symlink_source/src/Linked.mjs" 'value = 3'; then
@@ -1587,7 +1587,7 @@ wait "$transitive_local_watch_pid" 2>/dev/null || true
 
 # A watch rebuild after an unrelated edit replays warnings from modules it
 # doesn't recompile. Compiler requests are counted at the logical request log.
-cp -R "$root/tests/build_tests/focused/warning-replay" "$work/warning-replay"
+cp -R "$root/tests/build_tests/isolated/warning-replay" "$work/warning-replay"
 warning_replay="$work/warning-replay"
 warning_call_log="$warning_replay/compiler-calls.log"
 warning_watch_log="$warning_replay/watch.log"

@@ -111,7 +111,7 @@ file_link_if_supported() {
 }
 
 # check_snapshot SNAPSHOT ACTUAL [NAME=PATH...]: compares ACTUAL with the
-# snapshot file tests/build_tests/focused/snapshots/SNAPSHOT after replacing each
+# snapshot file tests/build_tests/isolated/snapshots/SNAPSHOT after replacing each
 # PATH by <NAME> (see check_snapshot.js). On Windows the native long and short
 # spellings of each PATH are replaced as well. UPDATE_SNAPSHOTS=1 rewrites the
 # snapshot.

@@ -5,15 +5,15 @@ cd ../../testrepo
 
 bold "Test: Rename a file with a dependent should trigger an error"
 
-rewatch clean &> /dev/null
-rewatch build &> /dev/null
+rescript clean &> /dev/null
+rescript build &> /dev/null
 
 mv ./packages/main/src/InternalDep.res ./packages/main/src/InternalDep2.res
-rewatch build &> ../integration/snapshots/rename-file-internal-dep.txt
+rescript build &> ../integration/snapshots/rename-file-internal-dep.txt
 normalize_paths ../integration/snapshots/rename-file-internal-dep.txt
 mv ./packages/main/src/InternalDep2.res ./packages/main/src/InternalDep.res
 
-rewatch build &> /dev/null
+rescript build &> /dev/null
 
 # Check snapshot
 if git diff --exit-code ../integration/snapshots/rename-file-internal-dep.txt &> /dev/null;

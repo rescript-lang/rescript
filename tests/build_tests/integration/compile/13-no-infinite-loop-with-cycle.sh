@@ -5,9 +5,9 @@ cd ../../testrepo
 
 bold "Test: It should not loop when clean building with a cycle"
 
-rewatch clean &> /dev/null
+rescript clean &> /dev/null
 echo 'Dep01.log()' >> packages/new-namespace/src/NS_alias.res
 git restore --worktree -- packages/new-namespace/src/NS_alias.res
-rewatch build &> /dev/null
+rescript build &> /dev/null
 
 success "No infinite loop detected"

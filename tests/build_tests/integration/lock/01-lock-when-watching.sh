@@ -7,12 +7,12 @@ bold "Test: watch.lock blocks watch and stays separate from build.lock"
 
 cleanup() {
   exit_watcher
-  rm -f rewatch.log second-watch.log
+  rm -f rescript.log second-watch.log
 }
 
 trap cleanup EXIT
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -24,7 +24,7 @@ fi
 
 clear_locks
 
-rewatch_bg watch > /dev/null 2>&1 &
+rescript_bg watch > /dev/null 2>&1 &
 success "Watcher Started"
 
 if ! wait_for_file "lib/rescript/watch.lock" 40; then
@@ -34,7 +34,7 @@ fi
 
 success "watch.lock created"
 
-if rewatch watch > second-watch.log 2>&1;
+if rescript watch > second-watch.log 2>&1;
 then
   error "Second watcher should have been blocked by watch.lock"
   cat second-watch.log
@@ -48,7 +48,7 @@ else
   exit 1
 fi
 
-build_output=$(rewatch build 2>&1)
+build_output=$(rescript build 2>&1)
 build_status=$?
 
 if [ $build_status -ne 0 ];
@@ -85,13 +85,13 @@ if ! wait_for_file_gone "lib/rescript/watch.lock" 20; then
   exit 1
 fi
 
-rewatch_bg watch > rewatch.log 2>&1 &
+rescript_bg watch > rescript.log 2>&1 &
 
 if wait_for_file "lib/rescript/watch.lock" 40; then
   success "Watcher can start again after watch.lock is removed"
 else
   error "Watcher did not restart after watch.lock removal"
-  cat rewatch.log
+  cat rescript.log
   exit 1
 fi
 

@@ -14,7 +14,7 @@ j["experimental-features"] = ["LetUnwrap"];
 fs.writeFileSync("rescript.json", JSON.stringify(j, null, 2));
 '
 
-out=$(rewatch build 2>&1)
+out=$(rescript build 2>&1)
 status=$?
 
 mv rescript.json.bak rescript.json

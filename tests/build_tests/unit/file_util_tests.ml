@@ -11,7 +11,7 @@ let write_file path contents =
 
 let tests =
   "file_util_tests" >:: fun _context ->
-  let root = Filename.temp_file "rewatch-file-util-" "" in
+  let root = Filename.temp_file "build-system-file-util-" "" in
   Sys.remove root;
   Unix.mkdir root 0o755;
   let root = Unix.realpath root in

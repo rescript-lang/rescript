@@ -8,7 +8,7 @@ cd ../../testrepo
 bold "Test: Clean repo then rebuild should not log compiler update clean"
 
 # Clean repo
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -20,9 +20,9 @@ fi
 
 # Rebuild with captured output. This test checks one lifecycle message; writing
 # into a tracked snapshot made the fixture dirty whenever work counts changed.
-output_file=$(mktemp "${TMPDIR:-/tmp}/rewatch-clean-rebuild.XXXXXX")
+output_file=$(mktemp "${TMPDIR:-/tmp}/build-system-clean-rebuild.XXXXXX")
 trap 'rm -f "$output_file"' EXIT
-rewatch build &> "$output_file"
+rescript build &> "$output_file"
 build_status=$?
 if [ $build_status -eq 0 ];
 then

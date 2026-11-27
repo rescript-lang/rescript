@@ -4,7 +4,7 @@ let check condition message = assert_bool message condition
 
 let write_file = Test_support.write_file
 
-let with_temp_dir = Test_support.with_temp_dir "rewatch-build-artifacts-"
+let with_temp_dir = Test_support.with_temp_dir "build-system-build-artifacts-"
 
 let cleanup_stale ~artifact_files ~ast_sources ?(present_source_files = [])
     ?(on_removed_module = ignore) ~root config modules =

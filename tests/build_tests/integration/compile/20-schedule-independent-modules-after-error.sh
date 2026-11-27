@@ -5,14 +5,14 @@ source "../utils.sh"
 
 bold "Test: Independent modules compile after an unrelated error"
 
-fixture=$(mktemp -d 2>/dev/null || mktemp -d -t rewatch-schedule-after-error)
+fixture=$(mktemp -d 2>/dev/null || mktemp -d -t build-system-schedule-after-error)
 trap "rm -rf '$fixture'" EXIT
 
 mkdir -p "$fixture/src"
 
 cat > "$fixture/rescript.json" <<'EOF'
 {
-  "name": "rewatch-schedule-after-error",
+  "name": "build-system-schedule-after-error",
   "sources": { "dir": "src" },
   "warnings": { "number": "+26+27+32", "error": false },
   "package-specs": { "module": "esmodule", "in-source": true },

@@ -8,7 +8,7 @@ set -eu
 root=$(CDPATH= cd -- "$(dirname "$0")/../../.." && pwd)
 rescript=${1:-$root/_build/default/build_system/rescript.exe}
 rescript=$(realpath "$rescript")
-work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-verbose-output-XXXXXX")
+work=$(mktemp -d "${TMPDIR:-/tmp}/build-system-verbose-output-XXXXXX")
 cleanup() {
   rm -rf "$work"
 }

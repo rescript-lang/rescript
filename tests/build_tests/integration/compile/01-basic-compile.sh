@@ -5,7 +5,7 @@ cd ../../testrepo
 
 bold "Test: It should compile"
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -15,7 +15,7 @@ else
   exit 1
 fi
 
-error_output=$(rewatch 2>&1)
+error_output=$(rescript 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Built"

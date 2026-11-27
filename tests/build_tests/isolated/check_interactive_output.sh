@@ -5,7 +5,7 @@ set -eu
 root=$(CDPATH= cd -- "$(dirname "$0")/../../.." && pwd)
 rescript=${1:-$root/_build/default/build_system/rescript.exe}
 rescript=$(realpath "$rescript")
-work=$(mktemp -d "${TMPDIR:-/tmp}/rewatch-interactive-output-XXXXXX")
+work=$(mktemp -d "${TMPDIR:-/tmp}/build-system-interactive-output-XXXXXX")
 
 if $windows_posix_shell; then
   echo "Skipping interactive output gate: a POSIX pseudo-terminal does not exercise the native Windows console"
@@ -63,7 +63,7 @@ cp -R "$work/project" "$work/after-build"
 cp -R "$work/project" "$work/watch"
 cp -R "$work/project" "$work/initial-failure-watch"
 printf 'let value = (\n' >"$work/initial-failure-watch/src/A.res"
-cp -R "$root/tests/build_tests/focused/basic" "$work/partial-initial-failure-watch"
+cp -R "$root/tests/build_tests/isolated/basic" "$work/partial-initial-failure-watch"
 printf 'let answer: int = "not an int"\n' \
   >"$work/partial-initial-failure-watch/src/B.res"
 cp -R "$work/project" "$work/warning-watch"

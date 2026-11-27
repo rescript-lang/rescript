@@ -6,7 +6,7 @@ cd ../../testrepo
 bold "Test: It should support custom suffixes"
 
 # Clean Repo
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -19,7 +19,7 @@ fi
 # Replace suffix
 replace "s/.mjs/.res.js/g" rescript.json
 
-error_output=$(rewatch build 2>&1)
+error_output=$(rescript build 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Built"
@@ -40,7 +40,7 @@ else
   exit 1
 fi
 
-error_output=$(rewatch clean 2>&1)
+error_output=$(rescript clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
@@ -54,7 +54,7 @@ fi
 replace "s/.res.js/.mjs/g" rescript.json
 
 # Restore original build
-error_output=$(rewatch build 2>&1)
+error_output=$(rescript build 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Built"

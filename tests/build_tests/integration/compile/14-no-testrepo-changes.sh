@@ -5,8 +5,8 @@ cd ../../testrepo
 
 bold "Test: Make sure we don't have changes in the test repo"
 
-rewatch clean &> /dev/null
-rewatch build &> /dev/null
+rescript clean &> /dev/null
+rescript build &> /dev/null
 
 if git diff --exit-code ./;
 then

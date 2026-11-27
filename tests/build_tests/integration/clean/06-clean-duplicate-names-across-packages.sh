@@ -34,7 +34,7 @@ NODE
 
 # Build separately so both packages have real output before root-level cleanup.
 for package in clean-duplicate-a clean-duplicate-b; do
-  if ! output=$(cd "node_modules/$package" && rewatch build 2>&1); then
+  if ! output=$(cd "node_modules/$package" && rescript build 2>&1); then
     error "Could not build $package"
     printf '%s\n' "$output" >&2
     exit 1
@@ -45,7 +45,7 @@ for package in clean-duplicate-a clean-duplicate-b; do
   fi
 done
 
-if ! output=$(rewatch clean 2>&1); then
+if ! output=$(rescript clean 2>&1); then
   error "Could not clean packages with same-named modules"
   printf '%s\n' "$output" >&2
   exit 1

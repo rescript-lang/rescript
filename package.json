@@ -48,9 +48,6 @@
     "rescript-tools": "cli/rescript-tools.js"
   },
   "scripts": {
-    "test": "node scripts/test.js -all",
-    "test-build": "node scripts/test.js -build",
-    "test-ocaml": "node scripts/test.js -ounit",
     "test-release-plan": "node --test scripts/releasePlan.test.js",
     "test-compiler-benchmarks": "node --test scripts/compilerBenchmarks.test.js",
     "check": "biome check --no-errors-on-unmatched .",
