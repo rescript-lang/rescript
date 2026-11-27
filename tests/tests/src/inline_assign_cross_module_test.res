@@ -20,6 +20,11 @@ let readBeforeAssign = () => Inline_assign_cross_module_lib.readThenAssign(5, p 
 
 let copyBeforeAssign = () => Inline_assign_cross_module_lib.copyThenAssign(1)
 
+let readBeforeAssignBound = () => {
+  let capture = p => () => p
+  Inline_assign_cross_module_lib.readThenAssign(5, capture)
+}
+
 describe(__MODULE__, () => {
   test("a variable the inlined function assigns, twice in a function", () => {
     eq(__LOC__, 14, addBumped(id(3), id(4)))
@@ -35,5 +40,9 @@ describe(__MODULE__, () => {
 
   test("a copy of an assigned variable, made before the assignment", () => {
     eq(__LOC__, 3, copyBeforeAssign())
+  })
+
+  test("a read of an assigned variable, passed to a bound closure before the assignment", () => {
+    eq(__LOC__, 15, readBeforeAssignBound())
   })
 })
