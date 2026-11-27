@@ -26,7 +26,7 @@ import {
 
 let ounitTest = false;
 let mochaTest = false;
-let buildTest = false;
+let projectTest = false;
 let formatTest = false;
 let runtimeDocstrings = false;
 
@@ -38,8 +38,8 @@ if (process.argv.includes("-mocha")) {
   mochaTest = true;
 }
 
-if (process.argv.includes("-build")) {
-  buildTest = true;
+if (process.argv.includes("-projects")) {
+  projectTest = true;
 }
 
 if (process.argv.includes("-format")) {
@@ -53,7 +53,7 @@ if (process.argv.includes("-docstrings")) {
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
-  buildTest = true;
+  projectTest = true;
   formatTest = true;
   runtimeDocstrings = true;
 }
@@ -153,7 +153,7 @@ if (mochaTest) {
   });
 }
 
-if (buildTest) {
+if (projectTest) {
   // Each directory below these suites with an input.js is one test.
   const suites = [buildTestDir, projectTestDir, errorTestDir];
   let hasError = false;
