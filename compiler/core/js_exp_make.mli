@@ -132,7 +132,6 @@ val float : ?comment:string -> string -> t
 val zero_int_literal : t
 
 (* val one_int_literal : t *)
-val zero_float_lit : t
 
 val zero_bigint_literal : t
 
@@ -274,6 +273,8 @@ val int32_bor : ?comment:string -> t -> t -> t
 val float_add : ?comment:string -> t -> t -> t
 
 val float_minus : ?comment:string -> t -> t -> t
+
+val float_neg : ?comment:string -> t -> t
 
 val float_mul : ?comment:string -> t -> t -> t
 
