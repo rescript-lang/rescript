@@ -23,9 +23,9 @@ export const testDir = path.resolve(projectDir, "tests");
 export const compilerTestDir = path.resolve(testDir, "tests");
 
 /**
- * path: `<projectDir>/tests/build_tests/`
+ * path: `<projectDir>/tests/build_tests/projects/`
  */
-export const buildTestDir = path.resolve(testDir, "build_tests");
+export const buildTestDir = path.resolve(testDir, "build_tests", "projects");
 
 /**
  * path: `<projectDir>/tests/project_tests/`

@@ -1,0 +1,1 @@
+- Gather the build system's tests under `tests/build_tests` (`integration/`, `testrepo/`, `focused/`, `projects/`, `unit/`) and its docs under `docs/build_system`; `make test-rewatch` is now `make test-build`.

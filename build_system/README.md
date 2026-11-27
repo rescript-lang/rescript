@@ -3,7 +3,7 @@
 This directory contains ReScript's build system and CLI (`rescript build`,
 `watch`, `clean`, `format`, and `compiler-args`). It ships as `rescript` in the
 `@rescript/<platform>` packages and is tested with the integration suite in
-[`../rewatch/tests`](../rewatch/tests).
+[`../tests/build_tests/integration`](../tests/build_tests/integration).
 
 The compiler is linked in: parses and compiles run in-process on a pool of
 OCaml domains rather than as `bsc` subprocesses (see
@@ -179,17 +179,17 @@ Windows CI.
 ## Testing
 
 ```sh
-dune runtest tests/rewatch_ounit_tests                          # unit tests
-sh build_system/tests/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"   # focused end-to-end tests
-make test-rewatch                                               # integration suite in rewatch/tests
+dune runtest tests/build_tests/unit    # unit tests
+sh tests/build_tests/focused/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"   # focused end-to-end tests
+make test-build                        # integration suite in tests/build_tests/integration
 ```
 
-The scripts in `tests/check_*.sh` check configuration acceptance, command
-validation, and verbose and interactive output, partly against snapshots in
-`tests/snapshots/`. Run them with `UPDATE_SNAPSHOTS=1` to rewrite the
-snapshots after an intended output change.
-`tests/check_canonical_test_coverage.sh` ensures that every integration test
-script is run by `rewatch/tests/suite.sh`.
+The scripts in `tests/build_tests/focused/check_*.sh` check configuration
+acceptance, command validation, and verbose and interactive output, partly
+against snapshots in `tests/build_tests/focused/snapshots/`. Run them with
+`UPDATE_SNAPSHOTS=1` to rewrite the snapshots after an intended output change.
+`tests/build_tests/focused/check_canonical_test_coverage.sh` ensures that every
+integration test script is run by `tests/build_tests/integration/suite.sh`.
 
 ## Packaging
 

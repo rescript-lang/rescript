@@ -50,7 +50,7 @@ _coverage/
 bisect*.coverage
 
 lib/rescript
-tests/build_tests/*/lib/
+tests/build_tests/projects/*/lib/
 tests/project_tests/*/lib/
 #ignore temporary directory
 *.goog.js

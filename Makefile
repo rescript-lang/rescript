@@ -156,10 +156,10 @@ test-gentype: lib
 	make -C tests/gentype_tests/typescript-react-example clean test
 	make -C tests/gentype_tests/stdlib-no-shims clean test
 
-test-rewatch: lib
-	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
+test-build: lib
+	./tests/build_tests/integration/suite.sh $(RESCRIPT_EXE)
 
-test-all: test test-gentype test-analysis test-tools test-rewatch
+test-all: test test-gentype test-analysis test-tools test-build
 
 # Playground
 
@@ -353,4 +353,4 @@ clean: clean-lib clean-compiler clean-coverage
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build compiler lib artifacts test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat semantic-diff clean-compiler clean-lib clean-gentype clean-tests clean
+.PHONY: yarn-install build compiler lib artifacts test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-build test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat semantic-diff clean-compiler clean-lib clean-gentype clean-tests clean
