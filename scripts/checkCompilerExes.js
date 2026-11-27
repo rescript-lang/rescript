@@ -3,7 +3,7 @@
 // @ts-check
 
 // Verify that the compiler binaries in the platform npm package were
-// produced by dune promotion from the current build (compiler/sync/dune is
+// produced by dune promotion from the current build (packages/dune is
 // their only producer). Fails when a binary is missing - e.g. this
 // platform's promotion rule did not fire - or when a stale binary from an
 // earlier build is still in place.
@@ -17,8 +17,7 @@ const syncDir = path.join(
   "..",
   "_build",
   "default",
-  "compiler",
-  "sync",
+  "packages",
 );
 
 let ok = true;
@@ -53,7 +52,7 @@ for (const exe of executables) {
 
 if (!ok) {
   console.error(
-    "Dune promotion did not produce these binaries; check that this platform is covered by a rule in compiler/sync/dune.",
+    "Dune promotion did not produce these binaries; check that this platform is covered by a rule in packages/dune.",
   );
   process.exit(1);
 }

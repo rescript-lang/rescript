@@ -72,7 +72,9 @@ $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 # Compiler
 
 COMPILER_SOURCE_DIRS := compiler syntax tests analysis tools build_system
-COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \))
+# Besides the sources, the dune files outside those directories: the root ones
+# and the rules in packages/dune that copy the binaries into the packages.
+COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \)) dune dune-project packages/dune
 COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 RESCRIPT_EXE := $(BIN_DIR)/rescript.exe
@@ -80,7 +82,7 @@ RESCRIPT_EXE := $(BIN_DIR)/rescript.exe
 compiler: $(COMPILER_EXES)
 
 # The compiler binaries in $(BIN_DIR) are produced by dune itself: the
-# promotion rules in compiler/sync/dune copy (and strip) them into the
+# promotion rules in packages/dune copy (and strip) them into the
 # platform npm package on every `dune build`, comparing content so unchanged
 # binaries are not rewritten. Make only needs to know that running dune
 # produces them.
@@ -88,12 +90,12 @@ $(COMPILER_BUILD_STAMP): $(COMPILER_SOURCES)
 	dune build
 
 $(COMPILER_EXES): $(COMPILER_BUILD_STAMP)
-	@cmp -s $@ _build/default/compiler/sync/$(@F) || { \
-	  rm -f _build/default/compiler/sync/$(@F); dune build; }
-	@cmp -s $@ _build/default/compiler/sync/$(@F) || { \
+	@cmp -s $@ _build/default/packages/$(@F) || { \
+	  rm -f _build/default/packages/$(@F); dune build; }
+	@cmp -s $@ _build/default/packages/$(@F) || { \
 	  echo "Error: $@ is missing or does not match the dune build output."; \
 	  echo "Dune promotion did not produce it; check that this platform is"; \
-	  echo "covered by a rule in compiler/sync/dune."; \
+	  echo "covered by a rule in packages/dune."; \
 	  exit 1; }
 	@test -x $@ || chmod 755 $@
 

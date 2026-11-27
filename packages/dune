@@ -1,0 +1,123 @@
+; Keep the npm platform packages' binaries in sync with every `dune build`.
+;
+; The @rescript/<platform>/bin copies are what cli/*.js, the test harnesses,
+; and the runtime build actually run; these promotion rules are their only
+; producer. Promotion compares content, so unchanged binaries are not
+; rewritten and no-op builds cause no timestamp churn downstream.
+;
+; One rule per platform; %{system}/%{architecture} come from `ocamlc -config`
+; (note: x64 is "amd64" there). Every package receives the build system as
+; rescript.exe. The browser profile is excluded because it builds a
+; playground-flavoured compiler that must never overwrite the native binaries.
+
+; The packages themselves hold no dune sources.
+
+(dirs)
+
+(rule
+ (enabled_if
+  (and
+   (<> %{profile} browser)
+   (= %{system} macosx)
+   (= %{architecture} arm64)))
+ (targets
+  bsc.exe
+  rescript-editor-analysis.exe
+  rescript-tools.exe
+  rescript.exe)
+ (deps
+  ../compiler/bsc/rescript_compiler_main.exe
+  ../analysis/bin/main.exe
+  ../tools/bin/main.exe
+  ../build_system/rescript.exe)
+ (mode
+  (promote
+   (until-clean)
+   (into @rescript/darwin-arm64/bin)))
+ (action
+  (progn
+   (run strip -o bsc.exe ../compiler/bsc/rescript_compiler_main.exe)
+   (run strip -o rescript-editor-analysis.exe ../analysis/bin/main.exe)
+   (run strip -o rescript-tools.exe ../tools/bin/main.exe)
+   (run strip -o rescript.exe ../build_system/rescript.exe))))
+
+(rule
+ (enabled_if
+  (and
+   (<> %{profile} browser)
+   (= %{system} linux)
+   (= %{architecture} arm64)))
+ (targets
+  bsc.exe
+  rescript-editor-analysis.exe
+  rescript-tools.exe
+  rescript.exe)
+ (deps
+  ../compiler/bsc/rescript_compiler_main.exe
+  ../analysis/bin/main.exe
+  ../tools/bin/main.exe
+  ../build_system/rescript.exe)
+ (mode
+  (promote
+   (until-clean)
+   (into @rescript/linux-arm64/bin)))
+ (action
+  (progn
+   (run strip -o bsc.exe ../compiler/bsc/rescript_compiler_main.exe)
+   (run strip -o rescript-editor-analysis.exe ../analysis/bin/main.exe)
+   (run strip -o rescript-tools.exe ../tools/bin/main.exe)
+   (run strip -o rescript.exe ../build_system/rescript.exe))))
+
+(rule
+ (enabled_if
+  (and
+   (<> %{profile} browser)
+   (= %{system} linux)
+   (= %{architecture} amd64)))
+ (targets
+  bsc.exe
+  rescript-editor-analysis.exe
+  rescript-tools.exe
+  rescript.exe)
+ (deps
+  ../compiler/bsc/rescript_compiler_main.exe
+  ../analysis/bin/main.exe
+  ../tools/bin/main.exe
+  ../build_system/rescript.exe)
+ (mode
+  (promote
+   (until-clean)
+   (into @rescript/linux-x64/bin)))
+ (action
+  (progn
+   (run strip -o bsc.exe ../compiler/bsc/rescript_compiler_main.exe)
+   (run strip -o rescript-editor-analysis.exe ../analysis/bin/main.exe)
+   (run strip -o rescript-tools.exe ../tools/bin/main.exe)
+   (run strip -o rescript.exe ../build_system/rescript.exe))))
+
+(rule
+ (enabled_if
+  (and
+   (<> %{profile} browser)
+   (= %{system} mingw64)
+   (= %{architecture} amd64)))
+ (targets
+  bsc.exe
+  rescript-editor-analysis.exe
+  rescript-tools.exe
+  rescript.exe)
+ (deps
+  ../compiler/bsc/rescript_compiler_main.exe
+  ../analysis/bin/main.exe
+  ../tools/bin/main.exe
+  ../build_system/rescript.exe)
+ (mode
+  (promote
+   (until-clean)
+   (into @rescript/win32-x64/bin)))
+ (action
+  (progn
+   (copy ../compiler/bsc/rescript_compiler_main.exe bsc.exe)
+   (copy ../analysis/bin/main.exe rescript-editor-analysis.exe)
+   (copy ../tools/bin/main.exe rescript-tools.exe)
+   (copy ../build_system/rescript.exe rescript.exe))))
