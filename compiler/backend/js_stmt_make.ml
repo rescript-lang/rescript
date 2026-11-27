@@ -64,7 +64,7 @@ let declare_variable ~kind (ident : Ident.t) : t =
 
 let define_variable ~kind (v : Ident.t) (exp : J.expression) : t =
   match exp.expression_desc with
-  | Undefined _ -> declare_variable ~kind v
+  | Undefined _ when not (Js_ts_annot.enabled ()) -> declare_variable ~kind v
   | _ ->
     let property : J.property = kind in
     let ident_info : J.ident_info = {used_stats = NA} in

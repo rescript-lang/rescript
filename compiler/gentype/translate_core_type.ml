@@ -1,19 +1,6 @@
 open Gentype_common
 open! Translate_type_expr_from_types
 
-let remove_option ~(label : Asttypes.arg_label)
-    (core_type : Typedtree.core_type) =
-  match (core_type.ctyp_desc, label) with
-  | Ttyp_constr (Path.Pident id, _, [t]), Optional {txt = lbl}
-    when Ident.name id = "option" ->
-    Some (lbl, t)
-  | ( Ttyp_constr (Pdot (Path.Pident name_space, id, _), _, [t]),
-      Optional {txt = lbl} )
-    when (* This has a different representation in 4.03+  *)
-         Ident.name name_space = "FB" && id = "option" ->
-    Some (lbl, t)
-  | _ -> None
-
 type process_variant = {
   no_payloads: (string * Typedtree.attributes) list;
   payloads: (string * Typedtree.attributes * Typedtree.core_type) list;
@@ -62,30 +49,31 @@ let rec translate_arrow_type ~config ~type_vars_gen
           in
           ( List.rev_append dependencies rev_arg_deps,
             (Nolabel, type_) :: rev_args )
-        | (Labelled {txt = lbl_txt} | Optional {txt = lbl_txt}) as label -> (
+        | Labelled {txt = lbl_txt} ->
           let as_label =
             match attrs |> Annotation.get_gentype_as_renaming with
             | Some s -> s
             | None -> ""
           in
-          match typ |> remove_option ~label with
-          | None ->
-            let {dependencies; type_ = type1} =
-              typ |> translateCoreType_ ~config ~type_vars_gen ~type_env
-            in
-            ( List.rev_append dependencies rev_arg_deps,
-              ( Label
-                  (match as_label = "" with
-                  | true -> lbl_txt
-                  | false -> as_label),
-                type1 )
-              :: rev_args )
-          | Some (lbl_txt, t1) ->
-            let {dependencies; type_ = type1} =
-              t1 |> translateCoreType_ ~config ~type_vars_gen ~type_env
-            in
-            ( List.rev_append dependencies rev_arg_deps,
-              (OptLabel lbl_txt, type1) :: rev_args )))
+          let {dependencies; type_ = type1} =
+            typ |> translateCoreType_ ~config ~type_vars_gen ~type_env
+          in
+          ( List.rev_append dependencies rev_arg_deps,
+            ( Label
+                (match as_label = "" with
+                | true -> lbl_txt
+                | false -> as_label),
+              type1 )
+            :: rev_args )
+        | Optional {txt = lbl_txt} ->
+          (* The core type of an optional argument is its option's payload:
+             Typetexp wraps it in [option] *)
+          let {dependencies; type_ = type1} =
+            typ |> translateCoreType_ ~config ~type_vars_gen ~type_env
+          in
+          let type1 = some_type ~config typ.ctyp_type type1 in
+          ( List.rev_append dependencies rev_arg_deps,
+            (OptLabel lbl_txt, type1) :: rev_args ))
       ([], []) params
   in
   let {dependencies; type_ = ret_type} =
@@ -137,6 +125,14 @@ and translateCoreType_ ~config ~type_vars_gen
       | true -> Closed
       | false -> Open)
       fields_translations
+  | Ttyp_constr (path, _, [payload]) when Path.same path Predef.path_option ->
+    let translation =
+      payload |> translateCoreType_ ~config ~type_vars_gen ~type_env
+    in
+    {
+      translation with
+      type_ = Option (some_type ~config payload.ctyp_type translation.type_);
+    }
   | Ttyp_constr (path, _, type_params) ->
     let params_translation =
       type_params |> translateCoreTypes_ ~config ~type_vars_gen ~type_env

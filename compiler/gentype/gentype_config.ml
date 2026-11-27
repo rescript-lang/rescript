@@ -10,6 +10,16 @@ type module_resolution =
   | Bundler
       (** should use TS input's extension (e.g. `.gen.tsx`) on import statements *)
 
+(** The nested-option markers [Some(v)] can be, for the values [v] of an
+    option's payload type: [Some(v)] is the frozen marker
+    [{BS_PRIVATE_NESTED_SOME_NONE: 0}] when [v] is [undefined], the marker of
+    depth [d + 1] when [v] is the marker of depth [d], and [v] itself
+    otherwise (Primitive_option.some). *)
+type option_markers =
+  | No_markers  (** [Some(v)] is [v] for every value of the payload type *)
+  | Depths of int list  (** a marker of one of these depths, or [v] *)
+  | Any_depth  (** a marker of a depth not known here, or [v] *)
+
 type t = {
   bs_dependencies: string list;
   dep_paths: (string, string) Hashtbl.t;
@@ -27,6 +37,9 @@ type t = {
   shims_map: Module_name.t Module_name_map.t;
   sources: string list;
   suffix: string;
+  option_payload_markers: Types.type_expr -> option_markers;
+      (** The markers [option<t>] can hold for this payload [t], which the
+          option then prints beside [t] *)
 }
 
 let default =
@@ -45,6 +58,7 @@ let default =
     shims_map = Module_name_map.empty;
     sources = [];
     suffix = ".bs.js";
+    option_payload_markers = (fun _ -> No_markers);
   }
 
 (* ----- CLI-flag backing state ----------------------------------------- *)
@@ -192,4 +206,5 @@ let build_config ~namespace =
     shims_map;
     sources = !(source_dirs_flag ());
     suffix;
+    option_payload_markers = default.option_payload_markers;
   }
