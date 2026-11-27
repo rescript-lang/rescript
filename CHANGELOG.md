@@ -19,7 +19,7 @@
 - Integer patterns that alias the same int32 value (e.g. `0xFFFF_FFFF` and `-1`) may now produce unused-case warnings. https://github.com/rescript-lang/rescript/pull/8717 https://github.com/rescript-lang/rescript/pull/8858
 - Fix constant folding of a `switch` picking the wrong case for `@as(int)` constructors and for coerced variants. https://github.com/rescript-lang/rescript/pull/9318
 - Fix constant folding of comparisons between `@as(int)` constructors and other constructors, and merging of switch arms returning them. https://github.com/rescript-lang/rescript/pull/9319
-- Fix a dense `switch` on ints or chars losing its default arm when its highest case is unreachable, so that it returned `undefined` for values above the cases. https://github.com/rescript-lang/rescript/pull/TODO
+- Fix a dense `switch` on ints or chars losing its default arm when its highest case is unreachable, so that it returned `undefined` for values above the cases. https://github.com/rescript-lang/rescript/pull/9418
 
 #### :nail_care: Polish
 
