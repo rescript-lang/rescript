@@ -1,0 +1,1 @@
+- `make test-build` runs all build system tests (unit, isolated and integration) through `tests/build_tests/Makefile`, whose targets CI calls; `scripts/test.js -build` is now `-projects`.

@@ -296,12 +296,12 @@ node scripts/test.js -mocha
 
 **Run build, project and error tests:**
 
-This will run the test projects in `tests/build_tests` (build system),
+This will run the test projects in `tests/build_tests/projects` (build system),
 `tests/project_tests` (compiler end-to-end) and `tests/error_tests` (error
 message snapshots).
 
 ```
-node scripts/test.js -build
+node scripts/test.js -projects
 ```
 
 **Run ounit tests:**

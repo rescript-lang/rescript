@@ -157,7 +157,7 @@ test-gentype: lib
 	make -C tests/gentype_tests/stdlib-no-shims clean test
 
 test-build: lib
-	./tests/build_tests/integration/suite.sh $(RESCRIPT_EXE)
+	$(MAKE) -C tests/build_tests test RESCRIPT=$(abspath $(RESCRIPT_EXE))
 
 test-all: test test-gentype test-analysis test-tools test-build
 
