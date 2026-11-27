@@ -41,7 +41,7 @@ function postProcessErrorOutput(fixtureName, output) {
   result = result.trimEnd();
   result = result.replace(
     new RegExp(
-      `(?:[A-Z]:)?[\\\\/][^ ]+?tests[\\\\/]build_tests[\\\\/]super_errors_multi[\\\\/]fixtures[\\\\/]${fixtureName}[\\\\/]([^:\\s]+)`,
+      `(?:[A-Z]:)?[\\\\/][^ ]+?tests[\\\\/]error_tests[\\\\/]multi[\\\\/]fixtures[\\\\/]${fixtureName}[\\\\/]([^:\\s]+)`,
       "g",
     ),
     (_match, file) =>

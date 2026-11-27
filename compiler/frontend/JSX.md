@@ -30,7 +30,7 @@ separate files.
 The same transformation is applied to signatures so the implementation and
 interface expose compatible component types. External components and the
 legacy `componentWithProps` form have separate validation paths; tests for
-these forms live under `tests/build_tests/react_ppx/`.
+these forms live under `tests/project_tests/react_ppx/`.
 
 ## JSX expressions
 
@@ -61,7 +61,8 @@ A change to this transform normally needs all of the following:
 - React and generic-module cases checked separately;
 - parser/printing coverage if the surface JSX shape changes;
 - transform snapshots under `tests/syntax_tests/`;
-- component type and diagnostic coverage under `tests/build_tests/`;
+- component type and diagnostic coverage under `tests/project_tests/` and
+  `tests/error_tests/`;
 - analysis and GenType coverage when the generated component shape changes.
 
 Use `dune exec res_parser -- -jsx-version 4 -print ml example.res` to inspect

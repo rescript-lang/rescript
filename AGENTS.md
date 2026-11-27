@@ -125,9 +125,10 @@ system).
 1. **Syntax tests** (`tests/syntax_tests/`) - Parser validation
 2. **Integration tests** (`tests/tests/`) - End-to-end behavior
 3. **Unit tests** (`tests/ounit_tests/`) - Compiler functions
-4. **Build tests** (`tests/build_tests/`) - Error cases and edge cases
-5. **Type tests** (`tests/build_tests/super_errors/`) - Single-file type checking errors
-6. **Multi-file error tests** (`tests/build_tests/super_errors_multi/`) - Cross-module errors that need separate `.res` / `.resi` files
+4. **Build tests** (`tests/build_tests/`) - Build system behavior
+5. **Project tests** (`tests/project_tests/`) - Compiler behavior that needs a whole project, such as JSX output or source maps
+6. **Type tests** (`tests/error_tests/single/`) - Single-file type checking errors
+7. **Multi-file error tests** (`tests/error_tests/multi/`) - Cross-module errors that need separate `.res` / `.resi` files
 
 ## Additional development commands
 

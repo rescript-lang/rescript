@@ -323,7 +323,7 @@ test("a card draws the message alone, whatever the diff", async () => {
   const touched = await card({
     "tests/tests/src/a_test.res": "let y = 1\n",
     "tests/tests/src/a_test.mjs": "y\n",
-    "tests/build_tests/super_errors/expected/x.res.expected": "e\n",
+    "tests/error_tests/single/expected/x.res.expected": "e\n",
     "changes/x.fix.md": "- Fix a thing.\n",
     "compiler/typing/config.ml": 'let cmi_magic_number = "BS00MI002"\n',
   });

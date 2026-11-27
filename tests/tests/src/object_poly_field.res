@@ -2,7 +2,7 @@
    object field is a live surface feature (Stage E survey). Every case in
    this file must keep compiling. The rejection of an object literal for a
    polymorphic field is pinned in
-   tests/build_tests/super_errors/fixtures/object_literal_for_poly_field.res. */
+   tests/error_tests/single/fixtures/object_literal_for_poly_field.res. */
 
 type poly = {"id": 'a. 'a => 'a}
 
@@ -23,7 +23,7 @@ let pair = use_poly(value)
 /* A settable polymorphic field accepts a value as polymorphic as its
    scheme, and stays usable at several types afterwards. The rejection of a
    monomorphic value is pinned in
-   tests/build_tests/super_errors/fixtures/object_write_poly_field_less_general.res. */
+   tests/error_tests/single/fixtures/object_write_poly_field_less_general.res. */
 type settable_poly = {@set "id": 'a. 'a => 'a}
 
 let write_poly = (o: settable_poly) => {

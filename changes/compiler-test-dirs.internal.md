@@ -1,0 +1,1 @@
+- Move the compiler error snapshots to `tests/error_tests` and the compiler end-to-end projects to `tests/project_tests`, leaving `tests/build_tests` to the build system.
