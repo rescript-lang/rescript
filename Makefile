@@ -72,7 +72,9 @@ $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 # Compiler
 
 COMPILER_SOURCE_DIRS := compiler syntax tests analysis tools build_system
-COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \))
+# Besides the sources, the dune files outside those directories: the root ones
+# and the rules in packages/dune that copy the binaries into the packages.
+COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.c' -o -name '*.h' -o -name '*.dune' -o -name dune -o -name dune-project \)) dune dune-project packages/dune
 COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools rescript
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 RESCRIPT_EXE := $(BIN_DIR)/rescript.exe
