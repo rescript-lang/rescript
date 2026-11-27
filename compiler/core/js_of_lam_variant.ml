@@ -53,8 +53,11 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
 (* invariant: optional is not allowed in this case *)
 (* arg is a polyvar *)
 
-(** FIXME:
-    1. duplicated evaluation of expressions arg
+(** A literal passes its tag, a constant, and its payload, so the payload is
+    evaluated once, in place, whatever its effects.
+
+    FIXME:
+    1. duplicated evaluation of an [arg] other than a literal
      Solution: calcuate the arg once in the beginning
     2. avoid block for branches <  3
     or always?
@@ -63,8 +66,7 @@ let eval (arg : J.expression) (dispatches : (string * string) list) : E.t =
 let eval_as_event (arg : J.expression)
     (dispatches : (string * string) list option) =
   match arg.expression_desc with
-  | Caml_block ([{expression_desc = Str {txt}}; cb], _, _, Blk_poly_var _)
-    when Js_analyzer.no_side_effect_expression cb ->
+  | Caml_block ([{expression_desc = Str {txt}}; cb], _, _, Blk_poly_var _) ->
     let v =
       match dispatches with
       | Some dispatches -> Ext_list.assoc_by_string dispatches txt None

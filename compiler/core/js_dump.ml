@@ -696,7 +696,13 @@ and expression_desc cxt ~(level : int) f x : cxt =
             comma_sp f;
             expression ~level:1 cxt f el))
   | Tagged_template (call_expr, string_args, value_args) ->
-    let cxt = expression cxt ~level f call_expr in
+    let cxt =
+      P.cond_paren_group f
+        (match call_expr.expression_desc with
+        | Fun _ -> true
+        | _ -> false)
+        (fun () -> expression ~level:15 cxt f call_expr)
+    in
     P.string f "`";
     let rec aux cxt xs ys =
       match (xs, ys) with
@@ -705,7 +711,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       | {J.expression_desc = Str {txt; _}} :: x_rest, y :: y_rest ->
         P.string f txt;
         P.string f "${";
-        let cxt = expression cxt ~level f y in
+        let cxt = expression ~level:0 cxt f y in
         P.string f "}";
         aux cxt x_rest y_rest
       | _ -> assert false
