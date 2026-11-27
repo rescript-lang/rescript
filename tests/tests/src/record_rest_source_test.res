@@ -201,6 +201,16 @@ let countingCounter: unit => (counter, unit => int) = %raw(`() => {
   ];
 }`)
 
+// a getter named `z` that writes `o.inner.j`
+let innerWrittenByGetter: unit => outer = %raw(`() => {
+  const o = { inner: { i: 1, j: 2 } };
+  Object.defineProperty(o, "z", {
+    enumerable: true,
+    get() { o.inner.j = 42; return 3; },
+  });
+  return o;
+}`)
+
 let nestedGetter: unit => (outer, unit => int) = %raw(`() => {
   let reads = 0;
   return [
@@ -352,9 +362,15 @@ describe(__MODULE__, () => {
     let (rest, name) = boundThenCall(c, () => ())->(((rest, name, _)) => (rest, name))
     // the second read is the explicit one of the source
     deepStrictEqual((rest, name, reads()), ({other: 1}, "read1", 2))
+    // the inner record is copied before the outer one, which reads `inner` again
     let (o, reads) = nestedGetter()
     let result = nestedRests(o, () => ())
-    deepStrictEqual((result, reads()), (({z: 3}, {j: 2}, 1), 1))
+    deepStrictEqual((result, reads()), (({z: 3}, {j: 2}, 1), 2))
+  })
+
+  test("nested rests are copied inner first", () => {
+    let result = nestedRests(innerWrittenByGetter(), () => ())
+    deepStrictEqual(result, ({z: 3}, {j: 2}, 1))
   })
 
   test("a constant next to a rest", () => {

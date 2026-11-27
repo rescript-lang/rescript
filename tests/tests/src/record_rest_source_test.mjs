@@ -199,8 +199,9 @@ function boundFieldOfField(o, f) {
 }
 
 function nestedRests(o, f) {
-  let {inner: match, ...rest} = o;
+  let match = o.inner;
   let {i, ...innerRest} = match;
+  let {inner: __unused0, ...rest} = o;
   f();
   return [
     rest,
@@ -211,9 +212,10 @@ function nestedRests(o, f) {
 
 function restsInTuple(param, f) {
   let match = param[0];
-  let {x: a, ...rest1} = match;
+  let a = match.x;
   let match$1 = param[1];
   let {x: b, ...rest2} = match$1;
+  let {x: __unused0, ...rest1} = match;
   f();
   return [
     a,
@@ -270,6 +272,15 @@ let countingCounter = (() => {
     { get name() { reads = reads + 1; return "read" + reads; }, bump() {}, other: 1 },
     () => reads,
   ];
+});
+
+let innerWrittenByGetter = (() => {
+  const o = { inner: { i: 1, j: 2 } };
+  Object.defineProperty(o, "z", {
+    enumerable: true,
+    get() { o.inner.j = 42; return 3; },
+  });
+  return o;
 });
 
 let nestedGetter = (() => {
@@ -474,7 +485,7 @@ Mocha.describe("Record_rest_source_test", () => {
   });
   Mocha.test("a bound field next to an unused rest", () => {
     let c = makeCounter();
-    Test_utils.eq("File \"record_rest_source_test.res\", line 301, characters 7-14", boundWithoutRest(c, () => setName(c, "new")), "old");
+    Test_utils.eq("File \"record_rest_source_test.res\", line 311, characters 7-14", boundWithoutRest(c, () => setName(c, "new")), "old");
   });
   Mocha.test("a bound field in a switch case", () => {
     let c = makeCounter();
@@ -632,6 +643,18 @@ Mocha.describe("Record_rest_source_test", () => {
         },
         1
       ],
+      2
+    ]);
+  });
+  Mocha.test("nested rests are copied inner first", () => {
+    let result = nestedRests(innerWrittenByGetter(), () => {});
+    Nodeassert.deepStrictEqual(result, [
+      {
+        z: 3
+      },
+      {
+        j: 2
+      },
       1
     ]);
   });
@@ -731,6 +754,7 @@ export {
   wildcardField,
   constructorField,
   countingCounter,
+  innerWrittenByGetter,
   nestedGetter,
   thisCounter,
   countingXy,

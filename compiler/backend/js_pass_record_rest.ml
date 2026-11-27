@@ -96,10 +96,12 @@ let pass =
       let rest =
         {statement with statement_desc = Variable {variable with value}}
       in
-      let statements = before @ (rest :: after) in
       match source.expression_desc with
-      | Var _ -> block self (List.rev statements) tail
-      | _ -> statements @ block self [] tail)
+      | Var _ ->
+        (* The copy may run getters, which can write what a later copy reads:
+           a later rest moves only the reads after this one. *)
+        before @ (rest :: block self (List.rev after) tail)
+      | _ -> before @ (rest :: after) @ block self [] tail)
     | ({
          statement_desc =
            Return
