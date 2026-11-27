@@ -10,6 +10,7 @@ type polymorphic<'a> = {compare: option<('a, 'a) => int>, first: option<'a>}
 type rec recursive = {self: unit => recursive, value: int}
 type callback = {run: unit => int}
 type rec node = {next: node, value: int}
+type counter = {start: int, step: unit => int}
 
 module Component = {
   @react.component
@@ -74,6 +75,14 @@ let rec sequenceCycle = {
   {next: sequenceCycle, value: 9}
 }
 
+// A record of a recursive group whose fields read none of the group's bindings
+// when it is built is declared directly, after the expressions before it
+let rec nextCount = () => counter.start + 1
+and counter = {
+  ignore(logged("counter", ()))
+  {start: logged("counterStart", id(10)), step: () => nextCount()}
+}
+
 let moduleCalls = takeCalls()
 
 // The source is evaluated, so the module it comes from stays imported when it
@@ -119,7 +128,16 @@ describe(__MODULE__, () => {
     eq(
       __LOC__,
       moduleCalls,
-      ["polymorphic", "recursive", "cycle", "letCycle", "letCycleSource", "sequenceCycle"],
+      [
+        "polymorphic",
+        "recursive",
+        "cycle",
+        "letCycle",
+        "letCycleSource",
+        "sequenceCycle",
+        "counter",
+        "counterStart",
+      ],
     )
     eq(__LOC__, strings.first, None)
     eq(__LOC__, ints.first, None)
@@ -132,6 +150,8 @@ describe(__MODULE__, () => {
     eq(__LOC__, letCycle.next.value, 8)
     eq(__LOC__, sequenceCycle.next === sequenceCycle, true)
     eq(__LOC__, sequenceCycle.next.value, 9)
+    eq(__LOC__, counter.start, 10)
+    eq(__LOC__, counter.step(), 11)
     eq(__LOC__, fromOtherModule, {x: 5, y: 6})
   })
 

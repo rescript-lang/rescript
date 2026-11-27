@@ -89,23 +89,25 @@ let with_block_source_loc lam block =
    in [let rec r = {...f(), next: r}], whose spread source [f()] is evaluated
    for its side effects first. Such a binding is declared as a dummy before
    those expressions run, and the block is copied into it. A field that is a
-   function, a constant or a variable bound before the group reads none. *)
-let rec block_after_effects ~(all_bindings : (Ident.t * Lambda.t) list)
+   function reads none when the block is built, whatever it refers to; any
+   other field reads one when it refers to a binding of the group. *)
+let block_after_effects ~(all_bindings : (Ident.t * Lambda.t) list)
     (lam : Lambda.t) =
+  let group = Set_ident.of_list (List.map fst all_bindings) in
   let reads_binding (arg : Lambda.t) =
     match arg with
-    | Lfunction _ | Lconst _ -> false
-    | Lvar pid ->
-      List.exists (fun (other, _) -> Ident.same other pid) all_bindings
-    | _ -> true
+    | Lfunction _ -> false
+    | _ -> Lam_hit.hit_variables group arg
   in
-  match lam with
-  | Lsequence (_, Lprim {primitive = Pmakeblock tag_info; args})
-  | Llet (_, _, _, Lprim {primitive = Pmakeblock tag_info; args}) ->
-    if List.exists reads_binding args then Some tag_info else None
-  | Lsequence (_, body) | Llet (_, _, _, body) ->
-    block_after_effects ~all_bindings body
-  | _ -> None
+  let rec block_tag (lam : Lambda.t) =
+    match lam with
+    | Lsequence (_, Lprim {primitive = Pmakeblock tag_info; args})
+    | Llet (_, _, _, Lprim {primitive = Pmakeblock tag_info; args}) ->
+      if List.exists reads_binding args then Some tag_info else None
+    | Lsequence (_, body) | Llet (_, _, _, body) -> block_tag body
+    | _ -> None
+  in
+  block_tag lam
 
 let args_either_function_or_const (args : Lambda.t list) =
   List.for_all
