@@ -32,10 +32,8 @@ repository root.
 
 ## Testing
 
-- Unit tests: `dune runtest tests/build_tests/unit`.
-- Isolated end-to-end tests:
-  `sh tests/build_tests/isolated/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"`.
-- Integration suite: `make test-build`. Run it for any change to build
-  behavior.
+- All build system tests: `make test-build`. Run it for any change to build
+  behavior. Single suites: `make -C tests/build_tests unit`, `isolated`,
+  `snapshots`, `verbose`, `interactive` or `integration`.
 - Add a test for every bug fix. Prefer the integration suite in
   `tests/build_tests/integration`. Poll for observable conditions instead of sleeping.

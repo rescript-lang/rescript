@@ -179,9 +179,10 @@ Windows CI.
 ## Testing
 
 ```sh
-dune runtest tests/build_tests/unit    # unit tests
-sh tests/build_tests/isolated/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"   # isolated end-to-end tests
-make test-build                        # integration suite in tests/build_tests/integration
+make test-build                        # all build system tests
+make -C tests/build_tests unit         # unit tests
+make -C tests/build_tests isolated     # isolated end-to-end tests
+make -C tests/build_tests integration  # integration suite in tests/build_tests/integration
 ```
 
 The scripts in `tests/build_tests/isolated/check_*.sh` check configuration

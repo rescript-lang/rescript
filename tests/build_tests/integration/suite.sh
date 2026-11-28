@@ -26,11 +26,27 @@ fi
 
 source ./utils.sh
 
+# Processes that run the executable under test, directly or, for the
+# cli/rescript.js script, through node. Processes that only name it among
+# their other arguments, like this script and the make that started it, don't
+# count.
+# The ps of Git for Windows has no -o and lists only the program, without its
+# arguments, so there the plain match is enough. grep finding nothing is the
+# normal case and must not end the script under set -e.
+executable_processes() {
+  if ps -eo pid=,args= >/dev/null 2>&1; then
+    ps -eo pid=,args= | awk -v exe="$RESCRIPT_EXECUTABLE" \
+      '$2 == exe || ($2 ~ /(^|\/)node$/ && $3 == exe)'
+  else
+    ps aux | grep -F "$RESCRIPT_EXECUTABLE" | grep -v grep || true
+  fi
+}
+
 bold "Check for stale rescript processes"
-STALE_PIDS=$(ps aux | grep "$RESCRIPT_EXECUTABLE" | grep -v grep | awk '{print $2}')
-if [ -n "$STALE_PIDS" ]; then
+STALE_PROCESSES=$(executable_processes)
+if [ -n "$STALE_PROCESSES" ]; then
   error "Found stale rescript processes using this executable:"
-  ps aux | grep "$RESCRIPT_EXECUTABLE" | grep -v grep
+  echo "$STALE_PROCESSES"
   exit 1
 fi
 success "No stale rescript processes found"

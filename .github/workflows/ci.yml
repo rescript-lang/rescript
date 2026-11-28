@@ -191,7 +191,7 @@ jobs:
       # The format check gives the same result everywhere; it runs on Linux
       # only, where it is fastest.
       - name: Run tests
-        run: node scripts/test.js ${{ runner.os == 'Linux' && '-all' || '-ounit -mocha -build -docstrings' }}
+        run: node scripts/test.js ${{ runner.os == 'Linux' && '-all' || '-ounit -mocha -projects -docstrings' }}
 
       - name: Check for diffs in tests folder
         run: git diff --ignore-cr-at-eol --exit-code tests
@@ -230,13 +230,8 @@ jobs:
         if: ${{ !matrix.skip_build_system_integration_tests }}
         timeout-minutes: 20
         run: |
-          . tests/build_tests/isolated/process_watchdog.sh
-          start_process_watchdog
-          bash tests/build_tests/isolated/check_integration_test_coverage.sh
-          bash tests/build_tests/isolated/check_config_acceptance.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
-          bash tests/build_tests/isolated/check_command_validation.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+          make -C tests/build_tests snapshots \
+            RESCRIPT="$PWD/packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe"
         shell: bash
 
       - name: Run build system interactive output tests
@@ -246,46 +241,41 @@ jobs:
         if: matrix.node-target == 'linux-arm64' || matrix.node-target == 'darwin-arm64'
         timeout-minutes: 15
         run: |
-          bash tests/build_tests/isolated/check_interactive_output.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+          make -C tests/build_tests interactive \
+            RESCRIPT="$PWD/packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe"
         shell: bash
 
       - name: Run build system verbose output tests
         if: ${{ !matrix.skip_build_system_integration_tests }}
         timeout-minutes: 10
         run: |
-          bash tests/build_tests/isolated/check_verbose_output.sh \
-            packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe
+          make -C tests/build_tests verbose \
+            RESCRIPT="$PWD/packages/@rescript/${{ matrix.node-target }}/bin/rescript.exe"
         shell: bash
 
       - name: Run build system unit tests
         timeout-minutes: 10
-        run: |
-          opam exec -- dune build tests/build_tests/unit/build_system_tests_main.exe
-          # Run the executable directly so a stuck test leaves live progress;
-          # dune otherwise buffers the test output until the action exits.
-          opam exec -- ./_build/default/tests/build_tests/unit/build_system_tests_main.exe -runner sequential
+        run: opam exec -- make -C tests/build_tests unit
         shell: bash
 
       # The integration suite works in tests/build_tests/testrepo and the
       # isolated one in directories of its own, so they run side by side; each
-      # takes one to three and a half minutes. The integration suite fails when
-      # another process runs its executable as it starts, so it runs a copy.
-      # Its output is shown once both are done.
+      # takes one to three and a half minutes. The integration target runs a
+      # copy of the binaries, so the isolated suite's processes don't count as
+      # leftovers. Its output is shown once both are done.
       - name: Run build system integration and isolated tests
         if: ${{ !matrix.skip_build_system_integration_tests }}
         timeout-minutes: 30
         run: |
           bin=packages/@rescript/${{ matrix.node-target }}/bin
-          rm -rf tmp/integration-bin
           mkdir -p tmp
-          cp -R "$bin" tmp/integration-bin
           integration_log=tmp/integration-tests.log
-          ./tests/build_tests/integration/suite.sh tmp/integration-bin/rescript.exe >"$integration_log" 2>&1 &
+          make -C tests/build_tests integration RESCRIPT="$PWD/$bin/rescript.exe" \
+            >"$integration_log" 2>&1 &
           integration=$!
 
           isolated_status=0
-          sh tests/build_tests/isolated/run.sh "$bin/rescript.exe" || isolated_status=$?
+          make -C tests/build_tests isolated RESCRIPT="$PWD/$bin/rescript.exe" || isolated_status=$?
           integration_status=0
           wait "$integration" || integration_status=$?
 

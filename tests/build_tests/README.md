@@ -25,10 +25,11 @@ which are not recommended for new projects.
 Run commands from the repository root:
 
 ```sh
-make test-build                                  # integration suite
-dune runtest tests/build_tests/unit              # unit tests
-sh tests/build_tests/isolated/run.sh "$PWD/packages/@rescript/<platform>/bin/rescript.exe"
-node scripts/test.js -build                      # projects (with project_tests and error_tests)
+make test-build                       # unit, isolated and integration suites
+make -C tests/build_tests unit         # unit tests
+make -C tests/build_tests isolated     # isolated/run.sh; also snapshots, verbose, interactive
+make -C tests/build_tests integration  # integration suite
+node scripts/test.js -projects         # projects (part of make test, with project_tests and error_tests)
 ```
 
 The integration suite is [`integration/suite.sh`](integration/suite.sh). It
