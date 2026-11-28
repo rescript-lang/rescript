@@ -7,9 +7,19 @@
 type u = (int, int) => int
 @val external v1: u = "v" // arity from u is implicit
 @val external v2: (int, int) => int = "v" // arity is explicit
+@module external m1: u = "left-pad" // the module itself, arity from u is implicit
 
 let f1 = x => v1(x, x)
 let f2 = x => v2(x, x)
+let f3 = x => m1(x, x)
+
+type instance
+type make = (int, int) => instance
+@new external n1: make = "N" // a class, arity from make is implicit
+@module @new external n2: make = "n-module" // the module itself as a class
+
+let f4 = x => n1(x, x)
+let f5 = x => n2(x, x)
 
 module FromTypeConstructor = {
   type fn<'props, 'return> = 'props => 'return

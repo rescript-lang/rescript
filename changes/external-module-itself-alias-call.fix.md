@@ -1,0 +1,1 @@
+- Fix a `@module` external of the module itself whose type is a function type alias returning the module instead of calling it with the arguments.

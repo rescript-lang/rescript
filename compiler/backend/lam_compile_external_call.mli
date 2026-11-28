@@ -22,27 +22,33 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val ocaml_to_js_eff :
+val ocaml_to_js :
   arg_label:External_arg_spec.label_noname ->
   arg_type:External_arg_spec.attr ->
   J.expression ->
-  Js_of_lam_variant.arg_expression * J.expression list
-(** Compile ocaml external function call to JS IR. *)
+  Js_of_lam_variant.arg_expression
+(** The JS arguments that an argument of an external, prepared by
+    [hold_arg], is passed as *)
 
 val hold_arg :
-  arg_label:External_arg_spec.label_noname ->
   arg_type:External_arg_spec.attr ->
   J.block * J.expression ->
   J.block * J.expression
-(** Binds a compiled argument, after its statements, to a temporary unless
-    [ocaml_to_js_eff] can read it in place: it reads a polymorphic variant
-    argument twice, or inside a function it builds *)
+(** Prepares a compiled argument and its statements for [ocaml_to_js], so
+    that it is evaluated once and in its place among the arguments. An
+    event-style polymorphic variant argument, which [ocaml_to_js] reads
+    twice, is bound to a temporary after the statements unless reading it
+    twice is the same as reading it once. The effects of a [unit] or
+    [@ignore] argument, which [ocaml_to_js] leaves out, become a statement
+    of the argument. *)
 
 val hold_args :
+  External_ffi_types.external_decl ->
   External_arg_spec.params ->
   (J.block * J.expression) list ->
   (J.block * J.expression) list
-(** [hold_arg] for the compiled arguments of a call to an external *)
+(** [hold_arg] for the compiled arguments of a call to an external, but for
+    the object of a [@send] call, which [translate_ffi] uses as it is *)
 
 val translate_ffi :
   Lam_compile_context.t ->

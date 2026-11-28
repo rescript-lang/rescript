@@ -1,0 +1,1 @@
+- Fix an `@int` or `@as` argument of an external keeping what it reads alive for as long as a closure created next to it.

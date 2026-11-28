@@ -1,0 +1,1 @@
+- Fix an `@string` argument of an external that is read by a key, as in `on(t, d->Dict.getUnsafe("ev"))`, being read twice.
