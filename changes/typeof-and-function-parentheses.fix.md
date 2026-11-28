@@ -1,0 +1,1 @@
+- Fix missing parentheses around `typeof` and functions used as the object of a member access or a call, or as an operand.
