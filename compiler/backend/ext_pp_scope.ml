@@ -31,11 +31,14 @@ type stamps = {next: int; stamps: string Map_int.t}
    a suffixed name like [x$1] can equal another identifier's mangled name;
    new names are checked against [used] instead of being assumed fresh.
    [reserved] holds the raw JS names the program refers to (see {!reserve}),
-   which a suffixed name must not capture. *)
+   which a suffixed name must not capture. [declared] holds the names that a
+   [%%raw] program declares and the program reads as JS globals, which no
+   binding may take. *)
 type t = {
   names: stamps Map_string.t;
   used: Set_string.t;
   reserved: Set_string.t;
+  declared: Set_string.t;
 }
 
 let empty : t =
@@ -43,18 +46,22 @@ let empty : t =
     names = Map_string.empty;
     used = Set_string.empty;
     reserved = Set_string.empty;
+    declared = Set_string.empty;
   }
 
-let reserve (cxt : t) (reserved : Set_string.t) : t = {cxt with reserved}
+let reserve (cxt : t) ~(declared : Set_string.t) (reserved : Set_string.t) : t =
+  {cxt with reserved; declared}
 
 (* A binding the source names may take a reserved name unsuffixed:
    [Js_pass_external_shadow] rewrote any reference to that raw name in its
    scope to [globalThis.x]. A binding the compiler synthesizes
    ({!Ext_ident.is_synthesized}) avoids every reserved name instead, so that
-   it shadows nothing. The rewrite would be wrong for a raw name that a
-   [%%raw] declaration in the module binds, which is no property of
-   [globalThis]. *)
-let add_ident ~synthesized ~mangled:name (stamp : int) (cxt : t) : string * t =
+   it shadows nothing. A name that a [%%raw] program declares is no property
+   of [globalThis], so there the rewrite would be wrong: every binding avoids
+   such a name, and references to it stay unchanged. A JS global
+   ([Ext_ident.is_js], added by {!merge}) is that raw name itself. *)
+let add_ident ~js ~synthesized ~mangled:name (stamp : int) (cxt : t) :
+    string * t =
   let {next; stamps} =
     match Map_string.find_opt name cxt.names with
     | None -> {next = 0; stamps = Map_int.empty}
@@ -68,6 +75,7 @@ let add_ident ~synthesized ~mangled:name (stamp : int) (cxt : t) : string * t =
       if
         Set_string.mem str cxt.used
         || ((i > 0 || synthesized) && Set_string.mem str cxt.reserved)
+        || ((not js) && Set_string.mem str cxt.declared)
       then pick (i + 1)
       else (i, str)
     in
@@ -80,6 +88,7 @@ let add_ident ~synthesized ~mangled:name (stamp : int) (cxt : t) : string * t =
             cxt.names;
         used = Set_string.add str cxt.used;
         reserved = cxt.reserved;
+        declared = cxt.declared;
       } )
 
 (**
@@ -119,7 +128,7 @@ let str_of_ident (cxt : t) (id : Ident.t) : string * t =
   else
     let id_name = id.name in
     let name = Ext_ident.convert id_name in
-    add_ident
+    add_ident ~js:false
       ~synthesized:(Ext_ident.is_synthesized id)
       ~mangled:name id.stamp cxt
 
@@ -132,7 +141,7 @@ let merge (cxt : t) (set : Set_ident.t) =
   Set_ident.fold
     (fun ident acc ->
       snd
-        (add_ident
+        (add_ident ~js:(Ext_ident.is_js ident)
            ~synthesized:(Ext_ident.is_synthesized ident)
            ~mangled:(Ext_ident.convert ident.name)
            ident.stamp acc))
@@ -160,4 +169,4 @@ let sub_scope (scope : t) (idents : Set_ident.t) : t =
                 stamps.stamps acc.used;
           })
     idents
-    {empty with reserved = scope.reserved}
+    {empty with reserved = scope.reserved; declared = scope.declared}

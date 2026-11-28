@@ -33,9 +33,11 @@ type t
 
 val empty : t
 
-val reserve : t -> Set_string.t -> t
-(** [reserve cxt names] keeps generated [$N] suffixes from producing any of
-    [names], the raw JS names (globals, externals) the program refers to. *)
+val reserve : t -> declared:Set_string.t -> Set_string.t -> t
+(** [reserve cxt ~declared names] keeps generated [$N] suffixes from producing
+    any of [names], the raw JS names (globals, externals) the program refers
+    to, and keeps every binding from taking a name in [declared], names
+    that [%%raw] programs declare and the program reads. *)
 
 val sub_scope : t -> Set_ident.t -> t
 

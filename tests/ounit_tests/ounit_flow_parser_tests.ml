@@ -48,6 +48,31 @@ let suites =
          ( __LOC__ >:: fun _ ->
            OUnit.assert_equal Js_raw_info.Js_stmt_comment
              (Classify_function.classify_stmt "// only a comment");
-           OUnit.assert_equal Js_raw_info.Js_stmt_unknown
+           OUnit.assert_equal
+             (Js_raw_info.Js_stmt_unknown {declared = []})
              (Classify_function.classify_stmt "console.log('hello')") );
+         ( __LOC__ >:: fun _ ->
+           let declared source =
+             match Classify_function.classify_stmt source with
+             | Js_stmt_unknown {declared} -> List.sort compare declared
+             | Js_stmt_comment -> OUnit.assert_failure "expected code"
+           in
+           OUnit.assert_equal ~printer:(String.concat ", ")
+             ["a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"; "i"; "j"; "k"]
+             (declared
+                "import a, * as b from 'x'; import {c, y as d} from 'y';\n\
+                 function e() {} class f {} var g = 1;\n\
+                 let {h, z: [i, ...j]} = {}; export const k = 2;\n\
+                 { function nested() {} }");
+           OUnit.assert_equal ~printer:(String.concat ", ")
+             ["v1"; "v2"; "v3"; "v4"; "v5"; "v6"; "v7"; "v8"; "v9"]
+             (declared
+                "if (x) { var v1 } else var v2;\n\
+                 for (var v3 = 0; ;) { var v4 } for (var v5 of []) {}\n\
+                 label: var v6; try { var v7 } catch (e) {} finally { var v8 }\n\
+                 switch (x) { case 1: var v9 }\n\
+                 { let blockLet; const blockConst = 1 }\n\
+                 while (x) { (function () { var inFunction }) }");
+           OUnit.assert_equal ~printer:(String.concat ", ") ["l"]
+             (declared "export default function l() {}") );
        ]

@@ -58,7 +58,9 @@ let extract_file_comments (x : J.deps_program) =
   (comments, {x with program = {x.program with block = new_block}})
 
 (* The initial scope for printing [x], reserving the raw JS names it refers
-   to so that renamed locals can't capture them. *)
+   to so that renamed locals can't capture them. Bindings avoid a name that
+   [%%raw] declares only where the program also reads it as a JS global: a
+   [%raw] snippet may read a ReScript binding of that name by its name. *)
 let initial_scope (x : J.program) =
   let names = ref Set_string.empty in
   let super = Js_record_iter.super in
@@ -71,7 +73,10 @@ let initial_scope (x : J.program) =
     }
   in
   self.program self x;
-  Ext_pp_scope.reserve Ext_pp_scope.empty !names
+  Ext_pp_scope.reserve Ext_pp_scope.empty
+    ~declared:
+      (Set_string.inter (Js_pass_external_shadow.raw_declarations x) !names)
+    !names
 
 let program f cxt (x : J.program) =
   P.at_least_two_lines f;
