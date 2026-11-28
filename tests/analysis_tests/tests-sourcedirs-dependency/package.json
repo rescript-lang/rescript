@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@tests/sourcedirs-dependency-lib": "workspace:*",
+    "@tests/sourcedirs-namespaced-dependency-lib": "workspace:*",
     "rescript": "workspace:^"
   }
 }

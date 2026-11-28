@@ -694,6 +694,15 @@ __metadata:
   resolution: "@tests/sourcedirs-dependency@workspace:tests/analysis_tests/tests-sourcedirs-dependency"
   dependencies:
     "@tests/sourcedirs-dependency-lib": "workspace:*"
+    "@tests/sourcedirs-namespaced-dependency-lib": "workspace:*"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@tests/sourcedirs-namespaced-dependency-lib@workspace:*, @tests/sourcedirs-namespaced-dependency-lib@workspace:tests/analysis_tests/tests-sourcedirs-dependency/namespaced-dependency":
+  version: 0.0.0-use.local
+  resolution: "@tests/sourcedirs-namespaced-dependency-lib@workspace:tests/analysis_tests/tests-sourcedirs-dependency/namespaced-dependency"
+  dependencies:
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
