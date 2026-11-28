@@ -41,7 +41,11 @@ type arg_expression = Splice0 | Splice1 of E.t | Splice2 of E.t * E.t
    temporary, a statement that also binds the arguments to its left that
    have side effects. An element at another index does not: it cannot be
    told from a property read by a key, as from a [@get_index] external such
-   as [Dict.getUnsafe]. *)
+   as [Dict.getUnsafe]. A [@get_index] read at a constant int key, such as an
+   item of a [NodeList] binding, cannot be told from an element at a constant
+   index either, so it is read twice as well, though a proxy or a getter can
+   then give the tag of one event and the payload of another, as a [@val]
+   getter can. *)
 let eval_as_event_in_place (arg : J.expression) =
   let rec duplicable (e : J.expression) =
     match e.expression_desc with
