@@ -1187,6 +1187,54 @@ let check_callee_attributes (funct : expression) =
     (fun () ->
       List.iter (Translattribute.check_attribute funct) funct.exp_attributes)
 
+(* Whether an argument reads the same wherever it is evaluated, so it can stay
+   in place when the arguments around it move. *)
+let rec is_module_path (m : Typedtree.module_expr) =
+  match m.mod_desc with
+  | Tmod_ident _ -> true
+  | Tmod_constraint (m, _, _, _) -> is_module_path m
+  | _ -> false
+
+let is_stable_arg (e : Typedtree.expression) =
+  match e.exp_desc with
+  | Texp_constant _
+  | Texp_ident (_, _, {val_kind = Val_reg})
+  | Texp_function _
+  | Texp_construct (_, _, [])
+  | Texp_variant (_, None) ->
+    true
+  | Texp_pack m -> is_module_path m
+  | _ -> false
+
+(* A labelled argument can be passed before arguments declared ahead of it, as
+   in [f(~b=g(), x)], but an application lists its arguments in declared
+   order. When that changes the order of the arguments that are not stable,
+   and one of them can have side effects, those arguments have to be
+   evaluated in source order first (#9340). A stable argument reads the same
+   wherever it is evaluated, and without effects the order makes no
+   difference. *)
+let args_out_of_source_order
+    (args : (Asttypes.arg_label * Typedtree.expression option) list) =
+  let rec sorted = function
+    | a :: (b :: _ as rest) -> a <= b && sorted rest
+    | _ -> true
+  in
+  let positions =
+    List.filter_map
+      (function
+        | _, Some (e : Typedtree.expression)
+          when (not e.exp_loc.loc_ghost) && not (is_stable_arg e) ->
+          Some e.exp_loc.loc_start.pos_cnum
+        | _ -> None)
+      args
+  in
+  (not (sorted positions))
+  && List.exists
+       (function
+         | _, Some e -> not (Typecore.is_nonexpansive e)
+         | _, None -> false)
+       args
+
 let rec transl_exp e =
   Builtin_attributes.warning_scope ~ppwarning:false e.exp_attributes (fun () ->
       List.iter (Translattribute.check_attribute e) e.exp_attributes;
@@ -1231,6 +1279,9 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
       e.exp_loc
   | Texp_template {segments; values} ->
     prim ~primitive:(Ptemplate segments) ~args:(transl_list values) e.exp_loc
+  | Texp_apply {funct; args; partial; transformed_jsx = false}
+    when args_out_of_source_order args ->
+    transl_apply_in_source_order e funct args ~partial
   | Texp_apply
       ({
          funct =
@@ -1570,6 +1621,65 @@ and transl_guard guard rhs =
 and transl_case {c_lhs; c_guard; c_rhs} = (c_lhs, transl_guard c_guard c_rhs)
 
 and transl_cases cases = List.map transl_case cases
+
+(* Binds the callee, unless it is an identifier, and then every argument that
+   is not stable to a temporary, in source order, and translates the
+   application with the temporaries in their place. *)
+and transl_apply_in_source_order (e : Typedtree.expression) funct args ~partial
+    =
+  let defs = ref [] in
+  let bind (arg : Typedtree.expression) : Typedtree.expression =
+    let id = Ident.create "arg" in
+    defs := (id, transl_exp arg) :: !defs;
+    {
+      arg with
+      exp_desc =
+        Texp_ident
+          ( Path.Pident id,
+            mknoloc (Longident.Lident (Ident.name id)),
+            {
+              val_type = arg.exp_type;
+              val_kind = Val_reg;
+              val_loc = arg.exp_loc;
+              val_attributes = [];
+            } );
+      exp_extra = [];
+      exp_attributes = [];
+    }
+  in
+  let funct =
+    match funct.exp_desc with
+    | Texp_ident _ -> funct
+    | _ -> bind funct
+  in
+  let to_bind =
+    List.filter_map
+      (function
+        | _, Some (arg : Typedtree.expression) when not (is_stable_arg arg) ->
+          Some arg
+        | _ -> None)
+      args
+    |> List.stable_sort (fun (a : Typedtree.expression) b ->
+        compare a.exp_loc.loc_start.pos_cnum b.exp_loc.loc_start.pos_cnum)
+  in
+  let bound = List.map (fun arg -> (arg, bind arg)) to_bind in
+  let args =
+    List.map
+      (fun (l, arg) ->
+        match arg with
+        | Some arg when not (is_stable_arg arg) ->
+          (l, Some (List.assq arg bound))
+        | _ -> (l, arg))
+      args
+  in
+  let body =
+    transl_exp0
+      {
+        e with
+        exp_desc = Texp_apply {funct; args; partial; transformed_jsx = false};
+      }
+  in
+  List.fold_left (fun body (id, lam) -> let_ Strict id lam body) body !defs
 
 and transl_apply ?(uncurried_partial_application = None) lam sargs loc =
   let lapply ap_func ap_args = apply ap_func ap_args loc in
