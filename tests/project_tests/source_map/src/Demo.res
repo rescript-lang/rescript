@@ -31,6 +31,16 @@ let describeItem = item =>
   | Pair(left, right) => Int.toString(left + right)
   }
 
+type settings = {retries: int, delay: int, label?: string}
+
+let updateSettings = base => {
+  ...base,
+  retries: add(base.retries, 1),
+  delay: try applyPipe(base.delay, add) catch {
+  | _ => 0
+  },
+}
+
 let unicodeMessage = "한글 🌏"
 
 let unicodeCrash = () => JsError.throwWithMessage(unicodeMessage)
