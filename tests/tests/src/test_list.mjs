@@ -9,8 +9,8 @@ function length_aux(_len, _x) {
     if (x === 0) {
       return len;
     }
-    _x = x.tl;
     _len = len + 1 | 0;
+    _x = x.tl;
     continue;
   };
 }
@@ -58,8 +58,8 @@ function nth(l, n) {
       if (n$1 === 0) {
         return l$1.hd;
       }
-      _n = n$1 - 1 | 0;
       _l = l$1.tl;
+      _n = n$1 - 1 | 0;
       continue;
     }
     throw {
@@ -77,8 +77,8 @@ function rev_append(_l1, _l2) {
     if (l1 === 0) {
       return l2;
     }
-    _l2 = {hd: l1.hd, tl: l2};
     _l1 = l1.tl;
+    _l2 = {hd: l1.hd, tl: l2};
     continue;
   };
 }
@@ -124,8 +124,8 @@ function rev_map(f, l) {
     if (x === 0) {
       return accu;
     }
-    _x = x.tl;
     _accu = {hd: f(x.hd), tl: accu};
+    _x = x.tl;
     continue;
   };
 }
@@ -152,8 +152,8 @@ function iteri(f, l) {
       return;
     }
     f(i, x.hd);
-    _x = x.tl;
     _i = i + 1 | 0;
+    _x = x.tl;
     continue;
   };
 }
@@ -165,8 +165,8 @@ function fold_left(f, _accu, _l) {
     if (l === 0) {
       return accu;
     }
-    _l = l.tl;
     _accu = f(accu, l.hd);
+    _l = l.tl;
     continue;
   };
 }
@@ -211,9 +211,9 @@ function rev_map2(f, l1, l2) {
     let accu = _accu;
     if (l1$1 !== 0) {
       if (l2$1 !== 0) {
-        _l2 = l2$1.tl;
-        _l1 = l1$1.tl;
         _accu = {hd: f(l1$1.hd, l2$1.hd), tl: accu};
+        _l1 = l1$1.tl;
+        _l2 = l2$1.tl;
         continue;
       }
       throw {
@@ -240,8 +240,8 @@ function iter2(f, _l1, _l2) {
     if (l1 !== 0) {
       if (l2 !== 0) {
         f(l1.hd, l2.hd);
-        _l2 = l2.tl;
         _l1 = l1.tl;
+        _l2 = l2.tl;
         continue;
       }
       throw {
@@ -268,9 +268,9 @@ function fold_left2(f, _accu, _l1, _l2) {
     let accu = _accu;
     if (l1 !== 0) {
       if (l2 !== 0) {
-        _l2 = l2.tl;
-        _l1 = l1.tl;
         _accu = f(accu, l1.hd, l2.hd);
+        _l1 = l1.tl;
+        _l2 = l2.tl;
         continue;
       }
       throw {
@@ -348,8 +348,8 @@ function for_all2(p, _l1, _l2) {
         if (!p(l1.hd, l2.hd)) {
           return false;
         }
-        _l2 = l2.tl;
         _l1 = l1.tl;
+        _l2 = l2.tl;
         continue;
       }
       throw {
@@ -378,8 +378,8 @@ function exists2(p, _l1, _l2) {
         if (p(l1.hd, l2.hd)) {
           return true;
         }
-        _l2 = l2.tl;
         _l1 = l1.tl;
+        _l2 = l2.tl;
         continue;
       }
       throw {
@@ -548,8 +548,8 @@ function find_all(p) {
       let l = x.tl;
       let x$1 = x.hd;
       if (p(x$1)) {
-        _x = l;
         _accu = {hd: x$1, tl: accu};
+        _x = l;
         continue;
       }
       _x = l;
@@ -575,12 +575,12 @@ function partition(p, l) {
     let l$1 = x.tl;
     let x$1 = x.hd;
     if (p(x$1)) {
-      _x = l$1;
       _yes = {hd: x$1, tl: yes};
+      _x = l$1;
       continue;
     }
-    _x = l$1;
     _no = {hd: x$1, tl: no};
+    _x = l$1;
     continue;
   };
 }
@@ -648,8 +648,8 @@ function chop(_k, _l) {
       return l;
     }
     if (l !== 0) {
-      _l = l.tl;
       _k = k - 1 | 0;
+      _l = l.tl;
       continue;
     }
     throw {
@@ -726,12 +726,12 @@ function stable_sort(cmp, l) {
       let h2 = l2$1.hd;
       let h1 = l1.hd;
       if (cmp(h1, h2) > 0) {
-        _accu = {hd: h1, tl: accu};
         _l1 = l1.tl;
+        _accu = {hd: h1, tl: accu};
         continue;
       }
-      _accu = {hd: h2, tl: accu};
       _l2 = l2$1.tl;
+      _accu = {hd: h2, tl: accu};
       continue;
     };
   };
@@ -796,12 +796,12 @@ function stable_sort(cmp, l) {
       let h2 = l2$1.hd;
       let h1 = l1.hd;
       if (cmp(h1, h2) <= 0) {
-        _accu = {hd: h1, tl: accu};
         _l1 = l1.tl;
+        _accu = {hd: h1, tl: accu};
         continue;
       }
-      _accu = {hd: h2, tl: accu};
       _l2 = l2$1.tl;
+      _accu = {hd: h2, tl: accu};
       continue;
     };
   };
@@ -909,18 +909,18 @@ function sort_uniq(cmp, l) {
       let h1 = l1.hd;
       let c$7 = cmp(h1, h2);
       if (c$7 === 0) {
-        _accu = {hd: h1, tl: accu};
-        _l2 = t2;
         _l1 = t1;
+        _l2 = t2;
+        _accu = {hd: h1, tl: accu};
         continue;
       }
       if (c$7 > 0) {
-        _accu = {hd: h1, tl: accu};
         _l1 = t1;
+        _accu = {hd: h1, tl: accu};
         continue;
       }
-      _accu = {hd: h2, tl: accu};
       _l2 = t2;
+      _accu = {hd: h2, tl: accu};
       continue;
     };
   };
@@ -1019,18 +1019,18 @@ function sort_uniq(cmp, l) {
       let h1 = l1.hd;
       let c$7 = cmp(h1, h2);
       if (c$7 === 0) {
-        _accu = {hd: h1, tl: accu};
-        _l2 = t2;
         _l1 = t1;
+        _l2 = t2;
+        _accu = {hd: h1, tl: accu};
         continue;
       }
       if (c$7 < 0) {
-        _accu = {hd: h1, tl: accu};
         _l1 = t1;
+        _accu = {hd: h1, tl: accu};
         continue;
       }
-      _accu = {hd: h2, tl: accu};
       _l2 = t2;
+      _accu = {hd: h2, tl: accu};
       continue;
     };
   };

@@ -12,8 +12,8 @@ function f() {
       if (n <= 0) {
         return acc;
       }
-      _n = n - 1 | 0;
       _acc = acc + n | 0;
+      _n = n - 1 | 0;
       continue;
     };
   };

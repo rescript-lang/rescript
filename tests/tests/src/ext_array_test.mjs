@@ -46,8 +46,8 @@ function reverse_of_list(x) {
       return a;
     }
     a[(len - i | 0) - 2 | 0] = x$1.hd;
-    _x = x$1.tl;
     _i = i + 1 | 0;
+    _x = x$1.tl;
     continue;
   };
 }
@@ -64,8 +64,8 @@ function filter(f, a) {
     }
     let v = a[i];
     if (f(v)) {
-      _i = i + 1 | 0;
       _acc = {hd: v, tl: acc};
+      _i = i + 1 | 0;
       continue;
     }
     _i = i + 1 | 0;
@@ -86,8 +86,8 @@ function filter_map(f, a) {
     let v = a[i];
     let v$1 = f(v);
     if (v$1 !== undefined) {
-      _i = i + 1 | 0;
       _acc = {hd: Primitive_option.valFromOption(v$1), tl: acc};
+      _i = i + 1 | 0;
       continue;
     }
     _i = i + 1 | 0;
@@ -127,8 +127,8 @@ function tolist_aux(a, f, _i, _res) {
     }
     let v = a[i];
     let v$1 = f(v);
-    _res = v$1 !== undefined ? ({hd: Primitive_option.valFromOption(v$1), tl: res}) : res;
     _i = i - 1 | 0;
+    _res = v$1 !== undefined ? ({hd: Primitive_option.valFromOption(v$1), tl: res}) : res;
     continue;
   };
 }
@@ -158,8 +158,8 @@ function of_list_map(f, a) {
       return arr;
     }
     arr[i] = f(x.hd);
-    _x = x.tl;
     _i = i + 1 | 0;
+    _x = x.tl;
     continue;
   };
 }

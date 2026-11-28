@@ -107,8 +107,8 @@ function min_elt(_def, _x) {
     if (typeof l !== "object") {
       return x._1;
     }
-    _x = l;
     _def = x._1;
+    _x = l;
     continue;
   };
 }

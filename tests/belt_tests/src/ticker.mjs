@@ -25,8 +25,8 @@ function split(delim, s) {
       let l_0 = s.slice(i$p + 1 | 0, x);
       let l$1 = {hd: l_0, tl: l};
       let l$2 = i$p === 0 ? ({hd: "", tl: l$1}) : l$1;
-      _x = i$p;
       _l = l$2;
+      _x = i$p;
       continue;
     };
   } else {
@@ -123,9 +123,9 @@ function compute_update_sequences(all_tickers) {
         }
         let match = type_._0;
         let map$1 = loop({hd: ticker, tl: up}, map, match.lhs);
-        _ticker = match.rhs;
-        _map = map$1;
         _up = {hd: ticker, tl: up};
+        _map = map$1;
+        _ticker = match.rhs;
         continue;
       };
     };
@@ -372,8 +372,8 @@ function loop(_lines, _param) {
     if (lines === 0) {
       return print_all_composite(all_tickers);
     }
-    _param = process_input_line(param[1], all_tickers, lines.hd);
     _lines = lines.tl;
+    _param = process_input_line(param[1], all_tickers, lines.hd);
     continue;
   };
 }

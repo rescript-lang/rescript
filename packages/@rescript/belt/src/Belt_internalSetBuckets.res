@@ -102,7 +102,10 @@ let toArray = h => {
 let rec doBucketFold = (~f, b, accu) =>
   switch C.toOpt(b) {
   | None => accu
-  | Some(cell) => doBucketFold(~f, cell.next, f(accu, cell.key))
+  | Some(cell) =>
+    // `f` may remove entries, so the rest is read after the call, as in `forEach`.
+    let accu = f(accu, cell.key)
+    doBucketFold(~f, cell.next, accu)
   }
 
 let reduce = (h, init, f) => {

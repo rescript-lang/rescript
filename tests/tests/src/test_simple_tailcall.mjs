@@ -26,8 +26,8 @@ function length(_acc, _x) {
     if (tl !== 0) {
       return 1 + length(acc + 1 | 0, tl.tl) | 0;
     }
-    _x = tl;
     _acc = acc + 1 | 0;
+    _x = tl;
     continue;
   };
 }

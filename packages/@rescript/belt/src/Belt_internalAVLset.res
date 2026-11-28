@@ -164,7 +164,10 @@ let rec forEach = (n, f) =>
 let rec reduce = (s, accu, f) =>
   switch s {
   | None => accu
-  | Some(n) => reduce(n.right, f(reduce(n.left, accu, f), n.value), f)
+  | Some(n) =>
+    // `f` may remove entries, so the rest is read after the call, as in `forEach`.
+    let accu = f(reduce(n.left, accu, f), n.value)
+    reduce(n.right, accu, f)
   }
 
 let rec every = (n, p) =>

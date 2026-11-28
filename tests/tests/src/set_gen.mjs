@@ -10,13 +10,13 @@ function cons_enum(_s, _e) {
     if (typeof s !== "object") {
       return e;
     }
+    _s = s._0;
     _e = {
       TAG: "More",
       _0: s._1,
       _1: s._2,
       _2: e
     };
-    _s = s._0;
     continue;
   };
 }
@@ -76,8 +76,8 @@ function cardinal_aux(_acc, _x) {
     if (typeof x !== "object") {
       return acc;
     }
-    _x = x._0;
     _acc = cardinal_aux(acc + 1 | 0, x._2);
+    _x = x._0;
     continue;
   };
 }
@@ -93,8 +93,8 @@ function elements_aux(_accu, _x) {
     if (typeof x !== "object") {
       return accu;
     }
-    _x = x._0;
     _accu = {hd: x._1, tl: elements_aux(accu, x._2)};
+    _x = x._0;
     continue;
   };
 }
@@ -123,8 +123,8 @@ function fold(f, _s, _accu) {
     if (typeof s !== "object") {
       return accu;
     }
-    _accu = f(s._1, fold(f, s._0, accu));
     _s = s._2;
+    _accu = f(s._1, fold(f, s._0, accu));
     continue;
   };
 }
@@ -691,8 +691,8 @@ function compare_aux(cmp, _e1, _e2) {
     if (c !== 0) {
       return c;
     }
-    _e2 = cons_enum(e2._1, e2._2);
     _e1 = cons_enum(e1._1, e1._2);
+    _e2 = cons_enum(e2._1, e2._2);
     continue;
   };
 }

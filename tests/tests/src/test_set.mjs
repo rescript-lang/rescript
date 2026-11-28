@@ -341,13 +341,13 @@ function Make(Ord) {
       if (typeof s !== "object") {
         return e;
       }
+      _s = s._0;
       _e = {
         TAG: "More",
         _0: s._1,
         _1: s._2,
         _2: e
       };
-      _s = s._0;
       continue;
     };
   };
@@ -369,8 +369,8 @@ function Make(Ord) {
       if (c !== 0) {
         return c;
       }
-      _e2 = cons_enum(e2._1, e2._2);
       _e1 = cons_enum(e1._1, e1._2);
+      _e2 = cons_enum(e2._1, e2._2);
       continue;
     };
   };
@@ -396,8 +396,8 @@ function Make(Ord) {
         if (!subset(l1, l2)) {
           return false;
         }
-        _s2 = r2;
         _s1 = r1;
+        _s2 = r2;
         continue;
       }
       if (c < 0) {
@@ -445,8 +445,8 @@ function Make(Ord) {
       if (typeof s !== "object") {
         return accu;
       }
-      _accu = f(s._1, fold(f, s._0, accu));
       _s = s._2;
+      _accu = f(s._1, fold(f, s._0, accu));
       continue;
     };
   };
@@ -537,8 +537,8 @@ function Make(Ord) {
       if (typeof x !== "object") {
         return accu;
       }
-      _x = x._0;
       _accu = {hd: x._1, tl: elements_aux(accu, x._2)};
+      _x = x._0;
       continue;
     };
   };
