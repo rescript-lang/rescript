@@ -47,7 +47,14 @@ let empty : t =
 
 let reserve (cxt : t) (reserved : Set_string.t) : t = {cxt with reserved}
 
-let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
+(* A binding the source names may take a reserved name unsuffixed:
+   [Js_pass_external_shadow] rewrote any reference to that raw name in its
+   scope to [globalThis.x]. A binding the compiler synthesizes
+   ({!Ext_ident.is_synthesized}) avoids every reserved name instead, so that
+   it shadows nothing. The rewrite would be wrong for a raw name that a
+   [%%raw] declaration in the module binds, which is no property of
+   [globalThis]. *)
+let add_ident ~synthesized ~mangled:name (stamp : int) (cxt : t) : string * t =
   let {next; stamps} =
     match Map_string.find_opt name cxt.names with
     | None -> {next = 0; stamps = Map_int.empty}
@@ -59,7 +66,8 @@ let add_ident ~mangled:name (stamp : int) (cxt : t) : string * t =
     let rec pick i =
       let str = if i = 0 then name else Printf.sprintf "%s$%d" name i in
       if
-        Set_string.mem str cxt.used || (i > 0 && Set_string.mem str cxt.reserved)
+        Set_string.mem str cxt.used
+        || ((i > 0 || synthesized) && Set_string.mem str cxt.reserved)
       then pick (i + 1)
       else (i, str)
     in
@@ -111,7 +119,9 @@ let str_of_ident (cxt : t) (id : Ident.t) : string * t =
   else
     let id_name = id.name in
     let name = Ext_ident.convert id_name in
-    add_ident ~mangled:name id.stamp cxt
+    add_ident
+      ~synthesized:(Ext_ident.is_synthesized id)
+      ~mangled:name id.stamp cxt
 
 let ident (cxt : t) f (id : Ident.t) : t =
   let str, cxt = str_of_ident cxt id in
@@ -121,7 +131,11 @@ let ident (cxt : t) f (id : Ident.t) : t =
 let merge (cxt : t) (set : Set_ident.t) =
   Set_ident.fold
     (fun ident acc ->
-      snd (add_ident ~mangled:(Ext_ident.convert ident.name) ident.stamp acc))
+      snd
+        (add_ident
+           ~synthesized:(Ext_ident.is_synthesized ident)
+           ~mangled:(Ext_ident.convert ident.name)
+           ident.stamp acc))
     set cxt
 
 (* Assume that all idents are already in [scope]

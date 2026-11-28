@@ -33,9 +33,11 @@ let global_this = E.js_global "globalThis"
    reference has to go through [globalThis.x]. *)
 
 (* The name a binding is printed with. Bindings named like JS keywords or
-   reserved globals are printed with a [$$] prefix, so they shadow nothing. *)
+   reserved globals are printed with a [$$] prefix, and a binding the compiler
+   synthesizes is printed with a name that is no raw JS name, so they shadow
+   nothing. *)
 let add_binding (ident : Ident.t) names =
-  if Ext_ident.is_js ident then names
+  if Ext_ident.is_js ident || Ext_ident.is_synthesized ident then names
   else String_set.add (Ext_ident.convert ident.name) names
 
 (* A JS [let], [const] or function declaration is in scope in its whole block,

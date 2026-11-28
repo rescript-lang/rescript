@@ -88,7 +88,7 @@ val while_ : ?label:J.label -> J.expression -> J.block -> t
 
 val for_ :
   ?label:J.label ->
-  J.for_ident_expression option ->
+  J.for_ident_expression ->
   J.finish_ident_expression ->
   J.for_ident ->
   J.for_direction ->

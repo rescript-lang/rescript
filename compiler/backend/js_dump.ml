@@ -1406,34 +1406,28 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
                   P.paren_group f 1 (fun _ ->
                       let cxt, new_id =
                         P.for_init f @@ fun () ->
-                        match
-                          (for_ident_expression, finish.expression_desc)
-                        with
-                        | Some ident_expression, (Number _ | Var _) ->
+                        match finish.expression_desc with
+                        | Number _ | Var _ ->
                           let cxt = pp_var_assign cxt f id in
-                          (expression ~level:1 cxt f ident_expression, None)
-                        | Some ident_expression, _ ->
+                          (expression ~level:1 cxt f for_ident_expression, None)
+                        | _ ->
                           let cxt = pp_var_assign cxt f id in
                           let cxt =
-                            expression ~level:1 cxt f ident_expression
+                            expression ~level:1 cxt f for_ident_expression
                           in
                           comma f;
                           P.space f;
                           let id =
-                            Ext_ident.create (Ident.name id ^ "_finish")
+                            Ext_ident.create_tmp
+                              ~name:
+                                (Ext_ident.derived_name id ~suffix:"_finish")
+                              ()
                           in
                           let cxt = Ext_pp_scope.ident cxt f id in
                           P.space f;
                           P.string f L.eq;
                           P.space f;
                           (expression ~level:1 cxt f finish, Some id)
-                        | None, (Number _ | Var _) -> (cxt, None)
-                        | None, _ ->
-                          let id =
-                            Ext_ident.create (Ident.name id ^ "_finish")
-                          in
-                          let cxt = pp_var_assign cxt f id in
-                          (expression ~level:15 cxt f finish, Some id)
                       in
                       semi f;
                       P.space f;

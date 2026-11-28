@@ -1,0 +1,1 @@
+- Fix a temporary the compiler names, such as a `for` loop's `i_finish`, capturing a JS name the code refers to, a global or a function declared in `%%raw`, which threw a `ReferenceError` or a `TypeError`: a temporary no longer takes such a name.

@@ -213,10 +213,10 @@ Mocha.describe("Argument_evaluation_order_test", () => {
   Mocha.test("the start of a for loop before a block in its end", () => {
     let r = 0;
     let visited = [];
-    let i = r;
+    let i_start = r;
     r = 2;
     let e = r;
-    for (let i_finish = (e - 1 | 0); i <= i_finish; ++i) {
+    for (let i = i_start, i_finish = e - 1 | 0; i <= i_finish; ++i) {
       visited.push(i);
     }
     Test_utils.eq("File \"argument_evaluation_order_test.res\", line 202, characters 7-14", [

@@ -45,10 +45,16 @@ let make_js_object (i : Ident.t) = i.flags <- i.flags lor js_object_flag
 *)
 let create_js (name : string) : Ident.t = {name; flags = js_flag; stamp = 0}
 
+let synthesized_flag = 0b1_000_000
+
+let is_synthesized (i : Ident.t) = i.flags land synthesized_flag <> 0
+
 let create = Ident.create
 
-(* FIXME: no need for `$' operator *)
-let create_tmp ?(name = Literals.tmp) () = create name
+let create_tmp ?(name = Literals.tmp) () =
+  let id = create name in
+  id.flags <- id.flags lor synthesized_flag;
+  id
 
 let[@inline] convert ~op (c : char) : string =
   match c with
@@ -94,6 +100,9 @@ let unwrap_uppercase_exotic name =
     let len = String.length name in
     String.sub name 2 (len - 3)
   else name
+
+let derived_name (id : Ident.t) ~suffix =
+  unwrap_uppercase_exotic (Ident.name id) ^ suffix
 
 exception Not_normal_letter of int
 let name_mangle name =

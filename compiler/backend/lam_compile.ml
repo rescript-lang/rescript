@@ -290,11 +290,12 @@ let rec delay_safe ~assignable (e : J.expression) =
    literal visible to translations that look into their arguments, such as
    the rows of a dict literal or a [@variadic] array. So does an
    [Optional_block], which keeps an optional argument known to be present. *)
-let rec evaluate_now ~assignable (e : J.expression) : J.block * J.expression =
+let rec evaluate_now ?name ~assignable (e : J.expression) :
+    J.block * J.expression =
   match e.expression_desc with
   | _ when delay_safe ~assignable e -> ([], e)
   | Seq (a, b) ->
-    let rest, b = evaluate_now ~assignable b in
+    let rest, b = evaluate_now ?name ~assignable b in
     if Js_analyzer.no_side_effect_expression a then (rest, b)
     else
       ({J.statement_desc = Exp a; comment = None; source_loc = None} :: rest, b)
@@ -331,7 +332,7 @@ let rec evaluate_now ~assignable (e : J.expression) : J.block * J.expression =
     in
     (held, {e with expression_desc = Object entries})
   | _ ->
-    let tmp = Ext_ident.create_tmp () in
+    let tmp = Ext_ident.create_tmp ?name () in
     ([S.define_variable ~kind:Strict tmp e], E.var tmp)
 
 (* [evaluate_now] on each of [xs], left to right. The elements left in place
@@ -1403,17 +1404,11 @@ let compile output_prefix =
       let block = [S.while_ ?label:loop_frame.label e body_block] in
       Js_output.output_of_block_and_expression lambda_cxt.continuation block
         E.unit
-  (* all non-tail
-      TODO: check semantics should start, finish be executed each time in both
-       ocaml and js?, also check evaluation order..
-       in ocaml id is not in the scope of finish, so it should be safe here
-
-       for i  = 0 to (print_int 3; 10) do print_int i done;;
-       3012345678910- : unit = ()
-
-      for(var i =  0 ; i < (console.log(i),10); ++i){console.log('hi')}
-      print i each time, so they are different semantics...
-  *)
+  (* Neither start nor finish is in tail position, and [id] is not in scope in
+     either. Start is evaluated before finish, and each only once:
+     [for i in 0 to {Console.log("x"); 10}] must not print on each iteration. A
+     JS loop test runs on each iteration, so [Js_dump] binds the end in the loop
+     header unless it is a number or a variable. *)
   and compile_for (id : J.for_ident) (start : Lambda.t) (finish : Lambda.t)
       (direction : Js_op.direction_flag) (body : Lambda.t)
       (lambda_cxt : Lam_compile_context.t) =
@@ -1422,14 +1417,9 @@ let compile output_prefix =
       match (compile_lambda new_cxt start, compile_lambda new_cxt finish) with
       | {value = None}, _ | _, {value = None} -> assert false
       | {block = b1; value = Some e1}, {block = b2; value = Some e2} -> (
-        (* order b1 -- (e1 -- b2 -- e2)
-            in most cases we can shift it into such scenarios
-            b1, b2, [e1, e2]
-           - b2 is Empty
-           - e1 is pure
-             we can guarantee e1 is pure, if it literally contains a side effect call,
-             put it in the beginning
-        *)
+        (* The evaluation order is b1, e1, b2, e2. The loop header evaluates e1
+           and then e2, so e1 goes there if b2 is empty or cannot affect its
+           value, and into a temporary before b2 otherwise. *)
         let loop_cxt, loop_frame = Lam_compile_context.push_loop lambda_cxt in
         let block_body =
           Js_output.output_as_block
@@ -1437,26 +1427,24 @@ let compile output_prefix =
                {loop_cxt with continuation = EffectCall Not_tail}
                body)
         in
-        let make_for for_ident_expression =
+        let make_for start =
           (* See compile_while above: only loops that need labeled control flow
              end up with a concrete JS label. *)
-          S.for_ ?label:loop_frame.label for_ident_expression e2 id direction
-            block_body
+          S.for_ ?label:loop_frame.label start e2 id direction block_body
         in
-        match (b1, b2) with
-        | _, [] -> b1 @ [make_for (Some e1)]
-        | _, _
-          when delay_safe ~assignable:lambda_cxt.meta.assignable e1
-               (*
-                     e1 > b2 > e2
-                     re-order
-                     b2 > e1 > e2
-                   *)
-          ->
-          List.append b1 (b2 @ [make_for (Some e1)])
-        | _, _ ->
-          List.append b1
-            (S.define_variable ~kind:Variable id e1 :: (b2 @ [make_for None])))
+        match b2 with
+        | [] -> b1 @ [make_for e1]
+        | _ ->
+          (* e1 must be evaluated before b2. Unless it is safe to delay, hold
+             it in a temporary rather than declaring [id] before the loop:
+             that would make [id] one variable shared by every iteration, so
+             closures in the body would all see its final value. *)
+          let held, e1 =
+            evaluate_now
+              ~name:(Ext_ident.derived_name id ~suffix:"_start")
+              ~assignable:lambda_cxt.meta.assignable e1
+          in
+          b1 @ held @ b2 @ [make_for e1])
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
       E.unit
