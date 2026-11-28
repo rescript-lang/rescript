@@ -277,6 +277,8 @@ With `@module("m")`, the class is the one the module `m` exports under that name
 
 A private abbreviation of another annotated type declares a subclass. A case of the superclass then excludes the instances of a subclass that is a case too, whatever the order of the cases.
 
+Two types annotated with the same class coerce to each other with `:>`, wherever they are declared. A subclass coerces to every declaration of its superclasses the same way.
+
 Example usage:
 ```rescript
 @instanceOf("Blob")

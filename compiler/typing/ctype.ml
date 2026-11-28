@@ -87,6 +87,13 @@ type subtype_context =
       issues: Record_coercion.record_field_subtype_violation list;
     }
   | Coercion_into_private_type of {typename: Path.t}
+  | Class_not_an_ancestor of {
+      source: Path.t;
+      source_class: Variant_runtime.Instance.class_name;
+      ancestors: Variant_runtime.Instance.class_name list;
+      target: Path.t;
+      target_class: Variant_runtime.Instance.class_name;
+    }
   | Record_array_mismatch of {
       array_record_name: Path.t;
       object_record_name: Path.t;
@@ -3713,6 +3720,64 @@ let variant_is_subtype env (row_desc : row_desc) (ty : type_expr) =
       && is_base_type Predef.path_string
   | _ -> false
 
+(* The class that the declaration of [t]'s own type constructor states with
+   [@instanceOf]. A type that only abbreviates a class type states none: its
+   values are instances of that class, but not every instance is one of its
+   values. *)
+let own_class env t =
+  match (repr t).desc with
+  | Tconstr (path, _, _) -> (
+    match Env.find_type path env with
+    | {type_shape = Recognized_as (InstanceType (Class {name}))} -> Some name
+    | _ -> None
+    | exception Not_found -> None)
+  | _ -> None
+
+(* The class of the values of [t] and its declared superclasses, nearest
+   first: what the first declaration on its expansion chain that states a
+   shape says, as [Variant_layout.recognized_as] reads it. *)
+let class_of env t =
+  let rec walk fuel t =
+    match (repr t).desc with
+    | Tconstr (path, _, _) when fuel > 0 -> (
+      match Env.find_type path env with
+      | {type_shape = Recognized_as (InstanceType (Class {name; ancestors}))} ->
+        Some (name, ancestors)
+      | {type_shape = Recognized_as _ | Never_undefined} -> None
+      | {type_shape = Unstated} | (exception Not_found) -> (
+        match try_expand_once_opt env t with
+        | expanded -> walk (fuel - 1) expanded
+        | exception Cannot_expand -> None))
+    | _ -> None
+  in
+  walk 100 t
+
+(* How the class type [t1] gets to the class type [t2] by the classes their
+   declarations state: [t2]'s own declaration states a class with
+   [@instanceOf], and [t1] is declared as that class ([`Same]) or as one of
+   its subclasses ([`Up]). The declarations may be in different modules or
+   packages; each describes the class it names. *)
+let class_step env t1 t2 =
+  match own_class env t2 with
+  | None -> None
+  | Some target -> (
+    match own_class env t1 with
+    | Some source when source = target -> Some `Same
+    | _ -> (
+      match class_of env t1 with
+      | Some (source, ancestors)
+        when source = target || List.mem target ancestors ->
+        Some `Up
+      | Some _ | None -> None))
+
+(* For two class types without a [class_step] from [t1] to [t2]: the class of
+   [t1], its declared superclasses, and the class of [t2] *)
+let unrelated_classes env t1 t2 =
+  match (own_class env t2, class_of env t1) with
+  | Some target, Some (source, ancestors) when class_step env t1 t2 = None ->
+    Some (source, ancestors, target)
+  | _ -> None
+
 let rec subtype_rec env trace t1 t2 cstrs =
   let t1 = repr t1 in
   let t2 = repr t2 in
@@ -3775,6 +3840,32 @@ let rec subtype_rec env trace t1 t2 cstrs =
             cstrs decl.type_variance (List.combine tl1 tl2)
         with Not_found ->
           (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
+      | Tconstr (_, [], _), Tconstr (_, [], _) when class_step env t1 t2 <> None
+        ->
+        (* A class type is what its class says it is, whichever declaration
+           names the class. Where the two types must be equal (an invariant
+           parameter, a mutable field) the check runs both ways, which only
+           two declarations of the same class pass. *)
+        cstrs
+      | Tconstr (p1, [], _), Tconstr (p2, [], _)
+        when unrelated_classes env t1 t2 <> None ->
+        (* Nothing else gets from one class type to another: an abstract class
+           type is reached through its abbreviations, which are its
+           subclasses *)
+        let source_class, ancestors, target_class =
+          match unrelated_classes env t1 t2 with
+          | Some classes -> classes
+          | None -> assert false
+        in
+        ( trace,
+          t1,
+          t2,
+          !(current_univar_pairs ()),
+          Some
+            (Class_not_an_ancestor
+               {source = p1; source_class; ancestors; target = p2; target_class})
+        )
+        :: cstrs
       | Tconstr (p1, _, _), _ when generic_private_abbrev env p1 ->
         subtype_rec env trace (expand_abbrev_opt env t1) t2 cstrs
       | _, Tconstr _ when coerces_into_private_type env t1 t2 ->
