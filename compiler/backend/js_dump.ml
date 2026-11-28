@@ -1052,11 +1052,13 @@ and expression_desc cxt ~(level : int) f x : cxt =
       (*
             [level 1] is correct, however
             to make nice indentation , force nested conditional to be parenthesized.
-            A function takes no parentheses here either.
+            A function takes no parentheses here either, also as an option
+            known to be present, which is printed as the function.
           *)
-      let branch_level (e : J.expression) =
+      let rec branch_level (e : J.expression) =
         match e.expression_desc with
         | Fun _ -> 1
+        | Optional_block (e, true) -> branch_level e
         | _ -> 3
       in
       let cxt =

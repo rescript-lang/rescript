@@ -29,26 +29,39 @@ function pick(c, apply) {
   return apply(c ? n => n + 1 | 0 : n => n + 2 | 0);
 }
 
+function pickSome(c, other, apply) {
+  return apply(c ? n => n + 1 | 0 : other);
+}
+
 Mocha.describe("Typeof_and_function_paren_test", () => {
   Mocha.test("typeof as the object", () => {
-    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 33, characters 7-14", (typeof x).length, 6);
-    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 34, characters 7-14", (typeof x).toUpperCase(), "STRING");
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 34, characters 7-14", (typeof x).length, 6);
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 35, characters 7-14", (typeof x).toUpperCase(), "STRING");
   });
   Mocha.test("arrow function as the object", () => {
-    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 38, characters 7-14", (n => n + 1 | 0).length, 1);
-    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 39, characters 7-14", (async n => n + 1 | 0).length, 1);
-    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 40, characters 7-14", (n => (n << 1)).call(null, 21), 42);
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 39, characters 7-14", (n => n + 1 | 0).length, 1);
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 40, characters 7-14", (async n => n + 1 | 0).length, 1);
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 41, characters 7-14", (n => (n << 1)).call(null, 21), 42);
   });
   Mocha.test("function expression as the object", () => {
-    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 44, characters 7-14", (function (n) {
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 45, characters 7-14", (function (n) {
       return n + 1 | 0;
     }).length, 1);
-    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 45, characters 7-14", callThisStatement(), 3);
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 46, characters 7-14", callThisStatement(), 3);
   });
-  Mocha.test("arrow function as an operand", () => Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 48, characters 48-55", (n => n + 1 | 0) === (n => n + 1 | 0), false));
+  Mocha.test("arrow function as an operand", () => Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 49, characters 48-55", (n => n + 1 | 0) === (n => n + 1 | 0), false));
   Mocha.test("arrow function as a branch of ?:", () => {
-    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 51, characters 7-14", pick(true, f => f(1)), 2);
-    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 52, characters 7-14", pick(false, f => f(1)), 3);
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 52, characters 7-14", pick(true, f => f(1)), 2);
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 53, characters 7-14", pick(false, f => f(1)), 3);
+    let applySome = f => {
+      if (f !== undefined) {
+        return f(1);
+      } else {
+        return 0;
+      }
+    };
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 59, characters 7-14", pickSome(true, undefined, applySome), 2);
+    Test_utils.eq("File \"typeof_and_function_paren_test.res\", line 60, characters 7-14", pickSome(false, n => n + 2 | 0, applySome), 3);
   });
 });
 
@@ -59,5 +72,6 @@ export {
   called,
   callThisStatement,
   pick,
+  pickSome,
 }
 /*  Not a pure module */

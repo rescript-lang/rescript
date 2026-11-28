@@ -25,8 +25,9 @@ let callThisStatement = () => {
   called.contents
 }
 
-// A function needs no parentheses as a branch of `?:`
+// A function needs no parentheses as a branch of `?:`, also in `Some`
 let pick = (c, apply) => apply(c ? n => n + 1 : n => n + 2)
+let pickSome = (c, other, apply) => apply(c ? Some(n => n + 1) : other)
 
 describe(__MODULE__, () => {
   test("typeof as the object", () => {
@@ -50,5 +51,12 @@ describe(__MODULE__, () => {
   test("arrow function as a branch of ?:", () => {
     eq(__LOC__, pick(true, f => f(1)), 2)
     eq(__LOC__, pick(false, f => f(1)), 3)
+    let applySome = f =>
+      switch f {
+      | Some(f) => f(1)
+      | None => 0
+      }
+    eq(__LOC__, pickSome(true, None, applySome), 2)
+    eq(__LOC__, pickSome(false, Some(n => n + 2), applySome), 3)
   })
 })
