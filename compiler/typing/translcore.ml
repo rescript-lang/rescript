@@ -1292,16 +1292,21 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.t =
          its snippet *)
           match (p.prim_name, argl) with
           | "#raw_expr", [Lconst (Const_string code)] ->
-            let kind = Classify_function.classify code in
             wrap
               (prim
-                 ~primitive:(Praw_js_code {code; code_info = Exp kind})
+                 ~primitive:(Praw_js_code (Classify_function.classify_raw code))
                  ~args:[] e.exp_loc)
           | "#raw_stmt", [Lconst (Const_string code)] ->
             let kind = Classify_function.classify_stmt code in
             wrap
               (prim
-                 ~primitive:(Praw_js_code {code; code_info = Stmt kind})
+                 ~primitive:
+                   (Praw_js_code
+                      {
+                        code;
+                        code_info = Stmt kind;
+                        ends_in_line_comment = false;
+                      })
                  ~args:[] e.exp_loc)
           | ("#raw_expr" | "#raw_stmt"), _ -> assert false
           | _ ->

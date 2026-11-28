@@ -47,4 +47,11 @@ type stmt = Js_stmt_comment | Js_stmt_unknown
 
 type code_info = Exp of exp | Stmt of stmt
 
-type t = {code: string; code_info: code_info}
+type t = {
+  code: string;
+  code_info: code_info;
+  ends_in_line_comment: bool;
+      (** Whether a line comment runs to the end of [code], so that what is
+          printed after it on the same line is commented out. Only the code
+          of an expression has more printed after it on its line. *)
+}

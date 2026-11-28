@@ -1,0 +1,1 @@
+- Fix a line comment at the end of `%raw` code commenting out the generated code after it.

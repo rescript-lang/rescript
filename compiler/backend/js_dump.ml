@@ -776,7 +776,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | Json_literal source ->
     P.string f source;
     cxt
-  | Raw_js_code {code = s; code_info = info} -> (
+  | Raw_js_code {code = s; code_info = info; ends_in_line_comment} -> (
     match info with
     | Exp exp_info ->
       let raw_paren =
@@ -788,6 +788,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       in
       if raw_paren then P.string f L.lparen;
       P.string f s;
+      if ends_in_line_comment then P.newline f;
       if raw_paren then P.string f L.rparen;
       cxt
     | Stmt stmt_info ->
