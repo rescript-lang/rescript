@@ -22,24 +22,37 @@ let three = (y => y + 2 // add two
 let lines = [1, // one
   2];
 
+let afterBlock = 1 /* a */ // b
+ + 1 | 0;
+
+let afterReturn = 1// one
+ + 1 | 0;
+
 let url = "http://example.com";
 
 let slashes = /\/\//;
 
+let inBlock = 1 /* a // b */ + 1 | 0;
+
 Mocha.describe("Raw_line_comment_test", () => {
-  Mocha.test("raw function ending with a line comment", () => Test_utils.eq("File \"raw_line_comment_test.res\", line 22, characters 59-66", succ(1), 2));
+  Mocha.test("raw function ending with a line comment", () => Test_utils.eq("File \"raw_line_comment_test.res\", line 30, characters 59-66", succ(1), 2));
   Mocha.test("raw literal ending with a line comment", () => {
-    Test_utils.eq("File \"raw_line_comment_test.res\", line 25, characters 7-14", one, 1);
-    Test_utils.eq("File \"raw_line_comment_test.res\", line 26, characters 7-14", two, 2);
+    Test_utils.eq("File \"raw_line_comment_test.res\", line 33, characters 7-14", one, 1);
+    Test_utils.eq("File \"raw_line_comment_test.res\", line 34, characters 7-14", two, 2);
   });
-  Mocha.test("called raw function ending with a line comment", () => Test_utils.eq("File \"raw_line_comment_test.res\", line 29, characters 66-73", three, 3));
-  Mocha.test("line comment before the last line", () => Test_utils.eq("File \"raw_line_comment_test.res\", line 31, characters 53-60", lines, [
+  Mocha.test("called raw function ending with a line comment", () => Test_utils.eq("File \"raw_line_comment_test.res\", line 37, characters 66-73", three, 3));
+  Mocha.test("line comment after a block comment or a carriage return", () => {
+    Test_utils.eq("File \"raw_line_comment_test.res\", line 40, characters 7-14", afterBlock, 2);
+    Test_utils.eq("File \"raw_line_comment_test.res\", line 41, characters 7-14", afterReturn, 2);
+  });
+  Mocha.test("line comment before the last line", () => Test_utils.eq("File \"raw_line_comment_test.res\", line 44, characters 53-60", lines, [
     1,
     2
   ]));
   Mocha.test("slashes that are not a comment", () => {
-    Test_utils.eq("File \"raw_line_comment_test.res\", line 34, characters 7-14", url, "http://example.com");
-    Test_utils.eq("File \"raw_line_comment_test.res\", line 35, characters 7-14", slashes.test("//"), true);
+    Test_utils.eq("File \"raw_line_comment_test.res\", line 47, characters 7-14", url, "http://example.com");
+    Test_utils.eq("File \"raw_line_comment_test.res\", line 48, characters 7-14", slashes.test("//"), true);
+    Test_utils.eq("File \"raw_line_comment_test.res\", line 49, characters 7-14", inBlock, 2);
   });
 });
 
@@ -50,7 +63,10 @@ export {
   two,
   three,
   lines,
+  afterBlock,
+  afterReturn,
   url,
   slashes,
+  inBlock,
 }
 /* three Not a pure module */

@@ -215,9 +215,9 @@ let template_literal segment : t =
 let json_literal source : t =
   {expression_desc = Json_literal source; comment = None; source_loc = None}
 
-let raw_js_code info s : t =
+let raw_js_code (raw : Js_raw_info.t) : t =
   {
-    expression_desc = Raw_js_code {code = String.trim s; code_info = info};
+    expression_desc = Raw_js_code {raw with code = String.trim raw.code};
     comment = None;
     source_loc = None;
   }

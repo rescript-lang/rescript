@@ -88,17 +88,34 @@ let classify_exp (prog : _ Flow_ast.Expression.t) : Js_raw_info.exp =
     if is_obj_literal prog then Js_literal {comment = None} else Js_exp_unknown
   | exception _ -> Js_exp_unknown
 
-(** It seems we do the parse twice
-    - in parsing
-    - in code generation
-*)
+(* Parses [code] as an expression. Besides the tree and the errors, it gives
+   whether a line comment runs to the end of [code]: whether the last comment
+   the lexer recorded is a line comment that starts after the last token, or
+   in code without a token. A "//" in a string, a template or a regular
+   expression is not a comment, and a line comment ends at any line
+   terminator. Code that the parser rejects counts as ending in one. *)
+let parse_exp (code : string) =
+  let open Parser_flow in
+  let env = Parser_env.init_env None code in
+  let prog, errors = do_parse env Parse.expression false in
+  let last_token = Parser_env.last_loc env in
+  (* The comments before the end of the input reach [Parser_env.comments]
+     when the end is eaten *)
+  Parser_env.Eat.token env;
+  let ends_in_line_comment =
+    errors <> []
+    ||
+    match (Parser_env.comments env, last_token) with
+    | (loc, {Flow_ast.Comment.kind = Line}) :: _, Some last ->
+      Loc.pos_cmp loc.start last._end >= 0
+    | (_, {Flow_ast.Comment.kind = Line}) :: _, None -> true
+    | _ -> false
+  in
+  (prog, errors, ends_in_line_comment)
+
 let classify ?(check : (Location.t * int) option) (prog : string) :
     Js_raw_info.exp =
-  let prog, errors =
-    let open Parser_flow in
-    let env = Parser_env.init_env None prog in
-    do_parse env Parse.expression false
-  in
+  let prog, errors, _ = parse_exp prog in
   match (check, errors) with
   | Some (loc, offset), _ :: _ ->
     Bs_flow_ast_utils.check_flow_errors ~loc ~offset errors;
@@ -106,29 +123,14 @@ let classify ?(check : (Location.t * int) option) (prog : string) :
   | Some _, [] | None, [] -> classify_exp prog
   | None, _ :: _ -> Js_exp_unknown
 
-(* Whether a line comment runs to the end of [code], an expression, so that
-   what is printed after it on the same line is commented out. Only a "//"
-   after the last line feed can start one, since a line comment ends at a line
-   break, and then [code] followed by a closing parenthesis does not parse; a
-   "//" in a string, a template or a regular expression does not count. Code
-   that the parser rejects counts as ending in one. *)
-let ends_in_line_comment (code : string) : bool =
-  let rec last_line_has_slashes i =
-    i > 0
-    &&
-    match code.[i] with
-    | '\n' -> false
-    | '/' when code.[i - 1] = '/' -> true
-    | _ -> last_line_has_slashes (i - 1)
+let classify_raw (code : string) : Js_raw_info.t =
+  let prog, errors, ends_in_line_comment = parse_exp code in
+  let kind =
+    match errors with
+    | [] -> classify_exp prog
+    | _ :: _ -> Js_exp_unknown
   in
-  last_line_has_slashes (String.length code - 1)
-  &&
-  let _, errors =
-    let open Parser_flow in
-    let env = Parser_env.init_env None ("(" ^ code ^ ")") in
-    do_parse env Parse.expression false
-  in
-  errors <> []
+  {code; code_info = Exp kind; ends_in_line_comment}
 
 let classify_stmt (prog : string) : Js_raw_info.stmt =
   let result = Parser_flow.parse_program false None prog in
