@@ -25,6 +25,7 @@ let suites =
       Ounit_ast_helper_tests.suites;
       Ounit_constructor_arguments_tests.suites;
       Ounit_object_mutability_tests.suites;
+      Ounit_instance_tests.suites;
       Ounit_pattern_printer_tests.suites;
       Ounit_js_analyzer_tests.suites;
       Ounit_external_shadow_tests.suites;

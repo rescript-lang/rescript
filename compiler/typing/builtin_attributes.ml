@@ -165,7 +165,11 @@ let warning_attribute ?(ppwarning = true) =
 let warning_scope ?ppwarning attrs f =
   let prev = Warnings.backup () in
   try
-    List.iter (warning_attribute ?ppwarning) (List.rev attrs);
+    (* Most nodes have no attributes; skipping them also saves the closure the
+       partial application would allocate on every call *)
+    (match attrs with
+    | [] -> ()
+    | _ -> List.iter (warning_attribute ?ppwarning) (List.rev attrs));
     let ret = f () in
     Warnings.restore prev;
     ret

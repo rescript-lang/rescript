@@ -1,0 +1,1 @@
+- Instantiate types that aren't generic without opening a copy session, so type checking allocates a little less.
