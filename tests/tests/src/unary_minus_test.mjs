@@ -26,8 +26,8 @@ function countdown(_start, _x) {
     if (!(x > 0)) {
       return start - x;
     }
-    _x = x - 1;
     _start = 0;
+    _x = x - 1;
     continue;
   };
 }
