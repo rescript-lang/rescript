@@ -81,7 +81,29 @@ let imported_modules (js : J.program) =
   self.program self js;
   !names
 
+let raw_declarations (js : J.program) =
+  let names = ref Set_string.empty in
+  let super = Js_record_iter.super in
+  let self =
+    {
+      super with
+      expression =
+        (fun self expr ->
+          match expr.expression_desc with
+          | Raw_js_code {code_info = Stmt (Js_stmt_unknown {declared})} ->
+            names :=
+              List.fold_left (fun acc n -> Set_string.add n acc) !names declared
+          | _ -> super.expression self expr);
+    }
+  in
+  self.program self js;
+  !names
+
 let program (js : J.program) : J.program =
+  (* A name that a [%%raw] program declares is read unchanged: no binding
+     takes it (see {!Ext_pp_scope.add_ident}), and it is no property of
+     [globalThis]. *)
+  let raw_declared = raw_declarations js in
   (* printed names of the bindings in scope at the current point *)
   let in_scope = ref (imported_modules js) in
   let with_bindings add f =
@@ -113,7 +135,9 @@ let program (js : J.program) : J.program =
         (fun self expr ->
           match expr.expression_desc with
           | Var (Id id)
-            when Ext_ident.is_js id && String_set.mem id.name !in_scope ->
+            when Ext_ident.is_js id
+                 && String_set.mem id.name !in_scope
+                 && not (Set_string.mem id.name raw_declared) ->
             E.dot global_this id.name
           | Fun {params} ->
             with_bindings

@@ -24,3 +24,6 @@
 
 (* Rewrite to using globalThis when shadowing would break @val/@scope globals. *)
 val program : J.program -> J.program
+
+val raw_declarations : J.program -> Set_string.t
+(** The names that the [%%raw] programs in a program declare. *)

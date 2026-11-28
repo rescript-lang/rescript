@@ -71,7 +71,9 @@ let initial_scope (x : J.program) =
     }
   in
   self.program self x;
-  Ext_pp_scope.reserve Ext_pp_scope.empty !names
+  Ext_pp_scope.reserve Ext_pp_scope.empty
+    ~declared:(Js_pass_external_shadow.raw_declarations x)
+    !names
 
 let program f cxt (x : J.program) =
   P.at_least_two_lines f;

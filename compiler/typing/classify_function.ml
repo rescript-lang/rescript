@@ -106,11 +106,72 @@ let classify ?(check : (Location.t * int) option) (prog : string) :
   | Some _, [] | None, [] -> classify_exp prog
   | None, _ :: _ -> Js_exp_unknown
 
+let rec pattern_names acc ((_, pattern) : (_, _) Flow_ast.Pattern.t) =
+  match pattern with
+  | Identifier {name = _, {name}} -> name :: acc
+  | Object {properties} ->
+    List.fold_left
+      (fun acc (property : (_, _) Flow_ast.Pattern.Object.property) ->
+        match property with
+        | Property (_, {pattern}) -> pattern_names acc pattern
+        | RestElement (_, {argument}) -> pattern_names acc argument)
+      acc properties
+  | Array {elements} ->
+    List.fold_left
+      (fun acc (element : (_, _) Flow_ast.Pattern.Array.element) ->
+        match element with
+        | Element (_, {argument}) | RestElement (_, {argument}) ->
+          pattern_names acc argument
+        | Hole _ -> acc)
+      acc elements
+  | Expression _ -> acc
+
+(* The names a toplevel statement of a raw program declares in the scope the
+   program is placed in. Declarations nested in a block are not collected. *)
+let rec statement_names acc ((_, statement) : (_, _) Flow_ast.Statement.t) =
+  match statement with
+  | FunctionDeclaration {id = Some (_, {name})}
+  | ClassDeclaration {id = Some (_, {name})} ->
+    name :: acc
+  | VariableDeclaration {declarations} ->
+    List.fold_left
+      (fun acc
+           ((_, {id}) :
+             (_, _) Flow_ast.Statement.VariableDeclaration.Declarator.t) ->
+        pattern_names acc id)
+      acc declarations
+  | ImportDeclaration {default; specifiers} -> (
+    let acc =
+      match default with
+      | Some {identifier = _, {name}} -> name :: acc
+      | None -> acc
+    in
+    match specifiers with
+    | Some (ImportNamespaceSpecifier (_, (_, {name}))) -> name :: acc
+    | Some (ImportNamedSpecifiers specifiers) ->
+      List.fold_left
+        (fun acc
+             ({local; remote} :
+               (_, _) Flow_ast.Statement.ImportDeclaration.named_specifier) ->
+          let _, {Flow_ast.Identifier.name} =
+            match local with
+            | Some local -> local
+            | None -> remote
+          in
+          name :: acc)
+        acc specifiers
+    | None -> acc)
+  | ExportNamedDeclaration {declaration = Some declaration}
+  | ExportDefaultDeclaration {declaration = Declaration declaration} ->
+    statement_names acc declaration
+  | _ -> acc
+
 let classify_stmt (prog : string) : Js_raw_info.stmt =
   let result = Parser_flow.parse_program false None prog in
   match fst result with
   | _loc, {statements = []} -> Js_stmt_comment
-  | _ -> Js_stmt_unknown
+  | _loc, {statements} ->
+    Js_stmt_unknown {declared = List.fold_left statement_names [] statements}
 (* we can also analayze throw
    x.x pure access
 *)

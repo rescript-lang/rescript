@@ -48,6 +48,22 @@ let suites =
          ( __LOC__ >:: fun _ ->
            OUnit.assert_equal Js_raw_info.Js_stmt_comment
              (Classify_function.classify_stmt "// only a comment");
-           OUnit.assert_equal Js_raw_info.Js_stmt_unknown
+           OUnit.assert_equal
+             (Js_raw_info.Js_stmt_unknown {declared = []})
              (Classify_function.classify_stmt "console.log('hello')") );
+         ( __LOC__ >:: fun _ ->
+           let declared source =
+             match Classify_function.classify_stmt source with
+             | Js_stmt_unknown {declared} -> List.sort compare declared
+             | Js_stmt_comment -> OUnit.assert_failure "expected code"
+           in
+           OUnit.assert_equal ~printer:(String.concat ", ")
+             ["a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"; "i"; "j"; "k"]
+             (declared
+                "import a, * as b from 'x'; import {c, y as d} from 'y';\n\
+                 function e() {} class f {} var g = 1;\n\
+                 let {h, z: [i, ...j]} = {}; export const k = 2;\n\
+                 { function nested() {} } if (true) { var hoisted }");
+           OUnit.assert_equal ~printer:(String.concat ", ") ["l"]
+             (declared "export default function l() {}") );
        ]

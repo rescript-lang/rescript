@@ -43,7 +43,9 @@ type exp =
 
 type raw_kind = Raw_re | Raw_exp | Raw_program
 
-type stmt = Js_stmt_comment | Js_stmt_unknown
+(* [declared] lists the names a raw program declares at its toplevel (see
+   {!Classify_function.classify_stmt}). *)
+type stmt = Js_stmt_comment | Js_stmt_unknown of {declared: string list}
 
 type code_info = Exp of exp | Stmt of stmt
 

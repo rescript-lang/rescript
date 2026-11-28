@@ -1,0 +1,1 @@
+- Fix a local binding named like a function or variable that `%%raw` declares in the module: the name was read as `globalThis.<name>`, which throws.
