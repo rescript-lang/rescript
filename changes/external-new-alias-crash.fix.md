@@ -1,0 +1,1 @@
+- Fix a compiler crash on a `@new` external whose type is a function type alias, as in `@new external make: mk = "Foo"`.

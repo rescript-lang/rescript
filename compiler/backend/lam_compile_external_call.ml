@@ -330,9 +330,15 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types ~(prim_name : string)
     let fn = external_var (module_itself_name ()) in
     E.call ~info:Js_call_info.na_full_call fn (assemble_args arg_types args)
   | Decl_new _, Some Module_itself ->
-    (* the module itself, as a class *)
+    (* the module itself, as a class. A function type that the external does
+       not spell out has no argument specs, and its arguments are passed as
+       they are, as in a call above. *)
     let fn = external_var (module_itself_name ()) in
-    let args = assemble_args_no_splice arg_types args in
+    let args =
+      match (arg_types, args) with
+      | [], _ :: _ -> args
+      | _ -> assemble_args_no_splice arg_types args
+    in
     (* TODO: fix in rest calling convention *)
     mark_new_object ();
     E.new_ fn args
@@ -355,7 +361,13 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types ~(prim_name : string)
     let fn = translate_scoped_module_val named_module fn scopes in
     E.call ~info:Js_call_info.na_full_call fn (assemble_args arg_types args)
   | Decl_new {name = fn}, _ ->
-    let args = assemble_args arg_types args in
+    (* a class, whose arguments are passed as they are when its function type
+       is not spelled out, as for the module itself above *)
+    let args =
+      match (arg_types, args) with
+      | [], _ :: _ -> args
+      | _ -> assemble_args arg_types args
+    in
     let fn = translate_scoped_module_val named_module fn scopes in
     mark_new_object ();
     E.new_ fn args
