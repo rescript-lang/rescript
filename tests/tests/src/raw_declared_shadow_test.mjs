@@ -5,6 +5,9 @@ import * as Test_utils from "./test_utils.mjs";
 
 function rawHelper() { return 1 }
 const rawLimit = 10
+if (true) { var rawHoisted = 41 }
+function rawTop() { return 2 }
+var rawCache = {a: 100}
 ;
 
 let G = {};
@@ -26,11 +29,29 @@ function loop() {
   return sum;
 }
 
-Mocha.describe("File \"raw_declared_shadow_test.res\", line 35, characters 9-16", () => {
+function hoisted() {
+  let rawHoisted$1 = rawHoisted + 1 | 0;
+  return (rawHoisted$1 << 1);
+}
+
+function rawTop$1() {
+  return rawTop() + 1 | 0;
+}
+
+function fromParam(rawCache, key) {
+  return (rawCache[key]);
+}
+
+Mocha.describe("File \"raw_declared_shadow_test.res\", line 57, characters 9-16", () => {
   Mocha.test("names declared by %%raw shadowed by bindings with the same name", () => {
-    Test_utils.eq("File \"raw_declared_shadow_test.res\", line 37, characters 7-14", local(), 4);
-    Test_utils.eq("File \"raw_declared_shadow_test.res\", line 38, characters 7-14", param(3), 19);
-    Test_utils.eq("File \"raw_declared_shadow_test.res\", line 39, characters 7-14", loop(), 35);
+    Test_utils.eq("File \"raw_declared_shadow_test.res\", line 59, characters 7-14", local(), 4);
+    Test_utils.eq("File \"raw_declared_shadow_test.res\", line 60, characters 7-14", param(3), 19);
+    Test_utils.eq("File \"raw_declared_shadow_test.res\", line 61, characters 7-14", loop(), 35);
+    Test_utils.eq("File \"raw_declared_shadow_test.res\", line 62, characters 7-14", hoisted(), 84);
+    Test_utils.eq("File \"raw_declared_shadow_test.res\", line 63, characters 7-14", rawTop() + 1 | 0, 3);
+    Test_utils.eq("File \"raw_declared_shadow_test.res\", line 64, characters 7-14", fromParam({
+      a: 1
+    }, "a"), 1);
   });
 });
 
@@ -39,5 +60,8 @@ export {
   local,
   param,
   loop,
+  hoisted,
+  rawTop$1 as rawTop,
+  fromParam,
 }
 /*  Not a pure module */

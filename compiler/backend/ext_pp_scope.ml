@@ -32,7 +32,8 @@ type stamps = {next: int; stamps: string Map_int.t}
    new names are checked against [used] instead of being assumed fresh.
    [reserved] holds the raw JS names the program refers to (see {!reserve}),
    which a suffixed name must not capture. [declared] holds the names that a
-   [%%raw] program declares, which no binding may take. *)
+   [%%raw] program declares and the program reads as JS globals, which no
+   binding may take. *)
 type t = {
   names: stamps Map_string.t;
   used: Set_string.t;

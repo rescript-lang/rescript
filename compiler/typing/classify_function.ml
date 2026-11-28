@@ -126,20 +126,79 @@ let rec pattern_names acc ((_, pattern) : (_, _) Flow_ast.Pattern.t) =
       acc elements
   | Expression _ -> acc
 
+let declarator_names acc
+    ({declarations} : (_, _) Flow_ast.Statement.VariableDeclaration.t) =
+  List.fold_left
+    (fun acc
+         ((_, {id}) :
+           (_, _) Flow_ast.Statement.VariableDeclaration.Declarator.t) ->
+      pattern_names acc id)
+    acc declarations
+
+(* [var] declarations nested in a statement are hoisted out of blocks, loops
+   and other statements, but not out of functions. *)
+let rec hoisted_vars acc ((_, statement) : (_, _) Flow_ast.Statement.t) =
+  let var_names acc
+      (declaration : (_, _) Flow_ast.Statement.VariableDeclaration.t) =
+    match declaration.kind with
+    | Var -> declarator_names acc declaration
+    | Let | Const -> acc
+  in
+  let block acc ((_, {body}) : _ * (_, _) Flow_ast.Statement.Block.t) =
+    List.fold_left hoisted_vars acc body
+  in
+  match statement with
+  | VariableDeclaration declaration -> var_names acc declaration
+  | Block {body} -> List.fold_left hoisted_vars acc body
+  | If {consequent; alternate} -> (
+    let acc = hoisted_vars acc consequent in
+    match alternate with
+    | Some (_, {body}) -> hoisted_vars acc body
+    | None -> acc)
+  | For {init; body} ->
+    let acc =
+      match init with
+      | Some (InitDeclaration (_, declaration)) -> var_names acc declaration
+      | Some (InitExpression _) | None -> acc
+    in
+    hoisted_vars acc body
+  | ForIn {left = LeftDeclaration (_, declaration); body}
+  | ForOf {left = LeftDeclaration (_, declaration); body} ->
+    hoisted_vars (var_names acc declaration) body
+  | ForIn {left = LeftPattern _; body}
+  | ForOf {left = LeftPattern _; body}
+  | While {body}
+  | DoWhile {body}
+  | Labeled {body}
+  | With {body} ->
+    hoisted_vars acc body
+  | Try {block = try_block; handler; finalizer} -> (
+    let acc = block acc try_block in
+    let acc =
+      match handler with
+      | Some (_, {body}) -> block acc body
+      | None -> acc
+    in
+    match finalizer with
+    | Some finalizer -> block acc finalizer
+    | None -> acc)
+  | Switch {cases} ->
+    List.fold_left
+      (fun acc ((_, {consequent}) : (_, _) Flow_ast.Statement.Switch.Case.t) ->
+        List.fold_left hoisted_vars acc consequent)
+      acc cases
+  | _ -> acc
+
 (* The names a toplevel statement of a raw program declares in the scope the
-   program is placed in. Declarations nested in a block are not collected. *)
-let rec statement_names acc ((_, statement) : (_, _) Flow_ast.Statement.t) =
+   program is placed in: its declarations, and the [var] declarations nested
+   in it. *)
+let rec statement_names acc ((_, statement) as st : (_, _) Flow_ast.Statement.t)
+    =
   match statement with
   | FunctionDeclaration {id = Some (_, {name})}
   | ClassDeclaration {id = Some (_, {name})} ->
     name :: acc
-  | VariableDeclaration {declarations} ->
-    List.fold_left
-      (fun acc
-           ((_, {id}) :
-             (_, _) Flow_ast.Statement.VariableDeclaration.Declarator.t) ->
-        pattern_names acc id)
-      acc declarations
+  | VariableDeclaration declaration -> declarator_names acc declaration
   | ImportDeclaration {default; specifiers} -> (
     let acc =
       match default with
@@ -164,7 +223,7 @@ let rec statement_names acc ((_, statement) : (_, _) Flow_ast.Statement.t) =
   | ExportNamedDeclaration {declaration = Some declaration}
   | ExportDefaultDeclaration {declaration = Declaration declaration} ->
     statement_names acc declaration
-  | _ -> acc
+  | _ -> hoisted_vars acc st
 
 let classify_stmt (prog : string) : Js_raw_info.stmt =
   let result = Parser_flow.parse_program false None prog in
