@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/class_identity_branches.res[0m:[2m11:68[0m
+
+   9 [2m│[0m // A branch has no declared type: the second is
+  10 [2m│[0m // not coerced to the type of the first
+  [1;31m11[0m [2m│[0m let pick = (first, a: View.element, b: Dom.element) => first ? a : [1;31mb[0m
+  12 [2m│[0m 
+
+  This has type: [1;31mDom.element[0m
+  But this ternary is expected to return: [1;33mView.element[0m
+
+  Ternaries ([1;33m?[0m and [1;33m:[0m) must return the same type in both branches.

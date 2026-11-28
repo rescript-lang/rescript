@@ -3720,6 +3720,13 @@ let variant_is_subtype env (row_desc : row_desc) (ty : type_expr) =
       && is_base_type Predef.path_string
   | _ -> false
 
+(* Which steps [subtype_rec] may take from one type to a different one *)
+type subtype_steps =
+  | All_steps  (** Every coercion [:>] knows *)
+  | Same_class
+      (** Only from a class type to another declaration of the same class;
+          everything else has to unify *)
+
 (* The class that the declaration of [t]'s own type constructor states with
    [@instanceOf]. A type that only abbreviates a class type states none: its
    values are instances of that class, but not every instance is one of its
@@ -3778,7 +3785,7 @@ let unrelated_classes env t1 t2 =
     Some (source, ancestors, target)
   | _ -> None
 
-let rec subtype_rec env trace t1 t2 cstrs =
+let rec subtype_rec ~steps env trace t1 t2 cstrs =
   let t1 = repr t1 in
   let t2 = repr t2 in
   if t1 == t2 then cstrs
@@ -3800,20 +3807,22 @@ let rec subtype_rec env trace t1 t2 cstrs =
         let cstrs =
           List.fold_left2
             (fun cstrs (a1 : Types.arg) (a2 : Types.arg) ->
-              subtype_rec env ((a2.typ, a1.typ) :: trace) a2.typ a1.typ cstrs)
+              subtype_rec ~steps env
+                ((a2.typ, a1.typ) :: trace)
+                a2.typ a1.typ cstrs)
             cstrs params1 params2
         in
-        subtype_rec env ((ret1, ret2) :: trace) ret1 ret2 cstrs
+        subtype_rec ~steps env ((ret1, ret2) :: trace) ret1 ret2 cstrs
       | Ttuple tl1, Ttuple tl2 ->
         (* TODO(subtype-errors) Tuple as context *)
-        subtype_list env trace tl1 tl2 cstrs
+        subtype_list ~steps env trace tl1 tl2 cstrs
       | Tconstr (p1, [], _), Tconstr (p2, [], _) when Path.same p1 p2 -> cstrs
       | Tconstr (p1, _tl1, _abbrev1), _
         when generic_abbrev env p1 && safe_abbrev env t1 ->
-        subtype_rec env trace (expand_abbrev env t1) t2 cstrs
+        subtype_rec ~steps env trace (expand_abbrev env t1) t2 cstrs
       | _, Tconstr (p2, _tl2, _abbrev2)
         when generic_abbrev env p2 && safe_abbrev env t2 ->
-        subtype_rec env trace t1 (expand_abbrev env t2) cstrs
+        subtype_rec ~steps env trace t1 (expand_abbrev env t2) cstrs
       | Tconstr (p1, tl1, _), Tconstr (p2, tl2, _) when Path.same p1 p2 -> (
         try
           let decl = Env.find_type p1 env in
@@ -3824,8 +3833,8 @@ let rec subtype_rec env trace t1 t2 cstrs =
                 if cn then
                   (* Invariant type argument: check both ways *)
                   if
-                    subtype_rec env ((t1, t2) :: trace) t1 t2 [] = []
-                    && subtype_rec env ((t2, t1) :: trace) t2 t1 [] = []
+                    subtype_rec ~steps env ((t1, t2) :: trace) t1 t2 [] = []
+                    && subtype_rec ~steps env ((t2, t1) :: trace) t2 t1 [] = []
                   then cstrs
                   else
                     ( trace,
@@ -3834,19 +3843,25 @@ let rec subtype_rec env trace t1 t2 cstrs =
                       !(current_univar_pairs ()),
                       None )
                     :: cstrs
-                else subtype_rec env ((t1, t2) :: trace) t1 t2 cstrs
-              else if cn then subtype_rec env ((t2, t1) :: trace) t2 t1 cstrs
+                else subtype_rec ~steps env ((t1, t2) :: trace) t1 t2 cstrs
+              else if cn then
+                subtype_rec ~steps env ((t2, t1) :: trace) t2 t1 cstrs
               else cstrs)
             cstrs decl.type_variance (List.combine tl1 tl2)
         with Not_found ->
           (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
-      | Tconstr (_, [], _), Tconstr (_, [], _) when class_step env t1 t2 <> None
-        ->
+      | Tconstr (_, [], _), Tconstr (_, [], _)
+        when match class_step env t1 t2 with
+             | Some `Same -> true
+             | Some `Up -> steps = All_steps
+             | None -> false ->
         (* A class type is what its class says it is, whichever declaration
            names the class. Where the two types must be equal (an invariant
            parameter, a mutable field) the check runs both ways, which only
            two declarations of the same class pass. *)
         cstrs
+      | _ when steps = Same_class ->
+        (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs
       | Tconstr (p1, [], _), Tconstr (p2, [], _)
         when unrelated_classes env t1 t2 <> None ->
         (* Nothing else gets from one class type to another: an abstract class
@@ -3867,7 +3882,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
         )
         :: cstrs
       | Tconstr (p1, _, _), _ when generic_private_abbrev env p1 ->
-        subtype_rec env trace (expand_abbrev_opt env t1) t2 cstrs
+        subtype_rec ~steps env trace (expand_abbrev_opt env t1) t2 cstrs
       | _, Tconstr _ when coerces_into_private_type env t1 t2 ->
         (* Only the module defining a private record or variant builds its
            values; a coercion from another type would build one anywhere *)
@@ -4062,7 +4077,9 @@ let rec subtype_rec env trace t1 t2 cstrs =
                            match violations with
                            | [] -> (
                              try
-                               let lst = subtype_list env trace tl1 tl2 cstrs in
+                               let lst =
+                                 subtype_list ~steps env trace tl1 tl2 cstrs
+                               in
                                if List.length lst = List.length cstrs then
                                  Coerces
                                else Fails_unexplained
@@ -4096,7 +4113,9 @@ let rec subtype_rec env trace t1 t2 cstrs =
                              (Variant_runtime.constructor_tag layout2 position2)
                          then
                            try
-                             let lst = subtype_list env trace tl1 tl2 cstrs in
+                             let lst =
+                               subtype_list ~steps env trace tl1 tl2 cstrs
+                             in
                              if List.length lst = List.length cstrs then Coerces
                              else Fails_unexplained
                              (* TODO(subtype-errors) Variant constructor tuple mismatch *)
@@ -4156,7 +4175,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
                        issues = violations;
                      }) )
               :: cstrs
-            else subtype_list env trace tl1 tl2 cstrs
+            else subtype_list ~steps env trace tl1 tl2 cstrs
           else
             ( trace,
               t1,
@@ -4195,9 +4214,9 @@ let rec subtype_rec env trace t1 t2 cstrs =
         when is_Tvar (object_row f1) && is_Tvar (object_row f2) ->
         (* Same row variable implies same object. *)
         (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs
-      | Tobject f1, Tobject f2 -> subtype_fields env trace f1 f2 cstrs
+      | Tobject f1, Tobject f2 -> subtype_fields ~steps env trace f1 f2 cstrs
       | Tvariant row1, Tvariant row2 -> (
-        try subtype_row env trace row1 row2 cstrs
+        try subtype_row ~steps env trace row1 row2 cstrs
         with Exit ->
           (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
       | Tvariant {row_closed = true; row_fields}, Tconstr (_, [], _)
@@ -4224,14 +4243,15 @@ let rec subtype_rec env trace t1 t2 cstrs =
             (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
         | _ -> (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
       | Tvariant v, _ when variant_is_subtype env (row_repr v) t2 -> cstrs
-      | Tpoly (u1, []), Tpoly (u2, []) -> subtype_rec env trace u1 u2 cstrs
+      | Tpoly (u1, []), Tpoly (u2, []) ->
+        subtype_rec ~steps env trace u1 u2 cstrs
       | Tpoly (u1, tl1), Tpoly (u2, []) ->
         let _, u1' = instance_poly ~fixed:false tl1 u1 in
-        subtype_rec env trace u1' u2 cstrs
+        subtype_rec ~steps env trace u1' u2 cstrs
       | Tpoly (u1, tl1), Tpoly (u2, tl2) -> (
         try
           enter_poly env (current_univar_pairs ()) u1 tl1 u2 tl2 (fun t1 t2 ->
-              subtype_rec env trace t1 t2 cstrs)
+              subtype_rec ~steps env trace t1 t2 cstrs)
         with Unify _ ->
           (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
       | Tpackage (p1, nl1, tl1), Tpackage (p2, nl2, tl2) -> (
@@ -4264,13 +4284,13 @@ let rec subtype_rec env trace t1 t2 cstrs =
           (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
       | _, _ -> (trace, t1, t2, !(current_univar_pairs ()), None) :: cstrs)
 
-and subtype_list env trace tl1 tl2 cstrs =
+and subtype_list ~steps env trace tl1 tl2 cstrs =
   if List.length tl1 <> List.length tl2 then subtype_error env trace;
   List.fold_left2
-    (fun cstrs t1 t2 -> subtype_rec env ((t1, t2) :: trace) t1 t2 cstrs)
+    (fun cstrs t1 t2 -> subtype_rec ~steps env ((t1, t2) :: trace) t1 t2 cstrs)
     cstrs tl1 tl2
 
-and subtype_fields env trace ty1 ty2 cstrs =
+and subtype_fields ~steps env trace ty1 ty2 cstrs =
   (* Assume that either rest1 or rest2 is not Tvar *)
   let fields1, rest1 = flatten_fields ty1 in
   let fields2, rest2 = flatten_fields ty2 in
@@ -4278,7 +4298,7 @@ and subtype_fields env trace ty1 ty2 cstrs =
   let cstrs =
     if rest2.desc = Tnil then cstrs
     else if miss1 = [] then
-      subtype_rec env ((rest1, rest2) :: trace) rest1 rest2 cstrs
+      subtype_rec ~steps env ((rest1, rest2) :: trace) rest1 rest2 cstrs
     else
       ( trace,
         build_fields (repr ty1).level miss1 rest1,
@@ -4304,7 +4324,9 @@ and subtype_fields env trace ty1 ty2 cstrs =
       | Asttypes.Immutable ->
         (* Read-only target: covariant; a mutable source just forgets its
            write permission. *)
-        subtype_rec env ((f1.f_typ, f2.f_typ) :: trace) f1.f_typ f2.f_typ cstrs
+        subtype_rec ~steps env
+          ((f1.f_typ, f2.f_typ) :: trace)
+          f1.f_typ f2.f_typ cstrs
       | Mutable ->
         (* A writable target requires equivalent field types. Add a deferred
            unification constraint over transient one-field fragments. The
@@ -4336,13 +4358,13 @@ and subtype_fields env trace ty1 ty2 cstrs =
         (trace, src, tgt, !(current_univar_pairs ()), None) :: cstrs)
     cstrs pairs
 
-and subtype_row env trace row1 row2 cstrs =
+and subtype_row ~steps env trace row1 row2 cstrs =
   let row1 = row_repr row1 and row2 = row_repr row2 in
   let r1, r2, pairs = merge_row_fields row1.row_fields row2.row_fields in
   let more1 = repr row1.row_more and more2 = repr row2.row_more in
   match (more1.desc, more2.desc) with
   | Tconstr (p1, _, _), Tconstr (p2, _, _) when Path.same p1 p2 ->
-    subtype_rec env ((more1, more2) :: trace) more1 more2 cstrs
+    subtype_rec ~steps env ((more1, more2) :: trace) more1 more2 cstrs
   | (Tvar _ | Tconstr _ | Tnil), (Tvar _ | Tconstr _ | Tnil)
     when row1.row_closed && r1 = [] ->
     List.fold_left
@@ -4350,15 +4372,17 @@ and subtype_row env trace row1 row2 cstrs =
         match (row_field_repr f1, row_field_repr f2) with
         | (Rpresent None | Reither (true, _, _, _)), Rpresent None -> cstrs
         | Rpresent (Some t1), Rpresent (Some t2) ->
-          subtype_rec env ((t1, t2) :: trace) t1 t2 cstrs
+          subtype_rec ~steps env ((t1, t2) :: trace) t1 t2 cstrs
         | Reither (false, t1 :: _, _, _), Rpresent (Some t2) ->
-          subtype_rec env ((t1, t2) :: trace) t1 t2 cstrs
+          subtype_rec ~steps env ((t1, t2) :: trace) t1 t2 cstrs
         | Rabsent, _ -> cstrs
         | _ -> raise Exit)
       cstrs pairs
   | Tunivar _, Tunivar _
     when row1.row_closed = row2.row_closed && r1 = [] && r2 = [] ->
-    let cstrs = subtype_rec env ((more1, more2) :: trace) more1 more2 cstrs in
+    let cstrs =
+      subtype_rec ~steps env ((more1, more2) :: trace) more1 more2 cstrs
+    in
     List.fold_left
       (fun cstrs (_, f1, f2) ->
         match (row_field_repr f1, row_field_repr f2) with
@@ -4368,7 +4392,7 @@ and subtype_row env trace row1 row2 cstrs =
           cstrs
         | Rpresent (Some t1), Rpresent (Some t2)
         | Reither (false, [t1], _, _), Reither (false, [t2], _, _) ->
-          subtype_rec env ((t1, t2) :: trace) t1 t2 cstrs
+          subtype_rec ~steps env ((t1, t2) :: trace) t1 t2 cstrs
         | _ -> raise Exit)
       cstrs pairs
   | _ -> raise Exit
@@ -4377,7 +4401,7 @@ let subtype env ty1 ty2 =
   Type_pairs.clear (subtypes ());
   current_univar_pairs () := [];
   (* Build constraint set. *)
-  let cstrs = subtype_rec env [(ty1, ty2)] ty1 ty2 [] in
+  let cstrs = subtype_rec ~steps:All_steps env [(ty1, ty2)] ty1 ty2 [] in
   Type_pairs.clear (subtypes ());
   (* Enforce constraints. *)
   function
@@ -4393,6 +4417,40 @@ let subtype env ty1 ty2 =
                    List.tl (List.tl trace),
                    ctx ))))
       (List.rev cstrs)
+
+(* Whether an expression of type [ty] is accepted, without a written [:>],
+   where [expected] is and the two do not unify: [ty] is a class type of the
+   same class as [expected] or of a subclass of it, or the two types are
+   equal up to class types that are two declarations of one class. A subclass
+   is not accepted inside another type, where a written coercion says what is
+   meant. The types are left as they were when the answer is no. *)
+let coerces_between_class_declarations env ty expected =
+  let nullary t =
+    match t.desc with
+    | Tconstr (_, [], _) -> true
+    | _ -> false
+  in
+  let source = expand_head env ty and target = expand_head env expected in
+  (nullary source && nullary target && class_step env source target <> None)
+  ||
+  let snapshot = Btype.snapshot () and levels = save_levels () in
+  Type_pairs.clear (subtypes ());
+  current_univar_pairs () := [];
+  match
+    let cstrs =
+      subtype_rec ~steps:Same_class env [(ty, expected)] ty expected []
+    in
+    Type_pairs.clear (subtypes ());
+    List.iter
+      (fun (_, t1, t2, pairs, _) -> unify_pairs (ref env) t1 t2 pairs)
+      (List.rev cstrs)
+  with
+  | () -> true
+  | exception (Unify _ | Subtype _) ->
+    Type_pairs.clear (subtypes ());
+    Btype.backtrack snapshot;
+    set_levels levels;
+    false
 
 (*******************)
 (*  Miscellaneous  *)

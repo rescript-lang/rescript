@@ -308,6 +308,14 @@ val subtype : Env.t -> type_expr -> type_expr -> unit -> unit
     invoking the returned function. Specialized cases may perform speculative
     unification while constructing the constraints. *)
 
+val coerces_between_class_declarations : Env.t -> type_expr -> type_expr -> bool
+(** Whether an expression of the first type is accepted where the second is
+    expected, as if [:>] were written, at a site that declares the type it
+    expects: the first is a class type ([@instanceOf]) of the same class as the
+    second or of one of its subclasses, or the two types are equal up to class
+    types that are two declarations of one class. When the answer is no, the
+    types are left as they were. *)
+
 val nondep_type : Env.t -> Ident.t -> type_expr -> type_expr
 (* Return a type equivalent to the given type but without
    references to the given module identifier. Raise [Not_found]
